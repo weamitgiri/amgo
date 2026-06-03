@@ -1,0 +1,1 @@
+import{E as t}from"./index-DJGpytUY.js";function s(r){return r?r.startsWith("http://")||r.startsWith("https://")?r:r.startsWith("/")?`${t.STORAGE_BASE_URL.replace(/\/storage$/,"")}${r}`:`${t.STORAGE_BASE_URL}/${r.replace(/^\//,"")}`:null}export{s as r};

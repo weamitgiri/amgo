@@ -1,0 +1,121 @@
+@extends('admin.layouts.default')
+ 
+@section('content') 
+ 
+@php
+ @$permissions = explode(',',@$user->permissions);
+ @$managers = explode(',',@$user->managers);
+@endphp
+
+  <div class="content-wrapper">
+    @include('admin.alert_message')
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h4 class="m-0">Permissions</h4>
+          </div>
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="{ url('admin/dashboard')}}">Dashboard</a></li>
+              <li class="breadcrumb-item"><a href="{{ url('admin/sub-admin')}}">Sub Admin</a></li>
+              <li class="breadcrumb-item active">Permissions</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid">
+       <div class="card">
+        <div class="card-header">
+        <h3 class="card-title">{{ $user->name }} <span class="text-muted">({{ $user->email }})</span></h3>
+        <div class="card-tools">
+          </div>
+        </div>
+
+        <div class="card-body">
+          <form method="POST" id="role_form" action="{{ url('admin/users-permissions/sub-admin/rolePermissionSave',encrypt($user->id))}}">
+            @csrf
+            <div class="row">
+                @foreach(\App\Models\Menu::getParentMenu() as $parent)  
+                 <div class="col-md-4 form-group">
+                    <li>
+                        <i class="fa {{$parent->icon}}"></i> &nbsp;&nbsp;<b>{{ $parent->name }}</b>
+                      <ul style="list-style-type:none;">
+                    @foreach(\App\Models\Menu::getSubMenu($parent->id) as $submenu)
+                        <li class="{{ request()->is($submenu->link) ? 'active' : '' }}">
+                        <input type="checkbox" name="menu_permission[{{$parent->id}}][]" value="{{$submenu->id}}" 
+                            {{ (in_array($submenu->id,$managers)) ? 'checked' : '' }}> {{ $submenu->name }}
+                            <span class="text-muted">(Sidebar Menu)</span>
+                            <ul style="list-style-type:none;">
+                                @foreach(\App\Models\Menu::getActionMenu($parent->id,$submenu->id) as $action)
+                                    <li class="">
+                                    <input type="checkbox" name="action_permission[]" value="{{$action->id}}"  
+                                        {{ (in_array($action->id,$permissions)) ? 'checked' : '' }}> {{ $action->showing_name }}
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </li>
+                    @endforeach
+                     </ul>
+                    </li>
+                 </div>
+                 @endforeach
+                </div>
+                <div class="row">
+                    <div class="col-md-4 offset-md-4">
+                      <button type="submit" name="save_role" class="btn btn-outline-primary btn-block">Save</button>
+                    </div>
+                </div>
+            </form>
+          </div>
+        </div>
+        </div>
+      </div>
+    </section>
+  </div>
+@endsection
+
+
+@section("footer_js")
+<script type="text/javascript" nonce="{{ csrf_token() }}">
+  $("select[name='id']").select2({placeholder:'Select Sub Admin',allowClear: true})
+  $("select[name='id']").val(0).trigger('change.select2');
+ 
+  $(document).on('submit','#role_form',function(event){
+    event.preventDefault();
+    form = this;
+    $("button[name='save_role']").attr('disabled','disabled');
+    var formData = new FormData(form);
+    
+    $.ajax({
+        url: form.action,
+        type: form.method,
+        data: formData,
+        cache: false,
+        contentType: false,
+        processData: false,
+        success: function(response) {
+          if (response.error== true) {
+            toastr.error(response.message);
+          }
+          if (response.error == false) {
+            $("#games_table").empty();
+            toastr.success(response.message);
+            $('html,body').animate({ scrollTop: 0 }, 'slow');
+          }
+          $("button[name='save_role']").removeAttr('disabled');
+        }            
+    });
+ })
+
+$(document).on('change',"input[type='checkbox']",function(event){
+
+  $(this).siblings('ul').find("input[type='checkbox']").prop('checked', this.checked);
+
+});
+</script>
+@endsection

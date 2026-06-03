@@ -1,0 +1,91 @@
+import { Router } from 'express';
+import { body } from 'express-validator';
+import * as gameEngineController from '../controllers/gameEngineController';
+import { validateRequest } from '../middlewares/validateRequest';
+import { authMiddleware } from '../middlewares/authMiddleware';
+
+const router = Router();
+
+// All game engine routes are protected
+router.use(authMiddleware);
+
+// Get game state
+router.get('/state/:group_id', gameEngineController.getGameState);
+
+// Case Summary Reopen
+router.post(
+    '/reopen-case-summary',
+    [
+        body('group_id').notEmpty().withMessage('Group ID is required'),
+    ],
+    validateRequest,
+    gameEngineController.reopenCaseSummary
+);
+
+// Questioning
+router.post(
+    '/ask-question',
+    [
+        body('group_id').notEmpty().withMessage('Group ID is required'),
+        body('asked_to_session_id').notEmpty().withMessage('Target session ID is required'),
+        body('question_text').notEmpty().withMessage('Question text is required'),
+    ],
+    validateRequest,
+    gameEngineController.askQuestion
+);
+
+router.post(
+    '/answer-question',
+    [
+        body('question_id').notEmpty().withMessage('Question ID is required'),
+        body('answer_text').notEmpty().withMessage('Answer text is required'),
+    ],
+    validateRequest,
+    gameEngineController.answerQuestion
+);
+
+// Lie Detector
+router.post(
+    '/start-lie-detector',
+    [
+        body('group_id').notEmpty().withMessage('Group ID is required'),
+        body('suspect_session_id').notEmpty().withMessage('Suspect session ID is required'),
+    ],
+    validateRequest,
+    gameEngineController.startLieDetector
+);
+
+router.post(
+    '/vote-lie-detector',
+    [
+        body('group_id').notEmpty().withMessage('Group ID is required'),
+        body('round_id').notEmpty().withMessage('Round ID is required'),
+        body('vote_value').isIn(['believable', 'suspicious']).withMessage('Invalid vote value'),
+    ],
+    validateRequest,
+    gameEngineController.voteLieDetector
+);
+
+// Witness Passcard
+router.post(
+    '/use-passcard',
+    [
+        body('group_id').notEmpty().withMessage('Group ID is required'),
+    ],
+    validateRequest,
+    gameEngineController.useWitnessPasscard
+);
+
+// Final Verdict
+router.post(
+    '/final-verdict',
+    [
+        body('group_id').notEmpty().withMessage('Group ID is required'),
+        body('identified_culprit_session_id').notEmpty().withMessage('Target session ID is required'),
+        body('reasoning').notEmpty().withMessage('Reasoning is required'),
+    ],
+    validateRequest,
+    gameEngineController.submitFinalVerdict
+);
+
+export default router;

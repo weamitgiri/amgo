@@ -1,0 +1,35 @@
+export const API_ENDPOINTS = {
+  public: {
+    packages: "/v1/public/packages",
+    cms: "/v1/public/cms",
+    cmsBySlug: (slug: string) => `/v1/public/cms/${slug}`,
+    settings: "/v1/public/settings",
+    games: "/v1/public/games",
+    gameById: (id: number | string) => `/v1/public/games/${id}`,
+  },
+  participant: {
+    joinLink: (linkToken: string) => `/v1/participant/join-links/${linkToken}`,
+    join: "/v1/participant/join",
+    verifyOtp: "/v1/participant/verify-otp",
+    lobby: (groupId: number | string) => `/v1/participant/lobby/${groupId}`,
+    gameSummary: (groupId: number | string) => `/v1/participant/game-summary/${groupId}`,
+  },
+  organizer: {
+    register: "/v1/organizer/register",
+    verifyOtp: "/v1/organizer/verify-otp",
+    resendOtp: "/v1/organizer/resend-otp",
+    login: "/v1/organizer/login",
+    verifyLogin: "/v1/organizer/verify-login",
+    dashboard: "/v1/organizer/dashboard",
+    profile: "/v1/organizer/profile",
+    profileBilling: "/v1/organizer/profile/billing",
+    eventStats: (bookingId: number | string) => `/v1/organizer/event-stats/${bookingId}`,
+    notifications: (bookingId: number | string) => `/v1/organizer/notifications/${bookingId}`,
+    notificationsReadAll: (bookingId: number | string) =>
+      `/v1/organizer/notifications/${bookingId}/read-all`,
+    createBooking: "/v1/organizer/create-booking",
+    booking: (bookingId: number | string) => `/v1/organizer/booking/${bookingId}`,
+    completeBooking: "/v1/organizer/complete-booking",
+    updateSession: "/v1/organizer/update-session",
+  },
+} as const;

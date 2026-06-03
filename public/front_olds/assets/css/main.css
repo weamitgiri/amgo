@@ -1,0 +1,34 @@
+/* Jackcerra Business HTML Template */
+
+/*
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&amp;family=Inter:wght@400;500;700&amp;family=Red+Hat+Display:wght@400;500;600;700&amp;family=DM+Sans:wght@500;700&amp;display=swap');
+*/
+ 
+@import url('bootstrap.css');
+@import url('global.css');
+@import url('header.css');
+@import url('footer.css');
+/*@import url('bootstrap-icons.css');*/
+@import url('font-awesome.css');
+@import url('animate.css');
+@import url('owl.css');
+@import url('jquery-ui.css');
+@import url('preloader.css');
+@import url('custom-animate.css');
+@import url('magnific-popup.css');
+@import url('odometer-theme-default.css');/*
+@import url('../../plugins/apexchart/apexcharts.css');*/
+@import url('../../plugins/menu/ma5-menu.css');
+
+@import url('breadcrumb.css');
+@import url('style.css');
+@import url('responsive.css');
+/*@import url('sidebar.css');*/
+@import url('team.css');
+/*@import url('testimonial.css');
+@import url('blog.css');
+@import url('contact.css');
+
+@import url('business.css');
+@import url('insurance.css');
+@import url('investment.css');

@@ -1,0 +1,192 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --color-purple-50: var(--purple-50);
+  --color-purple-100: var(--purple-100);
+  --color-purple-200: var(--purple-200);
+  --color-purple-300: var(--purple-300);
+  --color-purple-400: var(--purple-400);
+  --color-purple-500: var(--purple-500);
+  --color-purple-900: var(--purple-900);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-pink: var(--pink-accent);
+  --color-orange: var(--orange-accent);
+  --color-coral: var(--coral-accent);
+
+  --color-game-brown: var(--game-brown);
+  --color-game-orange: var(--game-orange);
+  --color-game-amber: var(--game-amber);
+  --color-game-green: var(--game-green);
+  --color-game-red: var(--game-red);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-elevated: var(--shadow-elevated);
+  --shadow-glow: var(--shadow-glow);
+}
+
+:root {
+  --radius: 0.875rem;
+
+  /* Surfaces — soft lavender app bg, true white cards */
+  --background: oklch(0.975 0.012 290);
+  --foreground: oklch(0.18 0.02 270);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.02 270);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.02 270);
+
+  /* Primary = vibrant purple */
+  --primary: oklch(0.55 0.24 295);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.96 0.02 290);
+  --secondary-foreground: oklch(0.25 0.05 290);
+
+  --muted: oklch(0.96 0.012 285);
+  --muted-foreground: oklch(0.5 0.03 270);
+
+  --accent: oklch(0.93 0.05 295);
+  --accent-foreground: oklch(0.3 0.15 295);
+
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+
+  --border: oklch(0.91 0.015 285);
+  --input: oklch(0.91 0.015 285);
+  --ring: oklch(0.55 0.24 295);
+
+  /* Purple scale */
+  --purple-50: oklch(0.975 0.015 295);
+  --purple-100: oklch(0.94 0.04 295);
+  --purple-200: oklch(0.87 0.08 295);
+  --purple-300: oklch(0.78 0.14 295);
+  --purple-400: oklch(0.65 0.2 295);
+  --purple-500: oklch(0.55 0.24 295);
+  --purple-900: oklch(0.18 0.05 295);
+
+  /* Status / accents */
+  --success: oklch(0.7 0.14 165);
+  --warning: oklch(0.78 0.13 85);
+  --info: oklch(0.68 0.13 240);
+  --pink-accent: oklch(0.7 0.16 355);
+  --orange-accent: oklch(0.75 0.14 55);
+  --coral-accent: oklch(0.7 0.18 25);
+
+  /* Game palette */
+  --game-brown: oklch(0.32 0.06 50);
+  --game-orange: oklch(0.65 0.15 50);
+  --game-amber: oklch(0.78 0.13 75);
+  --game-green: oklch(0.6 0.13 140);
+  --game-red: oklch(0.5 0.18 30);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, oklch(0.6 0.22 280), oklch(0.55 0.24 320));
+  --gradient-hero: linear-gradient(135deg, oklch(0.18 0.07 295) 0%, oklch(0.22 0.1 280) 50%, oklch(0.18 0.05 270) 100%);
+  --gradient-soft: linear-gradient(135deg, oklch(0.96 0.025 270), oklch(0.94 0.04 295));
+  --gradient-blue: linear-gradient(135deg, oklch(0.65 0.18 245), oklch(0.55 0.24 295));
+  --gradient-warm: linear-gradient(135deg, oklch(0.75 0.13 75), oklch(0.7 0.14 50));
+
+  /* Shadows */
+  --shadow-card: 0 4px 20px -6px oklch(0.4 0.1 295 / 0.08);
+  --shadow-elevated: 0 12px 40px -10px oklch(0.4 0.15 295 / 0.18);
+  --shadow-glow: 0 0 60px -10px oklch(0.55 0.24 295 / 0.45);
+
+  --chart-1: oklch(0.55 0.24 295);
+  --chart-2: oklch(0.7 0.16 355);
+  --chart-3: oklch(0.65 0.18 245);
+  --chart-4: oklch(0.78 0.13 85);
+  --chart-5: oklch(0.7 0.14 165);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.18 0.02 270);
+  --sidebar-primary: oklch(0.55 0.24 295);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.96 0.025 295);
+  --sidebar-accent-foreground: oklch(0.3 0.15 295);
+  --sidebar-border: oklch(0.91 0.015 285);
+  --sidebar-ring: oklch(0.55 0.24 295);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
+  }
+}
+
+@utility bg-gradient-primary { background-image: var(--gradient-primary); }
+@utility bg-gradient-hero { background-image: var(--gradient-hero); }
+@utility bg-gradient-soft { background-image: var(--gradient-soft); }
+@utility bg-gradient-blue { background-image: var(--gradient-blue); }
+@utility bg-gradient-warm { background-image: var(--gradient-warm); }
+@utility text-gradient-primary {
+  background-image: var(--gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
