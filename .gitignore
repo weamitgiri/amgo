@@ -1,0 +1,16 @@
+# Ignore PHP vendor directory
+/vendor/
+
+# Ignore Node modules for frontend and apis
+/frontend/node_modules/
+/apis/node_modules/
+
+# Ignore top-level node_modules if present
+/node_modules/
+
+# Environment files
+.env
+
+# Logs and storage (Laravel typical)
+/storage/
+/bootstrap/cache/
