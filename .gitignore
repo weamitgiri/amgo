@@ -14,3 +14,4 @@
 # Logs and storage (Laravel typical)
 /storage/
 /bootstrap/cache/
+apis/logs/*.log
