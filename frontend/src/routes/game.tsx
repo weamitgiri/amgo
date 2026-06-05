@@ -58,6 +58,7 @@ function GamePage() {
   const [secsCase, setSecsCase] = useState(0);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [secretOpened, setSecretOpened] = useState(false);
+  const [roleViewed, setRoleViewed] = useState(false);
   const [openPhotos, setOpenPhotos] = useState(false);
   const [guideModal, setGuideModal] = useState<GuideType>(null);
   const [guideSlide, setGuideSlide] = useState(0);
@@ -67,7 +68,7 @@ function GamePage() {
     [gameData]
   );
 
-  const yourPerson = useMemo(() => people.find((p) => p.is_you) ?? null, [people]);
+  const yourPerson = useMemo(() => people.find((p: GamePerson) => p.is_you) ?? null, [people]);
 
   const guideSlides = useMemo(
     () => ({
@@ -80,7 +81,7 @@ function GamePage() {
   const photoUrls = useMemo(
     () =>
       (gameData?.photos ?? []).map(
-        (p) => resolveMediaUrl(p.image) ?? mystery
+        (p: { image: string | null }) => resolveMediaUrl(p.image) ?? mystery
       ),
     [gameData]
   );
@@ -98,13 +99,64 @@ function GamePage() {
       setLoading(false);
       return;
     }
+
+    const stateKey = `game_state_${session.groupId}`;
+    const timerKey = `game_timers_${session.groupId}`;
+    const savedState = localStorage.getItem(stateKey);
+    const savedTimer = localStorage.getItem(timerKey);
+
     participantService
       .getGameSummary(session.groupId, session.participantId)
       .then((data) => {
         setGameData(data);
-        setSecsHdr(data.settings.game_duration_secs);
-        setSecsCase(data.settings.case_summary_view_secs);
-        setQuestionsLeft(data.settings.max_questions);
+
+        if (savedState) {
+          try {
+            const {
+              activity: savedActivity = [],
+              questionsLeft: savedQuestionsLeft = data.settings.max_questions,
+              secretOpened: savedSecretOpened = false,
+              roleViewed: savedRoleViewed = false,
+              phase: savedPhase = "summary",
+            } = JSON.parse(savedState);
+
+            setActivity(Array.isArray(savedActivity) ? savedActivity : []);
+            setQuestionsLeft(typeof savedQuestionsLeft === "number" ? savedQuestionsLeft : data.settings.max_questions);
+            setSecretOpened(Boolean(savedSecretOpened));
+            setRoleViewed(Boolean(savedRoleViewed));
+            setPhase(savedPhase === "investigation" ? "investigation" : "summary");
+            if (!savedRoleViewed && savedSecretOpened) {
+              setRoleModalOpen(true);
+            }
+          } catch {
+            setQuestionsLeft(data.settings.max_questions);
+            setActivity([]);
+          }
+        } else {
+          setQuestionsLeft(data.settings.max_questions);
+          setActivity([]);
+        }
+
+        if (savedTimer) {
+          try {
+            const { hdrStartTime, caseStartTime } = JSON.parse(savedTimer);
+            const hdrElapsed = Math.floor((Date.now() - hdrStartTime) / 1000);
+            const caseElapsed = Math.floor((Date.now() - caseStartTime) / 1000);
+
+            setSecsHdr(Math.max(0, data.settings.game_duration_secs - hdrElapsed));
+            setSecsCase(Math.max(0, data.settings.case_summary_view_secs - caseElapsed));
+          } catch {
+            const now = Date.now();
+            localStorage.setItem(timerKey, JSON.stringify({ hdrStartTime: now, caseStartTime: now }));
+            setSecsHdr(data.settings.game_duration_secs);
+            setSecsCase(data.settings.case_summary_view_secs);
+          }
+        } else {
+          const now = Date.now();
+          localStorage.setItem(timerKey, JSON.stringify({ hdrStartTime: now, caseStartTime: now }));
+          setSecsHdr(data.settings.game_duration_secs);
+          setSecsCase(data.settings.case_summary_view_secs);
+        }
       })
       .catch((err) => {
         toastError(err instanceof Error ? err.message : "Could not load game.");
@@ -122,9 +174,9 @@ function GamePage() {
   useEffect(() => {
     if (loading) return;
     const t = setInterval(() => {
-      setSecsHdr((s) => Math.max(0, s - 1));
+      setSecsHdr((s: number) => Math.max(0, s - 1));
       if (phase === "summary") {
-        setSecsCase((s) => Math.max(0, s - 1));
+        setSecsCase((s: number) => Math.max(0, s - 1));
       }
     }, 1000);
     return () => clearInterval(t);
@@ -135,6 +187,22 @@ function GamePage() {
       setPhase("investigation");
     }
   }, [secsCase, phase, gameData]);
+
+  // Persist activity and questionsLeft state to sessionStorage
+  useEffect(() => {
+    if (!session?.groupId) return;
+    const stateKey = `game_state_${session.groupId}`;
+    localStorage.setItem(
+      stateKey,
+      JSON.stringify({
+        activity,
+        questionsLeft,
+        secretOpened,
+        roleViewed,
+        phase,
+      })
+    );
+  }, [activity, questionsLeft, secretOpened, roleViewed, phase, session?.groupId]);
 
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
@@ -159,8 +227,8 @@ function GamePage() {
 
   const sendQuestion = () => {
     if (!question.trim() || questionsLeft <= 0 || !people[selectedAskee]) return;
-    setActivity((a) => [{ to: people[selectedAskee].short, q: question.trim() }, ...a]);
-    setQuestionsLeft((q) => q - 1);
+    setActivity((a: typeof activity) => [{ to: people[selectedAskee].short, q: question.trim() }, ...a]);
+    setQuestionsLeft((q: number) => q - 1);
     setModal("answer");
   };
 
@@ -198,6 +266,7 @@ function GamePage() {
           secretOpened={secretOpened}
           onRevealRole={() => setRoleModalOpen(true)}
           setSecretOpened={setSecretOpened}
+          setRoleViewed={setRoleViewed}
           setOpenPhotos={setOpenPhotos}
           onBegin={() => setPhase("investigation")}
           onOpenInfoModal={(type) => { setGuideModal(type); setGuideSlide(0); }}
@@ -224,7 +293,7 @@ function GamePage() {
       )}
 
       {roleModalOpen && yourPerson && (
-        <YourRoleModal person={yourPerson} onClose={() => setRoleModalOpen(false)} />
+        <YourRoleModal person={yourPerson} onClose={() => { setRoleModalOpen(false); setRoleViewed(true); }} />
       )}
       {openPhotos && <PhotosModal photos={photoUrls} onClose={() => setOpenPhotos(false)} />}
       {guideModal !== null && guideSlides[guideModal].length > 0 && (
@@ -233,8 +302,8 @@ function GamePage() {
           slideIndex={guideSlide}
           slides={guideSlides[guideModal]}
           onClose={() => setGuideModal(null)}
-          onPrev={() => setGuideSlide((i) => Math.max(0, i - 1))}
-          onNext={() => setGuideSlide((i) => Math.min(guideSlides[guideModal].length - 1, i + 1))}
+          onPrev={() => setGuideSlide((i: number) => Math.max(0, i - 1))}
+          onNext={() => setGuideSlide((i: number) => Math.min(guideSlides[guideModal].length - 1, i + 1))}
           onSelectSlide={(index) => setGuideSlide(index)}
         />
       )}
@@ -266,6 +335,7 @@ function SummaryView(props: {
   secretOpened: boolean;
   onRevealRole: () => void;
   setSecretOpened: (b: boolean) => void;
+  setRoleViewed: (b: boolean) => void;
   setOpenPhotos: (b: boolean) => void;
   onBegin: () => void;
   onOpenInfoModal: (type: "strategy" | "rules") => void;
@@ -279,6 +349,7 @@ function SummaryView(props: {
     secretOpened,
     onRevealRole,
     setSecretOpened,
+    setRoleViewed,
     setOpenPhotos,
     onBegin,
     onOpenInfoModal,
@@ -292,6 +363,7 @@ function SummaryView(props: {
     setTimeout(() => {
       setBoxOpening(false);
       setSecretOpened(true);
+      setRoleViewed(false);
       onRevealRole();
     }, 700);
   };
@@ -392,8 +464,12 @@ function SummaryView(props: {
                       : "border-white/10 bg-white/5"
                   }`}
                 >
-                  <div className={`aspect-[3/4] rounded-xl bg-gradient-to-br ${p.grad} ring-1 ring-white/10 grid place-items-center overflow-hidden`}>
-                    <Eye className="h-7 w-7 text-white/70" />
+                  <div className={`aspect-[3/4] min-h-[148px] rounded-xl bg-gradient-to-br ${p.grad} ring-1 ring-white/10 grid place-items-center overflow-hidden`}>
+                    {p.role_image ? (
+                      <img src={resolveMediaUrl(p.role_image) ?? ""} alt={p.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <Eye className="h-7 w-7 text-white/70" />
+                    )}
                   </div>
                   <div className="mt-2 text-[11px] text-pink-400 leading-tight line-clamp-2">{p.name}</div>
                 </div>
@@ -595,8 +671,12 @@ function InvestigationView(props: {
             <div className="mt-4 grid grid-cols-5 gap-2">
               {people.map((p, i) => (
                 <button type="button" key={p.id} onClick={() => setSelectedAskee(i)} className={`relative rounded-xl border p-2 text-center transition ${i === selectedAskee ? "border-purple-400 ring-2 ring-purple-400/40 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
-                  <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${p.grad} grid place-items-center`}>
-                    <Eye className="h-5 w-5 text-white/80" />
+                  <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${p.grad} grid place-items-center overflow-hidden`}>
+                    {p.role_image ? (
+                      <img src={resolveMediaUrl(p.role_image) ?? ""} alt={p.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-white/80" />
+                    )}
                   </div>
                   <div className="mt-1.5 text-[11px] font-semibold">{p.short}</div>
                   {i === selectedAskee && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-purple-500 ring-2 ring-purple-300" />}

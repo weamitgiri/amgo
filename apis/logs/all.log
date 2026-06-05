@@ -464,3 +464,118 @@
 2026-06-04 20:16:43:1643 [31merror[39m: [31mGroup not found[39m
 2026-06-04 20:17:43:1743 [31merror[39m: [31mGroup not found[39m
 2026-06-04 20:18:43:1843 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:19:43:1943 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:20:43:2043 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:21:43:2143 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:22:43:2243 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:23:43:2343 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:24:43:2443 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:25:43:2543 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:26:43:2643 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:27:43:2743 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:28:43:2843 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:29:43:2943 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:30:43:3043 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:31:43:3143 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:32:43:3243 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:33:43:3343 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:34:43:3443 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:35:43:3543 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:36:43:3643 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:37:43:3743 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:38:43:3843 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:39:43:3943 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:40:43:4043 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:41:43:4143 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:42:43:4243 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:43:43:4343 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:44:43:4443 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:45:43:4543 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:46:43:4643 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:47:43:4743 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:48:43:4843 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:49:43:4943 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:50:43:5043 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:51:43:5143 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:52:43:5243 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:53:43:5343 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:54:43:5443 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:55:43:5543 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:56:43:5643 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:57:40:5740 [32minfo[39m: [32m[Server] Node.js API running on port 6000 in development mode[39m
+2026-06-04 20:57:43:5743 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:58:43:5843 [31merror[39m: [31mGroup not found[39m
+2026-06-04 20:59:43:5943 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:00:26:026 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-04 21:00:43:043 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:01:43:143 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:01:49:149 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:02:37:237 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:02:43:243 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:03:43:343 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:04:43:443 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:05:08:58 [31merror[39m: [31mRescheduling is only allowed until 04 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-04 21:05:28:528 [31merror[39m: [31mRescheduling is only allowed until 04 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-04 21:05:43:543 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:06:43:643 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:07:43:743 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:08:43:843 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:09:43:943 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:10:43:1043 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:11:43:1143 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:12:43:1243 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:13:43:1343 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:14:43:1443 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:15:18:1518 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:15:26:1526 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:15:40:1540 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:15:41:1541 [31merror[39m: [31mGroup not found[39m
+2026-06-04 21:16:38:1638 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:17:29:1729 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:17:53:1753 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:18:20:1820 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:19:40:1940 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:20:11:2011 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:21:02:212 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:21:25:2125 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:21:44:2144 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-04 21:22:13:2213 [31merror[39m: [31mJoin limit reached. This package allows a maximum of 10 participants.[39m
+2026-06-05 20:52:52:5252 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-05 20:52:54:5254 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-05 20:52:56:5256 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-05 21:08:39:839 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:09:52:952 [31merror[39m: [31mError sending OTP email: Greeting never received[39m
+2026-06-05 21:10:59:1059 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:11:59:1159 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:15:14:1514 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:15:59:1559 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:17:01:171 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:17:22:1722 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:17:39:1739 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:18:06:186 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:18:22:1822 [31merror[39m: [31mError sending OTP email: Greeting never received[39m
+2026-06-05 21:18:35:1835 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:19:04:194 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:19:18:1918 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 21:19:23:1923 [31merror[39m: [31mJoin limit reached. This package allows a maximum of 10 participants.[39m
+2026-06-05 22:56:29:5629 [32minfo[39m: [32m[Server] Node.js API running on port 6000 in development mode[39m
+2026-06-05 22:58:43:5843 [31merror[39m: [31mError sending OTP email: Greeting never received[39m
+2026-06-05 23:01:51:151 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 23:01:54:154 [31merror[39m: [31mError sending OTP email: Greeting never received[39m
+2026-06-05 23:03:01:31 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 23:03:03:33 [31merror[39m: [31mBooking not found[39m
+2026-06-05 23:03:04:34 [31merror[39m: [31mBooking not found[39m
+2026-06-05 23:03:06:36 [31merror[39m: [31mBooking not found[39m
+2026-06-05 23:03:10:310 [31merror[39m: [31mBooking not found[39m
+2026-06-05 23:03:30:330 [31merror[39m: [31mBooking not found[39m
+2026-06-05 23:03:31:331 [31merror[39m: [31mBooking not found[39m
+2026-06-05 23:03:33:333 [31merror[39m: [31mBooking not found[39m
+2026-06-05 23:03:37:337 [31merror[39m: [31mError sending OTP email: Greeting never received[39m
+2026-06-05 23:04:07:47 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-05 23:04:14:414 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 23:04:47:447 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 10:56 PM (1 hour before start).[39m
+2026-06-05 23:09:31:931 [31merror[39m: [31mError sending OTP email: Greeting never received[39m
+2026-06-05 23:10:35:1035 [31merror[39m: [31mGroup not found[39m
+2026-06-05 23:10:46:1046 [31merror[39m: [31mGroup not found[39m
+2026-06-05 23:11:11:1111 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-05 23:15:05:155 [31merror[39m: [31mThis invitation link has expired[39m
