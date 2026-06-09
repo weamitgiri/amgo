@@ -57,8 +57,7 @@
   @yield('header_css')
     
 </head>
-{{-- <body class="sidebar-mini layout-fixed"> --}}
-<body class="sidebar-mini layout-fixed control-sidebar-slide-open">
+<body class="sidebar-mini layout-fixed">
 
     <svg xmlns="https://www.w3.org/2000/svg" width="4" height="5" viewBox="0 0 4 5">
         <path fill="#343a40" d="M2 0L0 2h4zm0 5L0 3h4z"/>

@@ -203,6 +203,13 @@ export type GameSummaryPayload = {
         is_you: boolean;
     }[];
     photos: { id: number; label: string; image: string | null }[];
+    clues: {
+        id: number;
+        clue_title: string;
+        clue_short_description: string | null;
+        clue_detail: string | null;
+        clue_image: string | null;
+    }[];
     rules: { id: number; title: string; description: string; details: string[] }[];
     strategy_slides: { title: string; description: string; details: string[] }[];
 };
@@ -254,6 +261,11 @@ export async function buildGameSummaryPayload(
         [row.game_row_id]
     );
 
+    const [clueRows] = await query(
+        'SELECT id, clue_title, clue_short_description, clue_detail, clue_image FROM game_clues WHERE game_id = ? ORDER BY id ASC',
+        [row.game_row_id]
+    );
+
     const [ruleRows] = await query(
         'SELECT id, rule_text, `order` FROM game_rules WHERE game_id = ? ORDER BY `order` ASC',
         [row.game_row_id]
@@ -289,7 +301,7 @@ export async function buildGameSummaryPayload(
             objective: isYou ? r.objective || '' : '',
             you_know: isYou ? parseJsonArray(r.what_you_know) : [],
             keep_in_mind: isYou ? parseJsonArray(r.keep_in_mind) : [],
-            role_image: isYou ? r.role_image : null,
+            role_image: r.role_image,
             is_you: isYou,
         };
         return base;
@@ -343,6 +355,13 @@ export async function buildGameSummaryPayload(
             id: Number(p.id),
             label: p.label,
             image: p.image,
+        })),
+        clues: clueRows.map((c: any) => ({
+            id: Number(c.id),
+            clue_title: String(c.clue_title || ''),
+            clue_short_description: c.clue_short_description ? String(c.clue_short_description) : null,
+            clue_detail: c.clue_detail ? String(c.clue_detail) : null,
+            clue_image: c.clue_image ? String(c.clue_image) : null,
         })),
         rules,
         strategy_slides:

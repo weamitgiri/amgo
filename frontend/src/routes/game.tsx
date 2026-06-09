@@ -318,9 +318,21 @@ function GamePage() {
       {modal === "vote" && people[selectedAskee] && (
         <VoteModal target={people[selectedAskee]} question={question} onClose={() => { setQuestion(""); setModal(null); }} />
       )}
-      {modal === "clue" && <ClueRoomModal onClose={() => setModal(null)} />}
+      {modal === "clue" && (
+        <ClueRoomModal
+          clues={gameData.clues}
+          unlockSecs={gameData.settings.clue_room_unlock_secs}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal === "accuse" && <AccuseModal people={people} onClose={() => setModal(null)} />}
-      {modal === "summary" && <CaseSummaryModal onClose={() => setModal(null)} />}
+      {modal === "summary" && (
+        <CaseSummaryModal
+          gameData={gameData}
+          photoUrls={photoUrls}
+          onClose={() => setModal(null)}
+        />
+      )}
     </div>
   );
 }
@@ -454,24 +466,34 @@ function SummaryView(props: {
         <div className="space-y-5">
           <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-6">
             <h3 className="text-center text-lg font-bold">Key People in the Bungalow</h3>
-            <div className={`mt-5 grid gap-2.5 ${people.length <= 5 ? "grid-cols-5" : "grid-cols-3 sm:grid-cols-5"}`}>
+            <div className={`mt-5 grid gap-4 ${people.length <= 5 ? "grid-cols-5" : "grid-cols-3 sm:grid-cols-5"}`}>
               {people.map((p) => (
                 <div
                   key={p.id}
-                  className={`rounded-2xl border p-2 text-center ${
+                  className={`rounded-[20px] overflow-hidden transition-all shadow-sm border ${
                     secretOpened && p.is_you
-                      ? "border-emerald-400/60 ring-2 ring-emerald-400/30 bg-emerald-500/10"
-                      : "border-white/10 bg-white/5"
+                      ? "ring-2 ring-fuchsia-500 bg-[#241334]"
+                      : "bg-[#1b1223] border-white/10"
                   }`}
                 >
-                  <div className={`aspect-[3/4] min-h-[148px] rounded-xl bg-gradient-to-br ${p.grad} ring-1 ring-white/10 grid place-items-center overflow-hidden`}>
+                  <div className="w-full h-44 md:h-56 bg-black grid place-items-center overflow-hidden">
                     {p.role_image ? (
-                      <img src={resolveMediaUrl(p.role_image) ?? ""} alt={p.name} className="h-full w-full object-cover" />
+                      <img src={resolveMediaUrl(p.role_image) ?? ""} alt={p.name} className="w-full h-full object-cover" />
                     ) : (
-                      <Eye className="h-7 w-7 text-white/70" />
+                      <div className={`h-full w-full ${p.grad} grid place-items-center`}>
+                        <Eye className="h-7 w-7 text-white/70" />
+                      </div>
                     )}
                   </div>
-                  <div className="mt-2 text-[11px] text-pink-400 leading-tight line-clamp-2">{p.name}</div>
+
+                  <div className="p-4 bg-[#2a1830] text-center">
+                    <div className="text-sm text-white/90 leading-snug font-medium">
+                      {roleDisplayName(p)}
+                    </div>
+                    <div className="mt-2 text-base text-pink-400 font-semibold">
+                      {p.is_you ? "(You)" : p.name}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -584,41 +606,53 @@ function InvestigationView(props: {
   return (
     <>
       {/* Investigation toolbar */}
-      <div className="mt-5 rounded-2xl border border-white/10 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 backdrop-blur p-4 flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-purple-500/30 grid place-items-center">
-            {lieMode ? <ScanSearch className="h-5 w-5 text-purple-200" /> : <FileText className="h-5 w-5 text-purple-200" />}
+      <div className="mt-5 rounded-2xl border border-white/10 bg-[#1c1132] backdrop-blur px-6 py-5 flex items-center gap-4 flex-wrap pb-7">
+        <div className="flex items-center gap-4">
+          <div className="h-11 w-11 rounded-full bg-purple-500/20 grid place-items-center">
+            {lieMode ? <ScanSearch className="h-5 w-5 text-purple-300" /> : <FileText className="h-5 w-5 text-purple-300" />}
           </div>
-          <h1 className="text-lg font-bold tracking-wide">{lieMode ? "Lie Detector Mode" : "Investigation"}</h1>
+          <h1 className="text-xl font-bold tracking-wide">{lieMode ? "Lie Detector Mode" : "Investigation"}</h1>
         </div>
-        <div className="ml-auto flex items-center gap-3 flex-wrap">
-          <div className="text-center">
-            <button onClick={() => openModal("summary")} className="inline-flex items-center gap-2 rounded-full bg-emerald-500/90 hover:bg-emerald-500 px-4 py-2 text-xs font-semibold">
+        
+        <div className="ml-auto flex items-center gap-6 flex-wrap">
+          <div className="relative flex flex-col items-center justify-center">
+            <button onClick={() => openModal("summary")} className="inline-flex items-center gap-2 rounded-full bg-[#00B87C] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity">
               <FileText className="h-4 w-4" /> Case Summary
             </button>
-            <div className="text-[10px] text-emerald-300 mt-1">Available for 5:00 minutes only</div>
+            <div className="absolute -bottom-5 text-[10px] text-[#00B87C] whitespace-nowrap">Available for 5:00 minutes only</div>
           </div>
-          <div className="text-center">
-            <div className="text-[11px] text-white/70">{lieMode ? "Lie Detector Mode Time Left" : "Investigation Time Left"}</div>
-            <div className="text-amber-300 font-bold tabular-nums">{fmt(invSecs)}</div>
+
+          <div className="flex flex-col items-center justify-center gap-0.5">
+            <div className="text-[10px] text-white/50">Investigation Time Left</div>
+            <div className="text-[#facc15] text-xl font-bold tabular-nums leading-none">{fmt(invSecs)}</div>
           </div>
-          <div className="text-center">
-            <div className="text-[11px] text-white/70">Questions Left</div>
-            <div className="text-white text-lg font-bold">{questionsLeft}/{lieMode ? lieMaxQuestions : maxQuestions}</div>
+
+          <div className="flex flex-col items-center justify-center gap-0.5">
+            <div className="text-[10px] text-white/50">Questions Left</div>
+            <div className="text-white text-xl font-bold leading-none">{questionsLeft}/{lieMode ? lieMaxQuestions : maxQuestions}</div>
           </div>
-          <div className="text-center">
-            <button onClick={() => setLieMode(!lieMode)} className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold ${lieMode ? "bg-cyan-500 hover:bg-cyan-400 text-white shadow-glow" : "bg-gradient-blue text-white"}`}>
+
+          <div className="relative flex flex-col items-center justify-center">
+            <button onClick={() => setLieMode(!lieMode)} className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-opacity ${lieMode ? "bg-[#7e57c2] text-white shadow-[0_0_15px_rgba(126,87,194,0.5)]" : "bg-[#7e57c2] text-white hover:opacity-90"}`}>
               <ScanSearch className="h-4 w-4" /> Lie Detector
             </button>
-            <div className="text-[10px] text-emerald-300 mt-1">● {lieMode ? "Active" : "Available"}</div>
+            <div className="absolute -bottom-5 flex items-center gap-1.5 text-[10px] text-[#00B87C] whitespace-nowrap">
+              <div className="h-1.5 w-1.5 rounded-full bg-[#00B87C]" />
+              {lieMode ? "Active" : "Available"}
+            </div>
           </div>
-          <div className="text-center">
-            <button onClick={() => openModal("clue")} className="inline-flex items-center gap-2 rounded-full bg-gradient-warm px-4 py-2 text-xs font-semibold">
+
+          <div className="relative flex flex-col items-center justify-center">
+            <button onClick={() => openModal("clue")} className="inline-flex items-center gap-2 rounded-full bg-[#f59e0b] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity">
               <Lightbulb className="h-4 w-4" /> Clue Room
             </button>
-            <div className="text-[10px] text-amber-300 mt-1">● New Clue</div>
+            <div className="absolute -bottom-5 flex items-center gap-1.5 text-[10px] text-[#facc15] whitespace-nowrap">
+              <div className="h-1.5 w-1.5 rounded-full bg-[#facc15]" />
+              New Clue
+            </div>
           </div>
-          <button onClick={() => openModal("accuse")} className="inline-flex items-center gap-2 rounded-full bg-rose-600 hover:bg-rose-500 px-4 py-2 text-xs font-semibold">
+
+          <button onClick={() => openModal("accuse")} className="inline-flex items-center gap-2 rounded-full bg-[#f43f5e] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity">
             <UserX className="h-4 w-4" /> Final Accusation
           </button>
         </div>
@@ -1030,26 +1064,38 @@ function VoteModal({ target, question, onClose }: { target: GamePerson; question
   );
 }
 
-function ClueRoomModal({ onClose }: { onClose: () => void }) {
+function ClueRoomModal({ clues, unlockSecs, onClose }: { clues: GameSummaryResponse['clues']; unlockSecs: number; onClose: () => void }) {
+  const firstClue = clues[0] ?? null;
+  const unlockLabel = `${Math.floor(unlockSecs / 60)}:${String(unlockSecs % 60).padStart(2, '0')}`;
+
   return (
     <ModalShell onClose={onClose} max="max-w-2xl">
       <div className="p-6">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-full border border-amber-400/50 bg-amber-500/10 grid place-items-center"><Lightbulb className="h-5 w-5 text-amber-300" /></div>
-          <h3 className="text-lg font-black tracking-widest">CLUE ROOM</h3>
-          <span className="text-xs text-emerald-400">Unlocked at 10:00</span>
+          <div>
+            <h3 className="text-lg font-black tracking-widest">CLUE ROOM</h3>
+            <div className="text-xs text-emerald-400">Unlocks after {unlockLabel} minutes</div>
+          </div>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="aspect-square rounded-xl bg-gradient-to-br from-amber-700 to-amber-900 grid place-items-center text-amber-200 font-black tracking-widest">TOP SECRET</div>
-            <div className="mt-3 text-amber-300 text-sm font-bold">Clue #1</div>
-            <p className="text-xs text-white/80 mt-1">A torn page was found near the window outside the study room.</p>
+            <div className="mt-3 text-amber-300 text-sm font-bold">{firstClue?.clue_title ?? 'Clue unavailable'}</div>
+            <p className="text-xs text-white/80 mt-1">{firstClue?.clue_short_description ?? 'A clue will appear here once it is unlocked.'}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="text-amber-300 text-sm font-bold">Clue Details</div>
-            <p className="text-xs text-white/80 mt-1">A piece of torn paper was discovered outside the study window.</p>
-            <p className="text-xs text-white/80 mt-2">There are some written numbers on it. Could be important.</p>
-            <div className="mt-3 rounded-xl bg-zinc-900 p-4 text-center font-mono text-amber-100">12 - 7 - 4 - 11<br />9 - 3</div>
+            {firstClue?.clue_detail ? (
+              <p className="text-xs text-white/80 mt-1">{firstClue.clue_detail}</p>
+            ) : (
+              <p className="text-xs text-white/80 mt-1">No additional clue details are available.</p>
+            )}
+            {firstClue?.clue_image ? (
+              <div className="mt-3 overflow-hidden rounded-xl bg-zinc-900">
+                <img src={resolveMediaUrl(firstClue.clue_image) ?? mystery} alt={firstClue.clue_title} className="h-36 w-full object-cover" />
+              </div>
+            ) : null}
           </div>
         </div>
         <p className="mt-5 text-center text-xs text-white/70">This clue is visible to all players. Use it wisely.</p>
@@ -1091,48 +1137,62 @@ function AccuseModal({ people, onClose }: { people: GamePerson[]; onClose: () =>
   );
 }
 
-function CaseSummaryModal({ onClose }: { onClose: () => void }) {
+function CaseSummaryModal({ gameData, photoUrls, onClose }: { gameData: GameSummaryResponse; photoUrls: string[]; onClose: () => void }) {
   return (
     <ModalShell onClose={onClose} max="max-w-4xl">
       <div className="p-7 overflow-y-auto max-h-[80vh]">
         <div className="flex items-center gap-3 mb-6">
           <div className="h-12 w-12 rounded-full border border-purple-400/40 grid place-items-center"><FileText className="h-5 w-5 text-purple-300" /></div>
-          <div><h3 className="text-2xl font-bold">Case Summary</h3><p className="text-xs text-white/65">Review the details of the case.</p></div>
+          <div>
+            <h3 className="text-2xl font-bold">Case Summary</h3>
+            <p className="text-xs text-white/65">Review the details of the case.</p>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4 text-sm leading-relaxed">
-            <p>An old wealthy businessman, Raghav Malhotra, is <span className="text-rose-400 font-semibold">found dead</span> in his luxury bungalow.</p>
-            <p>He was recently in a legal dispute with local farmers, accused of illegally taking their land for a "Dream City Project".</p>
-            <p className="font-bold uppercase tracking-wider text-white/90">On the night of the murder</p>
-            <ol className="space-y-3 border-l-2 border-purple-500/40 pl-4">
-              <Step time="10:00 PM" text="A farmer leader visited him at 10:00 PM to finalize a compensation deal" />
-              <Step time="10:30 PM" text="He left the house." />
-              <Step time="12:00 AM" text="A loud scream was heard by the daughter-in-law" />
-            </ol>
-            <p>After that, the businessman was <span className="text-rose-400 font-semibold">found dead</span> in his room.</p>
+            {gameData.game.case_summary_html ? (
+              <div className="prose prose-invert prose-sm max-w-none [&_p]:mb-3" dangerouslySetInnerHTML={{ __html: gameData.game.case_summary_html }} />
+            ) : (
+              <p className="text-white/70">No case summary content is available yet. Use the timeline and quick facts below to guide your investigation.</p>
+            )}
+            {gameData.game.timeline.length > 0 && (
+              <>
+                <p className="font-bold uppercase tracking-wider text-white/90">On the night of the murder</p>
+                <ol className="space-y-3 border-l-2 border-purple-500/40 pl-4">
+                  {gameData.game.timeline.map((step) => (
+                    <Step key={`${step.time}-${step.event}`} time={step.time} text={step.event} />
+                  ))}
+                </ol>
+              </>
+            )}
             <div className="inline-block bg-amber-100/95 text-zinc-900 text-xs px-3 py-1.5 rounded-sm">
               Now, <span className="text-rose-700 font-bold">everyone</span> present in the house is a <span className="text-rose-700 font-bold">suspect.</span>
             </div>
           </div>
           <div className="relative min-h-[320px]">
             <div className="absolute top-2 left-4 rotate-[-6deg] rounded-md bg-white p-2 shadow-elevated">
-              <img src={mystery} alt="" className="h-32 w-44 object-cover" />
+              <img src={photoUrls[0] ?? mystery} alt="Case photo" className="h-32 w-44 object-cover" />
             </div>
             <div className="absolute top-12 right-2 rotate-[5deg] rounded-md bg-white p-2 shadow-elevated">
-              <div className="h-28 w-40 bg-gradient-to-br from-zinc-700 to-zinc-900 grid place-items-center">
-                <AlertCircle className="h-10 w-10 text-amber-300/70" />
+              <img src={photoUrls[1] ?? mystery} alt="Case photo" className="h-28 w-40 object-cover" />
+            </div>
+            {gameData.game.quick_facts.length > 0 ? (
+              <div className="absolute bottom-0 left-2 right-6 rotate-[-2deg] rounded-md bg-amber-100/95 text-zinc-900 p-4 shadow-elevated">
+                <div className="text-xs font-bold tracking-wider">QUICK FACTS</div>
+                <ul className="mt-2 space-y-1 text-[12px]">
+                  {gameData.game.quick_facts.map((fact) => {
+                    const Icon = FACT_ICONS[fact.icon] ?? MapPin;
+                    return (
+                      <li key={`${fact.label}-${fact.value}`} className="flex gap-2 items-center">
+                        <Icon className="h-3.5 w-3.5" />
+                        {fact.label}: {fact.value}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-            </div>
-            <div className="absolute bottom-0 left-2 right-6 rotate-[-2deg] rounded-md bg-amber-100/95 text-zinc-900 p-4 shadow-elevated">
-              <div className="text-xs font-bold tracking-wider">QUICK FACTS</div>
-              <ul className="mt-2 space-y-1 text-[12px]">
-                <li className="flex gap-2 items-center"><MapPin className="h-3.5 w-3.5" /> Location: Malhotra Bungalow</li>
-                <li className="flex gap-2 items-center"><Calendar className="h-3.5 w-3.5" /> 28th April, 11:00 PM - 12:30 AM</li>
-                <li className="flex gap-2 items-center"><Cloud className="h-3.5 w-3.5" /> Weather: Rainy Night</li>
-                <li className="flex gap-2 items-center"><Video className="h-3.5 w-3.5" /> CCTV: Not working due to storm</li>
-              </ul>
-            </div>
+            ) : null}
           </div>
         </div>
 

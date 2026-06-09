@@ -16,16 +16,18 @@
 
 <li class="nav-item dropdown headerProfile">
   <a class="nav-link text-dark" data-toggle="dropdown" href="#">
-      <img src="{{ asset('front/assets/images/profile.png') }}" alt="User Profile" class="rounded-circle" width="40" height="40" />
+      @php $admin = auth('admin')->user(); @endphp
+      @if($admin && $admin->profile_photo_path)
+          <img src="{{ url('admin/showImage/storage/'.$admin->profile_photo_path) }}" alt="User Profile" class="rounded-circle" width="40" height="40" />
+      @else
+          <img src="{{ asset('front/assets/images/profile.png') }}" alt="User Profile" class="rounded-circle" width="40" height="40" />
+      @endif
       <span class="badge badge-danger navbar-badge"></span>
   </a>
   <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
       <a href="{{ url('admin/profile')}}" class="dropdown-item"><i class="fa fa-user-circle"></i> Profile</a>
       <div class="dropdown-divider"></div>
-      <a href="{{ url('admin/settings') }}" class="dropdown-item"><i class="fa fa-cog"></i> Setting</a> 
-        
-      
-       
+      <a href="{{ url('admin/settings') }}" class="dropdown-item"><i class="fa fa-cog"></i> Setting</a>
       <a href="{{ url('admin/logout')}}" class="dropdown-item"><i class="fa fa-sign-out-alt"></i> Logout</a>
   </div>
 </li>

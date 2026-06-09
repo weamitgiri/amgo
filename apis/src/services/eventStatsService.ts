@@ -29,6 +29,7 @@ export type EventStatsPayload = {
         name: string;
         email: string;
         joined_at: string | null;
+        group_id: number | null;
         group_name: string | null;
     }>;
     participants: Array<{
@@ -36,6 +37,7 @@ export type EventStatsPayload = {
         name: string;
         email: string;
         joined_at: string | null;
+        group_id: number | null;
         group_name: string | null;
     }>;
     groups: Array<{
@@ -209,6 +211,7 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
         `SELECT
             p.id, p.name, p.email,
             p.email_verified_at as joined_at,
+            p.group_id,
             g.group_name
          FROM game_participants p
          LEFT JOIN game_groups g ON p.group_id = g.id
@@ -278,6 +281,7 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
             name: p.name,
             email: p.email,
             joined_at: p.joined_at,
+            group_id: p.group_id ?? null,
             group_name: p.group_name,
         })),
         groups: groupsList,

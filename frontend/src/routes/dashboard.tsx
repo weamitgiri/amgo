@@ -191,46 +191,17 @@ function DashboardPage() {
         </div>
       ) : (
         <>
-          {/* Event Overview */}
-      <section className="rounded-2xl bg-white p-6 shadow-card">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Event Overview</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage your event, track participation, and prepare for the scheduled start.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* <span className="text-sm font-medium mr-1">Share Access Link</span>
-            <IconBtn
-              aria-label="Copy invite link"
-              onClick={async () => {
-                const link = booking?.invitation_link ? `${window.location.origin}/join/${booking.invitation_link}` : "";
-                if (!link) return;
-                try {
-                  await navigator.clipboard.writeText(link);
-                  toastSuccess('Invitation link copied to clipboard');
-                } catch (e) {
-                  toastError('Unable to copy link');
-                }
-              }}
-            >
-              <MessageCircle className="h-4 w-4 text-emerald-500" />
-            </IconBtn> */}
-            {/* <IconBtn
-              aria-label="Share via email"
-              onClick={() => {
-                const link = booking?.invitation_link ? `${window.location.origin}/join/${booking.invitation_link}` : "";
-                if (!link) return;
-                window.location.href = `mailto:?subject=You're invited&body=Join%20the%20event:%20${encodeURIComponent(link)}`;
-              }}
-            >
-              <Mail className="h-4 w-4 text-primary" />
-            </IconBtn> */}
-            <div className="flex items-center gap-2">
-              <PillIcon
-                icon={Link2}
-                label="Copy Link"
+          {/* Session Header */}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">Session Overview</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage your session, track participation, and prepare for the scheduled start.
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-semibold text-foreground">Share Access Link</span>
+              <button
                 onClick={async () => {
                   const link = booking?.invitation_link ? `${window.location.origin}/join/${booking.invitation_link}` : "";
                   if (!link) return;
@@ -243,102 +214,135 @@ function DashboardPage() {
                     toastError('Unable to copy link');
                   }
                 }}
-              />
-              {copyStatus && <span className="text-xs text-emerald-600">{copyStatus}</span>}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-border/80 bg-white px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors shadow-sm"
+              >
+                <Link2 className="h-4 w-4 text-primary" />
+                {copyStatus || 'Copy Link'}
+              </button>
             </div>
-            {/* <PillIcon icon={Share2} label="More" /> */}
+          </div>
+
+          {/* Event Overview */}
+      <section className="rounded-2xl bg-white shadow-card overflow-hidden">
+        <div className="p-6">
+          <div className="grid gap-5 lg:grid-cols-[220px_1fr_260px]">
+            {/* Left: Activity Image */}
+            <div className="relative h-[220px] w-full mt-2">
+              <div className="absolute inset-0 overflow-hidden rounded-2xl">
+                <img src={bookingImage} alt={activityName} className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
+              </div>
+              {bookingIcon && (
+                <img 
+                  src={bookingIcon} 
+                  alt={`${activityName} icon`} 
+                  className="absolute -top-6 left-1/2 -translate-x-1/2 w-[80%] max-w-[180px] object-contain drop-shadow-xl z-10" 
+                />
+              )}
+            </div>
+
+            {/* Center: Details */}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary shrink-0">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 22l-6-4-6 4 1.5-8.5L2 9h7z"/></svg>
+                </div>
+                <h2 className="text-xl font-bold">{activityName}</h2>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${booking?.booking_status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted/30 text-foreground/70'}`}>{booking?.booking_status ? booking.booking_status.charAt(0).toUpperCase()+booking.booking_status.slice(1) : 'Active'}</span>
+                <span className="text-xs text-muted-foreground">Package ID: {booking?.booking_id ?? '—'}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2 max-w-md">
+                A story-driven team challenge where employees collaborate, question, and compete to solve the case.
+              </p>
+              <div className="mt-5 grid grid-cols-3 gap-4 text-sm">
+                <Field label="Package" value={packageName} />
+                <Field label="Team Size" value={`Up to ${maxUsers} Participants`} />
+                <Field label="Groups" value={<>{maxGroups} Groups <span className="text-xs text-muted-foreground font-normal">({Math.min(5, maxUsers)} per group)</span></>} />
+              </div>
+            </div>
+
+            {/* Right: Reschedule Panel */}
+            <div className="rounded-2xl bg-purple-50/60 border border-purple-100 p-5 flex flex-col">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <span>Reschedule</span>
+                <span className="text-xs font-normal text-muted-foreground">• 1 time allowed</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                You can reschedule your event once before starting the game.
+              </p>
+              {booking?.is_rescheduled || rescheduled ? (
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700 font-medium">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" /> Rescheduled successfully
+                </div>
+              ) : (
+                <button
+                  onClick={() => setRescheduleOpen(true)}
+                  className="mt-3 w-full rounded-full border-2 border-primary text-primary bg-white text-sm font-semibold py-2 hover:bg-primary/5 transition-colors"
+                >
+                  Reschedule Event
+                </button>
+              )}
+              <div className="mt-4 text-xs text-muted-foreground font-medium">Current Schedule</div>
+              <div className="mt-1 flex items-center gap-3 text-sm font-medium">
+                <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-primary" /> {currentScheduleDate}</span>
+                <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5 text-primary" /> {currentScheduleTime}</span>
+              </div>
+              <div className="mt-3 text-xs text-muted-foreground font-medium">Reschedule untill</div>
+              <div className="text-sm font-medium">{rescheduleUntilLabel}</div>
+            </div>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-5 lg:grid-cols-[260px_1fr_260px]">
-          <div className="relative h-[180px] w-full overflow-hidden rounded-2xl">
-            <img src={bookingImage} alt={activityName} className="h-full w-full object-cover" />
-            {bookingIcon && (
-              <div className="absolute left-4 top-4 rounded-3xl border border-white/80 bg-white/90 p-2 shadow-lg">
-                <img src={bookingIcon} alt={`${activityName} icon`} className="h-10 w-10 rounded-xl object-cover" />
+        {/* Bottom Info Strip */}
+        <div className="border-t border-border/60 px-6 py-4">
+          <div className="grid grid-cols-4 gap-0 text-sm">
+            <div className="flex items-start gap-3 pr-4">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-purple-50 text-primary shrink-0 mt-0.5">
+                <Calendar className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-muted-foreground">Date</div>
+                <div className="font-semibold mt-0.5">{currentScheduleDate}</div>
               </div>
-            )}
-          </div>
-
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary">
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 22l-6-4-6 4 1.5-8.5L2 9h7z"/></svg>
+            </div>
+            <div className="flex items-start gap-3 border-l border-border/60 pl-4 pr-4">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-purple-50 text-primary shrink-0 mt-0.5">
+                <Clock className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-muted-foreground">Start Time</div>
+                <div className="font-semibold mt-0.5">{currentScheduleTime} <span className="text-xs text-muted-foreground font-normal">(IST)</span></div>
               </div>
-              <h2 className="text-xl font-bold">{activityName}</h2>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${booking?.booking_status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted/30 text-foreground/70'}`}>{booking?.booking_status ? booking.booking_status.charAt(0).toUpperCase()+booking.booking_status.slice(1) : 'Active'}</span>
-              <span className="text-xs text-muted-foreground">Booking ID: {booking?.booking_id ?? '—'}</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-2 max-w-md">
-              A story-driven team challenge where employees collaborate, question, and compete to solve the case.
-            </p>
-            <div className="mt-5 grid grid-cols-3 gap-4 text-sm">
-              <Field label="Package" value={packageName} />
-              <Field label="Team Size" value={`Up to ${maxUsers} Participants`} />
-              <Field label="Groups" value={`${maxGroups} Groups`} />
+            <div className="flex items-start gap-3 border-l border-border/60 pl-4 pr-4">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-purple-50 text-primary shrink-0 mt-0.5">
+                <ShieldCheck className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-muted-foreground">Access Validity</div>
+                <div className="font-semibold mt-0.5">5 Days <span className="text-xs text-muted-foreground font-normal">from activation</span></div>
+              </div>
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-              <Field label="Package Price" value={booking?.package_price ? `₹ ${booking.package_price}` : '—'} />
-              <Field label="Registered" value={`${eventStats?.event_progress.participants_joined ?? participantsJoined}`} />
-              <Field
-                label="Access Link"
-                value={
-                  booking?.invitation_link ? (
-                    <a className="text-primary" href={`${window.location.origin}/join/${booking.invitation_link}`}>
-                      open
-                    </a>
+            <div className="flex items-start gap-3 border-l border-border/60 pl-4">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-purple-50 text-primary shrink-0 mt-0.5">
+                <Download className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-muted-foreground">GST Invoice</div>
+                <div className="font-semibold mt-0.5">
+                  {booking?.booking_id ? (
+                    <button
+                      onClick={() => navigate({ to: `/payments`, search: { booking: String(booking.booking_id) } })}
+                      className="text-primary hover:underline"
+                    >
+                      download
+                    </button>
                   ) : (
-                    '—'
-                  )
-                }
-              />
-            </div>
-            <div className="mt-5 grid grid-cols-4 gap-4 border-t border-border/60 pt-4 text-sm">
-              <IconField icon={Calendar} label="Date" value={currentScheduleDate} extra="" />
-              <IconField icon={Clock} label="Start Time" value={currentScheduleTime} extra="" />
-              <IconField icon={ShieldCheck} label="Access Validity" value="5 Days" extra="from activation" />
-              <IconField icon={Download} label="GST Invoice" value={
-                booking?.booking_id ? (
-                  <button
-                    onClick={() => navigate({ to: `/payments`, search: { booking: String(booking.booking_id) } })}
-                    className="text-primary"
-                  >
-                    download
-                  </button>
-                ) : (
-                  <span className="text-muted">—</span>
-                )
-              } />
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-purple-50/60 border border-purple-100 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <span>Reschedule</span>
-              <span className="text-xs font-normal text-muted-foreground">• 1 time allowed</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              You can reschedule your event once before starting the game.
-            </p>
-            {booking?.is_rescheduled || rescheduled ? (
-              <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700 font-medium">
-                <CheckCircle2 className="h-4 w-4 shrink-0" /> Rescheduled successfully
+                    <span className="text-muted">—</span>
+                  )}
+                </div>
               </div>
-            ) : (
-              <button
-                onClick={() => setRescheduleOpen(true)}
-                className="mt-3 w-full rounded-full bg-gradient-primary text-white text-sm font-semibold py-2.5 shadow-glow hover:opacity-90 transition-opacity"
-              >
-                Reschedule Event
-              </button>
-            )}
-            <div className="mt-4 text-xs text-muted-foreground">Current Schedule</div>
-            <div className="mt-1 flex items-center gap-3 text-sm font-medium">
-              <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-primary" /> {currentScheduleDate}</span>
-              <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5 text-primary" /> {currentScheduleTime}</span>
             </div>
-            <div className="mt-3 text-xs text-muted-foreground">Reschedule until</div>
-            <div className="text-sm font-medium">{rescheduleUntilLabel}</div>
           </div>
         </div>
       </section>
@@ -382,11 +386,16 @@ function DashboardPage() {
             <CardTitle icon={Layers} color="text-primary" bg="bg-primary/10">Recent Groups</CardTitle>
             <a className="text-sm text-primary font-medium">View All Groups</a>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="mt-4 grid grid-cols-3 gap-4">
             {eventStats?.recent_groups && eventStats.recent_groups.length > 0 ? (
-              eventStats.recent_groups.map((g) => (
-                <GroupCard key={g.id} num={g.id} count={g.fill_status} status={g.is_complete ? 'Complete' : 'In Progress'} tone={g.is_complete ? 'success' : 'warning'} />
-              ))
+              eventStats.recent_groups.map((g) => {
+                const groupMembers = (eventStats.recent_participants || []).filter(
+                  (p) => p.group_id === g.id || p.group_name === g.name
+                );
+                return (
+                  <GroupCard key={g.id} num={g.id} count={g.fill_status} status={g.is_complete ? 'Complete' : 'In Progress'} tone={g.is_complete ? 'success' : 'warning'} members={groupMembers} />
+                );
+              })
             ) : (
               <div className="col-span-3 text-sm text-muted-foreground">No recent groups to show.</div>
             )}
@@ -405,16 +414,20 @@ function DashboardPage() {
             <a className="text-sm text-primary font-medium">View All</a>
           </div>
           <p className="text-sm text-muted-foreground mt-1">Ensure all the participants have joined and groups are complete</p>
-          <div className="mt-4 max-h-[280px] overflow-y-auto pr-1 space-y-3 scrollbar-thin">
+          <div className="mt-4 max-h-[280px] overflow-y-auto pr-2 divide-y divide-border/60 scrollbar-thin">
             {eventStats?.recent_participants && eventStats.recent_participants.length > 0 ? (
               eventStats.recent_participants.map((p) => {
-                const initials = p.name.split(" ").map((s: string) => s[0]).slice(0, 2).join("");
+                const safeName = p.name || "?";
+                const initials = safeName.split(" ").map((s: string) => s[0] || "").slice(0, 2).join("").toUpperCase();
+                const gradients = ["from-emerald-300 to-emerald-400", "from-rose-300 to-rose-400", "from-cyan-300 to-cyan-400", "from-indigo-300 to-indigo-400", "from-amber-300 to-amber-400", "from-slate-400 to-slate-500"];
+                const bgGrad = gradients[safeName.length % 6];
+                
                 return (
-                  <div key={p.email} className="flex items-center gap-3 text-sm shrink-0">
-                    <div className="grid h-8 w-8 place-items-center rounded-full text-xs font-semibold bg-muted/30">{initials}</div>
+                  <div key={p.email} className="flex items-center gap-4 py-3.5 text-sm shrink-0">
+                    <div className={`grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-white bg-gradient-to-br ${bgGrad} shadow-sm`}>{initials}</div>
                     <div className="flex-1 min-w-0 font-medium truncate">{p.name}</div>
                     <div className="text-xs text-muted-foreground whitespace-nowrap">{formatJoinedAt(p.joined_at)}</div>
-                    <span className="rounded-full bg-purple-100 text-primary text-xs px-2.5 py-0.5 font-medium whitespace-nowrap">{p.group_name ?? "—"}</span>
+                    <span className="rounded-full bg-purple-50 border border-purple-100 text-primary text-xs px-3 py-1 font-semibold whitespace-nowrap shadow-sm">{p.group_name ?? "—"}</span>
                   </div>
                 );
               })
@@ -515,18 +528,37 @@ function Stat2({ icon: Icon, label, value, sub }: any) {
     </div>
   );
 }
-function GroupCard({ num, count, status, tone }: any) {
-  const toneCls = tone === "success" ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700";
+function GroupCard({ num, count, status, tone, members = [] }: any) {
+  const gradients = ["from-emerald-300 to-emerald-400", "from-rose-300 to-rose-400", "from-cyan-300 to-cyan-400", "from-indigo-300 to-indigo-400", "from-amber-300 to-amber-400", "from-slate-400 to-slate-500"];
+  
   return (
-    <div className="rounded-xl border border-border p-3">
-      <div className="font-semibold">Group {num}</div>
-      <div className="text-xs text-muted-foreground">{count}</div>
-      <div className="mt-3 flex -space-x-1.5">
-        {["bg-amber-200","bg-purple-200","bg-pink-200","bg-orange-200","bg-emerald-200"].map((c,i) => (
-          <span key={i} className={`h-6 w-6 rounded-full border-2 border-white ${c}`} />
-        ))}
+    <div className="rounded-2xl border border-border/80 p-4 flex flex-col justify-between">
+      <div>
+        <div className="font-bold text-foreground text-[15px]">Group {num}</div>
+        <div className="text-sm text-muted-foreground mt-0.5">{count}</div>
       </div>
-      <div className={`mt-3 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${toneCls}`}>{status}</div>
+      <div className="mt-4 flex -space-x-1.5">
+        {members.slice(0, 5).map((m: any, i: number) => {
+          const safeName = m.name || "?";
+          const initials = safeName.split(" ").map((s: string) => s[0] || "").slice(0, 2).join("").toUpperCase();
+          const bgGrad = gradients[safeName.length % 6];
+          return (
+            <div key={i} style={{ zIndex: 5 - i }} className={`relative h-7 w-7 rounded-full border-[1.5px] border-white bg-gradient-to-br ${bgGrad} grid place-items-center text-[9px] font-bold text-white shrink-0 shadow-sm`}>
+              {initials}
+            </div>
+          )
+        })}
+        {members.length === 0 && (
+           <div className="text-[11px] text-muted-foreground">Waiting for participants...</div>
+        )}
+      </div>
+      <div className="mt-5">
+        {tone === "success" ? (
+          <span className="inline-block rounded-full px-3 py-1 text-[11px] font-bold bg-emerald-50 text-emerald-500 border border-emerald-200/60 shadow-sm">Complete</span>
+        ) : (
+          <span className="inline-block rounded-full px-3 py-1 text-[11px] font-bold bg-orange-50 text-orange-500 border border-orange-200/60 shadow-sm">In Progress</span>
+        )}
+      </div>
     </div>
   );
 }

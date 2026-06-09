@@ -9,6 +9,45 @@ import { organizerService } from "@/api/services/organizer.service";
 import type { OrganizerProfileResponse } from "@/api/types/organizer";
 import { toastError, toastSuccess } from "@/lib/toast";
 
+const INDIAN_STATES = [
+  { value: "Andhra Pradesh", label: "Andhra Pradesh" },
+  { value: "Arunachal Pradesh", label: "Arunachal Pradesh" },
+  { value: "Assam", label: "Assam" },
+  { value: "Bihar", label: "Bihar" },
+  { value: "Chhattisgarh", label: "Chhattisgarh" },
+  { value: "Goa", label: "Goa" },
+  { value: "Gujarat", label: "Gujarat" },
+  { value: "Haryana", label: "Haryana" },
+  { value: "Himachal Pradesh", label: "Himachal Pradesh" },
+  { value: "Jharkhand", label: "Jharkhand" },
+  { value: "Karnataka", label: "Karnataka" },
+  { value: "Kerala", label: "Kerala" },
+  { value: "Madhya Pradesh", label: "Madhya Pradesh" },
+  { value: "Maharashtra", label: "Maharashtra" },
+  { value: "Manipur", label: "Manipur" },
+  { value: "Meghalaya", label: "Meghalaya" },
+  { value: "Mizoram", label: "Mizoram" },
+  { value: "Nagaland", label: "Nagaland" },
+  { value: "Odisha", label: "Odisha" },
+  { value: "Punjab", label: "Punjab" },
+  { value: "Rajasthan", label: "Rajasthan" },
+  { value: "Sikkim", label: "Sikkim" },
+  { value: "Tamil Nadu", label: "Tamil Nadu" },
+  { value: "Telangana", label: "Telangana" },
+  { value: "Tripura", label: "Tripura" },
+  { value: "Uttar Pradesh", label: "Uttar Pradesh" },
+  { value: "Uttarakhand", label: "Uttarakhand" },
+  { value: "West Bengal", label: "West Bengal" },
+  { value: "Andaman and Nicobar Islands", label: "Andaman and Nicobar Islands" },
+  { value: "Chandigarh", label: "Chandigarh" },
+  { value: "Dadra and Nagar Haveli and Daman and Diu", label: "Dadra and Nagar Haveli and Daman and Diu" },
+  { value: "Delhi", label: "Delhi" },
+  { value: "Jammu and Kashmir", label: "Jammu and Kashmir" },
+  { value: "Ladakh", label: "Ladakh" },
+  { value: "Lakshadweep", label: "Lakshadweep" },
+  { value: "Puducherry", label: "Puducherry" },
+];
+
 export const Route = createFileRoute("/profile")({
   beforeLoad: requireOrganizerAuth,
   head: () => ({ meta: [{ title: "Edit Profile — Zoventro" }] }),
@@ -173,7 +212,7 @@ function ProfilePage() {
                   <BField label="GST Number" value={gstNumber} onChange={setGstNumber} />
                   <BField label="Billing Address" value={billingAddress} onChange={setBillingAddress} />
                   <BField label="City" value={city} onChange={setCity} />
-                  <BField label="State" value={state} onChange={setState} />
+                  <BField label="State" value={state} onChange={setState} options={INDIAN_STATES} />
                   <BField label="PIN Code" value={pinCode} onChange={setPinCode} />
                 </div>
                 <button
@@ -225,25 +264,44 @@ function BField({
   onChange,
   type = "text",
   readOnly = false,
+  options,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
   readOnly?: boolean;
+  options?: { value: string; label: string }[];
 }) {
   return (
     <label className="block">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <input
-        type={type}
-        value={value}
-        readOnly={readOnly}
-        onChange={(e) => onChange(e.target.value)}
-        className={`mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
-          readOnly ? "bg-muted/40 cursor-not-allowed text-muted-foreground" : ""
-        }`}
-      />
+      {options ? (
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        >
+          <option value="" disabled>
+            Select {label}
+          </option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type={type}
+          value={value}
+          readOnly={readOnly}
+          onChange={(e) => onChange(e.target.value)}
+          className={`mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+            readOnly ? "bg-muted/40 cursor-not-allowed text-muted-foreground" : ""
+          }`}
+        />
+      )}
     </label>
   );
 }

@@ -18,9 +18,7 @@ export function Footer() {
   const pages = [
     { label: "Home", to: "/" },
     { label: "Pricing", to: "/#pricing" },
-    { label: "Blog", to: "#" },
     { label: "Contact", to: "/#contact" },
-    { label: "FAQs", to: "#" },
     { label: "Login", to: "/login" },
   ];
 

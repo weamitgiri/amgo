@@ -510,3 +510,105 @@
 2026-06-05 23:10:46:1046 [31merror[39m: [31mGroup not found[39m
 2026-06-05 23:11:11:1111 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
 2026-06-05 23:15:05:155 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-07 21:46:09:469 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 22:09:08:98 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:13:913 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:14:914 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:14:914 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:15:915 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:15:915 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:15:915 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:15:915 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:15:915 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:15:915 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:16:916 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:16:916 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:16:916 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:16:916 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:09:16:916 [31merror[39m: [31mRescheduling is only allowed until 05 Jun 2026, 08:15 PM (1 hour before start).[39m
+2026-06-07 22:11:05:115 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 22:18:08:188 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 22:31:39:3139 [31merror[39m: [31mGroup not found[39m
+2026-06-07 22:31:54:3154 [31merror[39m: [31mGroup not found[39m
+2026-06-07 22:32:08:328 [31merror[39m: [31mGroup not found[39m
+2026-06-07 22:33:12:3312 [31merror[39m: [31mInvalid invitation link[39m
+2026-06-07 22:33:45:3345 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-07 22:35:20:3520 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 22:35:48:3548 [31merror[39m: [31mScheduled session must be in the future.[39m
+2026-06-07 22:36:02:362 [31merror[39m: [31mScheduled session must be in the future.[39m
+2026-06-07 22:36:03:363 [31merror[39m: [31mScheduled session must be in the future.[39m
+2026-06-07 22:36:03:363 [31merror[39m: [31mScheduled session must be in the future.[39m
+2026-06-07 22:36:24:3624 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:05:36:536 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:06:30:630 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:07:08:78 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:09:26:926 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:09:30:930 [31merror[39m: [31mInvalid OTP[39m
+2026-06-07 23:09:54:954 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:10:06:106 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:10:35:1035 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:10:54:1054 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:11:12:1112 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:11:29:1129 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:12:11:1211 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:12:27:1227 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:12:41:1241 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-07 23:13:38:1338 [31merror[39m: [31mJoin limit reached. This package allows a maximum of 10 participants.[39m
+2026-06-07 23:21:19:2119 [31merror[39m: [31mJoin limit reached. This package allows a maximum of 10 participants.[39m
+2026-06-07 23:30:22:3022 [31merror[39m: [31mJoin limit reached. This package allows a maximum of 10 participants.[39m
+2026-06-07 23:59:34:5934 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-07 23:59:48:5948 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:15:1115 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:17:1117 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:18:1118 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:19:1119 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:24:1124 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:26:1126 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:38:1138 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:39:1139 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:40:1140 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:43:1143 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:43:1143 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:45:1145 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:45:1145 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:45:1145 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:45:1145 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:45:1145 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:11:48:1148 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-08 00:13:56:1356 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 00:28:53:2853 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 00:28:58:2858 [31merror[39m: [31m[DB] Query failed: Unknown column 'account_status' in 'field list'[39m
+2026-06-08 00:29:05:295 [31merror[39m: [31m[DB] Query failed: Unknown column 'account_status' in 'field list'[39m
+2026-06-08 00:29:15:2915 [31merror[39m: [31m[DB] Query failed: Unknown column 'account_status' in 'field list'[39m
+2026-06-08 00:29:16:2916 [31merror[39m: [31m[DB] Query failed: Unknown column 'account_status' in 'field list'[39m
+2026-06-08 00:31:17:3117 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 00:31:42:3142 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:44:3144 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:44:3144 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:44:3144 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:44:3144 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:45:3145 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:45:3145 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:45:3145 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:45:3145 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:46:3146 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:46:3146 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 00:31:46:3146 [31merror[39m: [31mSession must be scheduled within 5 days of payment.[39m
+2026-06-08 20:36:38:3638 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 20:43:59:4359 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 20:44:12:4412 [31merror[39m: [31mPlease complete payment to activate your account.[39m
+2026-06-08 20:44:19:4419 [31merror[39m: [31mError sending OTP email: Greeting never received[39m
+2026-06-08 20:44:35:4435 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 20:57:06:576 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 20:57:53:5753 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 21:00:26:026 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 21:01:32:132 [31merror[39m: [31mError sending OTP email: Greeting never received[39m
+2026-06-08 21:01:45:145 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 21:02:04:24 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 21:02:36:236 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 21:02:42:242 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 21:03:04:34 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 21:04:08:48 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 21:04:12:412 [31merror[39m: [31mInvalid OTP[39m
+2026-06-08 21:04:29:429 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-08 21:04:54:454 [31merror[39m: [31mError sending OTP email: Greeting never received[39m

@@ -134,4 +134,11 @@ export type GameSummaryResponse = {
   photos: { id: number; label: string; image: string | null }[];
   rules: { id: number; title: string; description: string; details: string[] }[];
   strategy_slides: { title: string; description: string; details: string[] }[];
+  clues: {
+    id: number;
+    clue_title: string;
+    clue_short_description: string | null;
+    clue_detail: string | null;
+    clue_image: string | null;
+  }[];
 };

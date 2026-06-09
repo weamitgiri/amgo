@@ -114,6 +114,7 @@ export interface RecentParticipant {
   email: string;
   joined_at: string;
   group_name?: string | null;
+  group_id?: number | null;
 }
 
 export interface BookingParticipant {
@@ -121,6 +122,7 @@ export interface BookingParticipant {
   name: string;
   email: string;
   joined_at: string | null;
+  group_id?: number | null;
   group_name?: string | null;
 }
 

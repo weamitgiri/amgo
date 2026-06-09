@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken';
 
 import crypto from 'crypto';
 import { buildEventStats } from '../services/eventStatsService';
+import { ensureOrganizerStatusColumns } from '../utils/schemaHelpers';
 
 export const registerOrganizer = asyncHandler(async (req: Request, res: Response) => {
     const { name, email, company_name, company_website } = req.body;
@@ -16,6 +17,9 @@ export const registerOrganizer = asyncHandler(async (req: Request, res: Response
     //const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otp = '123456';
     const otp_expires_at = moment().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+
+    // Ensure schema has payment/account columns (avoid runtime SQL errors)
+    await ensureOrganizerStatusColumns();
 
     // Check if organizer already exists
     const [existing] = await query('SELECT id FROM organizers WHERE email = ?', [email]);
@@ -29,8 +33,8 @@ export const registerOrganizer = asyncHandler(async (req: Request, res: Response
         );
     } else {
         const [result] = await query(
-            'INSERT INTO organizers (name, email, company_name, company_website, otp, otp_expires_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [name, email, company_name, company_website, otp, otp_expires_at, 'active']
+            'INSERT INTO organizers (name, email, company_name, company_website, otp, otp_expires_at, status, payment_status, account_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, email, company_name, company_website, otp, otp_expires_at, 'active', 'pending', 'pending']
         );
         organizerId = (result as any).insertId;
     }
@@ -73,8 +77,10 @@ export const organizerLogin = asyncHandler(async (req: Request, res: Response) =
 export const verifyLoginOtp = asyncHandler(async (req: Request, res: Response) => {
     const { email, otp } = req.body;
 
+    await ensureOrganizerStatusColumns();
+
     const [rows] = await query(
-        'SELECT id, name, otp, otp_expires_at FROM organizers WHERE email = ?',
+        'SELECT id, name, otp, otp_expires_at, email_verified_at, status, payment_status, account_status FROM organizers WHERE email = ?',
         [email]
     );
 
@@ -90,6 +96,14 @@ export const verifyLoginOtp = asyncHandler(async (req: Request, res: Response) =
 
     if (moment().isAfter(moment(organizer.otp_expires_at))) {
         throw new AppError('OTP expired', 400);
+    }
+
+    if (!organizer.email_verified_at) {
+        throw new AppError('Email verification required before signing in.', 403);
+    }
+
+    if (organizer.account_status !== 'active' || organizer.payment_status !== 'paid') {
+        throw new AppError('Please complete payment to activate your account.', 403);
     }
 
     // Clear OTP after successful login
@@ -175,6 +189,8 @@ export const getEventStats = asyncHandler(async (req: Request, res: Response) =>
 export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
     const { email, otp } = req.body;
 
+    await ensureOrganizerStatusColumns();
+
     const [rows] = await query(
         'SELECT id, otp, otp_expires_at FROM organizers WHERE email = ?',
         [email]
@@ -196,8 +212,8 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
 
     // Mark as verified via email timestamp; keep status value aligned with schema
     await query(
-        'UPDATE organizers SET email_verified_at = ?, otp = NULL, otp_expires_at = NULL WHERE id = ?',
-        [moment().format('YYYY-MM-DD HH:mm:ss'), organizer.id]
+        'UPDATE organizers SET email_verified_at = ?, otp = NULL, otp_expires_at = NULL, account_status = CASE WHEN account_status = ? THEN ? ELSE ? END, payment_status = COALESCE(payment_status, ?) WHERE id = ?',
+        [moment().format('YYYY-MM-DD HH:mm:ss'), 'active', 'active', 'pending', 'pending', organizer.id]
     );
 
     return successResponse(res, 'Email verified successfully.', { organizer_id: organizer.id });
@@ -380,12 +396,45 @@ export const completeBooking = asyncHandler(async (req: Request, res: Response) 
             'UPDATE organizer_bookings SET status = ?, invitation_link = ? WHERE id = ?',
             ['completed', invitation_link, booking_id]
         );
+        await conn.query(
+            'UPDATE organizers SET payment_status = ?, account_status = ? WHERE id = ?',
+            ['paid', 'active', currentBooking[0].organizer_id]
+        );
     });
 
     return successResponse(res, 'Booking completed successfully.', {
         booking_id,
         invitation_link,
     });
+});
+
+export const confirmPayment = asyncHandler(async (req: Request, res: Response) => {
+    const { booking_id, billing_id } = req.body;
+
+    if (!booking_id && !billing_id) {
+        throw new AppError('Booking ID or billing ID is required.', 400);
+    }
+
+    const [rows] = await query(
+        `SELECT ob.id as booking_id, ob.organizer_id, b.id as billing_id
+         FROM organizer_bookings ob
+         LEFT JOIN organizer_billings b ON b.booking_id = ob.id
+         WHERE ${billing_id ? 'b.id = ?' : 'ob.id = ?'}`,
+        [billing_id || booking_id]
+    );
+
+    if (rows.length === 0) {
+        throw new AppError('Booking or billing record not found.', 404);
+    }
+
+    const row = rows[0] as any;
+    const paymentBillingId = row.billing_id || billing_id;
+
+    await query('UPDATE organizer_billings SET payment_status = ? WHERE id = ?', ['paid', paymentBillingId]);
+    await query('UPDATE organizer_bookings SET status = ? WHERE id = ?', ['completed', row.booking_id]);
+    await query('UPDATE organizers SET payment_status = ?, account_status = ? WHERE id = ?', ['paid', 'active', row.organizer_id]);
+
+    return successResponse(res, 'Payment confirmed and organizer account activated.');
 });
 
 export const updateSession = asyncHandler(async (req: Request, res: Response) => {

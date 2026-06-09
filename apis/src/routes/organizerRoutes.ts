@@ -156,6 +156,17 @@ router.post(
     organizerController.completeBooking
 );
 
+// Payment Confirmation (webhook or manual)
+router.post(
+    '/confirm-payment',
+    [
+        body('booking_id').optional().isNumeric().withMessage('Booking ID must be numeric'),
+        body('billing_id').optional().isNumeric().withMessage('Billing ID must be numeric'),
+    ],
+    validateRequest,
+    organizerController.confirmPayment
+);
+
 // Update Session Date/Time (One-time only)
 router.post(
     '/update-session',

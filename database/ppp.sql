@@ -312,6 +312,8 @@ INSERT INTO `cache` (`key`, `value`, `expiration`) VALUES
 ('356a192b7913b04c54574d18c28d46e6395428ab:timer', 'i:1779968930;', 1779968930),
 ('424f74a6a7ed4d4ed4761507ebcd209a6ef0937b', 'i:4;', 1779861437),
 ('424f74a6a7ed4d4ed4761507ebcd209a6ef0937b:timer', 'i:1779861437;', 1779861437),
+  `payment_status` enum('pending','paid','failed') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `account_status` enum('pending','active','inactive') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
 ('5c785c036466adea360111aa28563bfd556b5fba', 'i:1;', 1779964370),
 ('5c785c036466adea360111aa28563bfd556b5fba:timer', 'i:1779964370;', 1779964370);
 
