@@ -703,3 +703,39 @@
 2026-06-08 21:04:12:412 [31merror[39m: [31mInvalid OTP[39m
 2026-06-08 21:04:29:429 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
 2026-06-08 21:04:54:454 [31merror[39m: [31mError sending OTP email: Greeting never received[39m
+2026-06-09 20:42:09:429 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:10:4210 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:11:4211 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:11:4211 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:11:4211 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:11:4211 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:12:4212 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:12:4212 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:12:4212 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:12:4212 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:12:4212 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:12:4212 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:13:4213 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:13:4213 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:42:13:4213 [31merror[39m: [31mOrganizer not found. Please register first.[39m
+2026-06-09 20:43:14:4314 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:22:31:2231 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-09 22:22:37:2237 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-09 22:24:24:2424 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:25:15:2515 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:25:43:2543 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:25:46:2546 [31merror[39m: [31mBooking not found[39m
+2026-06-09 22:25:47:2547 [31merror[39m: [31mBooking not found[39m
+2026-06-09 22:25:49:2549 [31merror[39m: [31mBooking not found[39m
+2026-06-09 22:26:04:264 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:26:25:2625 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:26:41:2641 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:27:05:275 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:27:22:2722 [31merror[39m: [31mBooking not found[39m
+2026-06-09 22:27:28:2728 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-09 22:27:36:2736 [31merror[39m: [31mThis invitation link has expired[39m
+2026-06-09 22:28:01:281 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:28:27:2827 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:28:51:2851 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:29:08:298 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m
+2026-06-09 22:30:02:302 [31merror[39m: [31mError sending OTP email: Invalid login: 535 5.7.8 Authentication failed[39m

@@ -188,6 +188,18 @@ function GamePage() {
     }
   }, [secsCase, phase, gameData]);
 
+  // Redirect to results page when the game time is over (only once per session)
+  useEffect(() => {
+    if (loading) return;
+    if (!session?.groupId) return;
+    if (gameData && secsHdr === 0) {
+      const endedKey = `game_ended_${session.groupId}`;
+      if (sessionStorage.getItem(endedKey)) return;
+      sessionStorage.setItem(endedKey, "1");
+      navigate({ to: "/results" });
+    }
+  }, [secsHdr, loading, session?.groupId, gameData, navigate]);
+
   // Persist activity and questionsLeft state to sessionStorage
   useEffect(() => {
     if (!session?.groupId) return;
@@ -467,7 +479,7 @@ function SummaryView(props: {
           <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-6">
             <h3 className="text-center text-lg font-bold">Key People in the Bungalow</h3>
             <div className={`mt-5 grid gap-4 ${people.length <= 5 ? "grid-cols-5" : "grid-cols-3 sm:grid-cols-5"}`}>
-              {people.map((p) => (
+                {people.map((p) => (
                 <div
                   key={p.id}
                   className={`rounded-[20px] overflow-hidden transition-all shadow-sm border ${
@@ -478,13 +490,14 @@ function SummaryView(props: {
                 >
                   <div className="w-full h-44 md:h-56 bg-black grid place-items-center overflow-hidden">
                     {p.role_image ? (
-                      <img src={resolveMediaUrl(p.role_image) ?? ""} alt={p.name} className="w-full h-full object-cover" />
+                      <img src={resolveMediaUrl(p.role_image) ?? ""} alt={p.name} className="w-full h-full object-cover object-top" />
                     ) : (
                       <div className={`h-full w-full ${p.grad} grid place-items-center`}>
                         <Eye className="h-7 w-7 text-white/70" />
                       </div>
                     )}
                   </div>
+REPLACE
 
                   <div className="p-4 bg-[#2a1830] text-center">
                     <div className="text-sm text-white/90 leading-snug font-medium">
