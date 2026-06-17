@@ -1,0 +1,1008 @@
+================================================================================
+                    UBUNTU 22 LTS SERVER SETUP GUIDE
+          Complete Setup for Multi-Stack Application Deployment
+================================================================================
+
+Ubuntu 22 LTS (Jammy) - Long Term Support until April 2027
+Ideal for: Production servers, stability, and long-term support
+
+================================================================================
+PART 1: INITIAL UBUNTU 22 SETUP (FIRST TIME)
+================================================================================
+
+1.1 LAUNCH UBUNTU 22 LTS SERVER:
+   - AWS AMI: Ubuntu Server 22.04 LTS (HVM)
+   - Instance Type: t3.medium or larger
+   - Storage: 20GB minimum
+   - Network: Assign public IP
+   - Security: Use key pair (.pem file)
+
+1.2 CONNECT TO SERVER:
+   # From your local machine
+   chmod 400 your-key.pem
+   ssh -i your-key.pem ubuntu@<public-ip>
+   
+   # First time prompt: Type 'yes' to accept host key
+
+1.3 UPDATE SYSTEM (CRITICAL - RUN FIRST):
+   sudo apt update
+   sudo apt upgrade -y
+   sudo apt autoremove -y
+   
+   # Reboot if kernel updated
+   sudo reboot
+   
+   # Wait 30 seconds, then reconnect
+   ssh -i your-key.pem ubuntu@<public-ip>
+
+================================================================================
+PART 2: ESSENTIAL TOOLS & DEPENDENCIES
+================================================================================
+
+2.1 INSTALL BASIC TOOLS:
+   sudo apt install -y \
+     curl \
+     wget \
+     git \
+     vim \
+     nano \
+     htop \
+     net-tools \
+     build-essential \
+     openssl \
+     libssl-dev \
+     pkg-config \
+     software-properties-common \
+     apt-transport-https \
+     ca-certificates \
+     gnupg \
+     lsb-release
+
+2.2 VERIFY INSTALLATION:
+   curl --version
+   git --version
+   vim --version
+
+2.3 SETUP TIMEZONE (Important for servers):
+   # Check current timezone
+   timedatectl
+   
+   # Set to your timezone
+   sudo timedatectl set-timezone Asia/Kolkata
+   
+   # Verify
+   timedatectl
+
+2.4 SETUP SWAP (If not available):
+   # Check if swap exists
+   free -h
+   
+   # If 0B, create swap
+   sudo fallocate -l 4G /swapfile
+   sudo chmod 600 /swapfile
+   sudo mkswap /swapfile
+   sudo swapon /swapfile
+   
+   # Make permanent
+   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+================================================================================
+PART 3: SSH CONFIGURATION & SECURITY
+================================================================================
+
+3.1 DISABLE PASSWORD LOGIN:
+   sudo nano /etc/ssh/sshd_config
+   
+   # Find and change these lines:
+   PermitRootLogin no
+   PasswordAuthentication no
+   PubkeyAuthentication yes
+   
+   # Save: Ctrl+O, Enter, Ctrl+X
+   
+   # Restart SSH
+   sudo systemctl restart sshd
+
+3.2 SETUP FIREWALL (UFW):
+   sudo ufw enable
+   
+   # Allow SSH (CRITICAL - do this first!)
+   sudo ufw allow 22/tcp
+   
+   # Allow HTTP/HTTPS
+   sudo ufw allow 80/tcp
+   sudo ufw allow 443/tcp
+   
+   # Allow custom ports
+   sudo ufw allow 5000/tcp  # For Node.js API
+   sudo ufw allow 3306/tcp  # For MySQL (if needed)
+   
+   # Check status
+   sudo ufw status numbered
+
+3.3 SETUP FAIL2BAN (Prevent brute force):
+   sudo apt install -y fail2ban
+   
+   # Start service
+   sudo systemctl enable fail2ban
+   sudo systemctl start fail2ban
+   
+   # Check status
+   sudo fail2ban-client status
+
+3.4 GENERATE SSH KEY (if needed):
+   ssh-keygen -t ed25519 -C "your-email@example.com"
+   # Or for older systems: ssh-keygen -t rsa -b 4096
+
+================================================================================
+PART 4: INSTALL NODE.JS (For API Server)
+================================================================================
+
+4.1 ADD NODE.JS REPOSITORY:
+   curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+   
+   # For Node 20 (newer):
+   # curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+
+4.2 INSTALL NODE.JS & NPM:
+   sudo apt install -y nodejs
+   
+   # Verify
+   node --version      # Should be v18.x or v20.x
+   npm --version       # Should be 9.x or 10.x
+
+4.3 INSTALL GLOBAL PACKAGES:
+   # PM2 (Process Manager)
+   sudo npm install -g pm2
+   
+   # Yarn (Optional, faster npm)
+   sudo npm install -g yarn
+   
+   # Verify
+   pm2 --version
+   yarn --version
+
+4.4 SETUP PM2 STARTUP:
+   pm2 startup
+   # Copy and run the command it outputs
+   
+   pm2 save
+
+================================================================================
+PART 5: INSTALL PHP 8.2 (For Laravel)
+================================================================================
+
+5.1 ADD PHP REPOSITORY:
+   sudo add-apt-repository ppa:ondrej/php -y
+   sudo apt update
+
+5.2 INSTALL PHP 8.2:
+   sudo apt install -y \
+     php8.2-cli \
+     php8.2-fpm \
+     php8.2-mysql \
+     php8.2-pdo \
+     php8.2-gd \
+     php8.2-mbstring \
+     php8.2-curl \
+     php8.2-zip \
+     php8.2-xml \
+     php8.2-bcmath \
+     php8.2-intl \
+     php8.2-opcache
+
+5.3 VERIFY PHP:
+   php --version        # Should be 8.2.x
+   php -m               # List all modules
+   php-fpm8.2 --version
+
+5.4 START PHP-FPM:
+   sudo systemctl enable php8.2-fpm
+   sudo systemctl start php8.2-fpm
+   sudo systemctl status php8.2-fpm
+
+5.5 INSTALL COMPOSER:
+   curl -sS https://getcomposer.org/installer | php
+   sudo mv composer.phar /usr/local/bin/composer
+   sudo chmod +x /usr/local/bin/composer
+   
+   # Verify
+   composer --version
+
+================================================================================
+PART 6: INSTALL MYSQL (Database)
+================================================================================
+
+6.1 INSTALL MYSQL SERVER:
+   sudo apt install -y mysql-server
+   
+   # Verify
+   mysql --version
+
+6.2 SECURE MYSQL INSTALLATION:
+   sudo mysql_secure_installation
+   
+   # Follow prompts:
+   # - Validate Password Plugin: Y
+   # - Password strength level: 2 (strong)
+   # - Set root password: YES
+   # - Remove anonymous users: YES
+   # - Disable root remote login: YES
+   # - Remove test database: YES
+   # - Reload privilege tables: YES
+
+6.3 START MYSQL:
+   sudo systemctl enable mysql
+   sudo systemctl start mysql
+   sudo systemctl status mysql
+
+6.4 CREATE DATABASE USER:
+   # Connect to MySQL
+   sudo mysql -u root -p
+   
+   # Create database
+   CREATE DATABASE laravel_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   
+   # Create user
+   CREATE USER 'laravel_user'@'localhost' IDENTIFIED BY 'strong_password_123';
+   GRANT ALL PRIVILEGES ON laravel_db.* TO 'laravel_user'@'localhost';
+   FLUSH PRIVILEGES;
+   EXIT;
+   
+   # Test connection
+   mysql -u laravel_user -p laravel_db
+
+================================================================================
+PART 7: INSTALL NGINX (Web Server)
+================================================================================
+
+7.1 INSTALL NGINX:
+   sudo apt install -y nginx
+   
+   # Verify
+   nginx -v
+
+7.2 START NGINX:
+   sudo systemctl enable nginx
+   sudo systemctl start nginx
+   sudo systemctl status nginx
+
+7.3 TEST NGINX:
+   curl http://localhost
+   # Should show default Nginx page
+
+7.4 VERIFY FIREWALL:
+   sudo ufw allow 80/tcp
+   sudo ufw allow 443/tcp
+   sudo ufw status
+
+================================================================================
+PART 8: INSTALL REDIS (Caching)
+================================================================================
+
+8.1 INSTALL REDIS:
+   sudo apt install -y redis-server
+   
+   # Verify
+   redis-server --version
+
+8.2 START REDIS:
+   sudo systemctl enable redis-server
+   sudo systemctl start redis-server
+   sudo systemctl status redis-server
+
+8.3 TEST REDIS:
+   redis-cli ping
+   # Should return: PONG
+
+8.4 OPTIONAL - REDIS CONFIG:
+   # For production, edit config
+   sudo nano /etc/redis/redis.conf
+   
+   # Add:
+   # maxmemory 256mb
+   # maxmemory-policy allkeys-lru
+   
+   # Restart
+   sudo systemctl restart redis-server
+
+================================================================================
+PART 9: CREATE DIRECTORY STRUCTURE
+================================================================================
+
+9.1 CREATE PROJECT DIRECTORIES:
+   # Create main directory
+   sudo mkdir -p /var/www/myapp
+   sudo chown -R $USER:$USER /var/www/myapp
+   
+   # Create log directory
+   sudo mkdir -p /var/log/myapp
+   sudo chmod 755 /var/log/myapp
+   
+   # Create upload directory
+   sudo mkdir -p /var/www/uploads
+   sudo chown -R www-data:www-data /var/www/uploads
+   sudo chmod 775 /var/www/uploads
+   
+   # Verify
+   ls -la /var/www/
+
+9.2 CREATE BACKUP DIRECTORY:
+   mkdir -p /home/ubuntu/backups
+   mkdir -p /home/ubuntu/scripts
+
+================================================================================
+PART 10: SETUP GIT & CLONE REPOSITORY
+================================================================================
+
+10.1 CONFIGURE GIT:
+   git config --global user.name "Your Name"
+   git config --global user.email "your-email@example.com"
+
+10.2 CLONE REPOSITORY:
+   cd /var/www/myapp
+   git clone https://github.com/your-username/your-repo.git .
+   
+   # Verify
+   ls -la /var/www/myapp/
+
+10.3 SETUP GIT PULL WITH AUTOMATION:
+   # Create deployment script
+   nano /var/www/deploy.sh
+   
+   #!/bin/bash
+   cd /var/www/myapp
+   git pull origin main
+   echo "Repository updated"
+   
+   # Make executable
+   chmod +x /var/www/deploy.sh
+
+================================================================================
+PART 11: INSTALL SSL CERTIFICATE (Let's Encrypt)
+================================================================================
+
+11.1 INSTALL CERTBOT:
+   sudo apt install -y certbot python3-certbot-nginx
+   
+   # Verify
+   certbot --version
+
+11.2 GET FREE SSL CERTIFICATE:
+   sudo certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
+   
+   # Follow prompts
+   # Certificate location: /etc/letsencrypt/live/yourdomain.com/
+
+11.3 AUTO-RENEW CERTIFICATE:
+   sudo systemctl enable certbot.timer
+   sudo systemctl start certbot.timer
+   
+   # Test renewal
+   sudo certbot renew --dry-run
+
+11.4 VERIFY CERTIFICATE:
+   sudo ls -la /etc/letsencrypt/live/yourdomain.com/
+
+================================================================================
+PART 12: MONITORING & LOGGING
+================================================================================
+
+12.1 INSTALL HTOP & MONITORING TOOLS:
+   sudo apt install -y htop iotop nethogs
+   
+   # Use
+   htop              # Real-time system monitoring
+   iotop             # Disk I/O monitoring
+   nethogs           # Network monitoring
+
+12.2 SETUP LOGS:
+   # Create log files
+   sudo touch /var/log/myapp/app.log
+   sudo touch /var/log/myapp/error.log
+   sudo touch /var/log/myapp/access.log
+   
+   # Set permissions
+   sudo chown www-data:www-data /var/log/myapp/*
+   sudo chmod 644 /var/log/myapp/*
+
+12.3 VIEW SYSTEM LOGS:
+   # System logs
+   sudo journalctl -xe
+   sudo journalctl -u nginx
+   sudo journalctl -u php8.2-fpm
+   
+   # Application logs
+   tail -f /var/log/myapp/app.log
+
+12.4 SETUP LOGROTATE:
+   sudo nano /etc/logrotate.d/myapp
+   
+   /var/log/myapp/*.log {
+       daily
+       rotate 14
+       compress
+       delaycompress
+       notifempty
+       create 0640 www-data www-data
+       sharedscripts
+       postrotate
+           systemctl reload nginx > /dev/null 2>&1 || true
+       endscript
+   }
+
+================================================================================
+PART 13: SYSTEM OPTIMIZATION
+================================================================================
+
+13.1 KERNEL PARAMETERS:
+   sudo nano /etc/sysctl.conf
+   
+   # Add/modify these:
+   # Network optimization
+   net.core.somaxconn = 1024
+   net.ipv4.tcp_max_syn_backlog = 2048
+   net.ipv4.ip_local_port_range = 1024 65535
+   
+   # File descriptors
+   fs.file-max = 2097152
+   
+   # Apply changes
+   sudo sysctl -p
+
+13.2 INCREASE FILE DESCRIPTOR LIMITS:
+   sudo nano /etc/security/limits.conf
+   
+   # Add:
+   * soft nofile 65535
+   * hard nofile 65535
+   * soft nproc 65535
+   * hard nproc 65535
+
+13.3 TUNE MYSQL:
+   sudo nano /etc/mysql/mysql.conf.d/mysqld.cnf
+   
+   # Add under [mysqld]:
+   max_connections = 200
+   innodb_buffer_pool_size = 1G
+   innodb_log_file_size = 256M
+   slow_query_log = 1
+   long_query_time = 2
+
+13.4 APPLY CHANGES:
+   # Logout and login again
+   exit
+   ssh -i your-key.pem ubuntu@<public-ip>
+   
+   # Verify
+   ulimit -n  # Should show higher number
+
+================================================================================
+PART 14: INSTALL ADDITIONAL TOOLS
+================================================================================
+
+14.1 INSTALL DOCKER (Optional):
+   sudo apt install -y docker.io
+   sudo usermod -aG docker $USER
+   sudo systemctl enable docker
+   
+   # Verify
+   docker --version
+
+14.2 INSTALL DOCKER-COMPOSE (Optional):
+   sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+   sudo chmod +x /usr/local/bin/docker-compose
+   
+   # Verify
+   docker-compose --version
+
+14.3 INSTALL POSTMAN AGENT (Optional):
+   # For API testing
+   curl -o- https://dl-cli.pstmn.io/install/linux64.sh | sh
+
+14.4 INSTALL DIG/NSLOOKUP:
+   sudo apt install -y dnsutils
+   
+   # Test DNS
+   nslookup yourdomain.com
+   dig yourdomain.com
+
+14.5 INSTALL CURL & WGET:
+   sudo apt install -y curl wget
+   
+   # Already installed, but verify
+
+================================================================================
+PART 15: BACKUP & MAINTENANCE
+================================================================================
+
+15.1 CREATE BACKUP SCRIPT:
+   nano /home/ubuntu/scripts/backup.sh
+   
+   #!/bin/bash
+   DATE=$(date +%Y%m%d_%H%M%S)
+   BACKUP_DIR="/home/ubuntu/backups"
+   
+   # Backup MySQL
+   mysqldump -u laravel_user -p'password' laravel_db | gzip > $BACKUP_DIR/db-$DATE.sql.gz
+   
+   # Backup application
+   tar -czf $BACKUP_DIR/app-$DATE.tar.gz /var/www/myapp/
+   
+   # Keep only last 30 days
+   find $BACKUP_DIR -type f -mtime +30 -delete
+   
+   echo "Backup completed: $DATE"
+   
+   # Make executable
+   chmod +x /home/ubuntu/scripts/backup.sh
+
+15.2 ADD TO CRONTAB:
+   crontab -e
+   
+   # Add this line (3 AM daily):
+   0 3 * * * /home/ubuntu/scripts/backup.sh >> /var/log/backup.log 2>&1
+
+15.3 VERIFY CRON:
+   crontab -l
+
+================================================================================
+PART 16: SECURITY HARDENING
+================================================================================
+
+16.1 DISABLE UNNECESSARY SERVICES:
+   sudo systemctl disable bluetooth
+   sudo systemctl disable cups
+   sudo systemctl disable avahi-daemon
+   
+   # Check all services
+   sudo systemctl list-unit-files --state=enabled
+
+16.2 INSTALL UNATTENDED UPGRADES:
+   sudo apt install -y unattended-upgrades
+   
+   # Enable automatic security updates
+   sudo dpkg-reconfigure -plow unattended-upgrades
+   
+   # Check config
+   sudo nano /etc/apt/apt.conf.d/50unattended-upgrades
+
+16.3 SETUP IPTABLES (Additional firewall):
+   # Already using UFW, but verify
+   sudo ufw status verbose
+
+16.4 PROTECT KERNEL:
+   sudo nano /etc/sysctl.conf
+   
+   # Add:
+   kernel.kptr_restrict = 2
+   kernel.dmesg_restrict = 1
+   kernel.unprivileged_namespace_userns_clone = 0
+
+16.5 AUDIT TRAIL:
+   sudo apt install -y auditd
+   sudo systemctl enable auditd
+   sudo systemctl start auditd
+
+================================================================================
+PART 17: VERIFICATION CHECKLIST
+================================================================================
+
+17.1 VERIFY ALL SERVICES ARE RUNNING:
+   sudo systemctl status nginx
+   sudo systemctl status php8.2-fpm
+   sudo systemctl status mysql
+   sudo systemctl status redis-server
+   sudo systemctl status fail2ban
+
+17.2 CHECK PORTS:
+   # Should show services listening
+   sudo netstat -tlnp
+   
+   # Or with ss
+   sudo ss -tlnp
+
+17.3 VERIFY NETWORK:
+   # Check internet connectivity
+   curl https://google.com
+   
+   # Check DNS
+   nslookup google.com
+   
+   # Check IP
+   hostname -I
+
+17.4 CHECK DISK SPACE:
+   df -h
+   
+   # Should have at least 5GB free
+
+17.5 CHECK MEMORY:
+   free -h
+   
+   # Check swap
+   swapon --show
+
+17.6 CHECK SWAP:
+   free -h
+   # Should show swap in use
+
+17.7 VERIFY FIREWALL:
+   sudo ufw status numbered
+
+17.8 CHECK PROCESSES:
+   ps aux | grep nginx
+   ps aux | grep php
+   ps aux | grep mysql
+   ps aux | grep redis
+
+17.9 TEST SERVICES:
+   # Nginx
+   curl http://localhost
+   
+   # PHP
+   php --version
+   
+   # MySQL
+   mysql -u laravel_user -p -e "SELECT 1;"
+   
+   # Redis
+   redis-cli ping
+
+================================================================================
+PART 18: COMMON COMMANDS FOR UBUNTU 22
+================================================================================
+
+SYSTEM INFORMATION:
+   uname -a                    # System information
+   lsb_release -a              # Ubuntu version
+   hostnamectl                 # Hostname info
+   timedatectl                 # Time & timezone
+   uptime                      # System uptime
+   whoami                      # Current user
+
+SERVICE MANAGEMENT:
+   sudo systemctl start <service>      # Start service
+   sudo systemctl stop <service>       # Stop service
+   sudo systemctl restart <service>    # Restart service
+   sudo systemctl reload <service>     # Reload config
+   sudo systemctl enable <service>     # Enable on boot
+   sudo systemctl disable <service>    # Disable on boot
+   sudo systemctl status <service>     # Check status
+   sudo systemctl list-unit-files      # List all services
+
+PACKAGE MANAGEMENT:
+   sudo apt update              # Update package list
+   sudo apt upgrade -y          # Upgrade packages
+   sudo apt install -y <pkg>    # Install package
+   sudo apt remove <pkg>        # Remove package
+   sudo apt autoremove -y       # Remove unused
+   apt search <pkg>             # Search package
+   apt show <pkg>               # Show package info
+
+USER & PERMISSIONS:
+   sudo useradd -m -s /bin/bash username     # Add user
+   sudo usermod -aG sudo username            # Add to sudo
+   sudo passwd username                      # Change password
+   sudo chown -R user:group /path            # Change owner
+   sudo chmod 755 /path                      # Change permissions
+   id                                        # Current user info
+
+FILE & DIRECTORY:
+   ls -la                       # List files
+   cd /path                     # Change directory
+   pwd                          # Print working directory
+   mkdir /path                  # Create directory
+   cp -r /src /dst              # Copy files
+   mv /src /dst                 # Move files
+   rm -rf /path                 # Delete files/dirs
+   tar -czf file.tar.gz /path   # Compress
+   tar -xzf file.tar.gz         # Decompress
+   find /path -name "*.txt"     # Find files
+   du -sh /path                 # Directory size
+
+NETWORK:
+   ifconfig                     # Network info
+   ip addr show                 # IP addresses
+   netstat -tlnp                # Listening ports
+   ss -tlnp                     # Socket statistics
+   ping google.com              # Test connectivity
+   curl https://example.com     # Test HTTP
+   nslookup domain.com          # DNS lookup
+   traceroute domain.com        # Trace route
+   nc -zv host 80               # Check port
+   sudo ufw status              # Firewall status
+
+PROCESS & SYSTEM:
+   ps aux                       # List processes
+   top                          # Real-time processes
+   htop                         # Enhanced top
+   kill -9 <PID>                # Kill process
+   jobs                         # Background jobs
+   bg                           # Resume background
+   fg                           # Bring to foreground
+   df -h                        # Disk space
+   du -sh /path                 # Folder size
+   free -h                      # Memory info
+   dmesg                        # Kernel messages
+   journalctl -xe               # System logs
+
+TEXT PROCESSING:
+   cat /path/file               # View file
+   head -n 20 /path/file        # First 20 lines
+   tail -f /path/file           # Last lines (follow)
+   grep "text" /path/file       # Search in file
+   sed 's/old/new/g' file       # Find and replace
+   awk '{print $1}' file        # Column extraction
+   wc -l file                   # Line count
+   sort file                    # Sort lines
+   uniq file                    # Remove duplicates
+
+COMPRESSION:
+   gzip file                    # Compress .gz
+   gunzip file.gz               # Decompress .gz
+   tar -cf file.tar /path       # Create tar
+   tar -xf file.tar             # Extract tar
+   tar -czf file.tar.gz /path   # Tar + gzip
+   tar -xzf file.tar.gz         # Extract tar.gz
+   zip -r file.zip /path        # Create zip
+   unzip file.zip               # Extract zip
+
+SUDO & ADMIN:
+   sudo -i                      # Switch to root
+   sudo -u user command         # Run as user
+   sudo visudo                  # Edit sudoers
+   sudo systemctl list-units    # List all units
+   sudo journalctl -u service   # Service logs
+   sudo lsof -i :8080           # Process using port
+
+================================================================================
+PART 19: TROUBLESHOOTING
+================================================================================
+
+SERVICE NOT STARTING:
+   # Check status
+   sudo systemctl status nginx
+   
+   # View logs
+   sudo journalctl -u nginx -n 50
+   
+   # Check configuration
+   sudo nginx -t
+   sudo php-fpm8.2 -t
+   sudo mysql --version
+   
+   # Restart
+   sudo systemctl restart nginx
+
+PORT ALREADY IN USE:
+   # Find process using port
+   sudo lsof -i :80
+   sudo lsof -i :3306
+   sudo lsof -i :6379
+   
+   # Kill process
+   sudo kill -9 <PID>
+   
+   # Or change port in config
+
+HIGH MEMORY USAGE:
+   # Check what's using memory
+   free -h
+   top
+   
+   # Find process
+   ps aux --sort -%mem | head
+   
+   # Kill if needed
+   sudo kill -9 <PID>
+
+HIGH DISK USAGE:
+   # Check space
+   df -h
+   
+   # Find large files
+   du -sh /* | sort -rh | head
+   
+   # Clean cache/logs
+   sudo rm -rf /var/log/*old
+   sudo apt clean
+   sudo apt autoclean
+
+SSH CONNECTION ISSUES:
+   # Check SSH service
+   sudo systemctl status ssh
+   
+   # Verify key permissions
+   ls -la ~/.ssh
+   chmod 600 ~/.ssh/id_rsa
+   chmod 644 ~/.ssh/id_rsa.pub
+   
+   # Test SSH
+   ssh -v -i your-key.pem ubuntu@ip
+
+MYSQL CONNECTION FAILS:
+   # Check MySQL service
+   sudo systemctl status mysql
+   
+   # Test connection
+   mysql -u root -p
+   
+   # Reset root password (if needed)
+   sudo systemctl stop mysql
+   sudo mysqld_safe --skip-grant-tables &
+   mysql -u root
+   FLUSH PRIVILEGES;
+   ALTER USER 'root'@'localhost' IDENTIFIED BY 'new_password';
+   EXIT;
+
+PHP ISSUES:
+   # Check installed modules
+   php -m
+   
+   # Check version
+   php --version
+   
+   # Test PHP-FPM
+   sudo systemctl status php8.2-fpm
+   
+   # View error log
+   sudo tail -f /var/log/php8.2-fpm.log
+
+NGINX CONFIGURATION ERROR:
+   # Test config
+   sudo nginx -t
+   
+   # View error log
+   sudo tail -f /var/log/nginx/error.log
+   
+   # Reload (after fix)
+   sudo nginx -s reload
+
+NODE.JS/PM2 ISSUES:
+   # Check Node version
+   node --version
+   npm --version
+   
+   # List PM2 processes
+   pm2 list
+   
+   # View logs
+   pm2 logs
+   
+   # Restart all
+   pm2 restart all
+
+================================================================================
+PART 20: FINAL CHECKLIST - UBUNTU 22 READY FOR DEPLOYMENT
+================================================================================
+
+SYSTEM:
+  ☐ Ubuntu 22 LTS installed
+  ☐ System updated: sudo apt update && sudo apt upgrade -y
+  ☐ Timezone configured correctly
+  ☐ Swap configured (4GB minimum)
+  ☐ Hostname set: sudo hostnamectl set-hostname myserver
+
+SSH & SECURITY:
+  ☐ SSH key pair generated and saved locally
+  ☐ SSH password authentication disabled
+  ☐ UFW firewall enabled and ports allowed
+  ☐ Fail2Ban installed and running
+  ☐ SSH configured (no root login)
+  ☐ Automatic security updates enabled
+
+DEVELOPER TOOLS:
+  ☐ Git installed and configured
+  ☐ Curl & wget installed
+  ☐ Build tools installed (gcc, make, etc.)
+
+NODE.JS & FRONTEND:
+  ☐ Node.js 18+ installed
+  ☐ NPM installed and working
+  ☐ PM2 installed globally
+  ☐ Yarn installed (optional)
+
+PHP & BACKEND:
+  ☐ PHP 8.2 installed with all extensions
+  ☐ PHP-FPM running
+  ☐ Composer installed and working
+  ☐ Laravel dependencies ready
+
+DATABASE:
+  ☐ MySQL 8.0 installed
+  ☐ MySQL secured (root password set)
+  ☐ Database user created
+  ☐ MySQL running and enabled on boot
+
+CACHE & SESSION:
+  ☐ Redis installed
+  ☐ Redis running and enabled on boot
+  ☐ Redis responding to ping
+
+WEB SERVER:
+  ☐ Nginx installed
+  ☐ Nginx running and enabled on boot
+  ☐ Nginx test page loads at http://localhost
+
+SSL/TLS:
+  ☐ Certbot installed
+  ☐ Domain DNS pointing to server IP
+  ☐ SSL certificate obtained (if domain ready)
+  ☐ Auto-renewal configured
+
+DIRECTORIES:
+  ☐ /var/www/myapp created
+  ☐ /var/log/myapp created
+  ☐ /var/www/uploads created with proper permissions
+  ☐ /home/ubuntu/backups created
+  ☐ /home/ubuntu/scripts created
+
+MONITORING:
+  ☐ Htop installed for monitoring
+  ☐ Log files created in /var/log/myapp
+  ☐ Logrotate configured
+  ☐ Cron jobs configured for backups
+
+SERVICES STATUS:
+  ☐ Nginx: sudo systemctl status nginx
+  ☐ PHP-FPM: sudo systemctl status php8.2-fpm
+  ☐ MySQL: sudo systemctl status mysql
+  ☐ Redis: sudo systemctl status redis-server
+  ☐ Fail2Ban: sudo systemctl status fail2ban
+
+PORTS VERIFIED:
+  ☐ Port 22 (SSH): open
+  ☐ Port 80 (HTTP): open
+  ☐ Port 443 (HTTPS): will be after SSL
+  ☐ Port 5000 (Node.js): ready
+  ☐ Port 3306 (MySQL): local only
+
+NETWORK:
+  ☐ Internet connectivity: curl https://google.com
+  ☐ DNS working: nslookup google.com
+  ☐ Static IP assigned
+  ☐ Hostname resolves correctly
+
+PERFORMANCE:
+  ☐ Disk space sufficient: 5GB+ free
+  ☐ Memory sufficient: 4GB+ available
+  ☐ No high CPU processes
+  ☐ No disk errors in dmesg
+
+BACKUPS:
+  ☐ Backup script created
+  ☐ Cron job added for auto-backup
+  ☐ Backup directory permissions set correctly
+
+================================================================================
+                      UBUNTU 22 SETUP COMPLETE!
+================================================================================
+
+Your Ubuntu 22 LTS server is now ready for:
+✅ Frontend (React) deployment
+✅ Node.js API deployment
+✅ Laravel backend deployment
+✅ MySQL database
+✅ Redis caching
+✅ Production workloads
+
+Next Steps:
+1. Clone your repository: git clone <repo-url> /var/www/myapp
+2. Follow the project-specific setup in production.txt
+3. Test each service individually
+4. Configure Nginx for your applications
+5. Setup SSL certificates
+6. Run your applications
+
+For quick reference of all commands, use:
+  man command-name
+  command-name --help
+  ubuntu-support.com
+
+Support:
+- Ubuntu Documentation: https://help.ubuntu.com/
+- Linux Man Pages: https://man7.org/
+- Ask Ubuntu: https://askubuntu.com/
+
+Last Updated: June 14, 2026

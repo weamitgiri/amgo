@@ -1,0 +1,1107 @@
+================================================================================
+                   AWS PRODUCTION DEPLOYMENT GUIDE
+          For Multi-Stack Application (React + Node.js APIs + Laravel)
+================================================================================
+
+PROJECT STRUCTURE SUMMARY:
+- Frontend: React.js with TypeScript, Redux Toolkit, TanStack Router, Vite
+- APIs: Node.js/TypeScript Express Server with Socket.io, MySQL
+- Backend: Laravel PHP with MySQL, Queue, Broadcasting
+
+================================================================================
+PART 1: AWS INFRASTRUCTURE REQUIREMENTS
+================================================================================
+
+EC2 INSTANCES NEEDED:
+1. Frontend Server (Nginx/Cloudflare Pages) - t3.medium or t3.small
+2. Node.js API Server - t3.medium
+3. Laravel Backend Server - t3.large
+4. Database Server (MySQL) - t3.medium or RDS instance
+5. Optional: Cache Server (Redis) - t3.small
+
+AWS SERVICES:
+- EC2: Application servers
+- RDS (MySQL): Database
+- S3: Static assets, file uploads
+- CloudFront: CDN for frontend
+- ElastiCache: Redis for caching/sessions
+- Route53: Domain management
+- ALB/NLB: Load balancing
+- CloudWatch: Logging & monitoring
+
+================================================================================
+PART 2: DATABASE SETUP (MySQL)
+================================================================================
+
+1. CREATE AWS RDS INSTANCE:
+   - Engine: MySQL 8.0 or 5.7
+   - Instance Class: db.t3.small (minimum)
+   - Storage: 20GB (gp3)
+   - Multi-AZ: Yes (for production)
+   - VPC: Same as application servers
+   - Security Group: Allow port 3306 from application servers
+
+2. CREATE DATABASES:
+
+   # Connect to MySQL
+   mysql -h <RDS_ENDPOINT> -u admin -p
+   
+   # Create Laravel database
+   CREATE DATABASE laravel_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   
+   # Create Node.js API database (if separate)
+   CREATE DATABASE api_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   
+   # Create database users
+   CREATE USER 'laravel_user'@'%' IDENTIFIED BY 'STRONG_PASSWORD_HERE';
+   GRANT ALL PRIVILEGES ON laravel_db.* TO 'laravel_user'@'%';
+   
+   CREATE USER 'api_user'@'%' IDENTIFIED BY 'STRONG_PASSWORD_HERE';
+   GRANT ALL PRIVILEGES ON api_db.* TO 'api_user'@'%';
+   
+   FLUSH PRIVILEGES;
+
+================================================================================
+PART 3: FRONTEND SETUP (React.js)
+================================================================================
+
+EC2 INSTANCE SETUP:
+   # SSH into frontend server
+   ssh -i your-key.pem ec2-user@frontend-instance-ip
+   
+   # Update system
+   sudo yum update -y
+   sudo yum install -y curl git node npm
+
+3.1 INSTALL NODE & NPM:
+   # Install Node.js 18+
+   curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+   sudo yum install -y nodejs
+   
+   # Verify installation
+   node --version
+   npm --version
+
+3.2 CLONE AND SETUP FRONTEND:
+   cd /var/www
+   git clone <your-repo-url> myapp
+   cd myapp/frontend
+   
+   # Install dependencies
+   npm install
+   
+   # Install Redux (required)
+   npm install @reduxjs/toolkit react-redux
+
+3.3 ENVIRONMENT VARIABLES:
+   # Create .env.production
+   cat > .env.production << EOF
+   VITE_API_BASE_URL=https://api.yourdomain.com/api
+   VITE_AUTH_TOKEN_KEY=auth_token
+   VITE_ENVIRONMENT=production
+   VITE_APP_NAME=Z-Game
+   EOF
+
+3.4 BUILD FRONTEND:
+   npm run build
+   
+   # Output will be in dist/ folder
+
+3.5 SETUP NGINX:
+   sudo yum install -y nginx
+   
+   # Create Nginx config
+   sudo tee /etc/nginx/conf.d/frontend.conf > /dev/null << EOF
+   server {
+       listen 80;
+       server_name yourdomain.com www.yourdomain.com;
+       
+       root /var/www/myapp/frontend/dist;
+       index index.html index.htm;
+       
+       # Gzip compression
+       gzip on;
+       gzip_types text/plain text/css application/json application/javascript;
+       
+       # Browser caching
+       location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+           expires 30d;
+           add_header Cache-Control "public, immutable";
+       }
+       
+       # SPA routing
+       location / {
+           try_files $uri $uri/ /index.html;
+       }
+       
+       # Security headers
+       add_header X-Frame-Options "SAMEORIGIN" always;
+       add_header X-Content-Type-Options "nosniff" always;
+       add_header X-XSS-Protection "1; mode=block" always;
+       add_header Referrer-Policy "no-referrer-when-downgrade" always;
+       add_header Content-Security-Policy "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval';" always;
+   }
+   EOF
+   
+   # Enable and start Nginx
+   sudo systemctl enable nginx
+   sudo systemctl start nginx
+
+3.6 SETUP SSL CERTIFICATE (Let's Encrypt):
+   sudo yum install -y certbot certbot-nginx
+   
+   sudo certbot certonly --nginx -d yourdomain.com -d www.yourdomain.com
+   
+   # Update Nginx config with SSL
+   sudo certbot renew --dry-run
+
+3.7 CI/CD DEPLOYMENT (Auto-deploy on push):
+   # Install PM2 for process management
+   npm install -g pm2
+   
+   # Create deployment script: /var/www/deploy-frontend.sh
+   cat > /var/www/deploy-frontend.sh << 'EOF'
+   #!/bin/bash
+   cd /var/www/myapp/frontend
+   git pull origin main
+   npm install
+   npm run build
+   sudo systemctl restart nginx
+   EOF
+   
+   chmod +x /var/www/deploy-frontend.sh
+
+================================================================================
+PART 4: NODE.JS API SERVER SETUP
+================================================================================
+
+4.1 EC2 SETUP:
+   ssh -i your-key.pem ec2-user@api-instance-ip
+   
+   # Update system
+   sudo yum update -y
+   sudo yum install -y curl git node npm
+
+4.2 INSTALL NODE.JS (if not already):
+   curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+   sudo yum install -y nodejs
+
+4.3 CLONE AND SETUP APIs:
+   cd /var/www
+   git clone <your-repo-url> myapp
+   cd myapp/apis
+   
+   # Install dependencies
+   npm install
+
+4.4 ENVIRONMENT VARIABLES:
+   cat > .env.production << EOF
+   # Database Configuration
+   DB_HOST=<RDS_ENDPOINT>
+   DB_PORT=3306
+   DB_USER=api_user
+   DB_PASSWORD=STRONG_PASSWORD_HERE
+   DB_NAME=api_db
+   
+   # Server Configuration
+   PORT=5000
+   NODE_ENV=production
+   
+   # JWT Secret (generate strong random string)
+   JWT_SECRET=$(openssl rand -base64 32)
+   
+   # Laravel API Base URL
+   LARAVEL_API_URL=https://api.yourdomain.com
+   
+   # Email Configuration
+   MAIL_HOST=smtp.yourmailprovider.com
+   MAIL_PORT=587
+   MAIL_USER=your-email@domain.com
+   MAIL_PASSWORD=EMAIL_PASSWORD
+   
+   # File Upload
+   UPLOAD_PATH=/var/www/uploads
+   MAX_FILE_SIZE=5242880
+   EOF
+
+4.5 BUILD FOR PRODUCTION:
+   npm run build
+   # Creates dist/ folder with compiled TypeScript
+
+4.6 SETUP PM2 (Process Manager):
+   # Install PM2 globally
+   sudo npm install -g pm2
+   
+   # Create PM2 ecosystem file: ecosystem.config.js
+   cat > ecosystem.config.js << 'EOF'
+   module.exports = {
+     apps: [
+       {
+         name: 'zoventro-api',
+         script: 'dist/server.js',
+         instances: 'max',
+         exec_mode: 'cluster',
+         env: {
+           NODE_ENV: 'production',
+           PORT: 5000
+         },
+         error_file: './logs/api-error.log',
+         out_file: './logs/api-out.log',
+         log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+       }
+     ]
+   };
+   EOF
+   
+   # Start with PM2
+   pm2 start ecosystem.config.js
+   
+   # Save PM2 startup config
+   pm2 startup
+   pm2 save
+
+4.7 SETUP NGINX REVERSE PROXY FOR APIS:
+   sudo tee /etc/nginx/conf.d/api.conf > /dev/null << EOF
+   upstream api_backend {
+       server 127.0.0.1:5000;
+   }
+   
+   server {
+       listen 80;
+       server_name api.yourdomain.com;
+       
+       # Gzip compression
+       gzip on;
+       gzip_types text/plain text/css application/json application/javascript;
+       
+       # Rate limiting
+       limit_req_zone \$binary_remote_addr zone=api_limit:10m rate=100r/s;
+       limit_req zone=api_limit burst=200;
+       
+       location / {
+           proxy_pass http://api_backend;
+           proxy_set_header Host \$host;
+           proxy_set_header X-Real-IP \$remote_addr;
+           proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto \$scheme;
+           proxy_http_version 1.1;
+           proxy_set_header Connection 'upgrade';
+           proxy_cache_bypass \$http_upgrade;
+           
+           # WebSocket support
+           proxy_read_timeout 86400;
+       }
+       
+       # Security headers
+       add_header X-Frame-Options "SAMEORIGIN" always;
+       add_header X-Content-Type-Options "nosniff" always;
+       add_header X-XSS-Protection "1; mode=block" always;
+       add_header Referrer-Policy "no-referrer-when-downgrade" always;
+   }
+   EOF
+   
+   sudo nginx -t
+   sudo systemctl restart nginx
+
+4.8 SETUP SSL:
+   sudo certbot certonly --nginx -d api.yourdomain.com
+
+4.9 MONITORING & LOGGING:
+   # View logs
+   pm2 logs
+   
+   # Monitor CPU/Memory
+   pm2 monit
+   
+   # Watch for file changes in development
+   npm run dev
+
+4.10 AUTO-DEPLOYMENT:
+    cat > /var/www/deploy-apis.sh << 'EOF'
+    #!/bin/bash
+    cd /var/www/myapp/apis
+    git pull origin main
+    npm install
+    npm run build
+    pm2 restart zoventro-api
+    EOF
+    
+    chmod +x /var/www/deploy-apis.sh
+
+================================================================================
+PART 5: LARAVEL BACKEND SETUP
+================================================================================
+
+5.1 EC2 SETUP:
+   ssh -i your-key.pem ec2-user@backend-instance-ip
+   
+   # Update system
+   sudo yum update -y
+
+5.2 INSTALL PHP & DEPENDENCIES:
+   # Install PHP 8.2+
+   sudo amazon-linux-extras install -y php8.2
+   sudo yum install -y php8.2-{cli,fpm,mysql,zip,gd,mbstring,curl,xml,pdo}
+   
+   # Install Composer
+   php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+   php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+   php -r "unlink('composer-setup.php');"
+
+5.3 CLONE AND SETUP LARAVEL:
+   cd /var/www
+   git clone <your-repo-url> myapp
+   cd myapp
+   
+   # Install Composer dependencies
+   composer install --optimize-autoloader --no-dev
+
+5.4 ENVIRONMENT SETUP:
+   # Copy .env file
+   cp .env.example .env
+   
+   cat > .env << EOF
+   APP_NAME="Your App Name"
+   APP_ENV=production
+   APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));')
+   APP_DEBUG=false
+   APP_URL=https://yourdomain.com
+   
+   # Database Configuration
+   DB_CONNECTION=mysql
+   DB_HOST=<RDS_ENDPOINT>
+   DB_PORT=3306
+   DB_DATABASE=laravel_db
+   DB_USERNAME=laravel_user
+   DB_PASSWORD=STRONG_PASSWORD_HERE
+   
+   # Mail Configuration
+   MAIL_MAILER=smtp
+   MAIL_HOST=smtp.yourmailprovider.com
+   MAIL_PORT=587
+   MAIL_USERNAME=your-email@domain.com
+   MAIL_PASSWORD=EMAIL_PASSWORD
+   MAIL_ENCRYPTION=tls
+   MAIL_FROM_ADDRESS=noreply@yourdomain.com
+   MAIL_FROM_NAME="${APP_NAME}"
+   
+   # Cache Configuration
+   CACHE_DRIVER=redis
+   CACHE_REDIS_HOST=<ELASTICACHE_ENDPOINT>
+   CACHE_REDIS_PORT=6379
+   
+   # Session Configuration
+   SESSION_DRIVER=cookie
+   SESSION_LIFETIME=120
+   
+   # Queue Configuration
+   QUEUE_CONNECTION=database
+   
+   # Broadcasting
+   BROADCAST_DRIVER=log
+   EOF
+   
+   # Generate application key
+   php artisan key:generate
+
+5.5 DATABASE MIGRATIONS:
+   # Run migrations
+   php artisan migrate --force
+   
+   # Seed database (if seeders exist)
+   php artisan db:seed --force
+
+5.6 PERMISSIONS:
+   # Set proper permissions
+   sudo chown -R www-data:www-data /var/www/myapp
+   sudo chmod -R 755 /var/www/myapp
+   sudo chmod -R 775 /var/www/myapp/storage
+   sudo chmod -R 775 /var/www/myapp/bootstrap/cache
+
+5.7 SETUP PHP-FPM:
+   # Enable and start PHP-FPM
+   sudo systemctl enable php-fpm
+   sudo systemctl start php-fpm
+
+5.8 SETUP NGINX FOR LARAVEL:
+   sudo tee /etc/nginx/conf.d/laravel.conf > /dev/null << 'EOF'
+   server {
+       listen 80;
+       server_name yourdomain.com www.yourdomain.com;
+       
+       root /var/www/myapp/public;
+       index index.php index.html index.htm;
+       
+       # Gzip compression
+       gzip on;
+       gzip_types text/plain text/css application/json application/javascript;
+       
+       # Logging
+       access_log /var/log/nginx/laravel-access.log;
+       error_log /var/log/nginx/laravel-error.log;
+       
+       location / {
+           try_files $uri $uri/ /index.php?$query_string;
+       }
+       
+       location ~ \.php$ {
+           try_files $uri =404;
+           fastcgi_split_path_info ^(.+\.php)(/.+)$;
+           fastcgi_pass unix:/var/run/php-fpm.sock;
+           fastcgi_index index.php;
+           include fastcgi_params;
+           fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+           fastcgi_param PATH_INFO $fastcgi_path_info;
+       }
+       
+       # Security headers
+       add_header X-Frame-Options "SAMEORIGIN" always;
+       add_header X-Content-Type-Options "nosniff" always;
+       add_header X-XSS-Protection "1; mode=block" always;
+       add_header Referrer-Policy "no-referrer-when-downgrade" always;
+   }
+   EOF
+   
+   sudo nginx -t
+   sudo systemctl restart nginx
+
+5.9 QUEUE SETUP (Background jobs):
+   # Create supervisor config for queue worker
+   sudo tee /etc/supervisor/conf.d/laravel-worker.conf > /dev/null << 'EOF'
+   [program:laravel-worker]
+   process_name=%(program_name)s_%(process_num)02d
+   command=php /var/www/myapp/artisan queue:work database --sleep=3 --tries=3
+   autostart=true
+   autorestart=true
+   stopasgroup=true
+   stopwaitsecs=3600
+   user=www-data
+   numprocs=4
+   redirect_stderr=true
+   stdout_logfile=/var/log/supervisor/laravel-worker.log
+   stopasgroup=true
+   EOF
+   
+   sudo supervisorctl reread
+   sudo supervisorctl update
+   sudo supervisorctl start laravel-worker:*
+
+5.10 SSL SETUP:
+    sudo certbot certonly --nginx -d yourdomain.com -d www.yourdomain.com
+
+5.11 CRON JOB FOR LARAVEL:
+    # Add to crontab
+    crontab -e
+    
+    # Add this line:
+    * * * * * /usr/bin/php /var/www/myapp/artisan schedule:run >> /dev/null 2>&1
+
+5.12 AUTO-DEPLOYMENT:
+    cat > /var/www/deploy-laravel.sh << 'EOF'
+    #!/bin/bash
+    cd /var/www/myapp
+    git pull origin main
+    composer install --optimize-autoloader --no-dev
+    php artisan migrate --force
+    php artisan cache:clear
+    php artisan config:cache
+    php artisan view:cache
+    sudo systemctl restart php-fpm
+    sudo systemctl restart nginx
+    EOF
+    
+    chmod +x /var/www/deploy-laravel.sh
+
+================================================================================
+PART 6: CACHING & SESSION MANAGEMENT
+================================================================================
+
+6.1 AWS ElastiCache (Redis):
+    # Create ElastiCache cluster
+    - Engine: Redis 7.0
+    - Node type: cache.t3.micro (development) or cache.t3.small (production)
+    - Number of nodes: 1 (or 3+ for cluster mode)
+    - VPC: Same as application servers
+    
+    # Get the endpoint from AWS console
+    REDIS_ENDPOINT=your-cluster.xxxxxx.ng.0001.use1.cache.amazonaws.com:6379
+
+6.2 UPDATE ENVIRONMENT FILES:
+    # Frontend: No action needed (uses browser cache)
+    
+    # APIs (.env):
+    REDIS_HOST=your-cluster.xxxxxx.ng.0001.use1.cache.amazonaws.com
+    REDIS_PORT=6379
+    REDIS_PASSWORD= # if enabled
+    
+    # Laravel (.env):
+    CACHE_REDIS_HOST=your-cluster.xxxxxx.ng.0001.use1.cache.amazonaws.com
+    CACHE_REDIS_PORT=6379
+
+6.3 CLEAR CACHE IN PRODUCTION:
+    # Laravel
+    php artisan cache:clear
+    php artisan config:cache
+    php artisan view:cache
+    
+    # Node.js (if using Redis)
+    redis-cli FLUSHDB
+
+================================================================================
+PART 7: MONITORING & LOGGING
+================================================================================
+
+7.1 CLOUDWATCH SETUP:
+    # Install CloudWatch agent on all servers
+    wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+    sudo rpm -U ./amazon-cloudwatch-agent.rpm
+    
+    # Configure and start
+    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+        -a fetch-config \
+        -m ec2 \
+        -s \
+        -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json
+
+7.2 APPLICATION LOGGING:
+    # Frontend: Browser console & error tracking (Sentry recommended)
+    
+    # Node.js: Winston logs to CloudWatch
+    # Already configured in ecosystem.config.js
+    
+    # Laravel: Log to /storage/logs/
+    # Configure in config/logging.php
+
+7.3 PERFORMANCE MONITORING:
+    # Use CloudWatch to monitor:
+    - CPU Usage
+    - Memory Usage
+    - Network In/Out
+    - Disk Usage
+    
+    # Set alarms for:
+    - High CPU (> 80%)
+    - High Memory (> 85%)
+    - DB Connection errors
+
+================================================================================
+PART 8: BACKUP & DISASTER RECOVERY
+================================================================================
+
+8.1 DATABASE BACKUPS:
+    # AWS RDS automatic backups (enable in RDS console)
+    - Backup retention: 30 days
+    - Preferred backup window: 02:00-03:00 UTC
+    
+    # Manual backup via CLI
+    aws rds create-db-snapshot \
+        --db-instance-identifier laravel-db \
+        --db-snapshot-identifier laravel-db-backup-$(date +%Y%m%d)
+
+8.2 APPLICATION BACKUPS:
+    # Daily sync to S3
+    cat > /var/www/backup.sh << 'EOF'
+    #!/bin/bash
+    DATE=$(date +%Y%m%d_%H%M%S)
+    
+    # Backup Laravel
+    tar -czf /tmp/laravel-backup-$DATE.tar.gz /var/www/myapp
+    aws s3 cp /tmp/laravel-backup-$DATE.tar.gz s3://your-backup-bucket/
+    rm /tmp/laravel-backup-$DATE.tar.gz
+    
+    # Backup database
+    mysqldump -h <RDS_ENDPOINT> -u laravel_user -p$DB_PASSWORD laravel_db | \
+        gzip > /tmp/db-backup-$DATE.sql.gz
+    aws s3 cp /tmp/db-backup-$DATE.sql.gz s3://your-backup-bucket/
+    rm /tmp/db-backup-$DATE.sql.gz
+    EOF
+    
+    chmod +x /var/www/backup.sh
+    
+    # Add to crontab
+    0 3 * * * /var/www/backup.sh
+
+8.3 RESTORE FROM BACKUP:
+    # Restore database
+    aws s3 cp s3://your-backup-bucket/db-backup-YYYYMMDD_HHMMSS.sql.gz /tmp/
+    gunzip /tmp/db-backup-YYYYMMDD_HHMMSS.sql.gz
+    mysql -h <RDS_ENDPOINT> -u laravel_user -p$DB_PASSWORD laravel_db < \
+        /tmp/db-backup-YYYYMMDD_HHMMSS.sql
+
+================================================================================
+PART 9: SECURITY HARDENING
+================================================================================
+
+9.1 FIREWALL & SECURITY GROUPS:
+    # Frontend Security Group
+    - Inbound: HTTP (80) from anywhere, HTTPS (443) from anywhere
+    - Outbound: All
+    
+    # API Security Group
+    - Inbound: HTTP (80) from anywhere, HTTPS (443) from anywhere, SSH (22) from admin IP
+    - Outbound: All
+    
+    # Backend Security Group
+    - Inbound: HTTP (80) from ALB, HTTPS (443) from ALB, SSH (22) from admin IP
+    - Outbound: All
+    
+    # RDS Security Group
+    - Inbound: MySQL (3306) from app servers only
+    - Outbound: All
+
+9.2 SSL/TLS CERTIFICATES:
+    # Already configured with Let's Encrypt above
+    
+    # Renew certificates automatically (already setup by certbot)
+    # Check: sudo systemctl list-timers | grep certbot
+
+9.3 DISABLE ROOT SSH:
+    sudo sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+    sudo systemctl restart sshd
+
+9.4 CONFIGURE FAIL2BAN:
+    sudo yum install -y fail2ban
+    
+    sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
+    [DEFAULT]
+    bantime = 3600
+    findtime = 600
+    maxretry = 5
+    
+    [sshd]
+    enabled = true
+    
+    [nginx-http-auth]
+    enabled = true
+    
+    [nginx-limit-req]
+    enabled = true
+    EOF
+    
+    sudo systemctl enable fail2ban
+    sudo systemctl restart fail2ban
+
+9.5 UPDATE AND PATCH MANAGEMENT:
+    # Set automatic security updates
+    sudo yum install -y yum-cron
+    
+    # Edit /etc/yum/yum-cron.conf
+    # Set apply_updates = yes
+    
+    sudo systemctl enable yum-cron
+    sudo systemctl start yum-cron
+
+9.6 PROTECT SENSITIVE FILES:
+    # Laravel .env
+    sudo chmod 600 /var/www/myapp/.env
+    sudo chmod 600 /var/www/myapp/.env.production
+    
+    # APIs .env
+    sudo chmod 600 /var/www/myapp/apis/.env
+    
+    # Hide sensitive headers
+    sudo sed -i 's/server_tokens off;/server_tokens on;/' /etc/nginx/nginx.conf
+
+9.7 ENABLE WAF (Web Application Firewall):
+    # Use AWS WAF with CloudFront
+    # Configure in AWS Console for DDoS and common attacks
+
+================================================================================
+PART 10: LOAD BALANCING & AUTO-SCALING
+================================================================================
+
+10.1 CREATE APPLICATION LOAD BALANCER (ALB):
+    # In AWS Console:
+    - Create ALB
+    - Attach to VPC
+    - Create target groups:
+      * frontend-tg (port 80)
+      * api-tg (port 5000)
+      * backend-tg (port 80)
+
+10.2 CONFIGURE HEALTH CHECKS:
+    # Frontend health check
+    - Protocol: HTTP
+    - Path: /
+    - Port: 80
+    - Interval: 30s
+    - Timeout: 5s
+    
+    # API health check
+    - Protocol: HTTP
+    - Path: /health
+    - Port: 5000
+    - Interval: 30s
+    
+    # Backend health check
+    - Protocol: HTTP
+    - Path: /api/health
+    - Port: 80
+
+10.3 AUTO-SCALING GROUP:
+    # Create launch templates for each service
+    # Set min: 1, desired: 2, max: 4 for each
+    # Enable target tracking scaling based on CPU (70%)
+
+================================================================================
+PART 11: CI/CD PIPELINE SETUP
+================================================================================
+
+11.1 GITHUB ACTIONS (Automated Deployment):
+    # Create .github/workflows/deploy.yml
+    
+    name: Deploy to AWS
+    on:
+      push:
+        branches: [main, production]
+    
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v2
+          
+          - name: Deploy Frontend
+            run: |
+              ssh -i ${{ secrets.AWS_KEY }} ec2-user@frontend-ip \
+                '/var/www/deploy-frontend.sh'
+          
+          - name: Deploy APIs
+            run: |
+              ssh -i ${{ secrets.AWS_KEY }} ec2-user@api-ip \
+                '/var/www/deploy-apis.sh'
+          
+          - name: Deploy Backend
+            run: |
+              ssh -i ${{ secrets.AWS_KEY }} ec2-user@backend-ip \
+                '/var/www/deploy-laravel.sh'
+
+11.2 ENVIRONMENT VARIABLES & SECRETS:
+    # Store in GitHub Secrets:
+    - AWS_KEY (private key)
+    - FRONTEND_IP
+    - API_IP
+    - BACKEND_IP
+    - DB_PASSWORD
+    - JWT_SECRET
+
+================================================================================
+PART 12: COMPLETE DEPLOYMENT CHECKLIST
+================================================================================
+
+PRE-DEPLOYMENT:
+  ☐ Create AWS account and configure credentials
+  ☐ Create VPC and subnets
+  ☐ Create security groups
+  ☐ Create RDS MySQL instance
+  ☐ Create ElastiCache Redis cluster
+  ☐ Create S3 bucket for uploads
+  ☐ Register domain name
+  ☐ Create Route53 hosted zone
+  ☐ Create Application Load Balancer
+  ☐ Create EC2 instances (frontend, api, backend)
+  ☐ Create launch templates for auto-scaling
+
+FRONTEND DEPLOYMENT:
+  ☐ SSH into frontend instance
+  ☐ Install Node.js and npm
+  ☐ Clone repository
+  ☐ Install dependencies
+  ☐ Create .env.production
+  ☐ Build frontend
+  ☐ Install and configure Nginx
+  ☐ Setup SSL with Let's Encrypt
+  ☐ Test at yourdomain.com
+  ☐ Setup auto-deployment script
+
+API DEPLOYMENT:
+  ☐ SSH into API instance
+  ☐ Install Node.js and npm
+  ☐ Clone repository
+  ☐ Install dependencies
+  ☐ Create .env file with database credentials
+  ☐ Build TypeScript
+  ☐ Install PM2
+  ☐ Setup PM2 ecosystem
+  ☐ Configure Nginx reverse proxy
+  ☐ Setup SSL certificate
+  ☐ Test at api.yourdomain.com
+  ☐ Setup auto-deployment script
+
+BACKEND DEPLOYMENT:
+  ☐ SSH into backend instance
+  ☐ Install PHP 8.2+
+  ☐ Install Composer
+  ☐ Clone repository
+  ☐ Run composer install
+  ☐ Create .env file with database credentials
+  ☐ Generate application key
+  ☐ Run migrations
+  ☐ Setup Laravel file permissions
+  ☐ Configure Nginx for Laravel
+  ☐ Setup SSL certificate
+  ☐ Setup PHP-FPM
+  ☐ Configure queue workers with Supervisor
+  ☐ Setup cron for Laravel schedule
+  ☐ Test at yourdomain.com
+  ☐ Setup auto-deployment script
+
+DATABASE:
+  ☐ Create MySQL RDS instance
+  ☐ Create databases and users
+  ☐ Configure security group
+  ☐ Test connection from app servers
+  ☐ Setup automated backups
+
+CACHING:
+  ☐ Create Redis ElastiCache cluster
+  ☐ Configure security group
+  ☐ Update environment variables in apps
+  ☐ Test Redis connection
+
+MONITORING & LOGGING:
+  ☐ Setup CloudWatch alarms
+  ☐ Install CloudWatch agent on all servers
+  ☐ Configure log groups
+  ☐ Setup SNS notifications
+  ☐ Setup dashboard
+
+SECURITY:
+  ☐ Enable WAF on ALB
+  ☐ Install Fail2Ban on all servers
+  ☐ Disable root SSH
+  ☐ Configure security groups properly
+  ☐ Setup automated backups
+  ☐ Enable RDS encryption
+  ☐ Enable S3 bucket encryption
+  ☐ Setup VPC Flow Logs
+
+TESTING:
+  ☐ Test frontend in browser
+  ☐ Test API endpoints
+  ☐ Test authentication flow
+  ☐ Test file uploads
+  ☐ Test email sending
+  ☐ Test database operations
+  ☐ Test caching
+  ☐ Load testing with Apache Bench
+  ☐ Security scanning with OWASP ZAP
+
+FINAL:
+  ☐ Configure Route53 DNS records
+  ☐ Setup health checks
+  ☐ Enable auto-scaling
+  ☐ Setup CI/CD pipeline
+  ☐ Monitor first 24 hours
+  ☐ Document configuration
+  ☐ Create runbook for team
+
+================================================================================
+PART 13: TROUBLESHOOTING & COMMON COMMANDS
+================================================================================
+
+FRONTEND TROUBLESHOOTING:
+  # Check Nginx status
+  sudo systemctl status nginx
+  sudo nginx -t
+  
+  # View logs
+  tail -f /var/log/nginx/access.log
+  tail -f /var/log/nginx/error.log
+  
+  # Restart
+  sudo systemctl restart nginx
+  
+  # Clear browser cache
+  # Ctrl+Shift+Delete (Chrome, Firefox, Edge)
+
+API TROUBLESHOOTING:
+  # Check PM2 status
+  pm2 status
+  pm2 logs zoventro-api
+  pm2 monit
+  
+  # Restart API
+  pm2 restart zoventro-api
+  
+  # View Node.js port
+  netstat -tlnp | grep 5000
+
+BACKEND TROUBLESHOOTING:
+  # Check PHP-FPM
+  sudo systemctl status php-fpm
+  
+  # View Laravel logs
+  tail -f /var/www/myapp/storage/logs/laravel.log
+  
+  # Clear Laravel cache
+  php artisan cache:clear
+  php artisan config:cache
+  
+  # Test database connection
+  php artisan tinker
+  >>> DB::connection()->getPdo();
+
+DATABASE TROUBLESHOOTING:
+  # Connect to MySQL
+  mysql -h <RDS_ENDPOINT> -u laravel_user -p
+  
+  # Check database
+  SHOW DATABASES;
+  USE laravel_db;
+  SHOW TABLES;
+  
+  # Check backups
+  aws rds describe-db-snapshots --db-instance-identifier laravel-db
+
+GENERAL COMMANDS:
+
+1. CHECK DISK SPACE:
+   df -h
+   du -sh /var/www/*
+
+2. CHECK MEMORY:
+   free -h
+   top -b -n 1 | head -20
+
+3. CHECK NETWORK:
+   ss -tlnp
+   netstat -an | grep ESTABLISHED | wc -l
+
+4. VIEW SYSTEM LOGS:
+   sudo journalctl -xe
+   tail -f /var/log/messages
+
+5. RESTART ALL SERVICES:
+   sudo systemctl restart nginx
+   pm2 restart all
+   sudo systemctl restart php-fpm
+
+6. UPDATE APPLICATION:
+   cd /var/www/myapp/frontend && git pull && npm install && npm run build
+   cd /var/www/myapp/apis && git pull && npm install && npm run build && pm2 restart zoventro-api
+   cd /var/www/myapp && git pull && composer install && php artisan migrate
+
+7. DATABASE OPERATIONS:
+   # Backup
+   mysqldump -h <RDS> -u user -p db > backup.sql
+   
+   # Restore
+   mysql -h <RDS> -u user -p db < backup.sql
+   
+   # Monitor
+   mysql -h <RDS> -u user -p -e "SHOW PROCESSLIST;"
+
+8. CLEAR ALL CACHES:
+   # Frontend: Browser cache only
+   
+   # API: Redis
+   redis-cli FLUSHDB
+   
+   # Backend: Laravel
+   php artisan cache:clear
+   php artisan config:cache
+   php artisan view:cache
+
+9. HEALTH CHECK:
+   # Frontend
+   curl -I https://yourdomain.com
+   
+   # API
+   curl -I https://api.yourdomain.com/health
+   
+   # Backend
+   curl -I https://yourdomain.com/api/health
+
+10. ANALYZE PERFORMANCE:
+    # Frontend load time
+    curl -w "@curl-format.txt" -o /dev/null -s https://yourdomain.com
+    
+    # API response time
+    curl -w "@curl-format.txt" -o /dev/null -s https://api.yourdomain.com/v1/games
+    
+    # Database query log
+    mysql -h <RDS> -u user -p -e "SET GLOBAL slow_query_log = 'ON'; SET GLOBAL long_query_time = 2;"
+
+================================================================================
+PART 14: COST OPTIMIZATION
+================================================================================
+
+RECOMMENDATIONS:
+  1. Use t3 instances for non-critical servers (lower cost)
+  2. Enable detailed monitoring only on production
+  3. Use Reserved Instances for databases
+  4. Use Spot Instances for non-critical workloads
+  5. Configure ALB sticky sessions for better cache hits
+  6. Use CloudFront for static assets
+  7. Set up data transfer optimization
+  8. Monitor unused resources monthly
+
+ESTIMATED MONTHLY COSTS (Small Scale):
+  - EC2 instances (3x t3.medium): $50-70
+  - RDS (t3.small): $30-40
+  - ElastiCache (t3.micro): $15-20
+  - S3 storage: $1-5
+  - Data transfer: $10-20
+  - Route53: $0.50
+  - Total: ~$107-155 USD
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+1. ENVIRONMENT VARIABLES:
+   - Never commit .env files to version control
+   - Use AWS Secrets Manager for sensitive data
+   - Rotate secrets regularly
+
+2. BACKUPS:
+   - Test restore procedures monthly
+   - Keep 30-day backup retention
+   - Store backups in different region
+
+3. MONITORING:
+   - Set up alarms for all critical services
+   - Monitor database connections
+   - Watch for unusual traffic patterns
+   - Track error rates
+
+4. SCALING:
+   - Database can handle ~10k concurrent users on t3.small
+   - Node.js API can handle ~5k requests/sec on t3.medium
+   - Use horizontal scaling (more instances) not vertical
+
+5. SECURITY:
+   - Update all systems weekly
+   - Rotate SSH keys monthly
+   - Use VPC for all resources
+   - Enable VPC Flow Logs
+   - Use WAF for DDoS protection
+   - Enable CloudTrail for audit logs
+
+6. PERFORMANCE:
+   - Enable Gzip compression (already configured)
+   - Use CloudFront for static assets
+   - Implement query caching in Laravel
+   - Use Redis for sessions
+   - Enable HTTP/2 in Nginx
+
+7. DOCUMENTATION:
+   - Keep infrastructure diagram updated
+   - Document all DNS records
+   - Keep SSH key backup in secure location
+   - Document deployment procedures
+   - Create runbook for common issues
+
+================================================================================
+                            END OF GUIDE
+================================================================================
+
+For questions or updates, consult:
+- AWS Documentation: https://docs.aws.amazon.com/
+- Laravel Documentation: https://laravel.com/docs
+- Node.js Documentation: https://nodejs.org/en/docs
+- Nginx Documentation: https://nginx.org/en/docs
+- React Documentation: https://react.dev
+
+Last Updated: 2026-06-14
