@@ -63,8 +63,8 @@ function initialsFromName(name: string): string {
         .toUpperCase() || '?';
 }
 
-function groupStatus(memberCount: number): 'Complete' | 'In Progress' | 'Pending' {
-    if (memberCount >= PLAYERS_PER_GROUP) return 'Complete';
+function groupStatus(memberCount: number, playersPerGroup: number): 'Complete' | 'In Progress' | 'Pending' {
+    if (memberCount >= playersPerGroup) return 'Complete';
     if (memberCount > 0) return 'In Progress';
     return 'Pending';
 }
@@ -77,9 +77,10 @@ export type BookingLimits = {
 
 export async function getBookingLimits(bookingId: number | string): Promise<BookingLimits | null> {
     const [rows] = await query(
-        `SELECT p.max_users, p.total_groups
+        `SELECT p.max_users, p.total_groups, a.group_size
          FROM organizer_bookings ob
          JOIN packages p ON ob.package_id = p.id
+         JOIN activities a ON ob.activity_id = a.id
          WHERE ob.id = ?`,
         [bookingId]
     );
@@ -89,7 +90,8 @@ export async function getBookingLimits(bookingId: number | string): Promise<Book
     return {
         maxUsers: Number(rows[0].max_users) || 0,
         maxGroups: Number(rows[0].total_groups) || 0,
-        playersPerGroup: PLAYERS_PER_GROUP,
+        // Admin-configured per activity (activities.group_size)
+        playersPerGroup: Number(rows[0].group_size) || PLAYERS_PER_GROUP,
     };
 }
 
@@ -164,9 +166,10 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
     const [bookingRows] = await query(
         `SELECT
             ob.id, ob.link_clicks, ob.scheduled_date, ob.scheduled_time, ob.is_rescheduled,
-            p.max_users, p.total_groups
+            p.max_users, p.total_groups, a.group_size
          FROM organizer_bookings ob
          JOIN packages p ON ob.package_id = p.id
+         JOIN activities a ON ob.activity_id = a.id
          WHERE ob.id = ?`,
         [bookingId]
     );
@@ -176,6 +179,7 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
     const booking = bookingRows[0];
     const maxParticipants = Number(booking.max_users) || 0;
     const maxGroups = Number(booking.total_groups) || 0;
+    const playersPerGroup = Number(booking.group_size) || PLAYERS_PER_GROUP;
 
     const totalJoined = await countVerifiedParticipants(bookingId);
 
@@ -190,16 +194,16 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
         [bookingId]
     );
 
-    const groupsFormed = groupRows.filter((g: any) => Number(g.member_count) === PLAYERS_PER_GROUP).length;
+    const groupsFormed = groupRows.filter((g: any) => Number(g.member_count) === playersPerGroup).length;
 
     const currentIncompleteGroup = groupRows.find(
-        (g: any) => Number(g.member_count) > 0 && Number(g.member_count) < PLAYERS_PER_GROUP
+        (g: any) => Number(g.member_count) > 0 && Number(g.member_count) < playersPerGroup
     );
     const membersInIncompleteGroup = currentIncompleteGroup
         ? Number(currentIncompleteGroup.member_count)
         : 0;
     const remainingToFormGroup =
-        membersInIncompleteGroup > 0 ? PLAYERS_PER_GROUP - membersInIncompleteGroup : 0;
+        membersInIncompleteGroup > 0 ? playersPerGroup - membersInIncompleteGroup : 0;
 
     const eventStart = moment(
         `${booking.scheduled_date} ${booking.scheduled_time}`,
@@ -247,8 +251,8 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
             name: g.group_name,
             team_lead: members[0]?.name ?? null,
             member_count: memberCount,
-            capacity: PLAYERS_PER_GROUP,
-            status: groupStatus(memberCount),
+            capacity: playersPerGroup,
+            status: groupStatus(memberCount, playersPerGroup),
             last_updated: lastUpdated,
             members,
         });
@@ -267,13 +271,13 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
             scheduled_at: `${booking.scheduled_date} ${booking.scheduled_time}`,
             reschedule_cutoff: cutoffTime.format('DD MMM YYYY, hh:mm A'),
             is_reschedule_allowed: !booking.is_rescheduled && moment().isBefore(cutoffTime),
-            min_players_per_group: PLAYERS_PER_GROUP,
+            min_players_per_group: playersPerGroup,
         },
         recent_groups: groupRows.slice(-10).map((g: any) => ({
             id: g.id,
             name: g.group_name,
-            fill_status: `${g.member_count}/${PLAYERS_PER_GROUP}`,
-            is_complete: Number(g.member_count) === PLAYERS_PER_GROUP,
+            fill_status: `${g.member_count}/${playersPerGroup}`,
+            is_complete: Number(g.member_count) === playersPerGroup,
         })),
         recent_participants: recentParticipants,
         participants: (allParticipants as any[]).map((p) => ({

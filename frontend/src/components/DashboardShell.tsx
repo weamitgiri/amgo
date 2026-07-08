@@ -1,14 +1,14 @@
 import { useRouterState, Link } from "@tanstack/react-router";
 import { LayoutGrid, Users, Layers, Trophy, Settings, LayoutDashboard, ChevronLeft, ChevronRight, ChevronDown, User } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Logo } from "./Logo";
+import { Flogo } from "./Flogo";
 import { OrganizerNotificationBell } from "./OrganizerNotificationBell";
 
 const NAV = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutGrid },
   { label: "Participants", to: "/participants", icon: Users },
   { label: "Groups", to: "/groups", icon: Layers },
-  { label: "Results", to: "#", icon: Trophy },
+  { label: "Results", to: "/hr-results", icon: Trophy },
 ] as const;
 
 export function DashboardShell({ crumb, children, userName, userEmail, onLogout }: { crumb: string; children: ReactNode; userName: string; userEmail: string; onLogout: () => void }) {
@@ -46,9 +46,7 @@ export function DashboardShell({ crumb, children, userName, userEmail, onLogout 
         {!collapsed && <span>{n.label}</span>}
       </>
     );
-    return n.to === "#" ? (
-      <a href="#" title={collapsed ? n.label : undefined} className={cls}>{inner}</a>
-    ) : (
+    return (
       <Link to={n.to} title={collapsed ? n.label : undefined} className={cls}>{inner}</Link>
     );
   };
@@ -70,7 +68,7 @@ export function DashboardShell({ crumb, children, userName, userEmail, onLogout 
                     <path d="M5 6h12L7 18h12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
-              ) : <Logo />}
+              ) : <Flogo />}
             </div>
 
             {/* Main Nav */}

@@ -18,6 +18,7 @@ export const getJoinLink = asyncHandler(async (req: Request, res: Response) => {
     const [rows] = await query(
         `SELECT ob.id, ob.status, ob.game_id, ob.activity_id, ob.scheduled_date, ob.scheduled_time,
             a.title AS activity_title, a.slug AS activity_slug, a.description AS activity_description,
+            a.lobby_wait_secs,
             o.name AS organizer_name, o.company_name AS organizer_company
          FROM organizer_bookings ob
          JOIN activities a ON ob.activity_id = a.id
@@ -52,14 +53,19 @@ export const getJoinLink = asyncHandler(async (req: Request, res: Response) => {
         throw new AppError('Event schedule information is invalid', 400);
     }
 
-    const joinWindowEnd = scheduleStart.clone().add(15, 'minutes');
+    // Entry window is admin-configurable per activity (activities.lobby_wait_secs).
+    const lobbyWaitSecs = Number(booking.lobby_wait_secs) || 900;
+    const joinWindowEnd = scheduleStart.clone().add(lobbyWaitSecs, 'seconds');
     const now = moment();
     const isPending = now.isBefore(scheduleStart);
     const isJoin = now.isSameOrAfter(scheduleStart) && now.isSameOrBefore(joinWindowEnd);
     const isExpired = now.isAfter(joinWindowEnd);
 
     if (isExpired) {
-        throw new AppError('This invitation link has expired', 400);
+        throw new AppError(
+            `Access Denied: You have joined after the allowed time. The session started at ${scheduleStart.format('h:mm A')} and entry was closed at ${joinWindowEnd.format('h:mm A')}. Please contact the Organiser for assistance.`,
+            403
+        );
     }
 
     await query('UPDATE organizer_bookings SET link_clicks = link_clicks + 1 WHERE id = ?', [booking.id]);

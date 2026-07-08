@@ -1,5 +1,5 @@
 import { Instagram, Facebook, Linkedin, MessageCircle, ArrowUp } from "lucide-react";
-import { Logo } from "./Logo";
+import { Flogo } from "./Flogo";
 import { Link } from "@tanstack/react-router";
 import { useCmsPages, useSiteSettings } from "@/hooks/usePublicContent";
 import type { ApiCmsPage } from "@/api/types/public";
@@ -55,7 +55,7 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="grid gap-10 md:grid-cols-5">
           <div className="md:col-span-1">
-            <Logo />
+            <Flogo />
             <p className="mt-4 text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
               {tagline}
             </p>

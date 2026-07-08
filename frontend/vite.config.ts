@@ -1,9 +1,4 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - tanstackStart, viteReact, tailwindcss, tsConfigPaths, cloudflare (build-only),
-//     componentTagger (dev-only), VITE_* env injection, @ path alias, React/TanStack dedupe,
-//     error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... } }) if needed.
+
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
@@ -16,7 +11,7 @@ export default defineConfig({
     server: {
       proxy: {
         "/v1": {
-          target: process.env.VITE_API_PROXY_TARGET || "http://localhost:6000",
+          target: process.env.VITE_API_PROXY_TARGET || "http://localhost:6001",
           changeOrigin: true,
         },
       },

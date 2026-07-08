@@ -14,6 +14,7 @@ import mystery from "@/assets/mystery.jpg";
 import { resolveMediaUrl } from "@/utils/media";
 import { formatJoinedAt } from "@/lib/format-datetime";
 import { useOrganizerEventLive } from "@/hooks/useOrganizerEventLive";
+import type { OrganizerEventStats } from "@/api/types/organizer";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: requireOrganizerAuth,
@@ -42,15 +43,38 @@ function DashboardPage() {
   const bookingImage = resolveMediaUrl(booking?.cover_image) ?? mystery;
   const bookingIcon = booking?.activity_icon ? resolveMediaUrl(booking.activity_icon) : null;
   const bookingId = booking?.booking_id;
-    
+  const eventProgress: OrganizerEventStats["event_progress"] = eventStats?.event_progress ?? {
+    participants_joined: 0,
+    max_participants: 0,
+    groups_formed: 0,
+    max_groups: 0,
+    remaining_to_form_group: 0,
+    access_link_clicks: 0,
+  };
+  const recentGroups = Array.isArray(eventStats?.recent_groups) ? eventStats.recent_groups : [];
+  const recentParticipants = Array.isArray(eventStats?.recent_participants)
+    ? eventStats.recent_participants
+    : [];
+  const eventStatusMeta = eventStats?.event_status ?? null;
+  const bookingStatus = booking?.booking_status?.toLowerCase() ?? "active";
+
+  const toNumber = (value: unknown, fallback = 0) => {
+    const n = typeof value === "string" ? Number(value) : value;
+    return typeof n === "number" && Number.isFinite(n) ? n : fallback;
+  };
+
   const activityName = booking?.activity_name ?? "Mystery Quest";
   const packageName = booking?.package_name ?? "Standard Pack";
-  const maxUsers = eventStats?.event_progress?.max_participants ?? booking?.max_users ?? 50;
-  const maxGroups = eventStats?.event_progress?.max_groups ?? Math.ceil(maxUsers / 5);
-  const participantsJoined = eventStats?.event_progress?.participants_joined ?? booking?.registered_participants ?? 0;
-  const groupsFormed = eventStats?.event_progress?.groups_formed ?? 0;
-  const remainingToFormGroup = eventStats?.event_progress?.remaining_to_form_group ?? 0;
-  const linkClicks = eventStats?.event_progress?.access_link_clicks ?? null;
+  const maxUsers = toNumber(eventProgress.max_participants, booking?.max_users ?? 50);
+  const maxGroups = toNumber(eventProgress.max_groups, Math.ceil(maxUsers / 5));
+  const participantsJoined = toNumber(
+    eventProgress.participants_joined,
+    booking?.registered_participants ?? 0,
+  );
+  const groupsFormed = toNumber(eventProgress.groups_formed, 0);
+  const remainingToFormGroup = toNumber(eventProgress.remaining_to_form_group, 0);
+  const linkClicks = toNumber(eventProgress.access_link_clicks, 0);
+  const hasLiveStats = Boolean(eventStats && eventProgress);
 
   // Robust parsing of scheduled date/time from backend response.
   const parseDateTime = (
@@ -96,6 +120,10 @@ function DashboardPage() {
   };
 
   const scheduledDateTime = parseDateTime(booking?.scheduled_date, booking?.scheduled_time);
+  const gameDurationSecs = toNumber(booking?.game_duration_secs, 25 * 60);
+  const eventEndTime = scheduledDateTime && gameDurationSecs > 0
+    ? new Date(scheduledDateTime.getTime() + gameDurationSecs * 1000)
+    : null;
   const currentScheduleDate = scheduledDateTime
     ? scheduledDateTime.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
     : "—";
@@ -111,9 +139,12 @@ function DashboardPage() {
 
   const eventStartsMs = scheduledDateTime ? scheduledDateTime.getTime() - now.getTime() : null;
   const eventStartsMin = eventStartsMs !== null ? Math.ceil(eventStartsMs / 60000) : 0;
+  const isEventStarted = eventStartsMs !== null && eventStartsMs <= 0;
+  const eventEndedMs = eventEndTime ? eventEndTime.getTime() - now.getTime() : null;
+  const isEventCompleted = eventEndedMs !== null && eventEndedMs <= 0;
   const eventStatusLabel = eventStartsMs === null
     ? "Schedule unavailable"
-    : eventStartsMs <= 0
+    : isEventStarted
       ? Math.abs(eventStartsMs) <= 60000
         ? "Starting now"
         : `Started ${Math.abs(eventStartsMin)} min ago`
@@ -126,6 +157,16 @@ function DashboardPage() {
         : eventStartsMs < 86400000
           ? `Starting in ${Math.ceil(eventStartsMs / 3600000)} hr`
           : `Starting in ${Math.ceil(eventStartsMs / 86400000)} days`;
+  const eventStatusButtonLabel = scheduledDateTime
+    ? isEventStarted
+      ? "Event Started"
+      : eventStatusLabel
+    : "Schedule unavailable";
+  const eventOverviewBadgeLabel = isEventCompleted
+    ? "Event Completed"
+    : booking?.booking_status
+      ? booking.booking_status.charAt(0).toUpperCase() + booking.booking_status.slice(1)
+      : "Active";
 
   const rescheduleCutoff = scheduledDateTime
     ? new Date(scheduledDateTime.getTime() - 60 * 60 * 1000)
@@ -137,11 +178,24 @@ function DashboardPage() {
     ? "Today"
     : currentScheduleDate;
   const eventStatusText = scheduledDateTime
-    ? `Your event is scheduled to begin at ${currentScheduleTime}, ${scheduledDayLabel}.`
+    ? isEventCompleted
+      ? `Your event ended at ${eventEndTime?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) ?? "—"}.`
+      : `Your event is scheduled to begin at ${currentScheduleTime}, ${scheduledDayLabel}.`
     : "Schedule information is unavailable.";
+  const accessValidityLabel = isEventCompleted ? "Expired" : "5 Days";
+  const accessValidityClass = isEventCompleted ? "text-red-500" : "text-foreground";
+  const accessValiditySubLabel = isEventCompleted ? "event completed" : "from activation";
 
   // min date = today in YYYY-MM-DD format
   const todayStr = new Date().toISOString().split("T")[0];
+  // Reschedule window: 5 days from the payment date (matches backend enforcement).
+  const rescheduleMaxStr = (() => {
+    if (!booking?.payment_date) return undefined;
+    const paid = new Date(booking.payment_date);
+    if (Number.isNaN(paid.getTime())) return undefined;
+    paid.setDate(paid.getDate() + 5);
+    return paid.toISOString().split("T")[0];
+  })();
 
   const handleReschedule = () => {
     if (!newDate || !newTime || !booking) return;
@@ -248,7 +302,7 @@ function DashboardPage() {
                   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 22l-6-4-6 4 1.5-8.5L2 9h7z"/></svg>
                 </div>
                 <h2 className="text-xl font-bold">{activityName}</h2>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${booking?.booking_status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted/30 text-foreground/70'}`}>{booking?.booking_status ? booking.booking_status.charAt(0).toUpperCase()+booking.booking_status.slice(1) : 'Active'}</span>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${isEventCompleted ? 'bg-rose-100 text-rose-700' : booking?.booking_status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted/30 text-foreground/70'}`}>{eventOverviewBadgeLabel}</span>
                 <span className="text-xs text-muted-foreground">Package ID: {booking?.booking_id ?? '—'}</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2 max-w-md">
@@ -314,13 +368,13 @@ function DashboardPage() {
                 <div className="font-semibold mt-0.5">{currentScheduleTime} <span className="text-xs text-muted-foreground font-normal">(IST)</span></div>
               </div>
             </div>
-            <div className="flex items-start gap-3 border-l border-border/60 pl-4 pr-4">
+              <div className="flex items-start gap-3 border-l border-border/60 pl-4 pr-4">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-purple-50 text-primary shrink-0 mt-0.5">
                 <ShieldCheck className="h-4 w-4" />
               </span>
               <div>
                 <div className="text-xs text-muted-foreground">Access Validity</div>
-                <div className="font-semibold mt-0.5">5 Days <span className="text-xs text-muted-foreground font-normal">from activation</span></div>
+                  <div className={`font-semibold mt-0.5 ${accessValidityClass}`}>{accessValidityLabel} <span className="text-xs text-muted-foreground font-normal">{accessValiditySubLabel}</span></div>
               </div>
             </div>
             <div className="flex items-start gap-3 border-l border-border/60 pl-4">
@@ -352,30 +406,46 @@ function DashboardPage() {
         <Card>
           <CardTitle icon={Layers} color="text-primary" bg="bg-primary/10">Event Progress</CardTitle>
           <div className="grid grid-cols-2 gap-6 mt-5">
-            <Stat icon={Users} label="Participants Joined" value={`${participantsJoined}`} total={`${maxUsers}`} pct={Math.min(100, Math.round((participantsJoined / maxUsers) * 100))} />
+            <Stat icon={Users} label="Participants Joined" value={`${participantsJoined}`} total={`${maxUsers}`} pct={maxUsers > 0 ? Math.min(100, Math.round((participantsJoined / maxUsers) * 100)) : 0} />
             <Stat icon={Boxes} label="Groups Formed" value={`${groupsFormed}`} total={`${maxGroups}`} pct={maxGroups > 0 ? Math.min(100, Math.round((groupsFormed / maxGroups) * 100)) : 0} />
           </div>
           <div className="grid grid-cols-2 gap-6 mt-6 border-t border-border/60 pt-5">
             <Stat2 icon={UserMinus} label="Remaining to form group" value={`${remainingToFormGroup}`} sub={remainingToFormGroup === 1 ? "1 more participant needed" : `${remainingToFormGroup} more participants needed`} />
-            <Stat2 icon={MousePointerClick} label="Access Link Clicks" value={linkClicks !== null ? String(linkClicks) : "0"} sub="Updates live when invite link is opened" />
+            <Stat2 icon={MousePointerClick} label="Access Link Clicks" value={`${linkClicks}`} sub="Updates live when invite link is opened" />
           </div>
+          {!hasLiveStats && (
+            <p className="mt-4 text-xs text-muted-foreground">Live dashboard stats are still loading.</p>
+          )}
         </Card>
 
         <Card>
-          <h3 className="text-lg font-bold">Event Status</h3>
-          <p className="text-sm text-muted-foreground mt-1">Ensure all the participants have joined and groups are complete.</p>
-          <button className="mt-4 w-full rounded-full bg-gradient-primary text-white py-3 font-semibold inline-flex items-center justify-center gap-2 shadow-glow">
-            <Play className="h-4 w-4" /> {eventStatusLabel}
+          <h3 className="text-lg font-bold">{isEventCompleted ? "Event Completed" : "Event Status"}</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isEventCompleted
+              ? "The session has ended. Review participation, export records, and download the GST invoice."
+              : "Ensure all the participants have joined and groups are complete."}
+          </p>
+          <button
+            className={`mt-4 w-full rounded-full text-white py-3 font-semibold inline-flex items-center justify-center gap-2 shadow-glow ${isEventCompleted ? "bg-gradient-to-r from-rose-500 to-red-500" : "bg-gradient-primary"}`}
+            disabled={isEventCompleted}
+          >
+            <Play className="h-4 w-4" /> {isEventCompleted ? "Event Completed" : eventStatusButtonLabel}
           </button>
-          <div className="mt-3 flex items-start gap-2 rounded-xl bg-purple-50 px-4 py-3 text-sm">
-            <Info className="h-4 w-4 text-primary mt-0.5" />
-            <span>{eventStatusText}</span>
+          <div className={`mt-3 flex items-start gap-2 rounded-xl px-4 py-3 text-sm ${isEventCompleted ? "bg-rose-50 text-rose-700" : "bg-purple-50"}`}>
+            <Info className={`h-4 w-4 mt-0.5 ${isEventCompleted ? "text-rose-500" : "text-primary"}`} />
+            <span>
+              {isEventCompleted
+                ? "Your event has ended and access is now closed."
+                : eventStatusText}
+            </span>
           </div>
-          <ul className="mt-4 space-y-2 text-sm">
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Minimum 5 players per group required.</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Join within 15 minutes of the start time.</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Teams form automatically, late joiners may miss participation.</li>
-          </ul>
+          {!isEventCompleted && (
+            <ul className="mt-4 space-y-2 text-sm">
+              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Minimum 5 players per group required.</li>
+              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Join within 15 minutes of the start time.</li>
+              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Teams form automatically, late joiners may miss participation.</li>
+            </ul>
+          )}
         </Card>
       </div>
 
@@ -387,9 +457,9 @@ function DashboardPage() {
             <a className="text-sm text-primary font-medium">View All Groups</a>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-4">
-            {eventStats?.recent_groups && eventStats.recent_groups.length > 0 ? (
-              eventStats.recent_groups.map((g) => {
-                const groupMembers = (eventStats.recent_participants || []).filter(
+            {recentGroups.length > 0 ? (
+              recentGroups.map((g) => {
+                const groupMembers = recentParticipants.filter(
                   (p) => p.group_id === g.id || p.group_name === g.name
                 );
                 return (
@@ -415,15 +485,15 @@ function DashboardPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-1">Ensure all the participants have joined and groups are complete</p>
           <div className="mt-4 max-h-[280px] overflow-y-auto pr-2 divide-y divide-border/60 scrollbar-thin">
-            {eventStats?.recent_participants && eventStats.recent_participants.length > 0 ? (
-              eventStats.recent_participants.map((p) => {
+            {recentParticipants.length > 0 ? (
+              recentParticipants.map((p) => {
                 const safeName = p.name || "?";
                 const initials = safeName.split(" ").map((s: string) => s[0] || "").slice(0, 2).join("").toUpperCase();
                 const gradients = ["from-emerald-300 to-emerald-400", "from-rose-300 to-rose-400", "from-cyan-300 to-cyan-400", "from-indigo-300 to-indigo-400", "from-amber-300 to-amber-400", "from-slate-400 to-slate-500"];
                 const bgGrad = gradients[safeName.length % 6];
                 
                 return (
-                  <div key={p.email} className="flex items-center gap-4 py-3.5 text-sm shrink-0">
+                  <div key={`${p.email}-${p.joined_at}`} className="flex items-center gap-4 py-3.5 text-sm shrink-0">
                     <div className={`grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-white bg-gradient-to-br ${bgGrad} shadow-sm`}>{initials}</div>
                     <div className="flex-1 min-w-0 font-medium truncate">{p.name}</div>
                     <div className="text-xs text-muted-foreground whitespace-nowrap">{formatJoinedAt(p.joined_at)}</div>
@@ -445,6 +515,7 @@ function DashboardPage() {
     {rescheduleOpen && (
       <RescheduleModal
         todayStr={todayStr}
+        maxDateStr={rescheduleMaxStr}
         newDate={newDate}
         setNewDate={setNewDate}
         newTime={newTime}
@@ -565,6 +636,7 @@ function GroupCard({ num, count, status, tone, members = [] }: any) {
 
 function RescheduleModal({
   todayStr,
+  maxDateStr,
   newDate,
   setNewDate,
   newTime,
@@ -575,6 +647,7 @@ function RescheduleModal({
   onConfirm,
 }: {
   todayStr: string;
+  maxDateStr?: string;
   newDate: string;
   setNewDate: (v: string) => void;
   newTime: string;
@@ -631,12 +704,15 @@ function RescheduleModal({
             <label htmlFor="reschedule-date" className="text-sm font-semibold text-foreground">
               New Date
             </label>
-            <p className="text-xs text-muted-foreground mt-0.5">Past dates are disabled and cannot be selected.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Past dates are disabled. Rescheduling is only allowed within 5 days of your payment date.
+            </p>
             <div className="mt-2 relative">
               <input
                 id="reschedule-date"
                 type="date"
                 min={todayStr}
+                max={maxDateStr}
                 value={newDate}
                 onChange={(e) => setNewDate(e.target.value)}
                 className="w-full rounded-xl border border-border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer transition-colors"

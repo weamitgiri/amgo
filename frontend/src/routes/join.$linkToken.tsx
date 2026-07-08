@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 import { ArrowRight, ArrowLeft, User, Mail, Calendar, Clock, Lock, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { Crumbs } from "@/components/Crumbs";
 import { participantService } from "@/api/services/participant.service";
 import type { JoinLinkResponse } from "@/api/types/participant";
 import { saveParticipantSession } from "@/lib/participant-session";
@@ -93,6 +92,7 @@ function JoinPage() {
   const [step, setStep] = useState<"loading" | "invalid" | "pending" | "form" | "otp" | "done">("loading");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [otpValues, setOtpValues] = useState<string[]>(["", "", "", "", "", ""]);
   const [bookingId, setBookingId] = useState<number | null>(null);
   const [activityTitle, setActivityTitle] = useState("Mystery Quest");
@@ -205,7 +205,7 @@ function JoinPage() {
     return () => clearInterval(interval);
   }, [step, linkToken]);
 
-  const canSendOtp = name.trim().length > 0 && email.includes("@");
+  const canSendOtp = name.trim().length > 0 && email.includes("@") && disclaimerAccepted;
   const otpCode = otpValues.join("");
 
   const handleSendOtp = () => {
@@ -298,25 +298,6 @@ function JoinPage() {
       <div className="absolute top-1/3 -right-32 h-[420px] w-[420px] rounded-full bg-fuchsia-500/20 blur-3xl" />
 
       <header className="relative px-6 py-5 max-w-7xl mx-auto flex items-center justify-between">
-        <Crumbs
-          tone="dark"
-          items={[
-            { label: "Home", to: "/" },
-            { label: "Join Activity" },
-            {
-              label:
-                step === "loading"
-                  ? "Validating Link"
-                  : step === "invalid"
-                  ? "Activity Not Found"
-                  : step === "form"
-                  ? "Details"
-                  : step === "otp"
-                  ? "Verify OTP"
-                  : "Verified",
-            },
-          ]}
-        />
         <Logo />
       </header>
 
@@ -374,6 +355,8 @@ function JoinPage() {
                 setName={setName}
                 email={email}
                 setEmail={setEmail}
+                disclaimerAccepted={disclaimerAccepted}
+                setDisclaimerAccepted={setDisclaimerAccepted}
                 onNext={handleSendOtp}
                 canProceed={canSendOtp}
                 isSubmitting={isSubmitting}
@@ -482,8 +465,7 @@ function PendingStep({
           <Meta icon={Clock} label="Start Time" v1={scheduledTime || "TBA"} v2="" />
         </div>
         <div className="mt-5 rounded-2xl bg-white/5 p-4 text-sm text-white/80">
-          This activity has not started yet. Registration will open at{" "}
-          <span className="font-semibold text-white">{registrationOpensAt}</span>.
+          The game is not scheduled today. Please join at the right date and time. Please contact the organiser.
         </div>
       </div>
 
@@ -511,6 +493,8 @@ function FormStep({
   setName,
   email,
   setEmail,
+  disclaimerAccepted,
+  setDisclaimerAccepted,
   onNext,
   canProceed,
   isSubmitting,
@@ -520,6 +504,8 @@ function FormStep({
   setName: (v: string) => void;
   email: string;
   setEmail: (v: string) => void;
+  disclaimerAccepted: boolean;
+  setDisclaimerAccepted: (v: boolean) => void;
   onNext: () => void;
   canProceed: boolean;
   isSubmitting: boolean;
@@ -548,6 +534,20 @@ function FormStep({
           type="email"
         />
       </div>
+
+      <label className="mt-5 flex items-start gap-3 text-xs text-white/75 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={disclaimerAccepted}
+          onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/30 bg-white/10 accent-purple-500"
+        />
+        <span>
+          I understand that all characters, names, roles, incidents, and storylines in this game are
+          entirely fictional and created for entertainment purposes only. Any resemblance to real
+          persons, events, or situations is purely coincidental.
+        </span>
+      </label>
 
       <button
         type="button"

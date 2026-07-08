@@ -140,6 +140,18 @@ function ProfilePage() {
     },
   });
 
+  const deactivateMutation = useMutation({
+    mutationFn: () => organizerService.deleteAccount(),
+    onSuccess: () => {
+      toastSuccess("Your account has been deactivated.");
+      apiClient.setToken(null);
+      navigate({ to: "/login", search: { redirect: "/dashboard" } });
+    },
+    onError: (err: Error) => {
+      toastError(err.message || "Failed to deactivate account.");
+    },
+  });
+
   const organizerName = data?.organizer?.name ?? "Organizer";
   const organizerEmail = data?.organizer?.email ?? "";
   const hasBilling = !!data?.billing?.billing_id;
@@ -181,8 +193,6 @@ function ProfilePage() {
               <BField label="Official Email ID" type="email" value={email} onChange={() => {}} readOnly />
               <BField label="Company / Organization Name" value={companyName} onChange={setCompanyName} />
               <BField label="Company Website" value={companyWebsite} onChange={setCompanyWebsite} />
-              <BField label="Designation" value={designation} onChange={setDesignation} />
-              <BField label="Phone Number" value={phone} onChange={setPhone} />
             </div>
             <button
               type="button"
@@ -244,14 +254,27 @@ function ProfilePage() {
       </section>
 
       <section className="rounded-2xl bg-white p-6 shadow-card">
-        <h2 className="font-bold">Delete Data</h2>
-        <p className="text-xs text-muted-foreground mt-1">You can delete all your data and remove your account</p>
+        <h2 className="font-bold">Deactivate Account</h2>
+        <p className="text-xs text-muted-foreground mt-1">
+          Deactivating your account will permanently disable your login access and stop all
+          communications from Zoventro. Billing and invoice records will be retained as required
+          under the GST Act. This action is permanent and cannot be undone.
+        </p>
         <button
           type="button"
-          onClick={() => toastError("Please contact support to delete your account.")}
-          className="mt-4 rounded-full border border-primary/50 text-primary px-5 py-2 text-sm font-medium hover:bg-primary hover:text-white transition-colors"
+          disabled={deactivateMutation.isPending}
+          onClick={() => {
+            const confirmed = window.confirm(
+              "Are you sure you want to deactivate your account?\n\n" +
+                "• Your login access will be permanently disabled.\n" +
+                "• Billing and GST invoice records are retained for 7 years as required by law.\n" +
+                "• This cannot be undone from the app — contact support to reactivate."
+            );
+            if (confirmed) deactivateMutation.mutate();
+          }}
+          className="mt-4 rounded-full border border-destructive/50 text-destructive px-5 py-2 text-sm font-medium hover:bg-destructive hover:text-white transition-colors disabled:opacity-50"
         >
-          Delete Data &amp; Account
+          {deactivateMutation.isPending ? "Deactivating…" : "Deactivate Account"}
         </button>
       </section>
     </DashboardShell>

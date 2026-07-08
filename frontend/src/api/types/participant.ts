@@ -91,8 +91,15 @@ export type LobbySessionResponse = {
 /** @deprecated Use LobbySessionResponse */
 export type LobbyInfoResponse = LobbySessionResponse;
 
+export type GamePlayer = {
+  session_id: number;
+  pseudonym: string;
+  is_you: boolean;
+};
+
 export type GameSummaryRole = {
   id: number;
+  session_id: number | null;
   role_type: string;
   role_label: string;
   role_subtitle: string;
@@ -129,11 +136,14 @@ export type GameSummaryResponse = {
     case_summary_html: string | null;
     timeline: { time: string; event: string }[];
     quick_facts: { label: string; value: string; icon: string }[];
+    victim_name: string | null;
   };
+  players: GamePlayer[];
   roles: GameSummaryRole[];
   photos: { id: number; label: string; image: string | null }[];
   rules: { id: number; title: string; description: string; details: string[] }[];
-  strategy_slides: { title: string; description: string; details: string[] }[];
+  role_strategy_slides: { title: string; description: string; details: string[] }[];
+  strategy_slides: { title: string; description: string; details: string[]; appears_at_secs: number; closes_at_secs: number }[];
   clues: {
     id: number;
     clue_title: string;
@@ -141,4 +151,51 @@ export type GameSummaryResponse = {
     clue_detail: string | null;
     clue_image: string | null;
   }[];
+};
+
+export type GameQuestion = {
+  id: number;
+  group_id: number;
+  asked_by: number;
+  asked_to: number;
+  question_text: string;
+  points_awarded: number;
+  created_at: string;
+  answers?: GameAnswer[];
+};
+
+export type GameAnswer = {
+  id: number;
+  question_id: number;
+  participant_session_id: number;
+  answer_text: string;
+  penalty_applied: number;
+  answered_at: string;
+  auto_skipped?: boolean;
+};
+
+export type LieDetectorTally = { believable: number; suspicious: number };
+
+export type LieDetectorRound = {
+  id: number;
+  group_id: number;
+  suspect_id: number;
+  status: "active" | "completed";
+  tally?: LieDetectorTally;
+};
+
+export type SubmitAccusationResponse = { accepted: true; all_submitted: boolean };
+
+export type GameResultsResponse = {
+  is_finished: boolean;
+  is_incomplete?: boolean;
+  group_id?: number;
+  completed_at?: string | null;
+  culprit?: { session_id: number; pseudonym: string; role_type: string; score: number } | null;
+  winners?: { session_id: number; pseudonym: string; role_type: string; score: number }[];
+  losers?: { session_id: number; pseudonym: string; role_type: string; score: number }[];
+  correct_guess_count?: number | null;
+  total_guessers?: number;
+  pdf_available?: boolean;
+  pdf_expires_at?: string | null;
 };

@@ -118,6 +118,10 @@ Route::group(
             Route::post('packages/reorder-features', [PackageManagementController::class, 'reorderFeatures'])->name('packages.reorderFeatures');
         });
 
+        // Node API Logs viewer (apis/logs/*.log)
+        Route::get('api-logs', [\App\Http\Controllers\Admin\ApiLogController::class, 'index'])->name('api-logs.index');
+        Route::post('api-logs/clear', [\App\Http\Controllers\Admin\ApiLogController::class, 'clear'])->name('api-logs.clear');
+
 // Activity & Game Management
         Route::prefix('activities')->group(function () {
             Route::resource('/', \App\Http\Controllers\Admin\ActivityController::class)->names('activities')->parameters(['' => 'activity']);

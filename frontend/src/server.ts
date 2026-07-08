@@ -21,7 +21,22 @@ async function getServerEntry(): Promise<ServerEntry> {
 function brandedErrorResponse(): Response {
   return new Response(renderErrorPage(), {
     status: 500,
-    headers: { "content-type": "text/html; charset=utf-8" },
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "Referrer-Policy": "same-origin",
+    },
+  });
+}
+
+function applyResponseHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  if (!headers.has("Referrer-Policy")) {
+    headers.set("Referrer-Policy", "same-origin");
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
   });
 }
 
@@ -71,10 +86,11 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalizedResponse = await normalizeCatastrophicSsrResponse(response);
+      return applyResponseHeaders(normalizedResponse);
     } catch (error) {
       console.error(error);
-      return brandedErrorResponse();
+      return applyResponseHeaders(brandedErrorResponse());
     }
   },
 };

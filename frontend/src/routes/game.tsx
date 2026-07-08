@@ -1,14 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FileText, Lightbulb, Gamepad2, Camera, X, MapPin, Calendar, Cloud, Video,
-  ZoomIn, ShieldCheck, Eye, AlertCircle, Send, Clock, UserX, ScanSearch,
-  ThumbsUp, ThumbsDown, Hand
+  ZoomIn, ShieldCheck, Eye, Send, Clock, UserX, ScanSearch,
+  ThumbsUp, ThumbsDown
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { participantService } from "@/api/services/participant.service";
-import type { GameSummaryResponse, GameSummaryRole } from "@/api/types/participant";
+import type { GameStateResponse } from "@/api/services/participant.service";
+import type { GameSummaryResponse, GameSummaryRole, GamePlayer, LieDetectorTally } from "@/api/types/participant";
 import { getParticipantSession } from "@/lib/participant-session";
+import { getSocket } from "@/lib/socket";
 import { resolveMediaUrl } from "@/utils/media";
 import { toastError } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
@@ -46,6 +48,25 @@ type Phase = "summary" | "investigation";
 type ModalKey = null | "question" | "answer" | "vote" | "clue" | "accuse" | "summary";
 type GuideType = null | "strategy" | "rules";
 
+const KEY_PEOPLE_ORDER = [
+  "farmer leader",
+  "farmer-leader",
+  "son",
+  "daughter-in-law",
+  "daughter in law",
+  "servant",
+  "investigator",
+];
+
+type ActivityItem = {
+  questionId: number;
+  toSessionId: number;
+  q: string;
+  a?: string;
+  autoSkipped?: boolean;
+  tally?: LieDetectorTally;
+};
+
 function GamePage() {
   const navigate = useNavigate();
   const { game: gameSlug } = Route.useSearch();
@@ -53,6 +74,7 @@ function GamePage() {
 
   const [loading, setLoading] = useState(true);
   const [gameData, setGameData] = useState<GameSummaryResponse | null>(null);
+  const [gameState, setGameState] = useState<GameStateResponse | null>(null);
   const [phase, setPhase] = useState<Phase>("summary");
   const [secsHdr, setSecsHdr] = useState(0);
   const [secsCase, setSecsCase] = useState(0);
@@ -62,20 +84,38 @@ function GamePage() {
   const [openPhotos, setOpenPhotos] = useState(false);
   const [guideModal, setGuideModal] = useState<GuideType>(null);
   const [guideSlide, setGuideSlide] = useState(0);
+  const [showInstinctWarning, setShowInstinctWarning] = useState(false);
+  const [cluesUnlocked, setCluesUnlocked] = useState(false);
+  const [lieDetectorRoundId, setLieDetectorRoundId] = useState<number | null>(null);
+  const [myAccusationSubmitted, setMyAccusationSubmitted] = useState(false);
+  const [onlineSessionIds, setOnlineSessionIds] = useState<Set<number>>(new Set());
+  const [frozenSessionIds, setFrozenSessionIds] = useState<Set<number>>(new Set());
+  const [scoresBySessionId, setScoresBySessionId] = useState<Map<number, number>>(new Map());
 
   const people = useMemo(
     () => (gameData?.roles ?? []).map(mapRoleToPerson),
     [gameData]
   );
 
-  const yourPerson = useMemo(() => people.find((p: GamePerson) => p.is_you) ?? null, [people]);
+  // Real players (pseudonyms only) — the gameplay UI (questions, votes,
+  // accusations, scoreboard) is keyed on players, never on the character↔player
+  // mapping, which stays secret for everyone except yourself.
+  const players = useMemo(() => gameData?.players ?? [], [gameData]);
+  const myPlayer = useMemo(() => players.find((p) => p.is_you) ?? null, [players]);
 
+  const yourPerson = useMemo(() => people.find((p: GamePerson) => p.is_you) ?? null, [people]);
+  const isInvestigator = yourPerson?.role_type === "investigator";
+  const isCulprit = yourPerson?.role_type === "culprit";
+
+  // Investigator sees the timed suspect-profile cards; every other role sees
+  // their own role-specific strategy cards (per FSD: "Except Investigator, all
+  // other roles can see the strategy guide").
   const guideSlides = useMemo(
     () => ({
-      strategy: gameData?.strategy_slides ?? [],
+      strategy: isInvestigator ? gameData?.strategy_slides ?? [] : gameData?.role_strategy_slides ?? [],
       rules: gameData?.rules ?? [],
     }),
-    [gameData]
+    [gameData, isInvestigator]
   );
 
   const photoUrls = useMemo(
@@ -87,12 +127,54 @@ function GamePage() {
   );
 
   // investigation state
-  const [lieMode, setLieMode] = useState(false);
+  const lieMode = lieDetectorRoundId !== null;
   const [selectedAskee, setSelectedAskee] = useState(0);
   const [question, setQuestion] = useState("");
   const [modal, setModal] = useState<ModalKey>(null);
   const [questionsLeft, setQuestionsLeft] = useState(5);
-  const [activity, setActivity] = useState<{ to: string; q: string; a?: string; b?: number; s?: number }[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [pendingAnswerForMe, setPendingAnswerForMe] = useState<ActivityItem | null>(null);
+  const [voteContext, setVoteContext] = useState<{ questionId: number; answerText: string; answererSessionId: number } | null>(null);
+  const [lieTally, setLieTally] = useState<LieDetectorTally | null>(null);
+  const [invElapsed, setInvElapsed] = useState(0);
+  const autoCardRef = useRef<number | null>(null);
+
+  const applyGameState = useCallback((state: GameStateResponse) => {
+    setGameState(state);
+    setMyAccusationSubmitted(Boolean(state.group.my_accusation_submitted));
+
+    const online = new Set<number>();
+    const frozen = new Set<number>();
+    const scores = new Map<number, number>();
+    for (const s of state.group.participant_sessions) {
+      if (s.is_online) online.add(s.id);
+      if (s.left_at) frozen.add(s.id);
+      scores.set(s.id, s.total_score);
+    }
+    setOnlineSessionIds(online);
+    setFrozenSessionIds(frozen);
+    setScoresBySessionId(scores);
+
+    const activeRound = state.group.lie_detector_rounds.find((r) => r.status === "active");
+    setLieDetectorRoundId(activeRound ? activeRound.id : null);
+
+    const clueTimerUnlocked = state.group.timers.some((t) => t.timer_type === "clue_room_unlock" && !t.is_active);
+    if (clueTimerUnlocked) setCluesUnlocked(true);
+
+    setActivity(
+      state.group.questions.map((q) => {
+        const ans = q.answers?.[0];
+        return {
+          questionId: q.id,
+          toSessionId: q.asked_to,
+          q: q.question_text,
+          a: ans?.answer_text,
+          autoSkipped: ans?.auto_skipped,
+          tally: activeRound?.tally,
+        };
+      })
+    );
+  }, []);
 
   useEffect(() => {
     if (!session?.groupId) {
@@ -100,41 +182,34 @@ function GamePage() {
       return;
     }
 
-    const stateKey = `game_state_${session.groupId}`;
     const timerKey = `game_timers_${session.groupId}`;
-    const savedState = localStorage.getItem(stateKey);
     const savedTimer = localStorage.getItem(timerKey);
 
-    participantService
-      .getGameSummary(session.groupId, session.participantId)
-      .then((data) => {
+    Promise.all([
+      participantService.getGameSummary(session.groupId, session.participantId),
+      participantService.getGameState(session.groupId, session.participantId),
+    ])
+      .then(([data, state]) => {
         setGameData(data);
+        applyGameState(state);
+        setQuestionsLeft(Math.max(0, data.settings.max_questions - state.group.questions.length));
 
+        const savedState = localStorage.getItem(`game_ui_${session.groupId}`);
         if (savedState) {
           try {
-            const {
-              activity: savedActivity = [],
-              questionsLeft: savedQuestionsLeft = data.settings.max_questions,
-              secretOpened: savedSecretOpened = false,
-              roleViewed: savedRoleViewed = false,
-              phase: savedPhase = "summary",
-            } = JSON.parse(savedState);
-
-            setActivity(Array.isArray(savedActivity) ? savedActivity : []);
-            setQuestionsLeft(typeof savedQuestionsLeft === "number" ? savedQuestionsLeft : data.settings.max_questions);
-            setSecretOpened(Boolean(savedSecretOpened));
-            setRoleViewed(Boolean(savedRoleViewed));
-            setPhase(savedPhase === "investigation" ? "investigation" : "summary");
-            if (!savedRoleViewed && savedSecretOpened) {
-              setRoleModalOpen(true);
-            }
+            const { secretOpened: so = false, roleViewed: rv = false } = JSON.parse(savedState);
+            setSecretOpened(Boolean(so));
+            setRoleViewed(Boolean(rv));
+            if (so && !rv) setRoleModalOpen(true);
           } catch {
-            setQuestionsLeft(data.settings.max_questions);
-            setActivity([]);
+            /* ignore corrupt saved UI state */
           }
-        } else {
-          setQuestionsLeft(data.settings.max_questions);
-          setActivity([]);
+        }
+
+        const instinctWarningKey = `game_instinct_warning_${session.groupId}`;
+        if (!sessionStorage.getItem(instinctWarningKey)) {
+          setShowInstinctWarning(true);
+          sessionStorage.setItem(instinctWarningKey, "1");
         }
 
         if (savedTimer) {
@@ -145,6 +220,7 @@ function GamePage() {
 
             setSecsHdr(Math.max(0, data.settings.game_duration_secs - hdrElapsed));
             setSecsCase(Math.max(0, data.settings.case_summary_view_secs - caseElapsed));
+            setPhase(caseElapsed >= data.settings.case_summary_view_secs ? "investigation" : "summary");
           } catch {
             const now = Date.now();
             localStorage.setItem(timerKey, JSON.stringify({ hdrStartTime: now, caseStartTime: now }));
@@ -169,7 +245,91 @@ function GamePage() {
         });
       })
       .finally(() => setLoading(false));
-  }, [session?.groupId, session?.participantId, navigate, gameSlug, session?.inviteUrl, session?.gameSlug]);
+  }, [session?.groupId, session?.participantId, navigate, gameSlug, session?.inviteUrl, session?.gameSlug, applyGameState]);
+
+  // Real-time sync — every question/answer/vote/accusation/phase change is
+  // server-authoritative and broadcast to the whole group.
+  useEffect(() => {
+    if (!session?.groupId || !session?.participantId) return;
+    const socket = getSocket();
+
+    socket.emit("join_game_group", { groupId: session.groupId, participantId: session.participantId });
+
+    const onNewQuestion = (q: { id: number; asked_to: number; question_text: string }) => {
+      const item: ActivityItem = { questionId: q.id, toSessionId: q.asked_to, q: q.question_text };
+      setActivity((prev) => [item, ...prev]);
+      setQuestionsLeft((n) => Math.max(0, n - 1));
+      if (myPlayer?.session_id === q.asked_to) {
+        setPendingAnswerForMe(item);
+      }
+    };
+    const onNewAnswer = (a: { question_id: number; participant_session_id: number; answer_text: string; auto_skipped?: boolean }) => {
+      setActivity((prev) =>
+        prev.map((item) => (item.questionId === a.question_id ? { ...item, a: a.answer_text, autoSkipped: a.auto_skipped } : item))
+      );
+      setPendingAnswerForMe((prev) => (prev && prev.questionId === a.question_id ? null : prev));
+      // During a Lie Detector round, everyone except the answerer votes on the answer.
+      if (lieDetectorRoundId && !a.auto_skipped && myPlayer?.session_id !== a.participant_session_id) {
+        setVoteContext({ questionId: a.question_id, answerText: a.answer_text, answererSessionId: a.participant_session_id });
+      }
+    };
+    const onNewVote = ({ tally }: { round_id: number; tally: LieDetectorTally }) => {
+      setLieTally(tally);
+    };
+    const onLieDetectorStarted = (round: { id: number }) => setLieDetectorRoundId(round.id);
+    const onLieDetectorEnded = () => setLieDetectorRoundId(null);
+    const onPhaseChanged = (payload: { new_phase: string }) => {
+      if (payload.new_phase === "questioning") {
+        setLieDetectorRoundId(null);
+      }
+    };
+    const onCluesUnlocked = () => setCluesUnlocked(true);
+    const onAccusationSubmitted = (payload: { participant_session_id: number }) => {
+      if (myPlayer?.session_id === payload.participant_session_id) setMyAccusationSubmitted(true);
+    };
+    const onParticipantLeft = (payload: { participant_session_id: number }) => {
+      setFrozenSessionIds((prev) => new Set(prev).add(payload.participant_session_id));
+    };
+    const onGameEnded = () => {
+      if (session?.groupId) sessionStorage.setItem(`game_ended_${session.groupId}`, "1");
+      navigate({ to: "/results" });
+    };
+    const onGameIncomplete = () => {
+      if (session?.groupId) sessionStorage.setItem(`game_ended_${session.groupId}`, "1");
+      toastError("The Investigator has left the game. The session has ended.");
+      navigate({ to: "/results" });
+    };
+
+    socket.on("new_question", onNewQuestion);
+    socket.on("new_answer", onNewAnswer);
+    socket.on("new_vote", onNewVote);
+    socket.on("lie_detector_started", onLieDetectorStarted);
+    socket.on("lie_detector_ended", onLieDetectorEnded);
+    socket.on("phase_changed", onPhaseChanged);
+    socket.on("clues_unlocked", onCluesUnlocked);
+    socket.on("accusation_submitted", onAccusationSubmitted);
+    socket.on("participant_left", onParticipantLeft);
+    socket.on("game_ended", onGameEnded);
+    socket.on("game_incomplete", onGameIncomplete);
+
+    return () => {
+      // Do NOT emit leave_game_group here — this cleanup runs on every effect
+      // re-subscription (role load, lie-detector state changes), not just when
+      // the player actually leaves. Real departures are detected server-side
+      // via socket disconnect + a reconnect grace window.
+      socket.off("new_question", onNewQuestion);
+      socket.off("new_answer", onNewAnswer);
+      socket.off("new_vote", onNewVote);
+      socket.off("lie_detector_started", onLieDetectorStarted);
+      socket.off("lie_detector_ended", onLieDetectorEnded);
+      socket.off("phase_changed", onPhaseChanged);
+      socket.off("clues_unlocked", onCluesUnlocked);
+      socket.off("accusation_submitted", onAccusationSubmitted);
+      socket.off("participant_left", onParticipantLeft);
+      socket.off("game_ended", onGameEnded);
+      socket.off("game_incomplete", onGameIncomplete);
+    };
+  }, [session?.groupId, session?.participantId, navigate, myPlayer?.session_id, lieDetectorRoundId]);
 
   useEffect(() => {
     if (loading) return;
@@ -188,6 +348,42 @@ function GamePage() {
     }
   }, [secsCase, phase, gameData]);
 
+  // Non-investigator roles get their strategy guide force-opened once after the
+  // configured delay (FSD: "after 2 minutes passed, forcefully open the modal").
+  useEffect(() => {
+    if (loading || !gameData || isInvestigator) return;
+    const delayMs = (gameData.settings.strategy_guide_delay_secs || 120) * 1000;
+    const timer = window.setTimeout(() => {
+      setGuideModal("strategy");
+      setGuideSlide(0);
+    }, delayMs);
+    return () => window.clearTimeout(timer);
+  }, [loading, gameData, isInvestigator]);
+
+  // Investigation-phase elapsed clock, used to drive the investigator's timed
+  // suspect-profile cards (appears_at_secs / closes_at_secs windows).
+  useEffect(() => {
+    if (loading || phase !== "investigation") return;
+    const t = setInterval(() => setInvElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [loading, phase]);
+
+  useEffect(() => {
+    if (!isInvestigator || phase !== "investigation" || !gameData) return;
+    const slides = gameData.strategy_slides;
+    const idx = slides.findIndex(
+      (s) => s.closes_at_secs > s.appears_at_secs && invElapsed >= s.appears_at_secs && invElapsed < s.closes_at_secs
+    );
+    if (idx >= 0 && autoCardRef.current !== idx) {
+      autoCardRef.current = idx;
+      setGuideModal("strategy");
+      setGuideSlide(idx);
+    } else if (idx === -1 && autoCardRef.current !== null) {
+      autoCardRef.current = null;
+      setGuideModal((m) => (m === "strategy" ? null : m));
+    }
+  }, [invElapsed, isInvestigator, phase, gameData]);
+
   // Redirect to results page when the game time is over (only once per session)
   useEffect(() => {
     if (loading) return;
@@ -200,21 +396,11 @@ function GamePage() {
     }
   }, [secsHdr, loading, session?.groupId, gameData, navigate]);
 
-  // Persist activity and questionsLeft state to sessionStorage
+  // Persist local UI-only state (game data itself is server-authoritative now).
   useEffect(() => {
     if (!session?.groupId) return;
-    const stateKey = `game_state_${session.groupId}`;
-    localStorage.setItem(
-      stateKey,
-      JSON.stringify({
-        activity,
-        questionsLeft,
-        secretOpened,
-        roleViewed,
-        phase,
-      })
-    );
-  }, [activity, questionsLeft, secretOpened, roleViewed, phase, session?.groupId]);
+    localStorage.setItem(`game_ui_${session.groupId}`, JSON.stringify({ secretOpened, roleViewed }));
+  }, [secretOpened, roleViewed, session?.groupId]);
 
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
@@ -237,11 +423,93 @@ function GamePage() {
     );
   }
 
-  const sendQuestion = () => {
-    if (!question.trim() || questionsLeft <= 0 || !people[selectedAskee]) return;
-    setActivity((a: typeof activity) => [{ to: people[selectedAskee].short, q: question.trim() }, ...a]);
-    setQuestionsLeft((q: number) => q - 1);
-    setModal("answer");
+  const sendQuestion = async () => {
+    const target = players[selectedAskee];
+    if (!question.trim() || questionsLeft <= 0 || !target || target.is_you || !session?.participantId) return;
+    try {
+      await participantService.askQuestion({
+        group_id: session.groupId,
+        participant_id: session.participantId,
+        asked_to_session_id: target.session_id,
+        question_text: question.trim(),
+      });
+      setQuestion("");
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not send question.");
+    }
+  };
+
+  const submitAnswer = async (text: string) => {
+    if (!pendingAnswerForMe || !session?.participantId || !text.trim()) return;
+    try {
+      await participantService.answerQuestion({
+        question_id: pendingAnswerForMe.questionId,
+        participant_id: session.participantId,
+        answer_text: text.trim(),
+      });
+      setPendingAnswerForMe(null);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not submit answer.");
+    }
+  };
+
+  const castVote = async (vote: "believable" | "suspicious") => {
+    if (!voteContext || !lieDetectorRoundId || !session?.participantId) return;
+    try {
+      await participantService.voteLieDetector({
+        group_id: session.groupId,
+        participant_id: session.participantId,
+        round_id: lieDetectorRoundId,
+        vote_value: vote,
+      });
+      setVoteContext(null);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not cast vote.");
+      setVoteContext(null);
+    }
+  };
+
+  const toggleLieDetector = async () => {
+    if (!session?.participantId || !isInvestigator) return;
+    try {
+      if (lieMode && lieDetectorRoundId) {
+        await participantService.endLieDetector({
+          group_id: session.groupId,
+          participant_id: session.participantId,
+          round_id: lieDetectorRoundId,
+        });
+      } else {
+        const target = players[selectedAskee];
+        if (!target || target.is_you) {
+          toastError("Select a player to target with the lie detector first.");
+          return;
+        }
+        await participantService.startLieDetector({
+          group_id: session.groupId,
+          participant_id: session.participantId,
+          suspect_session_id: target.session_id,
+        });
+      }
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Lie detector action failed.");
+    }
+  };
+
+  const handleAccuse = async (accusedSessionId: number, reasoning: string) => {
+    if (!session?.participantId) return;
+    try {
+      await participantService.submitAccusation({
+        group_id: session.groupId,
+        participant_id: session.participantId,
+        accused_session_id: accusedSessionId,
+        reasoning,
+      });
+      setMyAccusationSubmitted(true);
+      setModal(null);
+      navigate({ to: "/results" });
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not submit accusation.");
+    }
   };
 
   return (
@@ -285,12 +553,15 @@ function GamePage() {
         />
       ) : (
         <InvestigationView
-          people={people}
+          players={players}
           yourRole={yourPerson}
+          isInvestigator={isInvestigator}
+          isCulprit={isCulprit}
+          caseSummaryMins={Math.round(gameData.settings.case_summary_view_secs / 60)}
           maxQuestions={gameData.settings.max_questions}
           lieMaxQuestions={gameData.settings.lie_detector_max_questions}
-          questionResponseSecs={gameData.settings.question_response_secs}
-          questionsLeft={lieMode ? Math.min(gameData.settings.lie_detector_max_questions, questionsLeft) : questionsLeft}
+          questionsLeft={questionsLeft}
+          invSecs={secsHdr}
           selectedAskee={selectedAskee}
           setSelectedAskee={setSelectedAskee}
           question={question}
@@ -298,9 +569,15 @@ function GamePage() {
           sendQuestion={sendQuestion}
           activity={activity}
           openModal={setModal}
-          locked={modal === "answer"}
+          locked={activity.some((a) => !a.a)}
           lieMode={lieMode}
-          setLieMode={setLieMode}
+          onToggleLieDetector={toggleLieDetector}
+          cluesUnlocked={cluesUnlocked}
+          myAccusationSubmitted={myAccusationSubmitted}
+          frozenSessionIds={frozenSessionIds}
+          onlineSessionIds={onlineSessionIds}
+          scoresBySessionId={scoresBySessionId}
+          lieTally={lieTally}
         />
       )}
 
@@ -319,25 +596,39 @@ function GamePage() {
           onSelectSlide={(index) => setGuideSlide(index)}
         />
       )}
-      {modal === "answer" && people[selectedAskee] && (
+      {pendingAnswerForMe && (
         <AnswerModal
-          target={people[selectedAskee]}
-          question={question}
+          question={pendingAnswerForMe.q}
           answerSecs={gameData.settings.question_response_secs}
-          onClose={() => { setModal("vote"); }}
+          onSubmit={submitAnswer}
         />
       )}
-      {modal === "vote" && people[selectedAskee] && (
-        <VoteModal target={people[selectedAskee]} question={question} onClose={() => { setQuestion(""); setModal(null); }} />
+      {voteContext && lieDetectorRoundId && (
+        <VoteModal
+          answererShort={players.find((p) => p.session_id === voteContext.answererSessionId)?.pseudonym ?? "Player"}
+          answerText={voteContext.answerText}
+          question={activity.find((a) => a.questionId === voteContext.questionId)?.q ?? ""}
+          onVote={castVote}
+          onClose={() => setVoteContext(null)}
+        />
       )}
       {modal === "clue" && (
         <ClueRoomModal
           clues={gameData.clues}
           unlockSecs={gameData.settings.clue_room_unlock_secs}
+          unlocked={cluesUnlocked}
           onClose={() => setModal(null)}
         />
       )}
-      {modal === "accuse" && <AccuseModal people={people} onClose={() => setModal(null)} />}
+      {modal === "accuse" && !isCulprit && (
+        <AccuseModal
+          players={players}
+          victimName={gameData.game.victim_name}
+          submitted={myAccusationSubmitted}
+          onSubmit={handleAccuse}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal === "summary" && (
         <CaseSummaryModal
           gameData={gameData}
@@ -345,6 +636,35 @@ function GamePage() {
           onClose={() => setModal(null)}
         />
       )}
+      {showInstinctWarning && (
+        <InstinctWarningModal onAcknowledge={() => setShowInstinctWarning(false)} />
+      )}
+    </div>
+  );
+}
+
+function InstinctWarningModal({ onAcknowledge }: { onAcknowledge: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-lg rounded-3xl border border-white/15 bg-purple-950/95 shadow-elevated p-7 text-center">
+        <div className="mx-auto h-14 w-14 rounded-full bg-amber-500/15 border border-amber-400/40 grid place-items-center">
+          <Eye className="h-6 w-6 text-amber-300" />
+        </div>
+        <h2 className="mt-4 text-xl font-black text-white">Trust Your Instincts</h2>
+        <p className="mt-3 text-sm leading-relaxed text-white/80">
+          This is a game of human instinct, not internet searches. Put the phone down, look your
+          suspects in the eye, and trust yourself. No AI tool can feel when someone is lying. You can.
+        </p>
+        <p className="mt-2 text-sm text-white/70">
+          Using external tools will spoil the game for yourself and everyone at the table.
+        </p>
+        <button
+          onClick={onAcknowledge}
+          className="mt-6 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow"
+        >
+          I Understand — Let's Play
+        </button>
+      </div>
     </div>
   );
 }
@@ -380,8 +700,21 @@ function SummaryView(props: {
   } = props;
   const [boxOpening, setBoxOpening] = useState(false);
   const caseMins = Math.round(gameData.settings.case_summary_view_secs / 60);
+  const orderedPeople = useMemo(
+    () =>
+      [...people]
+        .map((person, index) => {
+          const { title } = splitCharacterName(person.name);
+          const label = (title ?? roleDisplayName(person)).toLowerCase().replace(/\s+/g, " ").trim();
+          const orderIndex = KEY_PEOPLE_ORDER.findIndex((item) => label === item || label.includes(item));
+          return { person, index, orderIndex: orderIndex === -1 ? 99 : orderIndex };
+        })
+        .sort((a, b) => a.orderIndex - b.orderIndex || Number(a.person.is_you) - Number(b.person.is_you) || a.index - b.index)
+        .map(({ person }) => person),
+    [people]
+  );
 
-  const revealSecretBox = () => {
+  const revealSecretBox = useCallback(() => {
     if (secretOpened || boxOpening) return;
     setBoxOpening(true);
     setTimeout(() => {
@@ -390,7 +723,15 @@ function SummaryView(props: {
       setRoleViewed(false);
       onRevealRole();
     }, 700);
-  };
+  }, [boxOpening, onRevealRole, secretOpened, setRoleViewed, setSecretOpened]);
+
+  useEffect(() => {
+    if (secretOpened || boxOpening) return;
+    const timer = window.setTimeout(() => {
+      revealSecretBox();
+    }, 15000);
+    return () => window.clearTimeout(timer);
+  }, [boxOpening, revealSecretBox, secretOpened]);
   return (
     <>
       <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
@@ -476,39 +817,44 @@ function SummaryView(props: {
         </div>
 
         <div className="space-y-5">
-          <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-6">
-            <h3 className="text-center text-lg font-bold">Key People in the Bungalow</h3>
-            <div className={`mt-5 grid gap-4 ${people.length <= 5 ? "grid-cols-5" : "grid-cols-3 sm:grid-cols-5"}`}>
-                {people.map((p) => (
-                <div
-                  key={p.id}
-                  className={`rounded-[20px] overflow-hidden transition-all shadow-sm border ${
-                    secretOpened && p.is_you
-                      ? "ring-2 ring-fuchsia-500 bg-[#241334]"
-                      : "bg-[#1b1223] border-white/10"
-                  }`}
-                >
-                  <div className="w-full h-44 md:h-56 bg-black grid place-items-center overflow-hidden">
-                    {p.role_image ? (
-                      <img src={resolveMediaUrl(p.role_image) ?? ""} alt={p.name} className="w-full h-full object-cover object-top" />
-                    ) : (
-                      <div className={`h-full w-full ${p.grad} grid place-items-center`}>
-                        <Eye className="h-7 w-7 text-white/70" />
-                      </div>
-                    )}
-                  </div>
-REPLACE
+          <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-7">
+            <h3 className="text-center text-lg font-bold tracking-tight text-white">Key People in the Bungalow</h3>
+            <div className="mt-5 grid grid-cols-5 gap-2 sm:gap-3">
+              {orderedPeople.map((person: GamePerson) => {
+                const { displayName, title } = splitCharacterName(person.name);
+                const roleLabel = title ?? roleDisplayName(person);
+                // Your character is only revealed after the Secret Box is opened —
+                // before that, every card looks the same.
+                const bottomLabel = secretOpened && person.is_you ? "(You)" : displayName;
+                return (
+                  <div
+                    key={person.id}
+                    className={`overflow-hidden rounded-xl border shadow-sm transition-all ${
+                      secretOpened && person.is_you
+                        ? "ring-2 ring-fuchsia-500 border-fuchsia-500/80 bg-[#241334]"
+                        : "bg-[#1b1223] border-white/10"
+                    }`}
+                  >
+                    <div className="relative w-full aspect-[4/5] bg-black overflow-hidden">
+                      <img
+                        src={resolveMediaUrl(person.role_image) ?? mystery}
+                        alt={displayName}
+                        className="w-full h-full object-cover object-top"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#1b1223] to-transparent" />
+                    </div>
 
-                  <div className="p-4 bg-[#2a1830] text-center">
-                    <div className="text-sm text-white/90 leading-snug font-medium">
-                      {roleDisplayName(p)}
-                    </div>
-                    <div className="mt-2 text-base text-pink-400 font-semibold">
-                      {p.is_you ? "(You)" : p.name}
+                    <div className="px-1 py-2 bg-[#2a1830] text-center">
+                      <div className="truncate text-[10px] leading-tight text-white/80" title={roleLabel}>
+                        {roleLabel}
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] font-semibold leading-tight text-pink-400" title={bottomLabel}>
+                        {bottomLabel}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -577,30 +923,51 @@ REPLACE
 }
 
 /* -------- Investigation view -------- */
+const PLAYER_GRADS = [
+  "from-pink-500 to-orange-400",
+  "from-violet-500 to-purple-500",
+  "from-cyan-400 to-blue-500",
+  "from-emerald-400 to-teal-500",
+  "from-amber-400 to-orange-500",
+];
+
 function InvestigationView(props: {
-  people: GamePerson[];
+  players: GamePlayer[];
   yourRole: GamePerson | null;
+  isInvestigator: boolean;
+  isCulprit: boolean;
+  caseSummaryMins: number;
   maxQuestions: number;
   lieMaxQuestions: number;
-  questionResponseSecs: number;
   questionsLeft: number;
+  invSecs: number;
   selectedAskee: number;
   setSelectedAskee: (i: number) => void;
   question: string;
   setQuestion: (s: string) => void;
   sendQuestion: () => void;
-  activity: { to: string; q: string; a?: string; b?: number; s?: number }[];
+  activity: ActivityItem[];
   openModal: (m: ModalKey) => void;
   locked?: boolean;
   lieMode: boolean;
-  setLieMode: (b: boolean) => void;
+  onToggleLieDetector: () => void;
+  cluesUnlocked: boolean;
+  myAccusationSubmitted: boolean;
+  frozenSessionIds: Set<number>;
+  onlineSessionIds: Set<number>;
+  scoresBySessionId: Map<number, number>;
+  lieTally: LieDetectorTally | null;
 }) {
   const {
-    people,
+    players,
     yourRole,
+    isInvestigator,
+    isCulprit,
+    caseSummaryMins,
     maxQuestions,
     lieMaxQuestions,
     questionsLeft,
+    invSecs,
     selectedAskee,
     setSelectedAskee,
     question,
@@ -610,11 +977,20 @@ function InvestigationView(props: {
     openModal,
     locked = false,
     lieMode,
-    setLieMode,
+    onToggleLieDetector,
+    cluesUnlocked,
+    myAccusationSubmitted,
+    frozenSessionIds,
+    scoresBySessionId,
+    lieTally,
   } = props;
-  const [invSecs, setInvSecs] = useState(18 * 60 + 42);
-  useEffect(() => { const t = setInterval(() => setInvSecs((s) => Math.max(0, s - 1)), 1000); return () => clearInterval(t); }, []);
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const shortBySessionId = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const p of players) map.set(p.session_id, p.is_you ? `${p.pseudonym} (You)` : p.pseudonym);
+    return map;
+  }, [players]);
+  const initials = (pseudonym: string) => pseudonym.slice(0, 2).toUpperCase();
 
   return (
     <>
@@ -632,7 +1008,7 @@ function InvestigationView(props: {
             <button onClick={() => openModal("summary")} className="inline-flex items-center gap-2 rounded-full bg-[#00B87C] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity">
               <FileText className="h-4 w-4" /> Case Summary
             </button>
-            <div className="absolute -bottom-5 text-[10px] text-[#00B87C] whitespace-nowrap">Available for 5:00 minutes only</div>
+            <div className="absolute -bottom-5 text-[10px] text-[#00B87C] whitespace-nowrap">Available for {caseSummaryMins}:00 minutes only</div>
           </div>
 
           <div className="flex flex-col items-center justify-center gap-0.5">
@@ -645,15 +1021,17 @@ function InvestigationView(props: {
             <div className="text-white text-xl font-bold leading-none">{questionsLeft}/{lieMode ? lieMaxQuestions : maxQuestions}</div>
           </div>
 
-          <div className="relative flex flex-col items-center justify-center">
-            <button onClick={() => setLieMode(!lieMode)} className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-opacity ${lieMode ? "bg-[#7e57c2] text-white shadow-[0_0_15px_rgba(126,87,194,0.5)]" : "bg-[#7e57c2] text-white hover:opacity-90"}`}>
-              <ScanSearch className="h-4 w-4" /> Lie Detector
-            </button>
-            <div className="absolute -bottom-5 flex items-center gap-1.5 text-[10px] text-[#00B87C] whitespace-nowrap">
-              <div className="h-1.5 w-1.5 rounded-full bg-[#00B87C]" />
-              {lieMode ? "Active" : "Available"}
+          {isInvestigator && (
+            <div className="relative flex flex-col items-center justify-center">
+              <button onClick={onToggleLieDetector} className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-opacity ${lieMode ? "bg-[#7e57c2] text-white shadow-[0_0_15px_rgba(126,87,194,0.5)]" : "bg-[#7e57c2] text-white hover:opacity-90"}`}>
+                <ScanSearch className="h-4 w-4" /> Lie Detector
+              </button>
+              <div className="absolute -bottom-5 flex items-center gap-1.5 text-[10px] text-[#00B87C] whitespace-nowrap">
+                <div className="h-1.5 w-1.5 rounded-full bg-[#00B87C]" />
+                {lieMode ? "Active" : "Available"}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="relative flex flex-col items-center justify-center">
             <button onClick={() => openModal("clue")} className="inline-flex items-center gap-2 rounded-full bg-[#f59e0b] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity">
@@ -665,9 +1043,15 @@ function InvestigationView(props: {
             </div>
           </div>
 
-          <button onClick={() => openModal("accuse")} className="inline-flex items-center gap-2 rounded-full bg-[#f43f5e] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity">
-            <UserX className="h-4 w-4" /> Final Accusation
-          </button>
+          {!isCulprit && (
+            <button
+              onClick={() => openModal("accuse")}
+              disabled={myAccusationSubmitted}
+              className="inline-flex items-center gap-2 rounded-full bg-[#f43f5e] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <UserX className="h-4 w-4" /> {myAccusationSubmitted ? "Accusation Submitted" : "Final Accusation"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -676,16 +1060,22 @@ function InvestigationView(props: {
         <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
           <h3 className="text-sm font-bold mb-4">Players</h3>
           <ul className="space-y-2">
-            {people.map((p, i) => (
-              <li key={p.id} className={`rounded-xl border p-2 flex items-center gap-2 ${i === selectedAskee ? "border-purple-400 bg-purple-500/10" : "border-white/10 bg-white/5"}`}>
-                <div className={`h-9 w-9 rounded-full bg-gradient-to-br ${p.grad} grid place-items-center text-[10px] font-bold`}>{p.short.slice(0, 2)}</div>
-                <div className="flex-1">
-                  <div className="text-xs font-semibold">{p.short}</div>
-                  <div className="text-[10px] text-emerald-400">● Available</div>
-                </div>
-                {i === 1 && <span className="text-[10px] text-amber-300 tabular-nums">01:15</span>}
-              </li>
-            ))}
+            {players.map((p, i) => {
+              const frozen = frozenSessionIds.has(p.session_id);
+              return (
+                <li key={p.session_id} className={`rounded-xl border p-2 flex items-center gap-2 ${frozen ? "border-white/5 bg-white/[0.02] opacity-50" : i === selectedAskee ? "border-purple-400 bg-purple-500/10" : "border-white/10 bg-white/5"}`}>
+                  <div className={`h-9 w-9 rounded-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-[10px] font-bold`}>{initials(p.pseudonym)}</div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold">{p.is_you ? `${p.pseudonym} (You)` : p.pseudonym}</div>
+                    {frozen ? (
+                      <div className="text-[10px] text-rose-400">● Left the game</div>
+                    ) : (
+                      <div className="text-[10px] text-emerald-400">● Available</div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
           {yourRole ? (
             <div className="mt-5 rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-3">
@@ -698,52 +1088,63 @@ function InvestigationView(props: {
           ) : null}
         </div>
 
-        {/* Ask question */}
+        {/* Ask question (Investigator) / observer panel (everyone else) */}
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-lg font-bold">{lieMode ? "Lie Detector Mode Activated" : "Ask a Question"}</h3>
+              <h3 className="text-lg font-bold">{lieMode ? "Lie Detector Mode Activated" : isInvestigator ? "Ask a Question" : "Investigation In Progress"}</h3>
               <p className="text-xs text-white/70 mt-1">
-                {lieMode ? "Investigator can ask maximum 3 questions to any player in Lie Detector mode. Other players will vote on the answers." : "Select a player to ask a question"}
+                {lieMode
+                  ? `Investigator can ask maximum ${lieMaxQuestions} questions in Lie Detector mode. Other players will vote on the answers.`
+                  : isInvestigator
+                    ? "Select a player to ask a question"
+                    : "Answer honestly when questioned. Watch the activity feed for questions and answers."}
               </p>
             </div>
-            {lieMode && <div className="text-xs text-white/80">{Math.max(1, 4 - questionsLeft)}/3 Question</div>}
           </div>
-          {locked && (
-            <div className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200 flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5" /> Waiting for answer — input locked while the timer runs.
+          {isInvestigator ? (
+            <>
+              {locked && (
+                <div className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200 flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5" /> Waiting for answer — input locked while the timer runs.
+                </div>
+              )}
+              <fieldset disabled={locked} aria-busy={locked} className={locked ? "opacity-60 pointer-events-none select-none" : ""}>
+                <div className="mt-4 grid grid-cols-5 gap-2">
+                  {players.map((p, i) => (
+                    <button type="button" key={p.session_id} onClick={() => setSelectedAskee(i)} disabled={p.is_you || frozenSessionIds.has(p.session_id)} className={`relative rounded-xl border p-2 text-center transition disabled:opacity-40 ${i === selectedAskee ? "border-purple-400 ring-2 ring-purple-400/40 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
+                      <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold`}>
+                        {initials(p.pseudonym)}
+                      </div>
+                      <div className="mt-1.5 text-[11px] font-semibold">{p.is_you ? `${p.pseudonym} (You)` : p.pseudonym}</div>
+                      {i === selectedAskee && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-purple-500 ring-2 ring-purple-300" />}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-6">
+                  <label className="text-xs text-white/70">Type your question (max 120 characters)</label>
+                  <div className="mt-1 relative">
+                    <textarea value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 120))}
+                      placeholder="Type your question here..."
+                      className="w-full h-28 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400 disabled:cursor-not-allowed" />
+                    <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{question.length}/120</span>
+                  </div>
+                </div>
+                <button type="button" onClick={sendQuestion} disabled={!question.trim() || questionsLeft <= 0 || locked}
+                  className="mt-5 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed">
+                  <Send className="h-4 w-4 inline mr-2" /> Send Question
+                </button>
+              </fieldset>
+            </>
+          ) : (
+            <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
+              <ScanSearch className="h-8 w-8 mx-auto text-purple-300" />
+              <p className="mt-3 text-sm text-white/80">
+                The Investigator is questioning suspects. If a question comes to you, an answer window
+                will open automatically — you have limited time to respond.
+              </p>
             </div>
           )}
-          <fieldset disabled={locked} aria-busy={locked} className={locked ? "opacity-60 pointer-events-none select-none" : ""}>
-            <div className="mt-4 grid grid-cols-5 gap-2">
-              {people.map((p, i) => (
-                <button type="button" key={p.id} onClick={() => setSelectedAskee(i)} className={`relative rounded-xl border p-2 text-center transition ${i === selectedAskee ? "border-purple-400 ring-2 ring-purple-400/40 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
-                  <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${p.grad} grid place-items-center overflow-hidden`}>
-                    {p.role_image ? (
-                      <img src={resolveMediaUrl(p.role_image) ?? ""} alt={p.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-white/80" />
-                    )}
-                  </div>
-                  <div className="mt-1.5 text-[11px] font-semibold">{p.short}</div>
-                  {i === selectedAskee && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-purple-500 ring-2 ring-purple-300" />}
-                </button>
-              ))}
-            </div>
-            <div className="mt-6">
-              <label className="text-xs text-white/70">Type your question (max 120 characters)</label>
-              <div className="mt-1 relative">
-                <textarea value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 120))}
-                  placeholder="Type your question here..."
-                  className="w-full h-28 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400 disabled:cursor-not-allowed" />
-                <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{question.length}/120</span>
-              </div>
-            </div>
-            <button type="button" onClick={sendQuestion} disabled={!question.trim() || questionsLeft <= 0 || locked}
-              className="mt-5 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed">
-              <Send className="h-4 w-4 inline mr-2" /> Send Question
-            </button>
-          </fieldset>
           <p className="mt-2 text-center text-[11px] text-white/60">All answers are visible to everyone after the player submits.</p>
         </div>
 
@@ -752,52 +1153,62 @@ function InvestigationView(props: {
           <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
             <h3 className="text-sm font-bold mb-3 text-pink-400">{lieMode ? "Lie Detector Mode Q/A" : "Recent Activity"}</h3>
             <ul className="space-y-3 max-h-[400px] overflow-auto pr-1">
-              {activity.map((a, i) => (
-                <li key={i} className="rounded-xl bg-purple-500/10 border border-purple-400/20 p-4 relative">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-purple-500/40 grid place-items-center text-[11px] shrink-0">YA</div>
-                    <div className="flex-1">
-                      <div className="text-[11px] text-white/70">You asked <span className="text-pink-300 font-semibold">{a.to}</span></div>
-                      <div className="text-sm font-medium mt-0.5">{a.q}</div>
-                      <div className="text-[10px] text-white/40 mt-1">02:35</div>
-                    </div>
-                  </div>
-                  {a.a && (
-                    <div className="mt-3 flex items-start gap-3 border-t border-white/10 pt-3 relative">
-                      <div className="h-8 w-8 rounded-full bg-rose-500/40 grid place-items-center text-[11px] shrink-0">{a.to.slice(0,2)}</div>
-                      <div className="flex-1 pr-24">
-                        <div className="text-[11px] text-pink-300">{a.to} <span className="text-white/70">Answered</span></div>
-                        <div className="text-sm mt-0.5">{a.a}</div>
-                        <div className="text-[10px] text-white/40 mt-1">03:37</div>
+              {activity.length === 0 && (
+                <li className="text-xs text-white/50 text-center py-6">No questions asked yet.</li>
+              )}
+              {activity.map((a) => {
+                const targetShort = shortBySessionId.get(a.toSessionId) ?? "Player";
+                return (
+                  <li key={a.questionId} className="rounded-xl bg-purple-500/10 border border-purple-400/20 p-4 relative">
+                    <div className="flex items-start gap-3">
+                      <div className="h-8 w-8 rounded-full bg-purple-500/40 grid place-items-center text-[11px] shrink-0">
+                        {isInvestigator ? "YA" : "IN"}
                       </div>
-                      
-                      {/* Votes logic */}
-                      {a.b !== undefined && a.s !== undefined && (
-                        <div className="absolute right-0 top-3 text-right space-y-2">
-                          <div className="text-sm text-emerald-400">Believable ({a.b})</div>
-                          <div className="text-sm text-rose-400">Suspicious ({a.s})</div>
+                      <div className="flex-1">
+                        <div className="text-[11px] text-white/70">
+                          {isInvestigator ? "You asked" : "Investigator asked"}{" "}
+                          <span className="text-pink-300 font-semibold">{targetShort}</span>
                         </div>
-                      )}
+                        <div className="text-sm font-medium mt-0.5">{a.q}</div>
+                      </div>
                     </div>
-                  )}
-                  {!a.a && (
-                    <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
-                      <Clock className="h-4 w-4 text-amber-300" />
-                      <span className="text-xs text-amber-300">Waiting for answer...</span>
-                    </div>
-                  )}
-                </li>
-              ))}
+                    {a.a && (
+                      <div className="mt-3 flex items-start gap-3 border-t border-white/10 pt-3 relative">
+                        <div className="h-8 w-8 rounded-full bg-rose-500/40 grid place-items-center text-[11px] shrink-0">{targetShort.slice(0, 2)}</div>
+                        <div className="flex-1 pr-24">
+                          <div className="text-[11px] text-pink-300">
+                            {targetShort}{" "}
+                            <span className="text-white/70">{a.autoSkipped ? "did not answer" : "Answered"}</span>
+                          </div>
+                          <div className={`text-sm mt-0.5 ${a.autoSkipped ? "text-white/50 italic" : ""}`}>{a.a}</div>
+                        </div>
+                        {lieMode && lieTally && (
+                          <div className="absolute right-0 top-3 text-right space-y-2">
+                            <div className="text-sm text-emerald-400">Believable ({lieTally.believable})</div>
+                            <div className="text-sm text-rose-400">Suspicious ({lieTally.suspicious})</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {!a.a && (
+                      <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+                        <Clock className="h-4 w-4 text-amber-300" />
+                        <span className="text-xs text-amber-300">Waiting for answer...</span>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
             <h3 className="text-sm font-bold mb-3">Score Board</h3>
             <div className="grid grid-cols-5 gap-2 text-center text-[11px]">
-              {[["You", 120], ["Oni86", 50], ["John32", 100], ["James45", 80], ["Fred36", 60]].map(([n, p]) => (
-                <div key={n as string}>
-                  <div className="text-white/70">{n}</div>
-                  <div className="text-amber-300 font-bold">{p}</div>
+              {players.map((p) => (
+                <div key={p.session_id}>
+                  <div className="text-white/70 truncate">{p.is_you ? "You" : p.pseudonym}</div>
+                  <div className="text-amber-300 font-bold">{scoresBySessionId.get(p.session_id) ?? 0}</div>
                 </div>
               ))}
             </div>
@@ -908,6 +1319,14 @@ function roleDisplayName(person: GamePerson): string {
   return match ? match[1].trim() : label;
 }
 
+function splitCharacterName(rawName: string): { displayName: string; title: string | null } {
+  const match = rawName.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (match) {
+    return { displayName: match[1].trim(), title: match[2].trim() };
+  }
+  return { displayName: rawName.trim(), title: null };
+}
+
 function YourRoleModal({ person, onClose }: { person: GamePerson; onClose: () => void }) {
   const roleName = roleDisplayName(person);
   const roleTagline = person.role_subtitle || person.role_label || person.role;
@@ -995,69 +1414,81 @@ function PhotosModal({ photos, onClose }: { photos: string[]; onClose: () => voi
 }
 
 function AnswerModal({
-  target,
   question,
   answerSecs,
-  onClose,
+  onSubmit,
 }: {
-  target: GamePerson;
   question: string;
   answerSecs: number;
-  onClose: () => void;
+  onSubmit: (text: string) => void;
 }) {
   const [secs, setSecs] = useState(answerSecs);
   const [ans, setAns] = useState("");
   useEffect(() => { const t = setInterval(() => setSecs((s) => Math.max(0, s - 1)), 1000); return () => clearInterval(t); }, []);
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
   return (
-    <ModalShell onClose={onClose}>
-      <div className="p-6">
-        <div className="flex items-start gap-3">
-          <div className="h-12 w-12 rounded-full bg-purple-700/40 grid place-items-center"><ShieldCheck className="h-5 w-5 text-purple-200" /></div>
-          <div>
-            <h3 className="text-lg font-bold">You have been asked a Question</h3>
-            <p className="text-xs text-white/65">By SC (Investigator) in Lie Detector Mode</p>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-lg rounded-3xl border border-white/15 bg-purple-950/95 shadow-elevated">
+        <div className="p-6">
+          <div className="flex items-start gap-3">
+            <div className="h-12 w-12 rounded-full bg-purple-700/40 grid place-items-center"><ShieldCheck className="h-5 w-5 text-purple-200" /></div>
+            <div>
+              <h3 className="text-lg font-bold">You have been asked a Question</h3>
+              <p className="text-xs text-white/65">By the Investigator</p>
+            </div>
           </div>
-        </div>
-        <div className="mt-5 rounded-2xl border border-white/10 bg-purple-500/10 p-4 text-center">
-          <div className="text-[11px] text-white/60">Question</div>
-          <div className="mt-1 text-base">{question || "Where were you between 10 PM - 11 PM"}</div>
-        </div>
-        <div className="mt-5 text-center">
-          <Clock className="h-5 w-5 mx-auto text-white/60" />
-          <div className="text-xs text-white/65 mt-1">Time Left to answer</div>
-          <div className="text-2xl font-black text-amber-300 tabular-nums">{fmt(secs)}</div>
-        </div>
-        <div className="mt-5">
-          <label className="text-xs text-white/70">Type your answer (max 120 characters)</label>
-          <div className="mt-1 relative">
-            <textarea value={ans} onChange={(e) => setAns(e.target.value.slice(0, 120))} placeholder="Type your answer here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
-            <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{ans.length}/120</span>
+          <div className="mt-5 rounded-2xl border border-white/10 bg-purple-500/10 p-4 text-center">
+            <div className="text-[11px] text-white/60">Question</div>
+            <div className="mt-1 text-base">{question}</div>
           </div>
+          <div className="mt-5 text-center">
+            <Clock className="h-5 w-5 mx-auto text-white/60" />
+            <div className="text-xs text-white/65 mt-1">Time Left to answer</div>
+            <div className="text-2xl font-black text-amber-300 tabular-nums">{fmt(secs)}</div>
+          </div>
+          <div className="mt-5">
+            <label className="text-xs text-white/70">Type your answer (max 120 characters)</label>
+            <div className="mt-1 relative">
+              <textarea value={ans} onChange={(e) => setAns(e.target.value.slice(0, 120))} placeholder="Type your answer here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
+              <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{ans.length}/120</span>
+            </div>
+          </div>
+          <button onClick={() => onSubmit(ans)} disabled={!ans.trim()} className="mt-4 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40">Submit Answer</button>
+          <p className="mt-2 text-center text-[11px] text-white/60">Your answer will be visible to all players.</p>
         </div>
-        <button onClick={onClose} className="mt-4 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow">Submit Answer To Start Voting</button>
-        <p className="mt-2 text-center text-[11px] text-white/60">Your answer will be visible to all players.</p>
       </div>
-    </ModalShell>
+    </div>
   );
 }
 
-function VoteModal({ target, question, onClose }: { target: GamePerson; question: string; onClose: () => void }) {
+function VoteModal({
+  answererShort,
+  answerText,
+  question,
+  onVote,
+  onClose,
+}: {
+  answererShort: string;
+  answerText: string;
+  question: string;
+  onVote: (vote: "believable" | "suspicious") => void;
+  onClose: () => void;
+}) {
   const [vote, setVote] = useState<"believable" | "suspicious" | null>(null);
   return (
     <ModalShell onClose={onClose}>
       <div className="p-6">
         <div className="flex items-start gap-3">
           <div className="h-12 w-12 rounded-full bg-purple-700/40 grid place-items-center"><ShieldCheck className="h-5 w-5 text-purple-200" /></div>
-          <div><h3 className="text-lg font-bold">Vote on the Answer</h3><p className="text-xs text-white/65">By SC (Investigator)</p></div>
+          <div><h3 className="text-lg font-bold">Vote on the Answer</h3><p className="text-xs text-white/65">Lie Detector round</p></div>
         </div>
         <div className="mt-5 rounded-2xl border border-white/10 bg-purple-500/10 p-4 text-center">
           <div className="text-[11px] text-white/60">Question</div>
-          <div className="mt-1 text-base">{question || "Where were you between 10 PM - 11 PM"}</div>
+          <div className="mt-1 text-base">{question}</div>
         </div>
         <div className="mt-4">
-          <div className="text-xs text-pink-300 mb-1">{target.short} Answer</div>
-          <div className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm">I was in the library reading a book.</div>
+          <div className="text-xs text-pink-300 mb-1">{answererShort} Answer</div>
+          <div className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm">{answerText}</div>
         </div>
         <div className="mt-5">
           <div className="text-xs text-pink-300 mb-2">Select Votes</div>
@@ -1070,16 +1501,46 @@ function VoteModal({ target, question, onClose }: { target: GamePerson; question
             </button>
           </div>
         </div>
-        <button onClick={onClose} disabled={!vote} className="mt-6 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40">Submit Vote</button>
+        <button onClick={() => vote && onVote(vote)} disabled={!vote} className="mt-6 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40">Submit Vote</button>
         <p className="mt-2 text-center text-[11px] text-white/60">Your votes will be visible to all players.</p>
       </div>
     </ModalShell>
   );
 }
 
-function ClueRoomModal({ clues, unlockSecs, onClose }: { clues: GameSummaryResponse['clues']; unlockSecs: number; onClose: () => void }) {
+function ClueRoomModal({
+  clues,
+  unlockSecs,
+  unlocked,
+  onClose,
+}: {
+  clues: GameSummaryResponse['clues'];
+  unlockSecs: number;
+  unlocked: boolean;
+  onClose: () => void;
+}) {
   const firstClue = clues[0] ?? null;
   const unlockLabel = `${Math.floor(unlockSecs / 60)}:${String(unlockSecs % 60).padStart(2, '0')}`;
+
+  if (!unlocked) {
+    return (
+      <ModalShell onClose={onClose} max="max-w-md">
+        <div className="p-8 text-center">
+          <div className="mx-auto h-14 w-14 rounded-full border border-amber-400/50 bg-amber-500/10 grid place-items-center">
+            <Lightbulb className="h-6 w-6 text-amber-300" />
+          </div>
+          <h3 className="mt-4 text-lg font-black tracking-widest">CLUE ROOM LOCKED</h3>
+          <p className="mt-3 text-sm text-white/75">
+            The Clue Room opens when {unlockLabel} minutes remain in the session. Keep questioning —
+            the evidence will be revealed to everyone at the same time.
+          </p>
+          <button onClick={onClose} className="mt-6 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow">
+            Back to Investigation
+          </button>
+        </div>
+      </ModalShell>
+    );
+  }
 
   return (
     <ModalShell onClose={onClose} max="max-w-2xl">
@@ -1088,7 +1549,7 @@ function ClueRoomModal({ clues, unlockSecs, onClose }: { clues: GameSummaryRespo
           <div className="h-12 w-12 rounded-full border border-amber-400/50 bg-amber-500/10 grid place-items-center"><Lightbulb className="h-5 w-5 text-amber-300" /></div>
           <div>
             <h3 className="text-lg font-black tracking-widest">CLUE ROOM</h3>
-            <div className="text-xs text-emerald-400">Unlocks after {unlockLabel} minutes</div>
+            <div className="text-xs text-emerald-400">Unlocked — visible to all players</div>
           </div>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -1117,34 +1578,65 @@ function ClueRoomModal({ clues, unlockSecs, onClose }: { clues: GameSummaryRespo
   );
 }
 
-function AccuseModal({ people, onClose }: { people: GamePerson[]; onClose: () => void }) {
-  const [pick, setPick] = useState<number | null>(null);
+function AccuseModal({
+  players,
+  victimName,
+  submitted,
+  onSubmit,
+  onClose,
+}: {
+  players: GamePlayer[];
+  victimName: string | null;
+  submitted: boolean;
+  onSubmit: (accusedSessionId: number, reasoning: string) => void;
+  onClose: () => void;
+}) {
+  const [pickSessionId, setPickSessionId] = useState<number | null>(null);
   const [reason, setReason] = useState("");
+  const candidates = players.filter((p) => !p.is_you);
   return (
     <ModalShell onClose={onClose} max="max-w-2xl">
       <div className="p-6">
         <div className="flex items-start gap-3">
           <div className="h-12 w-12 rounded-full border border-rose-400/50 bg-rose-500/10 grid place-items-center"><UserX className="h-5 w-5 text-rose-300" /></div>
-          <div><h3 className="text-lg font-bold">Make Your Final Accusation</h3><p className="text-xs text-white/65">You can submit your accusation now.</p></div>
-        </div>
-        <div className="mt-5 grid grid-cols-5 gap-2">
-          {people.filter((p) => !p.is_you).map((p, i) => (
-            <button key={p.id} type="button" onClick={() => setPick(i)} className={`relative rounded-xl border p-2 text-center ${pick === i ? "border-purple-400 ring-2 ring-purple-400/40 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
-              <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${p.grad} grid place-items-center`}><Eye className="h-5 w-5 text-white/80" /></div>
-              <div className="mt-1.5 text-[11px] font-semibold">{p.short}</div>
-              {pick === i && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-purple-500 ring-2 ring-purple-300" />}
-            </button>
-          ))}
-        </div>
-        <div className="mt-5">
-          <label className="text-xs text-white/80">Why do you think this player is the culprit? <span className="text-white/50">(Optional)</span></label>
-          <div className="mt-1 relative">
-            <textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 120))} placeholder="Type your reason here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
-            <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{reason.length}/120</span>
+          <div>
+            <h3 className="text-lg font-bold">{victimName ? `Who Killed ${victimName}?` : "Make Your Final Accusation"}</h3>
+            <p className="text-xs text-white/65">The investigation is over. Trust your instincts. Name the killer.</p>
           </div>
         </div>
-        <Link to="/results" onClick={onClose} className="mt-5 block text-center w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow">Submit Answer</Link>
-        <p className="mt-2 text-center text-[11px] text-white/60">Once submitted, you cannot change your answer.</p>
+        {submitted ? (
+          <p className="mt-6 text-center text-sm text-emerald-300">Your accusation has been submitted. Waiting for the other players…</p>
+        ) : (
+          <>
+            <div className="mt-5 grid grid-cols-5 gap-2">
+              {candidates.map((p, i) => (
+                <button key={p.session_id} type="button" onClick={() => setPickSessionId(p.session_id)} className={`relative rounded-xl border p-2 text-center ${pickSessionId === p.session_id ? "border-purple-400 ring-2 ring-purple-400/40 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
+                  <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold`}>
+                    {p.pseudonym.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="mt-1.5 text-[11px] font-semibold">{p.pseudonym}</div>
+                  {pickSessionId === p.session_id && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-purple-500 ring-2 ring-purple-300" />}
+                </button>
+              ))}
+            </div>
+            <div className="mt-5">
+              <label className="text-xs text-white/80">Why do you think this player is the culprit?</label>
+              <div className="mt-1 relative">
+                <textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 120))} placeholder="Type your reason here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
+                <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{reason.length}/120</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => pickSessionId != null && onSubmit(pickSessionId, reason.trim())}
+              disabled={pickSessionId == null || !reason.trim()}
+              className="mt-5 block text-center w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Submit Answer
+            </button>
+            <p className="mt-2 text-center text-[11px] text-white/60">Choose carefully. An innocent person's fate rests on your decision. Once submitted, you cannot change your answer.</p>
+          </>
+        )}
       </div>
     </ModalShell>
   );

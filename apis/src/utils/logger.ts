@@ -33,31 +33,36 @@ const colors = {
 winston.addColors(colors);
 
 /**
- * Log Format
+ * Log Formats — colors are console-only; log files get clean parseable lines
+ * so the admin-panel log viewer can read them without ANSI escape codes.
  */
-const format = winston.format.combine(
+const fileFormat = winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
+    winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
+);
+
+const consoleFormat = winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
     winston.format.colorize({ all: true }),
-    winston.format.printf(
-        (info) => `${info.timestamp} ${info.level}: ${info.message}`
-    )
+    winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
 );
 
 /**
  * Define Transports
  */
 const transports = [
-    // Console transport
-    new winston.transports.Console(),
-    
-    // Error log file transport
+    // Console transport (colored)
+    new winston.transports.Console({ format: consoleFormat }),
+
+    // Error log file transport (plain text)
     new winston.transports.File({
         filename: 'logs/error.log',
         level: 'error',
+        format: fileFormat,
     }),
-    
-    // All logs file transport
-    new winston.transports.File({ filename: 'logs/all.log' }),
+
+    // All logs file transport (plain text)
+    new winston.transports.File({ filename: 'logs/all.log', format: fileFormat }),
 ];
 
 /**
@@ -66,7 +71,6 @@ const transports = [
 const logger = winston.createLogger({
     level: level(),
     levels,
-    format,
     transports,
 });
 

@@ -20,6 +20,30 @@ export function normalizeScheduledTime(time: string): string {
   return time.length === 5 ? `${time}:00` : time;
 }
 
+export function formatDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Matches the backend rule (organizerController): scheduling is allowed from
+// today through 5 days from now.
+export const MAX_SCHEDULE_DAYS_AHEAD = 5;
+
+export function getSelectableScheduleDateBounds() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const maxDate = new Date(today);
+  maxDate.setDate(maxDate.getDate() + MAX_SCHEDULE_DAYS_AHEAD);
+
+  return {
+    minDate: formatDateInputValue(today),
+    maxDate: formatDateInputValue(maxDate),
+  };
+}
+
 export function formatDisplayDate(isoDate: string): string {
   const d = new Date(`${isoDate}T00:00:00`);
   return d.toLocaleDateString("en-IN", {
@@ -64,11 +88,9 @@ export function validateSessionSetup(data: {
   if (!data.scheduledTime) errors.scheduledTime = "Start time is required";
 
   if (data.scheduledDate) {
-    const selected = new Date(`${data.scheduledDate}T00:00:00`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selected < today) {
-      errors.scheduledDate = "Date cannot be in the past";
+    const { minDate, maxDate } = getSelectableScheduleDateBounds();
+    if (data.scheduledDate < minDate || data.scheduledDate > maxDate) {
+      errors.scheduledDate = `Please select a date from today through the next ${MAX_SCHEDULE_DAYS_AHEAD} days`;
     }
   }
 
@@ -118,7 +140,9 @@ export function validateBillingForm(data: {
     errors.payment_method = "Please select a payment method";
   }
 
-  if (data.gst_number.trim() && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(data.gst_number.trim())) {
+  if (!data.gst_number.trim()) {
+    errors.gst_number = "GST number is required";
+  } else if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(data.gst_number.trim())) {
     errors.gst_number = "Please enter a valid GST number";
   }
 

@@ -1,16 +1,17 @@
 /**
  * Environment Configuration
- * Centralized management of environment variables
+ * Centralized management of environment variables testing
  */
 
 export const ENV = {
   // API Configuration
-  // Dev: empty string uses same-origin + Vite proxy (/v1 → Node API). Avoids CORS issues.
-  API_BASE_URL:
-    import.meta.env.VITE_API_BASE_URL ??
-    (import.meta.env.DEV ? "" : "http://localhost:6000"),
+  // Use the Vite proxy in development to avoid browser CORS preflights.
+  API_BASE_URL: import.meta.env.DEV
+    ? ""
+    : import.meta.env.VITE_API_BASE_URL || "http://localhost:6001",
   API_TIMEOUT: parseInt(import.meta.env.VITE_API_TIMEOUT || "30000"),
-  STORAGE_BASE_URL: import.meta.env.VITE_STORAGE_BASE_URL || "http://localhost:8000/storage",
+  STORAGE_BASE_URL:
+    import.meta.env.VITE_STORAGE_BASE_URL || "http://localhost/p/storage",
 
   // Authentication
   AUTH_TOKEN_KEY: import.meta.env.VITE_AUTH_TOKEN_KEY || "auth_token",

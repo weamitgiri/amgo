@@ -18,6 +18,7 @@ import { Route as ParticipantsRouteImport } from './routes/participants'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LobbyRouteImport } from './routes/lobby'
+import { Route as HrResultsRouteImport } from './routes/hr-results'
 import { Route as GroupsRouteImport } from './routes/groups'
 import { Route as GameRouteImport } from './routes/game'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -70,6 +71,11 @@ const LobbyRoute = LobbyRouteImport.update({
   path: '/lobby',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HrResultsRoute = HrResultsRouteImport.update({
+  id: '/hr-results',
+  path: '/hr-results',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GroupsRoute = GroupsRouteImport.update({
   id: '/groups',
   path: '/groups',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/game': typeof GameRoute
   '/groups': typeof GroupsRoute
+  '/hr-results': typeof HrResultsRoute
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/game': typeof GameRoute
   '/groups': typeof GroupsRoute
+  '/hr-results': typeof HrResultsRoute
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/game': typeof GameRoute
   '/groups': typeof GroupsRoute
+  '/hr-results': typeof HrResultsRoute
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/game'
     | '/groups'
+    | '/hr-results'
     | '/lobby'
     | '/login'
     | '/notifications'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/game'
     | '/groups'
+    | '/hr-results'
     | '/lobby'
     | '/login'
     | '/notifications'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/game'
     | '/groups'
+    | '/hr-results'
     | '/lobby'
     | '/login'
     | '/notifications'
@@ -213,6 +225,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   GameRoute: typeof GameRoute
   GroupsRoute: typeof GroupsRoute
+  HrResultsRoute: typeof HrResultsRoute
   LobbyRoute: typeof LobbyRoute
   LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LobbyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hr-results': {
+      id: '/hr-results'
+      path: '/hr-results'
+      fullPath: '/hr-results'
+      preLoaderRoute: typeof HrResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/groups': {
       id: '/groups'
       path: '/groups'
@@ -341,6 +361,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   GameRoute: GameRoute,
   GroupsRoute: GroupsRoute,
+  HrResultsRoute: HrResultsRoute,
   LobbyRoute: LobbyRoute,
   LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,

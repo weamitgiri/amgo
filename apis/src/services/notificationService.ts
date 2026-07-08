@@ -171,7 +171,15 @@ export async function notifyParticipantJoined(
     );
     const memberCount = Number(countRows[0]?.total ?? 0);
 
-    if (memberCount >= PLAYERS_PER_GROUP) {
+    // Group capacity is admin-configured per activity (activities.group_size).
+    const [sizeRows] = await query(
+        `SELECT a.group_size FROM organizer_bookings ob
+         JOIN activities a ON a.id = ob.activity_id WHERE ob.id = ? LIMIT 1`,
+        [bookingId]
+    );
+    const playersPerGroup = Number(sizeRows[0]?.group_size) || PLAYERS_PER_GROUP;
+
+    if (memberCount >= playersPerGroup) {
         await notifyGroupComplete(io, bookingId, organizerId, group.id, displayGroup);
     }
 }

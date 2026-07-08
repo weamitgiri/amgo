@@ -20,6 +20,7 @@ import type {
   UpdateOrganizerBillingPayload,
   OrganizerBillingProfile,
   OrganizerNotificationsResponse,
+  OrganizerGameResult,
 } from "../types/organizer";
 
 const noAuth = { auth: "none" as const };
@@ -110,6 +111,13 @@ export const organizerService = {
   /** Update session date/time (reschedule) */
   updateSession: (payload: { booking_id: number | string; scheduled_date: string; scheduled_time: string }) =>
     apiClient.post<{ message: string }>(API_ENDPOINTS.organizer.updateSession, payload),
+
+  /** Results tab — completed games with results-PDF availability */
+  getResults: () =>
+    apiClient.get<{ results: OrganizerGameResult[] }>(API_ENDPOINTS.organizer.results),
+
+  /** Deactivate account (soft delete — billing/GST records retained) */
+  deleteAccount: () => apiClient.post<null>(API_ENDPOINTS.organizer.deleteAccount, {}),
 
   /** Step 4: Complete booking and payment */
   completeBooking: (payload: CompleteBookingPayload) =>

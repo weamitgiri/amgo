@@ -2,7 +2,7 @@ import { io, type Socket } from "socket.io-client";
 
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ??
-  (import.meta.env.DEV ? "http://localhost:6000" : "http://localhost:6000");
+  (import.meta.env.DEV ? "http://localhost:6001" : "http://localhost:6001");
 
 let socket: Socket | null = null;
 

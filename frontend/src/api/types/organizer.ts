@@ -90,11 +90,26 @@ export interface DashboardBooking {
   activity_name: string;
   cover_image: string;
   activity_icon?: string | null;
+  game_duration_secs?: number | null;
   package_name: string;
   package_price: number | string;
   max_users: number;
   registered_participants: number;
+  payment_date?: string | null;
 }
+
+export type OrganizerGameResult = {
+  group_id: number;
+  group_name: string;
+  booking_id: number;
+  activity_name: string;
+  scheduled_date: string;
+  scheduled_time: string;
+  status: "completed" | "incomplete";
+  completed_at: string | null;
+  pdf_available: boolean;
+  pdf_expires_at: string | null;
+};
 
 export interface OrganizerDashboardResponse {
   organizer: OrganizerProfile & { company_name?: string | null };

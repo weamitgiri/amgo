@@ -1,5 +1,7 @@
 import moment, { Moment } from 'moment';
 import { query } from '../config/db';
+import { shortName } from '../utils/pseudonym';
+import { ensureCaseSummaryTimer } from './timerService';
 
 export type LobbyMember = {
     id: number;
@@ -85,14 +87,14 @@ export async function buildLobbyPayload(
             ob.invitation_link, ob.game_id, ob.scheduled_date, ob.scheduled_time,
             a.id AS activity_id, a.title AS activity_title, a.slug AS activity_slug,
             a.description AS activity_description, a.cover_image, a.icon,
-            a.lobby_wait_secs, a.game_duration_secs, a.group_size, a.max_questions,
+            a.lobby_wait_secs, a.game_duration_secs, a.case_summary_view_secs, a.group_size, a.max_questions,
             a.question_response_secs, a.clue_room_unlock_secs,
             a.lie_detector_enabled, a.lie_detector_timer_secs,
             ag.id AS game_row_id, ag.title AS case_title, ag.tagline, ag.case_summary
          FROM game_groups gg
          JOIN organizer_bookings ob ON gg.booking_id = ob.id
          JOIN activities a ON ob.activity_id = a.id
-         LEFT JOIN activity_games ag ON ob.game_id = ag.id
+         LEFT JOIN activity_games ag ON ag.id = COALESCE(gg.game_id, ob.game_id)
          WHERE gg.id = ?`,
         [groupId]
     );
@@ -110,18 +112,23 @@ export async function buildLobbyPayload(
         [groupId]
     );
 
-    const memberList: LobbyMember[] = members.map((m: any) => ({
-        id: m.id,
-        name: m.name || 'Participant',
-        status: m.status || 'joined',
-        is_you: currentParticipantId != null && String(m.id) === String(currentParticipantId),
-    }));
+    const memberList: LobbyMember[] = members.map((m: any) => {
+        const isYou = currentParticipantId != null && String(m.id) === String(currentParticipantId);
+        const realName = m.name || 'Participant';
+        return {
+            id: m.id,
+            name: isYou ? realName : shortName(realName, Number(m.id)),
+            status: m.status || 'joined',
+            is_you: isYou,
+        };
+    });
 
     const memberCount = memberList.length;
     const isGroupFull = memberCount >= groupSize;
     const now = moment();
     const scheduleStart = parseBookingSchedule(row.scheduled_date, row.scheduled_time);
     const scheduledStartLabel = scheduleStart ? formatScheduleLabel(scheduleStart) : null;
+    // Entry window / lobby wait is admin-configurable per activity (activities.lobby_wait_secs).
     const gameRedirectAt = scheduleStart ? scheduleStart.clone().add(lobbyWaitSecs, 'seconds') : null;
 
     let lobbyPhase: LobbyPhase = 'before_start';
@@ -135,18 +142,14 @@ export async function buildLobbyPayload(
     } else if (now.isBefore(scheduleStart)) {
         lobbyPhase = 'before_start';
         statusMessage = `This activity has not started yet. The scheduled start is ${scheduledStartLabel}.`;
-    } else if (!isGroupFull) {
-        lobbyPhase = 'waiting_members';
-        const need = groupSize - memberCount;
-        statusMessage =
-            need === 1
-                ? `Waiting for 1 more participant to join via the invite link. Your group needs exactly ${groupSize} members before the ${lobbyWaitMins}-minute lobby timer can begin.`
-                : `Waiting for ${need} more participants to join via the invite link. Your group needs exactly ${groupSize} members before the ${lobbyWaitMins}-minute lobby timer can begin.`;
     } else if (now.isBefore(gameRedirectAt)) {
         lobbyPhase = 'lobby_timer';
         gameStartsAt = gameRedirectAt.toISOString();
         lobbyCountdownSeconds = Math.max(0, gameRedirectAt.diff(now, 'seconds'));
-        statusMessage = `The activity started at ${scheduledStartLabel}. The game will begin in ${lobbyWaitMins} minutes from the scheduled start time.`;
+        const remainingSlots = Math.max(0, groupSize - memberCount);
+        statusMessage = remainingSlots > 0
+            ? `The activity started at ${scheduledStartLabel}. You can still join until the ${lobbyWaitMins}-minute entry window closes. ${remainingSlots} slot${remainingSlots === 1 ? '' : 's'} remain.`
+            : `The activity started at ${scheduledStartLabel}. The game will begin when the ${lobbyWaitMins}-minute entry window closes.`;
     } else {
         lobbyPhase = 'ready';
         gameStartsAt = gameRedirectAt.toISOString();
@@ -160,7 +163,10 @@ export async function buildLobbyPayload(
             row.group_status = 'active';
         }
 
-        statusMessage = 'Your group is ready. Starting the game…';
+        // Game starts now — kick off the case-summary clock (idempotent).
+        await ensureCaseSummaryTimer(groupId, Number(row.case_summary_view_secs) || 300);
+
+        statusMessage = `The ${lobbyWaitMins}-minute entry window has closed. Starting the game…`;
     }
 
     const [rules] = row.game_row_id

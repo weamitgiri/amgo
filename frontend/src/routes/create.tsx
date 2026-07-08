@@ -4,6 +4,9 @@ import { Header } from "@/components/Header";
 import { Crumbs } from "@/components/Crumbs";
 import { Footer } from "@/components/Footer";
 import { PillButton } from "@/components/PillButton";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toastSuccess, toastWarning, toastError } from "@/lib/toast";
 import { organizerService } from "@/api/services/organizer.service";
 import { mapApiFieldErrors, parseApiError } from "@/api/errors";
@@ -19,6 +22,8 @@ import {
   formatDisplayDate,
   formatDisplayTime,
   formatPrice,
+  formatDateInputValue,
+  getSelectableScheduleDateBounds,
   normalizeScheduledTime,
   perUserLabel,
   validateBillingForm,
@@ -35,9 +40,9 @@ import type { ApiActivity, ApiPackage } from "@/api/types/public";
 import { useGames, useGameDetails, usePackages } from "@/hooks/usePublicContent";
 import { resolveMediaUrl } from "@/utils/media";
 import { isOrganizerAuthenticated } from "@/lib/auth";
-import { Check, Mail, User, Copy, MessageCircle, Share2, CheckCircle2, X, Loader2 } from "lucide-react";
-import mystery from "@/assets/mystery.jpg";
-import cook from "@/assets/cook.jpg";
+import { Check, Mail, User, Copy, MessageCircle, Share2, CheckCircle2, X, Loader2, Calendar as CalendarIcon } from "lucide-react";
+import mystery from "@/assets/people-1.jpg";
+import cook from "@/assets/people-2.jpg";
 import hero from "@/assets/hero.jpg";
 
 const FALLBACK_IMAGES = [mystery, cook];
@@ -615,8 +620,19 @@ function SetupStep({
   const { data: games, isLoading: gamesLoading } = useGames();
   const { data: packages, isLoading: packagesLoading } = usePackages();
   const { data: gameDetails, isLoading: gameDetailsLoading } = useGameDetails(session.activityId);
+  const [dateOpen, setDateOpen] = useState(false);
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const { minDate: todayStr, maxDate: maxDateStr } = getSelectableScheduleDateBounds();
+  const selectedScheduleDate = session.scheduledDate ? new Date(`${session.scheduledDate}T00:00:00`) : undefined;
+  const disabledScheduleDays = {
+    before: new Date(`${todayStr}T00:00:00`),
+    after: new Date(`${maxDateStr}T00:00:00`),
+  };
+
+  const isAllowedScheduleDate = (value: string) => {
+    if (!value) return false;
+    return value >= todayStr && value <= maxDateStr;
+  };
 
   const selectActivity = (activity: ApiActivity) => {
     setSession((prev) => ({
@@ -748,11 +764,6 @@ function SetupStep({
         {gameDetailsLoading && session.activityId && (
           <p className="mt-2 text-xs text-muted-foreground">Loading game variant...</p>
         )}
-        {session.gameTitle && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Selected variant: <span className="font-medium text-foreground">{session.gameTitle}</span>
-          </p>
-        )}
         {errors.game && <p className="mt-1 text-xs text-destructive">{errors.game}</p>}
       </div>
 
@@ -823,24 +834,57 @@ function SetupStep({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-sm font-medium" htmlFor="session-date">
-            Date
+            Schedule Date
           </label>
-          <input
-            id="session-date"
-            type="date"
-            min={todayStr}
-            value={session.scheduledDate}
-            onChange={(e) => {
-              setSession((prev) => ({ ...prev, scheduledDate: e.target.value }));
-              setErrors((prev) => ({ ...prev, scheduledDate: undefined }));
-            }}
-            className={`mt-1.5 w-full rounded-lg border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-              errors.scheduledDate ? "border-destructive" : "border-input"
-            }`}
-          />
+          <Popover open={dateOpen} onOpenChange={setDateOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                id="session-date"
+                type="button"
+                variant="outline"
+                className={`mt-1.5 w-full justify-between px-4 py-2.5 text-sm font-normal ${
+                  errors.scheduledDate ? "border-destructive" : "border-input"
+                }`}
+              >
+                <span>{session.scheduledDate ? formatDisplayDate(session.scheduledDate) : "Select schedule date"}</span>
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarPicker
+                mode="single"
+                selected={selectedScheduleDate}
+                disabled={disabledScheduleDays}
+                defaultMonth={selectedScheduleDate ?? new Date(`${todayStr}T00:00:00`)}
+                onSelect={(date) => {
+                  if (!date) {
+                    setSession((prev) => ({ ...prev, scheduledDate: "" }));
+                    setErrors((prev) => ({ ...prev, scheduledDate: undefined }));
+                    return;
+                  }
+
+                  const nextValue = formatDateInputValue(date);
+                  if (isAllowedScheduleDate(nextValue)) {
+                    setSession((prev) => ({ ...prev, scheduledDate: nextValue }));
+                    setErrors((prev) => ({ ...prev, scheduledDate: undefined }));
+                    setDateOpen(false);
+                    return;
+                  }
+
+                  setErrors((prev) => ({
+                    ...prev,
+                    scheduledDate: "Please select a date from today through the next 5 days",
+                  }));
+                }}
+              />
+            </PopoverContent>
+          </Popover>
           {errors.scheduledDate && (
             <p className="mt-1 text-xs text-destructive">{errors.scheduledDate}</p>
           )}
+          <p className="mt-1 text-xs text-muted-foreground">
+            Available dates: today through the next 5 days. Disabled dates are greyed out in the calendar.
+          </p>
         </div>
         <div>
           <label className="text-sm font-medium" htmlFor="session-time">
@@ -1076,7 +1120,7 @@ function PaymentStep({
     try {
       const data = await organizerService.completeBooking({
         booking_id: bookingId,
-        gst_number: gstNumber.trim() || undefined,
+        gst_number: gstNumber.trim(),
         billing_address: billingAddress.trim(),
         city: city.trim(),
         state: state.trim(),
@@ -1152,10 +1196,10 @@ function PaymentStep({
         </p>
         <div className="mt-3 space-y-3">
           <BField
-            label="GST Number"
-            placeholder="Enter GST Number (optional)"
+            label="GST Number *"
+            placeholder="Enter GST Number"
             value={gstNumber}
-            onChange={setGstNumber}
+            onChange={(value) => setGstNumber(value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15))}
             error={errors.gst_number}
           />
           <BField
@@ -1180,7 +1224,7 @@ function PaymentStep({
             label="PIN Code"
             placeholder="Enter PIN Code"
             value={pinCode}
-            onChange={setPinCode}
+            onChange={(value) => setPinCode(value.replace(/\D/g, '').slice(0, 6))}
             error={errors.pin_code}
           />
         </div>
@@ -1362,13 +1406,13 @@ function SuccessCard({
             <Copy className="h-4 w-4" /> Copy
           </button>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+       {/* <div className="mt-4 flex flex-wrap gap-2">
           {[{ i: MessageCircle, l: "WhatsApp" }, { i: Mail, l: "Email" }, { i: Share2, l: "More" }].map(({ i: Icon, l }) => (
             <button key={l} type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs hover:bg-accent">
               <Icon className="h-3.5 w-3.5" /> {l}
             </button>
           ))}
-        </div>
+        </div>*/}
       </div>
 
       {!authed && (

@@ -1,4 +1,6 @@
 import { query, withTransaction } from '../config/db';
+import { shortName } from '../utils/pseudonym';
+import { ensureCaseSummaryTimer } from './timerService';
 
 const ROLE_GRADS = [
     'from-amber-700 via-orange-600 to-red-900',
@@ -72,12 +74,6 @@ function parseQuickFacts(value: unknown): { label: string; value: string; icon: 
         }));
     }
     return [];
-}
-
-function shortName(name: string, id: number): string {
-    const inside = name.match(/\(([^)]+)\)/);
-    const base = (inside?.[1] || name.split(/\s+/)[0] || 'Player').replace(/\W/g, '').slice(0, 12);
-    return `${base}${(id % 70) + 30}`;
 }
 
 function shuffleIds<T>(items: T[]): T[] {
@@ -187,9 +183,12 @@ export type GameSummaryPayload = {
         case_summary_html: string | null;
         timeline: { time: string; event: string }[];
         quick_facts: { label: string; value: string; icon: string }[];
+        victim_name: string | null;
     };
+    players: { session_id: number; pseudonym: string; is_you: boolean }[];
     roles: {
         id: number;
+        session_id: number | null;
         role_type: string;
         role_label: string;
         role_subtitle: string;
@@ -211,7 +210,8 @@ export type GameSummaryPayload = {
         clue_image: string | null;
     }[];
     rules: { id: number; title: string; description: string; details: string[] }[];
-    strategy_slides: { title: string; description: string; details: string[] }[];
+    role_strategy_slides: { title: string; description: string; details: string[] }[];
+    strategy_slides: { title: string; description: string; details: string[]; appears_at_secs: number; closes_at_secs: number }[];
 };
 
 export async function buildGameSummaryPayload(
@@ -219,18 +219,18 @@ export async function buildGameSummaryPayload(
     participantId?: number | string | null
 ): Promise<GameSummaryPayload | null> {
     const [groupRows] = await query(
-        `SELECT gg.id, ob.game_id, ob.activity_id,
+        `SELECT gg.id, gg.status AS group_status, ob.game_id, ob.activity_id,
             a.title AS activity_title, a.slug AS activity_slug,
             a.case_summary_view_secs, a.game_duration_secs, a.max_questions,
             a.question_response_secs, a.clue_room_unlock_secs, a.strategy_guide_delay_secs,
             a.lie_detector_enabled, a.lie_detector_max_questions, a.lie_detector_timer_secs,
             a.no_response_penalty,
             ag.id AS game_row_id, ag.title AS case_title, ag.tagline, ag.case_summary,
-            ag.timeline, ag.quick_facts
+            ag.timeline, ag.quick_facts, ag.victim_name
          FROM game_groups gg
          JOIN organizer_bookings ob ON gg.booking_id = ob.id
          JOIN activities a ON ob.activity_id = a.id
-         LEFT JOIN activity_games ag ON ob.game_id = ag.id
+         LEFT JOIN activity_games ag ON ag.id = COALESCE(gg.game_id, ob.game_id)
          WHERE gg.id = ?`,
         [groupId]
     );
@@ -272,7 +272,7 @@ export async function buildGameSummaryPayload(
     );
 
     const [cardRows] = await query(
-        `SELECT suspect_label, tag, profile_text, why_suspicious, suggested_questions
+        `SELECT suspect_label, tag, profile_text, why_suspicious, suggested_questions, appears_at_secs, closes_at_secs
          FROM investigator_cards WHERE game_id = ? ORDER BY card_number ASC`,
         [row.game_row_id]
     );
@@ -286,19 +286,70 @@ export async function buildGameSummaryPayload(
         );
     }
 
+    // Fallback game-clock start for participants who land on the game screen
+    // without a final lobby poll (e.g. direct refresh after the redirect).
+    if (row.group_status === 'active') {
+        await ensureCaseSummaryTimer(Number(row.id), Number(row.case_summary_view_secs) || 300);
+    }
+
+    // Must be queried AFTER role assignment above — on the very first summary
+    // call the sessions/roles are created inside ensureParticipantRoleAssignment,
+    // and reading them earlier would leave every role's session_id null.
+    const [sessionRows] = await query(
+        `SELECT ps.id, ps.role_id, ps.participant_id, gp.name AS participant_name
+         FROM participant_sessions ps
+         LEFT JOIN game_participants gp ON gp.id = ps.participant_id
+         WHERE ps.group_id = ? AND ps.role_id IS NOT NULL`,
+        [row.id]
+    );
+    const myRoleSessionId = (sessionRows as any[]).find(
+        (s: any) => String(s.participant_id) === String(participant.id)
+    )?.id;
+
+    // Players list for gameplay UI (questions, votes, accusations, scoreboard).
+    // Pseudonyms only — the player↔role mapping is the game's core secret and is
+    // never sent for anyone except the requesting player.
+    const players = (sessionRows as any[]).map((s: any) => ({
+        session_id: Number(s.id),
+        pseudonym: shortName(s.participant_name || 'Player', Number(s.id)),
+        is_you: String(s.participant_id) === String(participant.id),
+    }));
+
+    // Role-specific strategy cards (strategy_cards table) — shown to every role
+    // EXCEPT the investigator, who instead gets the timed suspect-profile cards
+    // (investigator_cards) mapped into strategy_slides below.
+    let roleStrategyRows: any[] = [];
+    if (myRoleId) {
+        const [rows] = await query(
+            'SELECT card_number, heading, body_content FROM strategy_cards WHERE role_id = ? ORDER BY card_number ASC',
+            [myRoleId]
+        );
+        roleStrategyRows = rows as any[];
+    }
+
+    // Roles are the CASE CHARACTERS (public: everyone sees the same Key People
+    // cards). What stays secret: which player has which role — so session_id and
+    // the private briefing fields (objective / what you know / keep in mind) are
+    // only populated on the requesting player's own role.
     const roles = roleRows.map((r: any, index: number) => {
         const name = r.character_name || 'Unknown';
         const isYou = myRoleId != null && Number(r.id) === myRoleId;
-        const roleLabel = r.subtitle?.split('.')[0]?.trim() || r.role_type;
+        // Private phrasing ("You are the one who did it…") — own role only.
+        const privateLabel = r.subtitle?.split('.')[0]?.trim() || r.role_type;
+        // Public label comes from the character name's parenthetical, e.g.
+        // "Priya Malhotra (Daughter-in-law)" → "Daughter-in-law".
+        const parenMatch = String(name).match(/\(([^)]+)\)\s*$/);
+        const publicLabel = parenMatch ? parenMatch[1].trim() : String(name);
         const base = {
             id: Number(r.id),
-            role_type: isYou ? r.role_type : '',
-            role_label: isYou ? roleLabel : '',
-            role_subtitle: isYou ? String(r.subtitle || roleLabel).trim() : '',
+            session_id: isYou ? (myRoleSessionId != null ? Number(myRoleSessionId) : null) : null,
+            role_type: isYou ? String(r.role_type || '') : '',
+            role_label: isYou ? String(privateLabel || '') : publicLabel,
+            role_subtitle: isYou ? String(r.subtitle || privateLabel || '').trim() : publicLabel,
             name,
             short: isYou ? `${shortName(name, Number(r.id))} (You)` : shortName(name, Number(r.id)),
             grad: ROLE_GRADS[index % ROLE_GRADS.length],
-            objective: isYou ? r.objective || '' : '',
+            objective: isYou ? String(r.objective || '') : '',
             you_know: isYou ? parseJsonArray(r.what_you_know) : [],
             keep_in_mind: isYou ? parseJsonArray(r.keep_in_mind) : [],
             role_image: r.role_image,
@@ -321,6 +372,8 @@ export async function buildGameSummaryPayload(
             c.why_suspicious,
             c.suggested_questions,
         ].filter(Boolean),
+        appears_at_secs: Number(c.appears_at_secs) || 0,
+        closes_at_secs: Number(c.closes_at_secs) || 0,
     }));
 
     return {
@@ -332,7 +385,7 @@ export async function buildGameSummaryPayload(
         },
         settings: {
             case_summary_view_secs: Number(row.case_summary_view_secs) || 300,
-            game_duration_secs: Number(row.game_duration_secs) || 1200,
+            game_duration_secs: Number(row.game_duration_secs) || 1500,
             max_questions: Number(row.max_questions) || 5,
             question_response_secs: Number(row.question_response_secs) || 120,
             clue_room_unlock_secs: Number(row.clue_room_unlock_secs) || 600,
@@ -349,7 +402,9 @@ export async function buildGameSummaryPayload(
             case_summary_html: row.case_summary,
             timeline: parseTimeline(row.timeline),
             quick_facts: parseQuickFacts(row.quick_facts),
+            victim_name: row.victim_name || null,
         },
+        players,
         roles,
         photos: photoRows.map((p: any) => ({
             id: Number(p.id),
@@ -364,6 +419,11 @@ export async function buildGameSummaryPayload(
             clue_image: c.clue_image ? String(c.clue_image) : null,
         })),
         rules,
+        role_strategy_slides: roleStrategyRows.map((c: any) => ({
+            title: String(c.heading || `Card ${c.card_number}`),
+            description: '',
+            details: [c.body_content].filter(Boolean).map(String),
+        })),
         strategy_slides:
             strategy_slides.length > 0
                 ? strategy_slides
@@ -372,6 +432,8 @@ export async function buildGameSummaryPayload(
                           title: 'Strategy Tip',
                           description: 'Review the case summary and timeline before questioning suspects.',
                           details: ['Note inconsistencies in statements.', 'Use your questions wisely.'],
+                          appears_at_secs: 0,
+                          closes_at_secs: 0,
                       },
                   ],
     };

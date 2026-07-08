@@ -17,6 +17,7 @@ import {
 import { resolveMediaUrl } from "@/utils/media";
 import { toastError } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
+import investigation from "@/assets/investigation-photos.png";
 
 const AVATAR_GRADS = [
   "from-pink-500 to-orange-400",
@@ -136,14 +137,14 @@ function LobbyPage() {
   const slug = gameSlug ?? session?.gameSlug ?? lobby?.activity.slug ?? "detective-mystery";
 
   useEffect(() => {
-    if (!lobby?.is_group_full) return;
+    if (!lobby) return;
     if (
       lobby.lobby_phase === "ready" ||
       (lobby.lobby_phase === "lobby_timer" && countdown === 0)
     ) {
       navigate({ to: "/game", search: { game: slug } });
     }
-  }, [lobby?.lobby_phase, lobby?.is_group_full, countdown, navigate, slug]);
+  }, [lobby, countdown, navigate, slug]);
 
   useEffect(() => {
     if (!session?.groupId || !session.participantId) return;
@@ -223,8 +224,8 @@ function LobbyPage() {
         </div>
 
         <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/5 relative min-h-[360px]">
-          <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80" />
-          <div className="absolute inset-0 bg-gradient-to-t from-purple-950/90 via-purple-950/40 to-transparent" />
+          <img src={investigation} alt="" className="absolute h-full w-full object-cover" />
+          <div className="absolute  bg-gradient-to-t from-purple-950/90 via-purple-950/40 to-transparent" />
           <div className="relative p-6">
             <div className="inline-block rounded-xl border-2 border-cyan-400/60 bg-purple-900/40 backdrop-blur px-4 py-3">
               <div className="text-lg font-bold">Case: {caseTitle}</div>
@@ -280,11 +281,10 @@ function LobbyPage() {
                   <div
                     className={`h-14 w-14 mx-auto rounded-full bg-gradient-to-br ${AVATAR_GRADS[index % AVATAR_GRADS.length]} grid place-items-center font-bold ring-2 ring-white/15 text-sm`}
                   >
-                    {initials(member.name)}
+                    {member.is_you ? initials(member.name) : member.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="mt-2 text-xs max-w-[88px] truncate">
-                    {member.name}
-                    {member.is_you ? " (You)" : ""}
+                    {member.is_you ? `${member.name} (You)` : member.name}
                   </div>
                   <div className="text-[11px] text-cyan-300 capitalize">({member.status})</div>
                 </div>
@@ -318,9 +318,8 @@ function LobbyPage() {
                 {lobby.lobby_phase === "before_start" && (
                   <>
                     Scheduled start: <span className="text-white font-medium">{lobby.scheduled_start_label}</span>.
-                    After the start time, your group must have all {lobby.group_capacity} members. Then a{" "}
-                    {Math.round(lobby.settings.lobby_wait_secs / 60)}-minute lobby timer runs before the game
-                    opens.
+                    The game opens after a {Math.round(lobby.settings.lobby_wait_secs / 60)}-minute entry window.
+                    Participants can join during that window, and the lobby timer counts down to the game start.
                   </>
                 )}
                 {lobby.lobby_phase === "waiting_members" && (
@@ -328,16 +327,14 @@ function LobbyPage() {
                     The activity has started
                     {lobby.scheduled_start_label ? ` (${lobby.scheduled_start_label})` : ""}. Share the invite
                     link so {lobby.remaining_slots} more participant
-                    {lobby.remaining_slots === 1 ? "" : "s"} can join. The {Math.round(lobby.settings.lobby_wait_secs / 60)}
-                    -minute timer begins only after all {lobby.group_capacity} members are in the group.
+                    {lobby.remaining_slots === 1 ? "" : "s"} can join before entry closes.
                   </>
                 )}
                 {lobby.lobby_phase === "lobby_timer" && (
                   <>
-                    All {lobby.group_capacity} participants have joined. The game started at the scheduled time
-                    {lobby.scheduled_start_label ? ` (${lobby.scheduled_start_label})` : ""}. You will be
-                    redirected to the game when the {Math.round(lobby.settings.lobby_wait_secs / 60)}-minute
-                    lobby timer ends.
+                    The game started at the scheduled time
+                    {lobby.scheduled_start_label ? ` (${lobby.scheduled_start_label})` : ""}. The lobby timer shows
+                    time remaining until the {Math.round(lobby.settings.lobby_wait_secs / 60)}-minute entry window closes.
                   </>
                 )}
                 {lobby.lobby_phase === "ready" && <>Launching the game now…</>}

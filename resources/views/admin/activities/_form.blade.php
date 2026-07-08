@@ -131,7 +131,7 @@
                 <div class="col-md-3">
                     <div class="form-group">
                         <label for="game_duration_secs">Game Duration (seconds)</label>
-                        <input type="number" name="game_duration_secs" id="game_duration_secs" class="form-control @error('game_duration_secs') is-invalid @enderror" value="{{ old('game_duration_secs', $activity->game_duration_secs ?? 1200) }}">
+                        <input type="number" name="game_duration_secs" id="game_duration_secs" class="form-control @error('game_duration_secs') is-invalid @enderror" value="{{ old('game_duration_secs', $activity->game_duration_secs ?? 1500) }}">
                         @error('game_duration_secs')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
                         <small class="form-text text-muted">e.g. 1200 = 20 min</small>
                     </div>

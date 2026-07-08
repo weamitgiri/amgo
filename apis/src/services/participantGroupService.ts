@@ -2,9 +2,41 @@ import type { PoolConnection } from 'mysql2/promise';
 import { AppError } from '../utils/AppError';
 import { assertCanJoinBooking, getBookingLimits } from './eventStatsService';
 
-const PLAYERS_PER_GROUP = 5;
-
 type GroupRow = { id: number; group_name: string; member_count: number };
+
+/**
+ * Pick the game for the Nth group (0-based) of a booking.
+ *
+ * Games are distributed round-robin across the activity's active games:
+ * with 4 games and 8 groups, groups 1-4 get games 1-4 and groups 5-8 cycle
+ * back to games 1-4 again. An activity with a single game assigns that game
+ * to every group. Falls back to the booking-level game selection when the
+ * activity has no active games of its own.
+ */
+async function resolveGameForGroup(
+    conn: PoolConnection,
+    bookingId: number | string,
+    groupIndex: number
+): Promise<number | null> {
+    const [bookingRows] = (await conn.query(
+        'SELECT activity_id, game_id FROM organizer_bookings WHERE id = ?',
+        [bookingId]
+    )) as any;
+    if (bookingRows.length === 0) return null;
+
+    const { activity_id: activityId, game_id: bookingGameId } = bookingRows[0];
+
+    const [gameRows] = (await conn.query(
+        "SELECT id FROM activity_games WHERE activity_id = ? AND status = 'active' ORDER BY id ASC",
+        [activityId]
+    )) as any;
+
+    if (gameRows.length === 0) {
+        return bookingGameId ? Number(bookingGameId) : null;
+    }
+
+    return Number(gameRows[groupIndex % gameRows.length].id);
+}
 
 export async function assignParticipantToGroup(
     conn: PoolConnection,
@@ -47,7 +79,8 @@ export async function assignParticipantToGroup(
     )) as any;
 
     const groups = groupRows as GroupRow[];
-    const availableGroup = groups.find((g) => Number(g.member_count) < PLAYERS_PER_GROUP);
+    // Group capacity is admin-configured per activity (activities.group_size).
+    const availableGroup = groups.find((g) => Number(g.member_count) < limits.playersPerGroup);
 
     let groupId: number;
     let groupName: string;
@@ -66,9 +99,11 @@ export async function assignParticipantToGroup(
         const nextGroupNum = groups.length + 1;
         groupName = `Group ${nextGroupNum}`;
 
+        const gameId = await resolveGameForGroup(conn, bookingId, groups.length);
+
         const [newGroup] = (await conn.query(
-            'INSERT INTO game_groups (booking_id, group_name, status) VALUES (?, ?, ?)',
-            [bookingId, groupName, 'waiting']
+            'INSERT INTO game_groups (booking_id, game_id, group_name, status) VALUES (?, ?, ?, ?)',
+            [bookingId, gameId, groupName, 'waiting']
         )) as any;
         groupId = newGroup.insertId;
     }

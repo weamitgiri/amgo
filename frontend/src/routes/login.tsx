@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 import { ArrowRight, Mail, Loader2 } from "lucide-react";
 import { Header } from "@/components/Header";
-import { Crumbs } from "@/components/Crumbs";
 import { Footer } from "@/components/Footer";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
 import { isOrganizerAuthenticated } from "@/lib/auth";
@@ -122,9 +121,6 @@ function LoginPage() {
     <div className="min-h-screen bg-[oklch(0.965_0.012_290)] flex flex-col">
       <div className="pt-4">
         <Header />
-      </div>
-      <div className="mx-auto max-w-6xl px-4 pt-4">
-        <Crumbs items={[{ label: "Home", to: "/" }, { label: "Login" }]} />
       </div>
       <main className="flex-1 px-4 py-6">
         <div className="mx-auto max-w-6xl grid gap-6 lg:grid-cols-2 rounded-3xl overflow-hidden bg-white shadow-card">

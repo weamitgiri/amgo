@@ -1,6 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { Logo } from "./Logo";
+import { Flogo } from "./Flogo";
 
 const NAV = [
   { label: "Overview", to: "/" as const },
@@ -17,7 +17,7 @@ export function Header({ floating = false }: { floating?: boolean }) {
       <div className="mx-auto max-w-6xl">
         <div className={`flex items-center justify-between gap-4 rounded-full border px-3 py-2 pl-4 backdrop-blur-xl ${floating ? "border-white/10 bg-white/5" : "border-border bg-card/80 shadow-card"}`}>
           <Link to="/">
-            <Logo light={floating} />
+            <Flogo light={floating} />
           </Link>
           <nav className="hidden md:flex items-center gap-7">
             {NAV.map((item) => {

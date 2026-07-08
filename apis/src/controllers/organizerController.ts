@@ -22,10 +22,14 @@ export const registerOrganizer = asyncHandler(async (req: Request, res: Response
     await ensureOrganizerStatusColumns();
 
     // Check if organizer already exists
-    const [existing] = await query('SELECT id FROM organizers WHERE email = ?', [email]);
+    const [existing] = await query('SELECT id, email_verified_at FROM organizers WHERE email = ?', [email]);
     
     let organizerId;
     if (existing.length > 0) {
+        if (existing[0].email_verified_at) {
+            throw new AppError('You already registered this email id. Please login.', 409);
+        }
+
         organizerId = existing[0].id;
         await query(
             'UPDATE organizers SET name = ?, company_name = ?, company_website = ?, otp = ?, otp_expires_at = ? WHERE id = ?',
@@ -147,10 +151,12 @@ export const getOrganizerDashboard = asyncHandler(async (req: Request, res: Resp
             a.title as activity_name,
             a.cover_image,
             a.icon as activity_icon,
+            a.game_duration_secs,
             p.name as package_name,
             p.price as package_price,
             p.max_users,
-            (SELECT COUNT(*) FROM game_participants WHERE booking_id = ob.id AND email_verified_at IS NOT NULL) as registered_participants
+            (SELECT COUNT(*) FROM game_participants WHERE booking_id = ob.id AND email_verified_at IS NOT NULL) as registered_participants,
+            (SELECT COALESCE(bill.created_at, ob.created_at) FROM organizer_billings bill WHERE bill.booking_id = ob.id ORDER BY bill.id DESC LIMIT 1) as payment_date
         FROM organizer_bookings ob
         JOIN activities a ON ob.activity_id = a.id
         JOIN packages p ON ob.package_id = p.id
@@ -252,7 +258,7 @@ export const createBooking = asyncHandler(async (req: Request, res: Response) =>
     }
 
     const [result] = await query(
-        'INSERT INTO organizer_bookings (organizer_id, activity_id, game_id, package_id, scheduled_date, scheduled_time, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO organizer_bookings (organizer_id, activity_id, game_id, package_id, scheduled_date, scheduled_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
         [organizer_id, activity_id, game_id, package_id, scheduled_date, scheduled_time, 'pending_activation']
     );
 
@@ -372,7 +378,7 @@ export const completeBooking = asyncHandler(async (req: Request, res: Response) 
 
         // Insert billing record
         await conn.query(
-            'INSERT INTO organizer_billings (booking_id, gst_number, billing_address, city, state, pin_code, package_price, taxes, additional_charges, gst_amount, total_payable, payment_method, payment_status, confirmation_details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO organizer_billings (booking_id, gst_number, billing_address, city, state, pin_code, package_price, taxes, additional_charges, gst_amount, total_payable, payment_method, payment_status, confirmation_details, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
             [
                 booking_id, 
                 gst_number || null, 
@@ -439,9 +445,10 @@ export const confirmPayment = asyncHandler(async (req: Request, res: Response) =
 
 export const updateSession = asyncHandler(async (req: Request, res: Response) => {
     const { booking_id, scheduled_date, scheduled_time } = req.body;
+    const organizerId = (req as any).user?.id;
 
     const [rows] = await query(
-        'SELECT is_rescheduled, scheduled_date, scheduled_time, status FROM organizer_bookings WHERE id = ?',
+        'SELECT organizer_id, is_rescheduled, scheduled_date, scheduled_time, status, created_at FROM organizer_bookings WHERE id = ?',
         [booking_id]
     );
 
@@ -450,6 +457,10 @@ export const updateSession = asyncHandler(async (req: Request, res: Response) =>
     }
 
     const booking = rows[0];
+
+    if (!organizerId || Number(booking.organizer_id) !== Number(organizerId)) {
+        throw new AppError('You are not allowed to reschedule this booking.', 403);
+    }
 
     // 1. One-time only rule
     if (booking.is_rescheduled) {
@@ -477,14 +488,23 @@ export const updateSession = asyncHandler(async (req: Request, res: Response) =>
             [booking_id]
         );
 
-        if (billingRows.length > 0) {
-            const paymentTime = moment(billingRows[0].created_at);
-            const allowedRescheduleUntil = moment(paymentTime).add(5, 'days').endOf('day');
-            const newSchedule = moment(`${scheduled_date} ${scheduled_time}`, 'YYYY-MM-DD HH:mm:ss');
+        if (billingRows.length === 0) {
+            // A completed booking with no billing record is a data-integrity
+            // problem — never treat it as "no restriction".
+            throw new AppError('No billing record found for this booking. Please contact support.', 400);
+        }
 
-            if (newSchedule.isAfter(allowedRescheduleUntil)) {
-                throw new AppError('Rescheduled session must remain within 5 days of payment.', 400);
-            }
+        // Legacy billing rows may have a NULL created_at — fall back to the
+        // booking's creation time rather than silently skipping the window.
+        const paymentTime = moment(billingRows[0].created_at || booking.created_at);
+        if (!paymentTime.isValid()) {
+            throw new AppError('Could not determine the payment date for this booking. Please contact support.', 400);
+        }
+        const allowedRescheduleUntil = moment(paymentTime).add(5, 'days').endOf('day');
+        const newSchedule = moment(`${scheduled_date} ${scheduled_time}`, 'YYYY-MM-DD HH:mm:ss');
+
+        if (newSchedule.isAfter(allowedRescheduleUntil)) {
+            throw new AppError('Rescheduled session must remain within 5 days of payment.', 400);
         }
     }
 
@@ -494,4 +514,64 @@ export const updateSession = asyncHandler(async (req: Request, res: Response) =>
     );
 
     return successResponse(res, 'Session rescheduled successfully.');
+});
+
+export const deactivateAccount = asyncHandler(async (req: Request, res: Response) => {
+    const organizerId = (req as any).user?.id;
+    if (!organizerId) {
+        throw new AppError('Authentication required', 401);
+    }
+
+    // Soft delete only — GST invoices in organizer_billings must be retained
+    // for 7 years per the GST Act, so billing/booking records are never touched.
+    // authMiddleware/profileController already filter on deleted_at IS NULL, so
+    // the organizer's JWT stops working from the very next request.
+    await query(
+        "UPDATE organizers SET deleted_at = NOW(), account_status = 'inactive' WHERE id = ? AND deleted_at IS NULL",
+        [organizerId]
+    );
+
+    return successResponse(
+        res,
+        'Your account has been deactivated. Billing and GST invoice records are retained as required by law.'
+    );
+});
+
+/**
+ * Results tab — every completed/incomplete group across the organizer's
+ * bookings, with results-PDF availability (PDFs live for 1 hour post-game).
+ */
+export const getOrganizerResults = asyncHandler(async (req: Request, res: Response) => {
+    const organizerId = (req as any).user.id;
+
+    const [rows] = await query(
+        `SELECT gg.id AS group_id, gg.group_name, gg.status, gg.completed_at,
+                gg.results_pdf_path, gg.results_pdf_expires_at,
+                ob.id AS booking_id, ob.scheduled_date, ob.scheduled_time,
+                a.title AS activity_name
+         FROM game_groups gg
+         JOIN organizer_bookings ob ON ob.id = gg.booking_id
+         JOIN activities a ON a.id = ob.activity_id
+         WHERE ob.organizer_id = ? AND gg.status IN ('completed', 'incomplete')
+         ORDER BY gg.completed_at DESC, gg.id DESC`,
+        [organizerId]
+    );
+
+    const now = new Date();
+    const results = (rows as any[]).map((r) => ({
+        group_id: Number(r.group_id),
+        group_name: r.group_name,
+        booking_id: Number(r.booking_id),
+        activity_name: r.activity_name,
+        scheduled_date: r.scheduled_date,
+        scheduled_time: r.scheduled_time,
+        status: r.status,
+        completed_at: r.completed_at,
+        pdf_available: Boolean(
+            r.results_pdf_path && r.results_pdf_expires_at && new Date(r.results_pdf_expires_at) > now
+        ),
+        pdf_expires_at: r.results_pdf_expires_at,
+    }));
+
+    return successResponse(res, 'Results retrieved.', { results });
 });

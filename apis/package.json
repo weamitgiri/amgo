@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@types/nodemailer": "^8.0.0",
+    "@types/pdfkit": "^0.17.6",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -22,6 +23,7 @@
     "morgan": "^1.10.0",
     "mysql2": "^3.11.5",
     "nodemailer": "^8.0.9",
+    "pdfkit": "^0.19.1",
     "socket.io": "^4.5.4",
     "winston": "^3.19.0"
   },

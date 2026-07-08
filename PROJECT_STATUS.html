@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoventro — Project Status</title>
+<style>
+  :root {
+    --bg: #0d0820;
+    --card: #1a1230;
+    --border: rgba(255,255,255,0.1);
+    --text: #e8e4f0;
+    --muted: #9b93b3;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --rose: #fb7185;
+    --purple: #a78bfa;
+    --blue: #60a5fa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 24px;
+  }
+  .container { max-width: 1150px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, #2d1b4e, #1a1230);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+  }
+  header h1 { font-size: 26px; }
+  header p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .progressbar {
+    margin-top: 16px; height: 14px; border-radius: 999px;
+    background: rgba(255,255,255,0.08); overflow: hidden;
+  }
+  .progressbar .fill {
+    height: 100%; width: 78%;
+    background: linear-gradient(90deg, #7c3aed, #34d399);
+    border-radius: 999px;
+  }
+  .progresslabel { font-size: 13px; color: var(--green); margin-top: 6px; font-weight: 700; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; text-align: center;
+  }
+  .stat .num { font-size: 28px; font-weight: 800; }
+  .stat .label { font-size: 12px; color: var(--muted); }
+  .section {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; margin-bottom: 20px;
+  }
+  .section h2 { font-size: 18px; margin-bottom: 4px; }
+  .section .sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .done { background: rgba(52,211,153,0.15); color: var(--green); }
+  .tested { background: rgba(52,211,153,0.3); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.5); }
+  .progress { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .pending { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .deferred { background: rgba(251,113,133,0.15); color: var(--rose); }
+  .bug { background: rgba(251,113,133,0.2); color: var(--rose); }
+  .file { font-family: monospace; font-size: 12px; color: var(--purple); }
+  .note {
+    background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 12px; padding: 14px 18px; font-size: 13px; margin-top: 12px;
+  }
+  .note strong { color: var(--amber); }
+  .testbox {
+    background: rgba(52,211,153,0.06); border: 1px solid rgba(52,211,153,0.3);
+    border-radius: 12px; padding: 16px 20px; margin-top: 14px;
+  }
+  .testbox h3 { color: var(--green); font-size: 15px; margin-bottom: 8px; }
+  ul.simple { list-style: none; }
+  ul.simple li { padding: 6px 0; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  ul.simple li:last-child { border-bottom: none; }
+  ul.simple li::before { content: "→ "; color: var(--purple); font-weight: 700; }
+  ul.check { list-style: none; }
+  ul.check li { padding: 4px 0; font-size: 13px; }
+  ul.check li::before { content: "✅ "; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0; }
+  .flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; font-size: 12px; }
+  .flow .step { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.4); color: var(--green); border-radius: 8px; padding: 4px 10px; font-weight: 600; }
+  .flow .arr { color: var(--muted); }
+  @media print { body { background: #fff; color: #111; } .section, .stat, header { border-color: #ddd; background: #fff; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>🎮 Zoventro — Project Status Dashboard</h1>
+    <p>Team engagement platform: Mystery Quest game &nbsp;•&nbsp; Laravel Admin (root) + Node.js APIs (<span class="file">apis/</span>) + React Frontend (<span class="file">frontend/</span>)</p>
+    <p>Last updated: <strong>5 July 2026</strong> &nbsp;•&nbsp; Full E2E test: <strong style="color:var(--green)">63/63 PASSED ✅</strong></p>
+    <div class="progressbar"><div class="fill" style="width:92%"></div></div>
+    <div class="progresslabel">Overall Progress: ~92% — Game flow + Organizer fixes + admin-configurable times + API logs viewer complete; sirf bell removal + GST invoice email bache hain</div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="num" style="color:var(--green)">22</div><div class="label">Completed ✅</div></div>
+    <div class="stat"><div class="num" style="color:var(--green)">63/63</div><div class="label">E2E Tests Passed 🧪</div></div>
+    <div class="stat"><div class="num" style="color:var(--blue)">2</div><div class="label">Pending 📋</div></div>
+    <div class="stat"><div class="num" style="color:var(--rose)">4</div><div class="label">Deferred ⏸️</div></div>
+  </div>
+
+  <!-- ================= E2E TEST REPORT ================= -->
+  <div class="section">
+    <h2>🧪 Full E2E Test Report — Poora game flow live test kiya (5 players)</h2>
+    <p class="sub">Real API (port 6001) + real database ke against automated test — har step verify hua</p>
+    <div class="flow">
+      <span class="step">Join Link</span><span class="arr">→</span>
+      <span class="step">5× OTP Join</span><span class="arr">→</span>
+      <span class="step">Lobby (pseudonyms)</span><span class="arr">→</span>
+      <span class="step">Roles Assigned</span><span class="arr">→</span>
+      <span class="step">Case Summary</span><span class="arr">→</span>
+      <span class="step">Questions (5 max)</span><span class="arr">→</span>
+      <span class="step">Lie Detector</span><span class="arr">→</span>
+      <span class="step">Accusations ×4</span><span class="arr">→</span>
+      <span class="step">Results + Winners</span><span class="arr">→</span>
+      <span class="step">PDF Download</span><span class="arr">→</span>
+      <span class="step">1-Hour Purge</span>
+    </div>
+    <div class="testbox">
+      <h3>Verified in test run:</h3>
+      <ul class="check">
+        <li>Join link sirf schedule window me khulta hai — late join par exact FSD message: "Access Denied: You have joined after the allowed time…"</li>
+        <li>5 players → automatic 1 group of 5, round-robin se game assigned (<span class="file">game_groups.game_id</span>)</li>
+        <li>Lobby me doosron ke real naam nahi — pseudonyms (Player53, Player58 style); apna naam sirf khud ko</li>
+        <li>Lobby window admin ke <span class="file">lobby_wait_secs</span> se chalti hai (test me 150s tha → "3-minute entry window" dikha — proof ki admin control kaam karta hai)</li>
+        <li>5 distinct roles (investigator, culprit, suspect, witness, participant) + victim name "Raghav Malhotra"</li>
+        <li>Non-investigator ko apne role ke 4 strategy cards; Investigator ko timed suspect cards (0:05–0:35, 2:35–3:05, 5:05–5:35, 7:35–8:05)</li>
+        <li>Case summary timer → questioning phase → clue room unlock chain automatic</li>
+        <li>Sirf Investigator question puch sakta hai; 5 questions max — 6th rejected: "Maximum of 5 questions reached"</li>
+        <li>Lie Detector: sirf ek baar ("only once per game" enforced), live vote tally (believable/suspicious counts), "Back to Questioning"</li>
+        <li>Culprit accusation nahi kar sakta; duplicate accusation rejected; 4th accusation par game auto-finalize</li>
+        <li>Winner table exact FSD ke mutabik: 3 correct + 1 wrong → 3 Winners, 2 Losers (wrong guesser + culprit)</li>
+        <li>Results PDF ban gayi (employee emails ke saath, HR ke liye) — %PDF verified, download OK</li>
+        <li>1-hour purge: PII deleted (name/email/OTP null), results deleted, scores reset, PDF file deleted, expired PDF → 404</li>
+        <li>HR email + GST billing + booking data untouched (compliance ✓)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ================= COMPLETED ================= -->
+  <div class="section">
+    <h2>✅ Completed — Jo kaam ho chuka hai</h2>
+    <p class="sub">Sab implement + typecheck pass; game flow E2E-tested bhi</p>
+    <table>
+      <tr><th>Feature</th><th>Details</th><th>Status</th></tr>
+      <tr>
+        <td><strong>Database schema fixes</strong></td>
+        <td>game_groups status enum ('completed'/'incomplete'), completed_at, retention columns, group_accusations table, timers.reference_id, left_at, victim_name, game duration 20→25 min, game_groups.game_id. Laravel migrations + runtime helpers dono.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Winner/Loser scoring (FSD table)</strong></td>
+        <td>4 non-culprit roles sab accuse karte hain. 4/3/2/1/0 correct → winners/losers exact FSD ke hisaab se. Culprit sirf 0-correct par jeetta hai. Culprit accuse nahi kar sakta, duplicate blocked.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Post-game data deletion (compliance)</strong></td>
+        <td>Game end + 1 hour → participant ka SAB data permanently delete (naam, email, OTP, scores, roles, Q&amp;A, accusations). Sirf HR email, GST invoice, date/time, package bacha rehta hai. Auto-sweep har 60s.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Results PDF (1-hour window)</strong></td>
+        <td>Game end par PDF — employee names + emails, roles, scores, winner/loser. Participant ya organizer download kar sakta hai. 1 ghante baad file bhi delete, phir 404.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Round-robin game assignment</strong></td>
+        <td>Activity ke active games groups par cycle hote hain (4 games, 8 groups → 1,2,3,4,1,2,3,4). Ek game → sab groups ko wahi. Group ke sab players ko hamesha same game.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Admin-configurable timers (NEW)</strong></td>
+        <td>Lobby/join window ab admin panel ke <span class="file">lobby_wait_secs</span> se chalta hai — pehle 3 jagah hardcoded 15 min tha. Game duration, case summary, clue room, question response, lie detector — sab admin Activities form se manage hote hain.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Game engine — real backend</strong></td>
+        <td>Ask/Answer/Vote/Accuse real APIs + socket events. 5-question cap server-enforced, 2-min answer timeout par auto-skip + -10, Clue Room 10-min-remaining unlock (UI-gated), Lie Detector full mechanic.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Edge cases (player leaves)</strong></td>
+        <td>Investigator gaya → turant "Game Incomplete" + roles reveal, no waiting. Koi aur gaya → slot frozen ("Left the game"), auto-skip no-penalty, 0 score at end.</td>
+        <td><span class="badge done">DONE</span></td>
+      </tr>
+      <tr>
+        <td><strong>Lobby privacy (pseudonyms)</strong></td>
+        <td>Doosre players ke real naam kabhi nahi dikhte — system-generated naam. Game me bhi, results me bhi, lobby me bhi.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Consent + warning modals</strong></td>
+        <td>Join form: fictional-content disclaimer checkbox (bina check kiye Send Code disabled). Game se pehle: "human instinct / no AI tools" warning modal (ek baar, acknowledge zaroori).</td>
+        <td><span class="badge done">DONE</span></td>
+      </tr>
+      <tr>
+        <td><strong>Case summary screen</strong></td>
+        <td>5-min auto-close, 15-second me Secret Box auto-open (role reveal), 2-min par strategy guide force-open (non-investigator ke liye, admin-configurable delay).</td>
+        <td><span class="badge done">DONE</span></td>
+      </tr>
+      <tr>
+        <td><strong>Strategy guides (role-wise)</strong></td>
+        <td>Har role ko apne 4 strategy cards (Kartar/Raju/Vikram/Priya). Investigator ko alag timed suspect-profile cards jo game me auto-appear/auto-close hote hain FSD schedule par.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Results screen (real data)</strong></td>
+        <td>Static mock hataya — real API se culprit reveal, rankings, winners/losers, Game Incomplete state, PDF/CSV/Print, auto-polling jab tak sab accusations na aa jayen.</td>
+        <td><span class="badge done">DONE</span></td>
+      </tr>
+      <tr>
+        <td><strong>"Game not scheduled" message</strong></td>
+        <td>Scheduled date/time se pehle link kholne par exact FSD text: "The game is not scheduled today. Please join at the right date and time. Please contact the organiser."</td>
+        <td><span class="badge done">DONE</span></td>
+      </tr>
+      <tr>
+        <td><strong>Date-bound fix (booking)</strong></td>
+        <td>Frontend ab backend jaisa today+5 days allow karta hai (pehle +4 tha). Calendar bounds, error messages, help text sab "next 5 days".</td>
+        <td><span class="badge done">DONE</span></td>
+      </tr>
+      <tr>
+        <td><strong>Reschedule hardening</strong></td>
+        <td>Date picker me ab max limit (payment date + 5 days). Billing record missing → clear reject, silently skip nahi. Bonus fix: bookings/billings me created_at NULL insert ho raha tha — ab NOW() set hota hai + purana data backfilled.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Account deactivation (real)</strong></td>
+        <td>Profile ka "Deactivate Account" button ab real soft-delete endpoint call karta hai — confirmation ke baad login turant band, GST/billing records untouched (7-saal retention). Live tested: token 401 after deactivation.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Results tab in HR sidebar</strong></td>
+        <td>Sidebar ka "Results" link (pehle dead "#" tha) ab <span class="file">/hr-results</span> page kholta hai — sab completed/incomplete games ki list, results PDF download (1-hour window), expired hone par "Expired (auto-deleted)". Backend: <span class="file">GET /v1/organizer/results</span>.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Socket departure grace window</strong></td>
+        <td>Page refresh/navigation par game "Incomplete" ho jaata tha (Investigator left bug). Ab 12-sec reconnect grace — real departure par hi game end. Live socket test: blip survives ✅, real leave → incomplete ✅.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Group size DB-driven</strong></td>
+        <td>Players-per-group (5) 3 files me hardcoded tha — ab <span class="file">activities.group_size</span> se aata hai (group creation, event stats, notifications). Admin activity form se change kar sakte hain.</td>
+        <td><span class="badge tested">DONE + TESTED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Admin API Logs viewer</strong></td>
+        <td>Admin panel me naya "API Logs" page (<span class="file">/admin/api-logs</span>) — Node API ke error.log/all.log browser me dekho: level filter, search, error/warning counts, clear-log, refresh. Sidebar me link add. Logger bhi fix kiya (files me ANSI color codes nahi jaate ab).</td>
+        <td><span class="badge done">DONE</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ================= BUGS FIXED ================= -->
+  <div class="section">
+    <h2>🐛 Bugs Found &amp; Fixed — Testing me jo bugs mile aur fix hue</h2>
+    <table>
+      <tr><th>Bug</th><th>Impact</th><th>Fix</th></tr>
+      <tr>
+        <td><span class="badge bug">CRITICAL</span> Pehle player ko session_id null milta tha</td>
+        <td>Pehla player (usually Investigator) kisi ko question nahi bhej pata tha — pura game block.</td>
+        <td>Sessions query ab role-assignment ke BAAD chalti hai (<span class="file">gameSummaryService.ts</span>).</td>
+      </tr>
+      <tr>
+        <td><span class="badge bug">CRITICAL</span> Game clock kabhi start nahi hota tha</td>
+        <td>case_summary timer create karne wala code kahin tha hi nahi — questioning phase, clue room unlock kabhi trigger nahi hote.</td>
+        <td>Naya <span class="file">ensureCaseSummaryTimer()</span> — lobby ready hone par + game screen load par (idempotent).</td>
+      </tr>
+      <tr>
+        <td><span class="badge bug">HIGH</span> Lobby window hardcoded 15 min</td>
+        <td>Admin panel ka Lobby Wait setting ignore ho raha tha — 3 files me hardcoded.</td>
+        <td>Teeno jagah <span class="file">activities.lobby_wait_secs</span> use hota hai; frontend messages bhi dynamic.</td>
+      </tr>
+      <tr>
+        <td><span class="badge bug">HIGH</span> game_groups status enum bug</td>
+        <td>Code 'completed' likhta tha par enum me tha hi nahi — production me SQL error hota.</td>
+        <td>Enum widen kiya ('completed', 'incomplete') — migration + runtime helper.</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ================= STATIC VALUES AUDIT ================= -->
+  <div class="section">
+    <h2>📌 Static Values Audit — Kya DB se aata hai, kya static hai</h2>
+    <p class="sub">User requirement: "saare times activity ke database se aane chahiye" — audit karke fix kiya. Neeche poori list.</p>
+
+    <h3 style="color:var(--green); font-size:15px; margin-top:8px;">✅ Ab 100% DB (Admin Panel → Activities) se aata hai:</h3>
+    <table>
+      <tr><th>Setting</th><th>DB Column</th><th>Kahan use hota hai</th></tr>
+      <tr><td>Lobby / entry window</td><td class="file">activities.lobby_wait_secs</td><td>Join cutoff, lobby countdown, saare messages</td></tr>
+      <tr><td>Game duration (total 25 min)</td><td class="file">activities.game_duration_secs</td><td>Header timer, questioning phase, game end</td></tr>
+      <tr><td>Case summary time (5 min)</td><td class="file">activities.case_summary_view_secs</td><td>Auto-close, phase transition, header label bhi ab dynamic</td></tr>
+      <tr><td>Clue room unlock (10 min remaining)</td><td class="file">activities.clue_room_unlock_secs</td><td>Timer chain + UI gate</td></tr>
+      <tr><td>Answer time (2 min)</td><td class="file">activities.question_response_secs</td><td>Answer modal countdown + server auto-skip</td></tr>
+      <tr><td>No-response penalty (-10)</td><td class="file">activities.no_response_penalty</td><td>Timeout auto-skip scoring</td></tr>
+      <tr><td>Max questions (5)</td><td class="file">activities.max_questions</td><td>Frontend counter + server-side cap</td></tr>
+      <tr><td>Lie detector (7 min / 3 questions)</td><td class="file">activities.lie_detector_timer_secs / lie_detector_max_questions</td><td>Round timer + question cap</td></tr>
+      <tr><td>Strategy guide delay (2 min)</td><td class="file">activities.strategy_guide_delay_secs</td><td>Force-open timing (non-investigator)</td></tr>
+      <tr><td><strong>Group size (5 players)</strong> — aaj fix hua</td><td class="file">activities.group_size</td><td>Group creation, event stats, notifications, lobby (pehle 3 files me hardcoded 5 tha)</td></tr>
+      <tr><td>Investigator card timings (0:05, 2:35…)</td><td class="file">investigator_cards.appears_at_secs / closes_at_secs</td><td>Timed auto-open/close cards</td></tr>
+      <tr><td>Case content (plot, roles, clues, rules, victim)</td><td class="file">activity_games + related tables</td><td>Poora game content admin se</td></tr>
+    </table>
+
+    <h3 style="color:var(--blue); font-size:15px; margin-top:18px;">📘 FSD business rules — jaan-boojh ke static (spec fixed hai):</h3>
+    <ul class="simple">
+      <li>Booking window: <strong>today + 5 days</strong> — FSD rule</li>
+      <li>Reschedule: <strong>sirf 1 baar</strong>, payment se 5 din ke andar — FSD rule</li>
+      <li>Results PDF + data deletion: <strong>game end + 1 hour</strong> — FSD rule</li>
+      <li>Winner scoring table (4/3/2/1/0 correct) — FSD rule</li>
+      <li>Question/answer/reason length: <strong>120 characters</strong> — FSD rule</li>
+      <li>Secret Box auto-open: <strong>15 seconds</strong> (case summary par) — FSD rule</li>
+      <li>GST 15-char, PIN 6-digit, Indian states list — FSD validation rules</li>
+    </ul>
+
+    <h3 style="color:var(--rose); font-size:15px; margin-top:18px;">🚨 Dev-only statics — PRODUCTION SE PEHLE HATANA ZAROORI:</h3>
+    <ul class="simple">
+      <li><strong>OTP hardcoded '123456'</strong> — 4 jagah (<span class="file">organizerController.ts:18,64,237</span>, <span class="file">participantController.ts:134</span>) — random OTP wapas enable karna hai</li>
+      <li><strong>Payment simulated hai</strong> — completeBooking direct 'paid' mark karta hai (Razorpay deferred)</li>
+      <li><strong>NODE_ENV production nahi</strong> — API errors me stack traces jaate hain</li>
+    </ul>
+
+    <h3 style="color:var(--muted); font-size:15px; margin-top:18px;">⚙️ Technical constants — static rehna theek hai:</h3>
+    <ul class="simple">
+      <li>Socket reconnect grace: 12 sec (refresh/navigation protection)</li>
+      <li>Timer service poll: 5 sec; retention sweep: 60 sec</li>
+      <li>OTP validity: 10 minute; JWT: 24 hour</li>
+      <li>Fallback defaults (<span class="file">|| 1500, || 300, || 900, || 5</span>…) — sirf tab lagte hain jab DB me value missing/0 ho; DB hamesha priority</li>
+      <li>Frontend polling: results 5s, dashboard stats 10s, hr-results 30s</li>
+      <li>Fallback images (mystery.jpg etc.) — jab admin ne image upload na ki ho</li>
+    </ul>
+  </div>
+
+  <!-- ================= PENDING ================= -->
+  <div class="section">
+    <h2>📋 Pending — Jo kaam abhi bacha hai (Organizer/HR side)</h2>
+    <p class="sub">Ye agla pass hai — game flow se independent hai, kabhi bhi ho sakta hai</p>
+    <table>
+      <tr><th>Task</th><th>Details</th><th>Status</th></tr>
+      <tr>
+        <td><strong>1. Notification bell removal</strong></td>
+        <td>FSD: "Bell icon at top is not needed" — <span class="file">DashboardShell.tsx</span> se hatana hai.</td>
+        <td><span class="badge pending">PENDING</span></td>
+      </tr>
+      <tr>
+        <td><strong>2. GST invoice PDF + email</strong></td>
+        <td>Payment ke baad GST invoice auto-generate + registered email par bhejna (pdfkit + nodemailer ready hain). Dashboard ka invoice download link bhi.</td>
+        <td><span class="badge pending">PENDING</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ================= DEFERRED ================= -->
+  <div class="section">
+    <h2>⏸️ Deferred — Aapke decision se baad ke liye</h2>
+    <table>
+      <tr><th>Item</th><th>Reason</th><th>Status</th></tr>
+      <tr>
+        <td><strong>Cook &amp; Create game</strong></td>
+        <td>Poora game exist nahi karta (sirf marketing image). Banana Mystery Quest jitna bada project hai — ingredient voting, impostor, chat, ratings, awards, naya DB schema.</td>
+        <td><span class="badge deferred">DEFERRED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Razorpay integration</strong></td>
+        <td>Real payment gateway — API keys chahiye. Abhi payment simulated hai (direct 'paid').</td>
+        <td><span class="badge deferred">DEFERRED</span></td>
+      </tr>
+      <tr>
+        <td><strong>IP geo-blocking (India-only)</strong></td>
+        <td>"Zoventro is currently available for Indian companies only" — geo-IP service chahiye.</td>
+        <td><span class="badge deferred">DEFERRED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Marketing page fixes</strong></td>
+        <td>Hero "Explore Activities" + "Contact Us" buttons unwired, alag contact page nahi, footer phone clickable nahi.</td>
+        <td><span class="badge deferred">DEFERRED</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ================= NOTES ================= -->
+  <div class="section">
+    <h2>⚠️ Important Notes — Dhyan rakhne wali baatein</h2>
+    <ul class="simple">
+      <li><strong>Admin me lobby_wait_secs abhi 150 (2.5 min) hai</strong> — FSD ke 15-minute lobby ke liye admin panel me <strong>900</strong> set karein (<span class="file">localhost/p/admin/activities</span> → Edit → Lobby Wait).</li>
+      <li><strong>Data deletion auto-run hai:</strong> Game end + 1 hour par participant data permanently delete. Testing karte waqt yaad rakhein.</li>
+      <li><strong>Dev OTP fixed hai (123456)</strong> — production se pehle random OTP wapas enable karna hai (<span class="file">participantController.ts:134</span>).</li>
+      <li><strong>API errors me stack trace dikhta hai</strong> — production me <span class="file">NODE_ENV=production</span> set karna zaroori.</li>
+      <li><strong>PDF local disk par hai</strong> (<span class="file">apis/storage/</span>) — GST 7-saal retention ke liye aage S3 jaisa storage better.</li>
+      <li><strong>Ports:</strong> Frontend <span class="file">:8080</span>, Node API <span class="file">:6001</span>, Laravel admin <span class="file">localhost/p/admin</span>.</li>
+    </ul>
+    <div class="note">
+      <strong>Agla recommended kaam:</strong> Pending section ke 5 organizer/HR items (1-2 din ka kaam) → phir production readiness (real OTP, NODE_ENV, Razorpay keys aane par payment integration).
+    </div>
+  </div>
+
+  <footer>Zoventro Project Status • Updated 5 July 2026 • E2E: 63/63 passed</footer>
+</div>
+</body>
+</html>

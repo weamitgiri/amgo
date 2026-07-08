@@ -43,7 +43,7 @@ class ApiClient {
   /**
    * Get stored authentication token
    */
-  private getToken(): string | null {
+  getToken(): string | null {
     if (typeof window === "undefined") return null;
     return localStorage.getItem(ENV.AUTH_TOKEN_KEY);
   }
@@ -68,7 +68,10 @@ class ApiClient {
     options: RequestConfig = {}
   ): Promise<T> {
     const { auth = "organizer", timeout, ...fetchOptions } = options;
-    const url = `${this.baseUrl}${endpoint}`;
+    
+    // Ensure endpoint starts with /
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = this.baseUrl ? `${this.baseUrl}${normalizedEndpoint}` : normalizedEndpoint;
     const requestId = `${url}-${Date.now()}`;
     const abortController = new AbortController();
     this.abortControllers.set(requestId, abortController);
@@ -80,7 +83,11 @@ class ApiClient {
     try {
       const response = await fetch(url, {
         ...fetchOptions,
+        mode: fetchOptions.mode || "cors",
+        credentials: fetchOptions.credentials || "include",
+        referrerPolicy: fetchOptions.referrerPolicy || "same-origin",
         headers: {
+          Accept: "application/json",
           "Content-Type": "application/json",
           ...(auth !== "none" ? this.getAuthHeader() : {}),
           ...(fetchOptions.headers || {}),
@@ -113,7 +120,19 @@ class ApiClient {
 
       return body as T;
     } catch (error) {
-      console.error(`API Error [${endpoint}]:`, error);
+      // Provide helpful error messages for common network issues
+      if (error instanceof TypeError) {
+        const errorMessage = error.message.toLowerCase();
+        
+        if (errorMessage.includes('fetch')) {
+          console.error(
+            `Network Error: Unable to connect to API at ${url}. ` +
+            `Make sure your backend is running. Error: ${error.message}`
+          );
+        }
+      }
+      
+      console.error(`API Error [${normalizedEndpoint}]:`, error);
       throw error;
     } finally {
       clearTimeout(timeoutId);

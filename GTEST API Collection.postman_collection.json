@@ -1,0 +1,789 @@
+{
+  "info": {
+    "_postman_id": "64c20620-ec77-46cd-aea3-332eb7e9a8d7",
+    "name": "GTEST API Collection",
+    "description": "Comprehensive collection of APIs for Organizer Registration, Public Content, Participant Joining, and Game Engine.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "55380529",
+    "_collection_link": "https://go.postman.co/collection/55380529-64c20620-ec77-46cd-aea3-332eb7e9a8d7?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Organizer Registration & Login",
+      "item": [
+        {
+          "name": "Step 1: Register Organizer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"company_name\": \"Example Corp\",\n    \"company_website\": \"https://example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "register"
+              ]
+            },
+            "description": "Step 1 of the registration process. Submits basic info and sends an OTP to the email."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 2: Verify OTP (Registration)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"john@example.com\",\n    \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/verify-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "verify-otp"
+              ]
+            },
+            "description": "Step 2: Verifies the 6-digit OTP received via email for registration. This step is mandatory before creating a booking."
+          },
+          "response": []
+        },
+        {
+          "name": "Organizer Login - Step 1",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"john@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "login"
+              ]
+            },
+            "description": "Step 1 of the login process. Sends an OTP to the email."
+          },
+          "response": []
+        },
+        {
+          "name": "Organizer Login - Step 2 (Verify)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"john@example.com\",\n    \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/verify-login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "verify-login"
+              ]
+            },
+            "description": "Step 2 of the login process. Verifies the OTP and returns a JWT token."
+          },
+          "response": []
+        },
+        {
+          "name": "Organizer Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "dashboard"
+              ]
+            },
+            "description": "Retrieves the organizer's dashboard data, including purchased activities and bookings."
+          },
+          "response": []
+        },
+        {
+          "name": "Organizer Event Real-time Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/event-stats/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "event-stats",
+                "1"
+              ]
+            },
+            "description": "Retrieves real-time event stats (joined participants, groups formed, link clicks) for the organizer's dashboard."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"john@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/resend-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "resend-otp"
+              ]
+            },
+            "description": "Resends a new OTP to the registered email."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 3: Create Booking",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"organizer_id\": 1,\n    \"activity_id\": 1,\n    \"game_id\": 1,\n    \"package_id\": 1,\n    \"scheduled_date\": \"2026-06-15\",\n    \"scheduled_time\": \"14:30:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/create-booking",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "create-booking"
+              ]
+            },
+            "description": "Step 3: Selects game, package, and schedule to create a pending booking. (Requires Step 2 completion)."
+          },
+          "response": []
+        },
+        {
+          "name": "Review Booking Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/booking/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "booking",
+                "1"
+              ]
+            },
+            "description": "Retrieves all booking details for review before final submission."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 4: Complete Booking & Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"booking_id\": 1,\n    \"gst_number\": \"22AAAAA0000A1Z5\",\n    \"billing_address\": \"123 Business St\",\n    \"city\": \"Tech City\",\n    \"state\": \"Digital State\",\n    \"pin_code\": \"123456\",\n    \"payment_method\": \"razorpay\",\n    \"consents\": {\n        \"authorization\": true,\n        \"participant_consent\": true,\n        \"terms_accepted\": true,\n        \"non_refundable_accepted\": true,\n        \"validity_accepted\": true\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/complete-booking",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "complete-booking"
+              ]
+            },
+            "description": "Step 4: Submits billing info and mandatory consents to finalize the booking. This generates the unique invitation_link for participants."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Session (One-time)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"booking_id\": 1,\n    \"scheduled_date\": \"2026-06-20\",\n    \"scheduled_time\": \"16:00:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/organizer/update-session",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "organizer",
+                "update-session"
+              ]
+            },
+            "description": "Allows updating the session date and time exactly once after booking."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Participant Journey",
+      "item": [
+        {
+          "name": "Step 1: Verify Invitation Link",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/participant/verify-link/0gqRFNn9tlzUkOWdaioH",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "verify-link",
+                "0gqRFNn9tlzUkOWdaioH"
+              ]
+            },
+            "description": "Verifies if the invitation link token is valid and active."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 2: Join Session (Name & Email)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"booking_id\": 1,\n    \"name\": \"Alice Smith\",\n    \"email\": \"alice@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/participant/join",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "join"
+              ]
+            },
+            "description": "Participant submits name and email to receive an OTP."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 3: Verify OTP & Enter Lobby",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"booking_id\": 1,\n    \"email\": \"alice@example.com\",\n    \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/participant/verify-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "verify-otp"
+              ]
+            },
+            "description": "Verifies participant OTP and automatically assigns them to a group (5 members max)."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 4: Get Lobby Information",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/participant/lobby/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "participant",
+                "lobby",
+                "1"
+              ]
+            },
+            "description": "Retrieves the list of members in the same group and the group status."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public Content",
+      "item": [
+        {
+          "name": "Get All Packages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/public/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "packages"
+              ]
+            },
+            "description": "Retrieves all active packages."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All CMS Pages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/public/cms",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "cms"
+              ]
+            },
+            "description": "Retrieves list of all published CMS pages."
+          },
+          "response": []
+        },
+        {
+          "name": "Get CMS Page by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/public/cms/terms-and-conditions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "cms",
+                "terms-and-conditions"
+              ]
+            },
+            "description": "Retrieves full content of a specific CMS page by its slug."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Site Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/public/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "settings"
+              ]
+            },
+            "description": "Retrieves site-wide settings in key-value format."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Game List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/public/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "games"
+              ]
+            },
+            "description": "Retrieves list of all active main games."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Game Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/public/games/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "games",
+                "1"
+              ]
+            },
+            "description": "Retrieves detailed information about a specific game and its variations."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Game Engine (Auth Required)",
+      "item": [
+        {
+          "name": "Get Game State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/game/state/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "game",
+                "state",
+                "1"
+              ]
+            },
+            "description": "Retrieves current state of a game group."
+          },
+          "response": []
+        },
+        {
+          "name": "Ask Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"group_id\": \"1\",\n    \"asked_to_session_id\": \"target_session_id\",\n    \"question_text\": \"Where were you during the incident?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/game/ask-question",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "game",
+                "ask-question"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Answer Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"question_id\": \"1\",\n    \"answer_text\": \"I was in the kitchen.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/game/answer-question",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "game",
+                "answer-question"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start Lie Detector",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"group_id\": \"1\",\n    \"suspect_session_id\": \"suspect_session_id\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/game/start-lie-detector",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "game",
+                "start-lie-detector"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Vote Lie Detector",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"group_id\": \"1\",\n    \"round_id\": \"1\",\n    \"vote_value\": \"suspicious\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/game/vote-lie-detector",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "game",
+                "vote-lie-detector"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Final Verdict",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"group_id\": \"1\",\n    \"identified_culprit_session_id\": \"culprit_id\",\n    \"reasoning\": \"Found the fingerprints on the weapon.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/game/final-verdict",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "game",
+                "final-verdict"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "jwt_token",
+      "value": "your_jwt_here"
+    }
+  ]
+}
