@@ -9,7 +9,7 @@ import { Logo } from "@/components/Logo";
 import { participantService } from "@/api/services/participant.service";
 import type { GameStateResponse } from "@/api/services/participant.service";
 import type { GameSummaryResponse, GameSummaryRole, GamePlayer, LieDetectorTally } from "@/api/types/participant";
-import { getParticipantSession } from "@/lib/participant-session";
+import { getParticipantSession, participantGameKey } from "@/lib/participant-session";
 import { getSocket } from "@/lib/socket";
 import { resolveMediaUrl } from "@/utils/media";
 import { toastError } from "@/lib/toast";
@@ -182,8 +182,9 @@ function GamePage() {
       return;
     }
 
-    const timerKey = `game_timers_${session.groupId}`;
-    const savedTimer = localStorage.getItem(timerKey);
+    const timerKey = participantGameKey("timers", session.groupId, session.participantId);
+    const uiKey = participantGameKey("ui", session.groupId, session.participantId);
+    const savedTimer = sessionStorage.getItem(timerKey);
 
     Promise.all([
       participantService.getGameSummary(session.groupId, session.participantId),
@@ -194,7 +195,7 @@ function GamePage() {
         applyGameState(state);
         setQuestionsLeft(Math.max(0, data.settings.max_questions - state.group.questions.length));
 
-        const savedState = localStorage.getItem(`game_ui_${session.groupId}`);
+        const savedState = sessionStorage.getItem(uiKey);
         if (savedState) {
           try {
             const { secretOpened: so = false, roleViewed: rv = false } = JSON.parse(savedState);
@@ -206,7 +207,11 @@ function GamePage() {
           }
         }
 
-        const instinctWarningKey = `game_instinct_warning_${session.groupId}`;
+        const instinctWarningKey = participantGameKey(
+          "instinct_warning",
+          session.groupId,
+          session.participantId
+        );
         if (!sessionStorage.getItem(instinctWarningKey)) {
           setShowInstinctWarning(true);
           sessionStorage.setItem(instinctWarningKey, "1");
@@ -223,13 +228,13 @@ function GamePage() {
             setPhase(caseElapsed >= data.settings.case_summary_view_secs ? "investigation" : "summary");
           } catch {
             const now = Date.now();
-            localStorage.setItem(timerKey, JSON.stringify({ hdrStartTime: now, caseStartTime: now }));
+            sessionStorage.setItem(timerKey, JSON.stringify({ hdrStartTime: now, caseStartTime: now }));
             setSecsHdr(data.settings.game_duration_secs);
             setSecsCase(data.settings.case_summary_view_secs);
           }
         } else {
           const now = Date.now();
-          localStorage.setItem(timerKey, JSON.stringify({ hdrStartTime: now, caseStartTime: now }));
+          sessionStorage.setItem(timerKey, JSON.stringify({ hdrStartTime: now, caseStartTime: now }));
           setSecsHdr(data.settings.game_duration_secs);
           setSecsCase(data.settings.case_summary_view_secs);
         }
@@ -291,11 +296,21 @@ function GamePage() {
       setFrozenSessionIds((prev) => new Set(prev).add(payload.participant_session_id));
     };
     const onGameEnded = () => {
-      if (session?.groupId) sessionStorage.setItem(`game_ended_${session.groupId}`, "1");
+      if (session?.groupId && session.participantId) {
+        sessionStorage.setItem(
+          participantGameKey("ended", session.groupId, session.participantId),
+          "1"
+        );
+      }
       navigate({ to: "/results" });
     };
     const onGameIncomplete = () => {
-      if (session?.groupId) sessionStorage.setItem(`game_ended_${session.groupId}`, "1");
+      if (session?.groupId && session.participantId) {
+        sessionStorage.setItem(
+          participantGameKey("ended", session.groupId, session.participantId),
+          "1"
+        );
+      }
       toastError("The Investigator has left the game. The session has ended.");
       navigate({ to: "/results" });
     };
@@ -389,18 +404,21 @@ function GamePage() {
     if (loading) return;
     if (!session?.groupId) return;
     if (gameData && secsHdr === 0) {
-      const endedKey = `game_ended_${session.groupId}`;
+      const endedKey = participantGameKey("ended", session.groupId, session.participantId);
       if (sessionStorage.getItem(endedKey)) return;
       sessionStorage.setItem(endedKey, "1");
       navigate({ to: "/results" });
     }
-  }, [secsHdr, loading, session?.groupId, gameData, navigate]);
+  }, [secsHdr, loading, session?.groupId, session?.participantId, gameData, navigate]);
 
   // Persist local UI-only state (game data itself is server-authoritative now).
   useEffect(() => {
-    if (!session?.groupId) return;
-    localStorage.setItem(`game_ui_${session.groupId}`, JSON.stringify({ secretOpened, roleViewed }));
-  }, [secretOpened, roleViewed, session?.groupId]);
+    if (!session?.groupId || !session.participantId) return;
+    sessionStorage.setItem(
+      participantGameKey("ui", session.groupId, session.participantId),
+      JSON.stringify({ secretOpened, roleViewed })
+    );
+  }, [secretOpened, roleViewed, session?.groupId, session?.participantId]);
 
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 

@@ -1,0 +1,1 @@
+import{c as o}from"./config-M3yvMPYh.js";const n=[["path",{d:"m6 9 6 6 6-6",key:"qrunsl"}]],h=o("chevron-down",n);const e=[["path",{d:"m15 18-6-6 6-6",key:"1wnfg3"}]],r=o("chevron-left",e);const t=[["path",{d:"m9 18 6-6-6-6",key:"mthhwq"}]],s=o("chevron-right",t);export{s as C,r as a,h as b};

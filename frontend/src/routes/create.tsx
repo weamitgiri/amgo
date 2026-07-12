@@ -1164,7 +1164,7 @@ function PaymentStep({
             <p className="font-medium">{registration.company_name || "—"}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Company Website</p>
+            <p className="text-xs text-muted-foreground">Company Website  (http://exmpale.com/)</p>
             <p className="font-medium">{registration.company_website || "—"}</p>
           </div>
         </div>
@@ -1190,14 +1190,14 @@ function PaymentStep({
       </Section>
 
       <div>
-        <p className="text-sm font-semibold">Billing Details (GST Invoice)</p>
+        <p className="text-sm font-semibold">Billing Details (GST Invoice) (Ex.29ABCDE1234F1Z5)</p>
         <p className="text-xs text-muted-foreground mt-0.5">
           A GST invoice will be automatically generated and sent to your registered email after successful payment
         </p>
         <div className="mt-3 space-y-3">
           <BField
             label="GST Number *"
-            placeholder="Enter GST Number"
+            placeholder="Enter GST Number (Ex.29ABCDE1234F1Z5)"
             value={gstNumber}
             onChange={(value) => setGstNumber(value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15))}
             error={errors.gst_number}
