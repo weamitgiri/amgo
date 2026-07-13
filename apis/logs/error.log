@@ -99,3 +99,61 @@
 2026-07-12 00:33:52:3352 error: The Lie Detector can only be used once per game
 2026-07-12 00:33:59:3359 error: The Lie Detector can only be used once per game
 2026-07-12 00:37:49:3749 error: The Lie Detector can only be used once per game
+2026-07-12 16:49:39:4939 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-12 16:49:45:4945 error: Booking not found
+2026-07-12 16:49:46:4946 error: Booking not found
+2026-07-12 16:49:48:4948 error: Booking not found
+2026-07-12 16:50:18:5018 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-12 16:50:56:5056 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-12 16:50:59:5059 error: Booking not found
+2026-07-12 16:51:00:510 error: Booking not found
+2026-07-12 16:51:02:512 error: Booking not found
+2026-07-12 16:51:06:516 error: Access Denied: You have joined after the allowed time. The session started at 2:34 PM and entry was closed at 2:49 PM. Please contact the Organiser for assistance.
+2026-07-12 16:51:09:519 error: Access Denied: You have joined after the allowed time. The session started at 2:34 PM and entry was closed at 2:49 PM. Please contact the Organiser for assistance.
+2026-07-12 16:51:11:5111 error: Booking not found
+2026-07-12 16:55:37:5537 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-12 16:56:07:567 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-12 16:56:44:5644 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-12 16:57:03:573 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-12 16:57:18:5718 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-12 16:57:31:5731 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-12 17:07:00:70 error: You are not part of this group
+2026-07-12 17:07:00:70 error: You are not part of this group
+2026-07-12 17:07:09:79 error: You are not part of this group
+2026-07-12 17:07:09:79 error: You are not part of this group
+2026-07-13 19:58:38:5838 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 19:59:24:5924 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:04:55:455 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:05:39:539 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:07:34:734 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:07:58:758 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:08:44:844 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:09:42:942 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:10:29:1029 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:10:46:1046 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:11:02:112 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:11:16:1116 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 20:11:36:1136 error: Join limit reached. This package allows a maximum of 10 participants.
+2026-07-13 20:11:43:1143 error: Join limit reached. This package allows a maximum of 10 participants.
+2026-07-13 20:12:39:1239 error: Join limit reached. This package allows a maximum of 10 participants.
+2026-07-13 20:15:00:150 error: You are not part of this group
+2026-07-13 20:15:00:150 error: You are not part of this group
+2026-07-13 20:15:00:150 error: You are not part of this group
+2026-07-13 20:15:00:150 error: You are not part of this group
+2026-07-13 20:15:00:150 error: You are not part of this group
+2026-07-13 20:15:00:150 error: You are not part of this group
+2026-07-13 20:15:00:150 error: You are not part of this group
+2026-07-13 20:15:00:150 error: You are not part of this group
+2026-07-13 20:15:00:150 error: You are not part of this group
+2026-07-13 21:24:42:2442 error: Access Denied: You have joined after the allowed time. The session started at 8:00 PM and entry was closed at 8:15 PM. Please contact the Organiser for assistance.
+2026-07-13 22:42:05:425 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 22:42:47:4247 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 22:44:53:4453 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 22:45:06:456 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 22:45:20:4520 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 22:45:40:4540 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 22:45:57:4557 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-13 22:59:00:590 error: You are not part of this group
+2026-07-13 22:59:00:590 error: You are not part of this group
+2026-07-13 22:59:00:590 error: You are not part of this group
+2026-07-13 22:59:00:590 error: You are not part of this group

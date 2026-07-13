@@ -65,6 +65,7 @@ type ActivityItem = {
   a?: string;
   autoSkipped?: boolean;
   tally?: LieDetectorTally;
+  fromSessionId?: number;
 };
 
 function GamePage() {
@@ -134,6 +135,7 @@ function GamePage() {
   const [questionsLeft, setQuestionsLeft] = useState(5);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [pendingAnswerForMe, setPendingAnswerForMe] = useState<ActivityItem | null>(null);
+  const [answerTimeoutPenalty, setAnswerTimeoutPenalty] = useState(0);
   const [voteContext, setVoteContext] = useState<{ questionId: number; answerText: string; answererSessionId: number } | null>(null);
   const [lieTally, setLieTally] = useState<LieDetectorTally | null>(null);
   const [invElapsed, setInvElapsed] = useState(0);
@@ -260,8 +262,8 @@ function GamePage() {
 
     socket.emit("join_game_group", { groupId: session.groupId, participantId: session.participantId });
 
-    const onNewQuestion = (q: { id: number; asked_to: number; question_text: string }) => {
-      const item: ActivityItem = { questionId: q.id, toSessionId: q.asked_to, q: q.question_text };
+    const onNewQuestion = (q: { id: number; asked_to: number; question_text: string; asked_by?: number }) => {
+      const item: ActivityItem = { questionId: q.id, toSessionId: q.asked_to, q: q.question_text, fromSessionId: q.asked_by };
       setActivity((prev) => [item, ...prev]);
       setQuestionsLeft((n) => Math.max(0, n - 1));
       if (myPlayer?.session_id === q.asked_to) {
@@ -614,11 +616,16 @@ function GamePage() {
           onSelectSlide={(index) => setGuideSlide(index)}
         />
       )}
-      {pendingAnswerForMe && (
+      {pendingAnswerForMe && gameData && (
         <AnswerModal
           question={pendingAnswerForMe.q}
           answerSecs={gameData.settings.question_response_secs}
           onSubmit={submitAnswer}
+          investigatorRole={isInvestigator ? "Investigator" : "Investigator"}
+          onTimeout={() => {
+            setPendingAnswerForMe(null);
+            setAnswerTimeoutPenalty(-10);
+          }}
         />
       )}
       {voteContext && lieDetectorRoundId && (
@@ -1077,24 +1084,34 @@ function InvestigationView(props: {
         {/* Players */}
         <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
           <h3 className="text-sm font-bold mb-4">Players</h3>
-          <ul className="space-y-2">
+          <div className="grid grid-cols-3 gap-2">
             {players.map((p, i) => {
               const frozen = frozenSessionIds.has(p.session_id);
+              const roleImage = p.is_you && yourRole?.role_image ? resolveMediaUrl(yourRole.role_image) : null;
               return (
-                <li key={p.session_id} className={`rounded-xl border p-2 flex items-center gap-2 ${frozen ? "border-white/5 bg-white/[0.02] opacity-50" : i === selectedAskee ? "border-purple-400 bg-purple-500/10" : "border-white/10 bg-white/5"}`}>
-                  <div className={`h-9 w-9 rounded-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-[10px] font-bold`}>{initials(p.pseudonym)}</div>
-                  <div className="flex-1">
-                    <div className="text-xs font-semibold">{p.is_you ? `${p.pseudonym} (You)` : p.pseudonym}</div>
-                    {frozen ? (
-                      <div className="text-[10px] text-rose-400">● Left the game</div>
+                <div key={p.session_id} className={`flex flex-col items-center opacity-transition ${frozen ? "opacity-40" : ""}`}>
+                  <div className="h-16 w-16 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20 mb-2">
+                    {roleImage ? (
+                      <img src={roleImage} alt="role" className="h-full w-full object-cover" />
                     ) : (
-                      <div className="text-[10px] text-emerald-400">● Available</div>
+                      <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold text-white`}>
+                        {initials(p.pseudonym)}
+                      </div>
                     )}
                   </div>
-                </li>
+                  <div className="text-center flex-1 min-w-0">
+                    <div className="text-[10px] font-semibold truncate max-w-full">{p.pseudonym}</div>
+                    {p.is_you && <div className="text-[8px] text-purple-300 font-bold">You</div>}
+                    {frozen ? (
+                      <div className="text-[8px] text-rose-400">Left</div>
+                    ) : (
+                      <div className="text-[8px] text-emerald-400">●</div>
+                    )}
+                  </div>
+                </div>
               );
             })}
-          </ul>
+          </div>
           {yourRole ? (
             <div className="mt-5 rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-3">
               <div className="text-[10px] text-white/70">Your Role</div>
@@ -1128,40 +1145,82 @@ function InvestigationView(props: {
                 </div>
               )}
               <fieldset disabled={locked} aria-busy={locked} className={locked ? "opacity-60 pointer-events-none select-none" : ""}>
-                <div className="mt-4 grid grid-cols-5 gap-2">
-                  {players.map((p, i) => (
-                    <button type="button" key={p.session_id} onClick={() => setSelectedAskee(i)} disabled={p.is_you || frozenSessionIds.has(p.session_id)} className={`relative rounded-xl border p-2 text-center transition disabled:opacity-40 ${i === selectedAskee ? "border-purple-400 ring-2 ring-purple-400/40 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
-                      <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold`}>
-                        {initials(p.pseudonym)}
-                      </div>
-                      <div className="mt-1.5 text-[11px] font-semibold">{p.is_you ? `${p.pseudonym} (You)` : p.pseudonym}</div>
-                      {i === selectedAskee && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-purple-500 ring-2 ring-purple-300" />}
-                    </button>
-                  ))}
+                <div className="mt-4">
+                  <label className="text-xs text-white/70 block mb-3">🎯 {lieMode ? "Select Suspect for Interrogation" : "Select a Player"}</label>
+                  <div className="grid grid-cols-5 gap-3">
+                    {players.map((p, i) => {
+                      const roleImage = p.is_you && yourRole?.role_image ? resolveMediaUrl(yourRole.role_image) : null;
+                      return (
+                        <button type="button" key={p.session_id} onClick={() => setSelectedAskee(i)} disabled={p.is_you || frozenSessionIds.has(p.session_id)} className={`relative rounded-2xl border-2 overflow-hidden p-0 text-center transition group disabled:opacity-40 disabled:cursor-not-allowed ${i === selectedAskee ? "border-purple-400 ring-2 ring-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "border-white/10 hover:border-purple-300/30"}`}>
+                          <div className="relative">
+                            {roleImage ? (
+                              <img src={roleImage} alt="role" className="h-24 w-24 mx-auto object-cover" />
+                            ) : (
+                              <div className={`h-24 w-24 bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-base font-bold text-white`}>
+                                {initials(p.pseudonym)}
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                          </div>
+                          <div className="px-2 py-2.5 text-[10px] font-semibold relative z-10 bg-black/50 text-center border-t border-white/10">{p.pseudonym}</div>
+                          {i === selectedAskee && <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 h-5 w-5 rounded-full bg-purple-500 ring-3 ring-purple-300" />}
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
                 <div className="mt-6">
-                  <label className="text-xs text-white/70">Type your question (max 120 characters)</label>
+                  <label className="text-xs text-white/70">💬 {lieMode ? "Interrogation Question" : "Your Question"} (max 120 characters)</label>
                   <div className="mt-1 relative">
                     <textarea value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 120))}
-                      placeholder="Type your question here..."
+                      placeholder="🎤 Type your interrogation question here..."
                       className="w-full h-28 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400 disabled:cursor-not-allowed" />
                     <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{question.length}/120</span>
                   </div>
                 </div>
                 <button type="button" onClick={sendQuestion} disabled={!question.trim() || questionsLeft <= 0 || locked}
                   className="mt-5 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed">
-                  <Send className="h-4 w-4 inline mr-2" /> Send Question
+                  Send Interrogation
                 </button>
               </fieldset>
             </>
           ) : (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
-              <ScanSearch className="h-8 w-8 mx-auto text-purple-300" />
-              <p className="mt-3 text-sm text-white/80">
-                The Investigator is questioning suspects. If a question comes to you, an answer window
-                will open automatically — you have limited time to respond.
-              </p>
-            </div>
+            <>
+              <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-6 text-center mb-6">
+                <ScanSearch className="h-8 w-8 mx-auto text-purple-300" />
+                <p className="mt-3 text-sm text-white/80">
+                  The Investigator is questioning suspects. If a question comes to you, an answer window
+                  will open automatically — you have limited time to respond.
+                </p>
+              </div>
+              <div>
+                <label className="text-xs text-white/70 block mb-3">All Players</label>
+                <div className="grid grid-cols-5 gap-3">
+                  {players.map((p, i) => {
+                    const frozen = frozenSessionIds.has(p.session_id);
+                    const roleImage = p.is_you && yourRole?.role_image ? resolveMediaUrl(yourRole.role_image) : null;
+                    return (
+                      <div key={p.session_id} className={`relative rounded-2xl border-2 border-white/10 overflow-hidden ${frozen ? "opacity-40" : ""}`}>
+                        <div className="relative">
+                          {roleImage ? (
+                            <img src={roleImage} alt="role" className="h-24 w-24 mx-auto object-cover" />
+                          ) : (
+                            <div className={`h-24 w-24 bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-base font-bold text-white`}>
+                              {initials(p.pseudonym)}
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                        </div>
+                        <div className="px-2 py-2.5 text-[10px] font-semibold relative z-10 bg-black/50 text-center border-t border-white/10">
+                          <div>{p.pseudonym}</div>
+                          {p.is_you && <div className="text-[8px] text-purple-300">(You)</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           )}
           <p className="mt-2 text-center text-[11px] text-white/60">All answers are visible to everyone after the player submits.</p>
         </div>
@@ -1435,43 +1494,98 @@ function AnswerModal({
   question,
   answerSecs,
   onSubmit,
+  investigatorRole = "Investigator",
+  onTimeout,
 }: {
   question: string;
   answerSecs: number;
   onSubmit: (text: string) => void;
+  investigatorRole?: string;
+  onTimeout?: () => void;
 }) {
   const [secs, setSecs] = useState(answerSecs);
   const [ans, setAns] = useState("");
-  useEffect(() => { const t = setInterval(() => setSecs((s) => Math.max(0, s - 1)), 1000); return () => clearInterval(t); }, []);
+  const isTimeUp = secs === 0;
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setSecs((s) => {
+        const next = Math.max(0, s - 1);
+        if (next === 0 && s > 0 && onTimeout) {
+          onTimeout();
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [onTimeout]);
+
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const canClose = false; // Modal cannot be closed during countdown
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4">
       <div className="relative w-full max-w-lg rounded-3xl border border-white/15 bg-purple-950/95 shadow-elevated">
+        {/* Close button disabled during countdown */}
+        {false && (
+          <button className="absolute top-4 right-4 z-10 h-9 w-9 grid place-items-center rounded-xl bg-purple-700/40 opacity-20 cursor-not-allowed">
+            <X className="h-4 w-4" />
+          </button>
+        )}
         <div className="p-6">
           <div className="flex items-start gap-3">
             <div className="h-12 w-12 rounded-full bg-purple-700/40 grid place-items-center"><ShieldCheck className="h-5 w-5 text-purple-200" /></div>
             <div>
               <h3 className="text-lg font-bold">You have been asked a Question</h3>
-              <p className="text-xs text-white/65">By the Investigator</p>
+              <p className="text-xs text-white/65">By SC ({investigatorRole}) in Lie Detector Mode</p>
             </div>
           </div>
           <div className="mt-5 rounded-2xl border border-white/10 bg-purple-500/10 p-4 text-center">
             <div className="text-[11px] text-white/60">Question</div>
             <div className="mt-1 text-base">{question}</div>
           </div>
-          <div className="mt-5 text-center">
-            <Clock className="h-5 w-5 mx-auto text-white/60" />
-            <div className="text-xs text-white/65 mt-1">Time Left to answer</div>
-            <div className="text-2xl font-black text-amber-300 tabular-nums">{fmt(secs)}</div>
+          <div className={`mt-5 text-center ${
+            isTimeUp ? "rounded-2xl bg-rose-500/20 border border-rose-400/40 p-4" : ""
+          }`}>
+            <Clock className={`h-5 w-5 mx-auto ${
+              isTimeUp ? "text-rose-400" : "text-white/60"
+            }`} />
+            <div className={`text-xs mt-1 ${
+              isTimeUp ? "text-rose-300 font-bold" : "text-white/65"
+            }`}>Time Left to answer</div>
+            <div className={`text-2xl font-black tabular-nums ${
+              isTimeUp ? "text-rose-400" : "text-amber-300"
+            }`}>{fmt(secs)}</div>
+            {isTimeUp && (
+              <p className="text-xs text-rose-300 font-semibold mt-2">⚠️ Time's up! -10 points penalty applied.</p>
+            )}
           </div>
           <div className="mt-5">
             <label className="text-xs text-white/70">Type your answer (max 120 characters)</label>
             <div className="mt-1 relative">
-              <textarea value={ans} onChange={(e) => setAns(e.target.value.slice(0, 120))} placeholder="Type your answer here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
+              <textarea
+                value={ans}
+                onChange={(e) => setAns(e.target.value.slice(0, 120))}
+                placeholder="Type your answer here..."
+                disabled={isTimeUp}
+                className={`w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400 ${
+                  isTimeUp ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              />
               <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{ans.length}/120</span>
             </div>
           </div>
-          <button onClick={() => onSubmit(ans)} disabled={!ans.trim()} className="mt-4 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40">Submit Answer</button>
+          <button
+            onClick={() => onSubmit(ans)}
+            disabled={!ans.trim() || isTimeUp}
+            className={`mt-4 w-full rounded-full py-3 text-sm font-semibold shadow-glow ${
+              isTimeUp
+                ? "bg-white/5 text-white/40 cursor-not-allowed"
+                : "bg-gradient-primary disabled:opacity-40"
+            }`}
+          >
+            {isTimeUp ? "Time Expired" : "Submit Answer To Start Voting"}
+          </button>
           <p className="mt-2 text-center text-[11px] text-white/60">Your answer will be visible to all players.</p>
         </div>
       </div>
@@ -1495,32 +1609,61 @@ function VoteModal({
   const [vote, setVote] = useState<"believable" | "suspicious" | null>(null);
   return (
     <ModalShell onClose={onClose}>
-      <div className="p-6">
-        <div className="flex items-start gap-3">
-          <div className="h-12 w-12 rounded-full bg-purple-700/40 grid place-items-center"><ShieldCheck className="h-5 w-5 text-purple-200" /></div>
-          <div><h3 className="text-lg font-bold">Vote on the Answer</h3><p className="text-xs text-white/65">Lie Detector round</p></div>
+      <div className="p-8">
+        <div className="flex items-start gap-4">
+          <div className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 grid place-items-center flex-shrink-0"><ScanSearch className="h-6 w-6 text-white" /></div>
+          <div>
+            <h2 className="text-2xl font-black">Vote on the Answer</h2>
+            <p className="text-sm text-white/60 mt-1">By SC (Investigator)</p>
+          </div>
         </div>
-        <div className="mt-5 rounded-2xl border border-white/10 bg-purple-500/10 p-4 text-center">
-          <div className="text-[11px] text-white/60">Question</div>
-          <div className="mt-1 text-base">{question}</div>
+
+        <div className="mt-7 rounded-2xl border-2 border-purple-400/50 bg-purple-500/15 p-5 text-center">
+          <div className="text-xs text-white/50 uppercase tracking-widest font-bold mb-2">Question</div>
+          <div className="text-lg font-bold text-purple-200">{question}</div>
         </div>
-        <div className="mt-4">
-          <div className="text-xs text-pink-300 mb-1">{answererShort} Answer</div>
-          <div className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm">{answerText}</div>
+
+        <div className="mt-6">
+          <div className="text-sm text-pink-300 font-semibold mb-2">{answererShort}'s Answer</div>
+          <div className="rounded-xl border border-white/15 bg-black/30 p-4 text-base text-white/90 leading-relaxed">{answerText}</div>
         </div>
-        <div className="mt-5">
-          <div className="text-xs text-pink-300 mb-2">Select Votes</div>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => setVote("believable")} className={`rounded-xl border py-3 text-sm font-semibold ${vote === "believable" ? "border-emerald-400 bg-emerald-500/20 text-emerald-300" : "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"}`}>
-              <ThumbsUp className="h-4 w-4 inline mr-2" /> Believable
+
+        <div className="mt-8">
+          <div className="text-sm font-bold text-white/80 mb-4 uppercase tracking-wider">📊 Cast Your Vote</div>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => setVote("believable")}
+              className={`relative rounded-2xl border-2 py-5 px-4 text-center font-semibold transition-all transform ${
+                vote === "believable"
+                  ? "border-emerald-400 bg-emerald-500/25 text-emerald-200 shadow-[0_0_20px_rgba(52,211,153,0.4)] scale-105"
+                  : "border-emerald-500/40 text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/15"
+              }`}
+            >
+              <div className="text-3xl mb-2">✅</div>
+              <div className="text-sm font-bold">Believable</div>
             </button>
-            <button onClick={() => setVote("suspicious")} className={`rounded-xl border py-3 text-sm font-semibold ${vote === "suspicious" ? "border-rose-400 bg-rose-500/20 text-rose-300" : "border-rose-500/40 text-rose-300 hover:bg-rose-500/10"}`}>
-              <ThumbsDown className="h-4 w-4 inline mr-2" /> Suspicious
+            <button
+              onClick={() => setVote("suspicious")}
+              className={`relative rounded-2xl border-2 py-5 px-4 text-center font-semibold transition-all transform ${
+                vote === "suspicious"
+                  ? "border-rose-400 bg-rose-500/25 text-rose-200 shadow-[0_0_20px_rgba(244,63,94,0.4)] scale-105"
+                  : "border-rose-500/40 text-rose-300 hover:border-rose-400 hover:bg-rose-500/15"
+              }`}
+            >
+              <div className="text-3xl mb-2">❌</div>
+              <div className="text-sm font-bold">Suspicious</div>
             </button>
           </div>
         </div>
-        <button onClick={() => vote && onVote(vote)} disabled={!vote} className="mt-6 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40">Submit Vote</button>
-        <p className="mt-2 text-center text-[11px] text-white/60">Your votes will be visible to all players.</p>
+
+        <button
+          onClick={() => vote && onVote(vote)}
+          disabled={!vote}
+          className="mt-8 w-full rounded-full bg-gradient-primary py-4 text-base font-bold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:shadow-lg"
+        >
+          Submit Vote
+        </button>
+        <p className="mt-3 text-center text-xs text-white/50">Your vote will be visible to all players after submission.</p>
       </div>
     </ModalShell>
   );

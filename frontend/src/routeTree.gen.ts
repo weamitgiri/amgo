@@ -23,8 +23,13 @@ import { Route as GroupsRouteImport } from './routes/groups'
 import { Route as GameRouteImport } from './routes/game'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CreateRouteImport } from './routes/create'
+import { Route as CookandcreateRouteRouteImport } from './routes/cookandcreate/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CookandcreateIndexRouteImport } from './routes/cookandcreate/index'
 import { Route as JoinLinkTokenRouteImport } from './routes/join.$linkToken'
+import { Route as CookandcreateSummaryRouteImport } from './routes/cookandcreate/summary'
+import { Route as CookandcreateLobbyRouteImport } from './routes/cookandcreate/lobby'
+import { Route as CookandcreateGameRouteImport } from './routes/cookandcreate/game'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -96,19 +101,45 @@ const CreateRoute = CreateRouteImport.update({
   path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CookandcreateRouteRoute = CookandcreateRouteRouteImport.update({
+  id: '/cookandcreate',
+  path: '/cookandcreate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CookandcreateIndexRoute = CookandcreateIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CookandcreateRouteRoute,
 } as any)
 const JoinLinkTokenRoute = JoinLinkTokenRouteImport.update({
   id: '/join/$linkToken',
   path: '/join/$linkToken',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CookandcreateSummaryRoute = CookandcreateSummaryRouteImport.update({
+  id: '/summary',
+  path: '/summary',
+  getParentRoute: () => CookandcreateRouteRoute,
+} as any)
+const CookandcreateLobbyRoute = CookandcreateLobbyRouteImport.update({
+  id: '/lobby',
+  path: '/lobby',
+  getParentRoute: () => CookandcreateRouteRoute,
+} as any)
+const CookandcreateGameRoute = CookandcreateGameRouteImport.update({
+  id: '/game',
+  path: '/game',
+  getParentRoute: () => CookandcreateRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cookandcreate': typeof CookandcreateRouteRouteWithChildren
   '/create': typeof CreateRoute
   '/dashboard': typeof DashboardRoute
   '/game': typeof GameRoute
@@ -123,7 +154,11 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/results': typeof ResultsRoute
   '/terms': typeof TermsRoute
+  '/cookandcreate/game': typeof CookandcreateGameRoute
+  '/cookandcreate/lobby': typeof CookandcreateLobbyRoute
+  '/cookandcreate/summary': typeof CookandcreateSummaryRoute
   '/join/$linkToken': typeof JoinLinkTokenRoute
+  '/cookandcreate/': typeof CookandcreateIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -141,11 +176,16 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/results': typeof ResultsRoute
   '/terms': typeof TermsRoute
+  '/cookandcreate/game': typeof CookandcreateGameRoute
+  '/cookandcreate/lobby': typeof CookandcreateLobbyRoute
+  '/cookandcreate/summary': typeof CookandcreateSummaryRoute
   '/join/$linkToken': typeof JoinLinkTokenRoute
+  '/cookandcreate': typeof CookandcreateIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cookandcreate': typeof CookandcreateRouteRouteWithChildren
   '/create': typeof CreateRoute
   '/dashboard': typeof DashboardRoute
   '/game': typeof GameRoute
@@ -160,12 +200,17 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/results': typeof ResultsRoute
   '/terms': typeof TermsRoute
+  '/cookandcreate/game': typeof CookandcreateGameRoute
+  '/cookandcreate/lobby': typeof CookandcreateLobbyRoute
+  '/cookandcreate/summary': typeof CookandcreateSummaryRoute
   '/join/$linkToken': typeof JoinLinkTokenRoute
+  '/cookandcreate/': typeof CookandcreateIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cookandcreate'
     | '/create'
     | '/dashboard'
     | '/game'
@@ -180,7 +225,11 @@ export interface FileRouteTypes {
     | '/profile'
     | '/results'
     | '/terms'
+    | '/cookandcreate/game'
+    | '/cookandcreate/lobby'
+    | '/cookandcreate/summary'
     | '/join/$linkToken'
+    | '/cookandcreate/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -198,10 +247,15 @@ export interface FileRouteTypes {
     | '/profile'
     | '/results'
     | '/terms'
+    | '/cookandcreate/game'
+    | '/cookandcreate/lobby'
+    | '/cookandcreate/summary'
     | '/join/$linkToken'
+    | '/cookandcreate'
   id:
     | '__root__'
     | '/'
+    | '/cookandcreate'
     | '/create'
     | '/dashboard'
     | '/game'
@@ -216,11 +270,16 @@ export interface FileRouteTypes {
     | '/profile'
     | '/results'
     | '/terms'
+    | '/cookandcreate/game'
+    | '/cookandcreate/lobby'
+    | '/cookandcreate/summary'
     | '/join/$linkToken'
+    | '/cookandcreate/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CookandcreateRouteRoute: typeof CookandcreateRouteRouteWithChildren
   CreateRoute: typeof CreateRoute
   DashboardRoute: typeof DashboardRoute
   GameRoute: typeof GameRoute
@@ -338,12 +397,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cookandcreate': {
+      id: '/cookandcreate'
+      path: '/cookandcreate'
+      fullPath: '/cookandcreate'
+      preLoaderRoute: typeof CookandcreateRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/cookandcreate/': {
+      id: '/cookandcreate/'
+      path: '/'
+      fullPath: '/cookandcreate/'
+      preLoaderRoute: typeof CookandcreateIndexRouteImport
+      parentRoute: typeof CookandcreateRouteRoute
     }
     '/join/$linkToken': {
       id: '/join/$linkToken'
@@ -352,11 +425,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JoinLinkTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cookandcreate/summary': {
+      id: '/cookandcreate/summary'
+      path: '/summary'
+      fullPath: '/cookandcreate/summary'
+      preLoaderRoute: typeof CookandcreateSummaryRouteImport
+      parentRoute: typeof CookandcreateRouteRoute
+    }
+    '/cookandcreate/lobby': {
+      id: '/cookandcreate/lobby'
+      path: '/lobby'
+      fullPath: '/cookandcreate/lobby'
+      preLoaderRoute: typeof CookandcreateLobbyRouteImport
+      parentRoute: typeof CookandcreateRouteRoute
+    }
+    '/cookandcreate/game': {
+      id: '/cookandcreate/game'
+      path: '/game'
+      fullPath: '/cookandcreate/game'
+      preLoaderRoute: typeof CookandcreateGameRouteImport
+      parentRoute: typeof CookandcreateRouteRoute
+    }
   }
 }
 
+interface CookandcreateRouteRouteChildren {
+  CookandcreateGameRoute: typeof CookandcreateGameRoute
+  CookandcreateLobbyRoute: typeof CookandcreateLobbyRoute
+  CookandcreateSummaryRoute: typeof CookandcreateSummaryRoute
+  CookandcreateIndexRoute: typeof CookandcreateIndexRoute
+}
+
+const CookandcreateRouteRouteChildren: CookandcreateRouteRouteChildren = {
+  CookandcreateGameRoute: CookandcreateGameRoute,
+  CookandcreateLobbyRoute: CookandcreateLobbyRoute,
+  CookandcreateSummaryRoute: CookandcreateSummaryRoute,
+  CookandcreateIndexRoute: CookandcreateIndexRoute,
+}
+
+const CookandcreateRouteRouteWithChildren =
+  CookandcreateRouteRoute._addFileChildren(CookandcreateRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CookandcreateRouteRoute: CookandcreateRouteRouteWithChildren,
   CreateRoute: CreateRoute,
   DashboardRoute: DashboardRoute,
   GameRoute: GameRoute,
