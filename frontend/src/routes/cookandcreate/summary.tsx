@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { CookCreateLayout } from './_components/CookCreateLayout';
-import { CookCreateHeader } from './_components/CookCreateHeader';
-import { CountdownTimer } from './_components/CountdownTimer';
-import { RoleRevealModal } from './_components/RoleRevealModal';
+import { CookCreateLayout } from './-components/CookCreateLayout';
+import { CookCreateHeader } from './-components/CookCreateHeader';
+import { CountdownTimer } from './-components/CountdownTimer';
+import { RoleRevealModal } from './-components/RoleRevealModal';
 
 export const Route = createFileRoute('/cookandcreate/summary')({
   component: SummaryPage,

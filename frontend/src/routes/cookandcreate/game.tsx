@@ -1,14 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Utensils, Lightbulb } from 'lucide-react';
-import { CookCreateLayout } from './_components/CookCreateLayout';
-import { CookCreateHeader } from './_components/CookCreateHeader';
-import { CountdownTimer } from './_components/CountdownTimer';
-import { RoundProgress } from './_components/RoundProgress';
-import { PlayersSidebar } from './_components/PlayersSidebar';
-import { ActivityFeed } from './_components/ActivityFeed';
-import { IngredientCard } from './_components/IngredientCard';
-import { RoundResultsModal } from './_components/RoundResultsModal';
+import { CookCreateLayout } from './-components/CookCreateLayout';
+import { CookCreateHeader } from './-components/CookCreateHeader';
+import { CountdownTimer } from './-components/CountdownTimer';
+import { RoundProgress } from './-components/RoundProgress';
+import { PlayersSidebar } from './-components/PlayersSidebar';
+import { ActivityFeed } from './-components/ActivityFeed';
+import { IngredientCard } from './-components/IngredientCard';
+import { RoundResultsModal } from './-components/RoundResultsModal';
 
 export const Route = createFileRoute('/cookandcreate/game')({
   component: GamePage,

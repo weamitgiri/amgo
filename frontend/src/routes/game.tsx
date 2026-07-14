@@ -574,6 +574,7 @@ function GamePage() {
       ) : (
         <InvestigationView
           players={players}
+          people={people}
           yourRole={yourPerson}
           isInvestigator={isInvestigator}
           isCulprit={isCulprit}
@@ -958,6 +959,7 @@ const PLAYER_GRADS = [
 
 function InvestigationView(props: {
   players: GamePlayer[];
+  people: GamePerson[];
   yourRole: GamePerson | null;
   isInvestigator: boolean;
   isCulprit: boolean;
@@ -985,6 +987,7 @@ function InvestigationView(props: {
 }) {
   const {
     players,
+    people,
     yourRole,
     isInvestigator,
     isCulprit,
@@ -1006,10 +1009,11 @@ function InvestigationView(props: {
     cluesUnlocked,
     myAccusationSubmitted,
     frozenSessionIds,
+    onlineSessionIds,
     scoresBySessionId,
     lieTally,
   } = props;
-  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "00")}:${String(s % 60).padStart(2, "00")}`;
   const shortBySessionId = useMemo(() => {
     const map = new Map<number, string>();
     for (const p of players) map.set(p.session_id, p.is_you ? `${p.pseudonym} (You)` : p.pseudonym);
@@ -1017,23 +1021,31 @@ function InvestigationView(props: {
   }, [players]);
   const initials = (pseudonym: string) => pseudonym.slice(0, 2).toUpperCase();
 
+  // Build role image lookup by index position (session_id is null for other players by design)
+  // people[i] corresponds to players[i] in order from the server
+  const roleImageByIndex = useMemo(() => {
+    return people.map((person) =>
+      person.role_image ? resolveMediaUrl(person.role_image) : null
+    );
+  }, [people]);
+
   return (
     <>
       {/* Investigation toolbar */}
-      <div className="mt-5 rounded-2xl border border-white/10 bg-[#1c1132] backdrop-blur px-6 py-5 flex items-center gap-4 flex-wrap pb-7">
+      <div className="mt-5 rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] px-6 py-5 flex items-center gap-4 flex-wrap pb-7">
         <div className="flex items-center gap-4">
-          <div className="h-11 w-11 rounded-full bg-purple-500/20 grid place-items-center">
+          <div className="h-11 w-11 rounded-full bg-purple-500/20 grid place-items-center border border-purple-500/30">
             {lieMode ? <ScanSearch className="h-5 w-5 text-purple-300" /> : <FileText className="h-5 w-5 text-purple-300" />}
           </div>
-          <h1 className="text-xl font-bold tracking-wide">{lieMode ? "Lie Detector Mode" : "Investigation"}</h1>
+          <h1 className="text-xl font-bold tracking-wide text-white">{lieMode ? "Lie Detector Mode" : "Investigation"}</h1>
         </div>
         
         <div className="ml-auto flex items-center gap-6 flex-wrap">
           <div className="relative flex flex-col items-center justify-center">
-            <button onClick={() => openModal("summary")} className="inline-flex items-center gap-2 rounded-full bg-[#00B87C] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity">
+            <button onClick={() => openModal("summary")} className="inline-flex items-center gap-2 rounded-full bg-[#00d084] px-6 py-2.5 text-[13px] font-bold text-white hover:opacity-90 transition-opacity">
               <FileText className="h-4 w-4" /> Case Summary
             </button>
-            <div className="absolute -bottom-5 text-[10px] text-[#00B87C] whitespace-nowrap">Available for {caseSummaryMins}:00 minutes only</div>
+            <div className="absolute -bottom-5 text-[10px] text-[#00d084] whitespace-nowrap">Available for {caseSummaryMins}:00 minutes only</div>
           </div>
 
           <div className="flex flex-col items-center justify-center gap-0.5">
@@ -1048,22 +1060,22 @@ function InvestigationView(props: {
 
           {isInvestigator && (
             <div className="relative flex flex-col items-center justify-center">
-              <button onClick={onToggleLieDetector} className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-opacity ${lieMode ? "bg-[#7e57c2] text-white shadow-[0_0_15px_rgba(126,87,194,0.5)]" : "bg-[#7e57c2] text-white hover:opacity-90"}`}>
+              <button onClick={onToggleLieDetector} className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[13px] font-bold transition-opacity ${lieMode ? "bg-[#3b82f6] text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "bg-[#3b82f6] text-white hover:opacity-90"}`}>
                 <ScanSearch className="h-4 w-4" /> Lie Detector
               </button>
-              <div className="absolute -bottom-5 flex items-center gap-1.5 text-[10px] text-[#00B87C] whitespace-nowrap">
-                <div className="h-1.5 w-1.5 rounded-full bg-[#00B87C]" />
+              <div className="absolute -bottom-5 flex items-center gap-1.5 text-[10px] text-[#00d084] whitespace-nowrap">
+                <div className="h-1.5 w-1.5 rounded-full bg-[#00d084]" />
                 {lieMode ? "Active" : "Available"}
               </div>
             </div>
           )}
 
           <div className="relative flex flex-col items-center justify-center">
-            <button onClick={() => openModal("clue")} className="inline-flex items-center gap-2 rounded-full bg-[#f59e0b] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity">
+            <button onClick={() => openModal("clue")} className="inline-flex items-center gap-2 rounded-full bg-[#eab308] px-6 py-2.5 text-[13px] font-bold text-white hover:opacity-90 transition-opacity">
               <Lightbulb className="h-4 w-4" /> Clue Room
             </button>
-            <div className="absolute -bottom-5 flex items-center gap-1.5 text-[10px] text-[#facc15] whitespace-nowrap">
-              <div className="h-1.5 w-1.5 rounded-full bg-[#facc15]" />
+            <div className="absolute -bottom-5 flex items-center gap-1.5 text-[10px] text-[#eab308] whitespace-nowrap">
+              <div className="h-1.5 w-1.5 rounded-full bg-[#eab308]" />
               New Clue
             </div>
           </div>
@@ -1082,55 +1094,84 @@ function InvestigationView(props: {
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[260px_1fr_320px]">
         {/* Players */}
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-          <h3 className="text-sm font-bold mb-4">Players</h3>
-          <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-5">
+          <h3 className="text-sm font-bold mb-4 text-white">Players</h3>
+          <div className="space-y-2">
             {players.map((p, i) => {
               const frozen = frozenSessionIds.has(p.session_id);
-              const roleImage = p.is_you && yourRole?.role_image ? resolveMediaUrl(yourRole.role_image) : null;
+              const isOnline = onlineSessionIds.has(p.session_id);
+              const isAnswering = activity.some(a => a.toSessionId === p.session_id && !a.a);
+              const roleImage = roleImageByIndex[i] ?? null;
+
+              // Determine status text and color
+              let statusText = "Offline";
+              let statusColor = "text-white/40";
+              if (isOnline) {
+                if (isAnswering) {
+                  statusText = "Answering";
+                  statusColor = "text-amber-400";
+                } else {
+                  statusText = "Online";
+                  statusColor = "text-[#00d084]";
+                }
+              }
+              if (frozen) {
+                statusText = "Left";
+                statusColor = "text-white/40";
+              }
+
               return (
-                <div key={p.session_id} className={`flex flex-col items-center opacity-transition ${frozen ? "opacity-40" : ""}`}>
-                  <div className="h-16 w-16 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20 mb-2">
+                <button
+                  type="button"
+                  key={p.session_id}
+                  disabled={p.is_you || frozen}
+                  onClick={() => { if (isInvestigator) setSelectedAskee(i); }}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all ${
+                    i === selectedAskee && isInvestigator
+                      ? "bg-purple-500/15 ring-1 ring-purple-400/40"
+                      : "hover:bg-white/5"
+                  } ${frozen ? "opacity-40" : ""}`}
+                >
+                  {/* Circular avatar */}
+                  <div className="relative h-10 w-10 rounded-full overflow-hidden flex-shrink-0">
                     {roleImage ? (
                       <img src={roleImage} alt="role" className="h-full w-full object-cover" />
                     ) : (
-                      <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold text-white`}>
+                      <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-xs font-bold text-white`}>
                         {initials(p.pseudonym)}
                       </div>
                     )}
                   </div>
-                  <div className="text-center flex-1 min-w-0">
-                    <div className="text-[10px] font-semibold truncate max-w-full">{p.pseudonym}</div>
-                    {p.is_you && <div className="text-[8px] text-purple-300 font-bold">You</div>}
-                    {frozen ? (
-                      <div className="text-[8px] text-rose-400">Left</div>
-                    ) : (
-                      <div className="text-[8px] text-emerald-400">●</div>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-semibold text-white truncate">
+                      {p.pseudonym} {p.is_you && <span className="text-purple-300 font-normal text-[10px]">(You)</span>}
+                    </div>
+                    <div className={`text-[10px] flex items-center gap-1 mt-0.5 ${statusColor}`}>
+                      <span className="text-[6px]">●</span> {statusText}
+                    </div>
                   </div>
-                </div>
+                  {isAnswering && <div className="text-amber-400 text-[10px] font-bold animate-pulse">⏱ Live</div>}
+                </button>
               );
             })}
           </div>
           {yourRole ? (
-            <div className="mt-5 rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-3">
-              <div className="text-[10px] text-white/70">Your Role</div>
-              <div className="text-emerald-300 font-black tracking-widest uppercase">{roleDisplayName(yourRole)}</div>
-              {yourRole.objective ? (
-                <p className="text-[10px] text-white/70 mt-1">{yourRole.objective}</p>
-              ) : null}
+            <div className="mt-5 pt-4 border-t border-white/10">
+              <div className="text-[10px] text-white/50 mb-1 uppercase tracking-widest">Your Role</div>
+              <div className="text-purple-300 text-base font-black tracking-widest uppercase">{roleDisplayName(yourRole)}</div>
+              <p className="text-[10px] text-white/50 mt-1 leading-relaxed">Ask up to 5 questions to uncover the truth</p>
             </div>
           ) : null}
         </div>
 
         {/* Ask question (Investigator) / observer panel (everyone else) */}
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-6">
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-lg font-bold">{lieMode ? "Lie Detector Mode Activated" : isInvestigator ? "Ask a Question" : "Investigation In Progress"}</h3>
               <p className="text-xs text-white/70 mt-1">
                 {lieMode
-                  ? `Investigator can ask maximum ${lieMaxQuestions} questions in Lie Detector mode. Other players will vote on the answers.`
+                  ? `Investigator can ask maximum ${lieMaxQuestions} questions in Lie Detector mode.`
                   : isInvestigator
                     ? "Select a player to ask a question"
                     : "Answer honestly when questioned. Watch the activity feed for questions and answers."}
@@ -1145,75 +1186,90 @@ function InvestigationView(props: {
                 </div>
               )}
               <fieldset disabled={locked} aria-busy={locked} className={locked ? "opacity-60 pointer-events-none select-none" : ""}>
-                <div className="mt-4">
-                  <label className="text-xs text-white/70 block mb-3">🎯 {lieMode ? "Select Suspect for Interrogation" : "Select a Player"}</label>
-                  <div className="grid grid-cols-5 gap-3">
-                    {players.map((p, i) => {
-                      const roleImage = p.is_you && yourRole?.role_image ? resolveMediaUrl(yourRole.role_image) : null;
-                      return (
-                        <button type="button" key={p.session_id} onClick={() => setSelectedAskee(i)} disabled={p.is_you || frozenSessionIds.has(p.session_id)} className={`relative rounded-2xl border-2 overflow-hidden p-0 text-center transition group disabled:opacity-40 disabled:cursor-not-allowed ${i === selectedAskee ? "border-purple-400 ring-2 ring-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "border-white/10 hover:border-purple-300/30"}`}>
-                          <div className="relative">
+                <div className="mt-6 flex flex-wrap gap-6 justify-start">
+                  {players.map((p, i) => {
+                    const roleImage = roleImageByIndex[i] ?? null;
+                    const isSelected = i === selectedAskee;
+                    return (
+                      <button
+                        type="button"
+                        key={p.session_id}
+                        onClick={() => setSelectedAskee(i)}
+                        disabled={p.is_you || frozenSessionIds.has(p.session_id)}
+                        className={`relative flex flex-col items-center gap-3 text-center transition disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        {/* Rounded rect card with circular portrait inside */}
+                        <div className={`relative w-[110px] h-[140px] rounded-2xl flex flex-col items-center justify-center gap-2 border-2 px-2 py-4 transition-all ${
+                          isSelected
+                            ? "border-[#a855f7]/60 bg-[#2a174c] shadow-[0_0_20px_rgba(168,85,247,0.35)]"
+                            : "border-[#3b2a59]/60 bg-[#1e1235] hover:border-purple-400/40"
+                        }`}>
+                          {/* Circular portrait */}
+                          <div className="h-[80px] w-[80px] rounded-full overflow-hidden ring-2 ring-white/10 flex-shrink-0">
                             {roleImage ? (
-                              <img src={roleImage} alt="role" className="h-24 w-24 mx-auto object-cover" />
+                              <img src={roleImage} alt={p.pseudonym} className="h-full w-full object-cover" />
                             ) : (
-                              <div className={`h-24 w-24 bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-base font-bold text-white`}>
+                              <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-xl font-bold text-white`}>
                                 {initials(p.pseudonym)}
                               </div>
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                           </div>
-                          <div className="px-2 py-2.5 text-[10px] font-semibold relative z-10 bg-black/50 text-center border-t border-white/10">{p.pseudonym}</div>
-                          {i === selectedAskee && <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 h-5 w-5 rounded-full bg-purple-500 ring-3 ring-purple-300" />}
+                          {/* Name */}
+                          <div className="text-[12px] font-semibold text-white leading-tight">
+                            {p.pseudonym}
+                            {p.is_you && <div className="text-[10px] text-purple-300 mt-0.5">(You)</div>}
+                          </div>
+                        </div>
+                        {/* Selected indicator dot */}
+                        {isSelected && (
+                          <div className="h-5 w-5 rounded-full bg-[#1a0f2e] border-2 border-[#a855f7] flex items-center justify-center">
+                            <div className="h-2.5 w-2.5 bg-white rounded-full" />
+                          </div>
+                        )}
                       </button>
                     );
                   })}
                 </div>
-              </div>
-                <div className="mt-6">
-                  <label className="text-xs text-white/70">💬 {lieMode ? "Interrogation Question" : "Your Question"} (max 120 characters)</label>
-                  <div className="mt-1 relative">
+                <div className="mt-8">
+                  <label className="text-xs text-white/70">Type your question (max 120 characters)</label>
+                  <div className="mt-1.5 relative">
                     <textarea value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 120))}
-                      placeholder="🎤 Type your interrogation question here..."
-                      className="w-full h-28 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400 disabled:cursor-not-allowed" />
-                    <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{question.length}/120</span>
+                      placeholder="Type your question here..."
+                      className="w-full h-24 rounded-xl bg-transparent border border-white/15 p-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#a855f7] disabled:cursor-not-allowed resize-none" />
+                    <span className="absolute bottom-3 right-3 text-[10px] text-white/50">{question.length}/120</span>
                   </div>
                 </div>
                 <button type="button" onClick={sendQuestion} disabled={!question.trim() || questionsLeft <= 0 || locked}
-                  className="mt-5 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed">
-                  Send Interrogation
+                  className="mt-5 w-full rounded-full bg-gradient-to-r from-[#a855f7] to-[#d946ef] py-3 text-sm font-bold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed text-white hover:opacity-90">
+                  Send Question
                 </button>
               </fieldset>
             </>
           ) : (
             <>
-              <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-6 text-center mb-6">
-                <ScanSearch className="h-8 w-8 mx-auto text-purple-300" />
-                <p className="mt-3 text-sm text-white/80">
-                  The Investigator is questioning suspects. If a question comes to you, an answer window
-                  will open automatically — you have limited time to respond.
-                </p>
-              </div>
               <div>
-                <label className="text-xs text-white/70 block mb-3">All Players</label>
-                <div className="grid grid-cols-5 gap-3">
+                <label className="text-xs text-white/70 block mb-5">All Players</label>
+                <div className="flex flex-wrap gap-6 justify-start">
                   {players.map((p, i) => {
                     const frozen = frozenSessionIds.has(p.session_id);
-                    const roleImage = p.is_you && yourRole?.role_image ? resolveMediaUrl(yourRole.role_image) : null;
+                    const roleImage = roleImageByIndex[i] ?? null;
                     return (
-                      <div key={p.session_id} className={`relative rounded-2xl border-2 border-white/10 overflow-hidden ${frozen ? "opacity-40" : ""}`}>
-                        <div className="relative">
-                          {roleImage ? (
-                            <img src={roleImage} alt="role" className="h-24 w-24 mx-auto object-cover" />
-                          ) : (
-                            <div className={`h-24 w-24 bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-base font-bold text-white`}>
-                              {initials(p.pseudonym)}
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                        </div>
-                        <div className="px-2 py-2.5 text-[10px] font-semibold relative z-10 bg-black/50 text-center border-t border-white/10">
-                          <div>{p.pseudonym}</div>
-                          {p.is_you && <div className="text-[8px] text-purple-300">(You)</div>}
+                      <div key={p.session_id} className={`flex flex-col items-center gap-0 ${frozen ? "opacity-40" : ""}`}>
+                        {/* Card with circular portrait inside */}
+                        <div className="relative w-[110px] h-[140px] rounded-2xl flex flex-col items-center justify-center gap-2 border-2 border-[#3b2a59]/60 bg-[#1e1235] px-2 py-4">
+                          <div className="h-[80px] w-[80px] rounded-full overflow-hidden ring-2 ring-white/10">
+                            {roleImage ? (
+                              <img src={roleImage} alt={p.pseudonym} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-xl font-bold text-white`}>
+                                {initials(p.pseudonym)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-[12px] font-semibold text-white leading-tight text-center">
+                            {p.pseudonym}
+                            {p.is_you && <div className="text-[10px] text-purple-300 mt-0.5">(You)</div>}
+                          </div>
                         </div>
                       </div>
                     );
@@ -1227,37 +1283,39 @@ function InvestigationView(props: {
 
         {/* Activity + Score */}
         <div className="space-y-5">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <h3 className="text-sm font-bold mb-3 text-pink-400">{lieMode ? "Lie Detector Mode Q/A" : "Recent Activity"}</h3>
+          <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-5">
+            <h3 className="text-[15px] font-bold mb-4 text-white">Recent Activity</h3>
             <ul className="space-y-3 max-h-[400px] overflow-auto pr-1">
               {activity.length === 0 && (
-                <li className="text-xs text-white/50 text-center py-6">No questions asked yet.</li>
+                <li className="text-xs text-white/50 text-center py-6">No activity yet.</li>
               )}
               {activity.map((a) => {
                 const targetShort = shortBySessionId.get(a.toSessionId) ?? "Player";
                 return (
-                  <li key={a.questionId} className="rounded-xl bg-purple-500/10 border border-purple-400/20 p-4 relative">
+                  <li key={a.questionId} className="rounded-xl bg-[#2a174c] border border-transparent p-4 relative">
                     <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-full bg-purple-500/40 grid place-items-center text-[11px] shrink-0">
-                        {isInvestigator ? "YA" : "IN"}
+                      <div className="h-8 w-8 rounded-full bg-black/40 overflow-hidden shrink-0 border border-white/10 grid place-items-center text-[10px] text-white font-bold">
+                        {isInvestigator ? "YOU" : "INV"}
                       </div>
                       <div className="flex-1">
-                        <div className="text-[11px] text-white/70">
+                        <div className="text-[11px] text-white/50">
                           {isInvestigator ? "You asked" : "Investigator asked"}{" "}
-                          <span className="text-pink-300 font-semibold">{targetShort}</span>
+                          <span className="text-pink-400">{targetShort}</span>
                         </div>
-                        <div className="text-sm font-medium mt-0.5">{a.q}</div>
+                        <div className="text-[13px] text-white mt-1">{a.q}</div>
+                        <div className="text-[10px] text-white/30 mt-1">02:35</div>
                       </div>
                     </div>
                     {a.a && (
-                      <div className="mt-3 flex items-start gap-3 border-t border-white/10 pt-3 relative">
-                        <div className="h-8 w-8 rounded-full bg-rose-500/40 grid place-items-center text-[11px] shrink-0">{targetShort.slice(0, 2)}</div>
+                      <div className="mt-4 flex items-start gap-3 relative">
+                        <div className="h-8 w-8 rounded-full bg-black/40 overflow-hidden shrink-0 border border-white/10 grid place-items-center text-[10px] text-white font-bold">{targetShort.slice(0, 2).toUpperCase()}</div>
                         <div className="flex-1 pr-24">
-                          <div className="text-[11px] text-pink-300">
+                          <div className="text-[11px] text-pink-400">
                             {targetShort}{" "}
-                            <span className="text-white/70">{a.autoSkipped ? "did not answer" : "Answered"}</span>
+                            <span className="text-white/50">{a.autoSkipped ? "did not answer" : "Answered"}</span>
                           </div>
-                          <div className={`text-sm mt-0.5 ${a.autoSkipped ? "text-white/50 italic" : ""}`}>{a.a}</div>
+                          <div className={`text-[13px] text-white mt-1 ${a.autoSkipped ? "text-white/50 italic" : ""}`}>{a.a}</div>
+                          <div className="text-[10px] text-white/30 mt-1">03:37</div>
                         </div>
                         {lieMode && lieTally && (
                           <div className="absolute right-0 top-3 text-right space-y-2">
@@ -1268,9 +1326,15 @@ function InvestigationView(props: {
                       </div>
                     )}
                     {!a.a && (
-                      <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
-                        <Clock className="h-4 w-4 text-amber-300" />
-                        <span className="text-xs text-amber-300">Waiting for answer...</span>
+                      <div className="mt-4 flex items-start gap-3">
+                        <div className="h-8 w-8 rounded-full bg-black/40 overflow-hidden shrink-0 border border-white/10 grid place-items-center text-[10px] text-white font-bold">{targetShort.slice(0, 2).toUpperCase()}</div>
+                        <div className="flex-1">
+                          <div className="text-[11px] text-pink-400">
+                            {targetShort} <span className="text-white/50">Answering</span>
+                          </div>
+                          <div className="text-[13px] text-amber-400 mt-1">Waiting for answer...</div>
+                          <div className="text-[10px] text-white/30 mt-1">03:37</div>
+                        </div>
                       </div>
                     )}
                   </li>
@@ -1279,13 +1343,13 @@ function InvestigationView(props: {
             </ul>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <h3 className="text-sm font-bold mb-3">Score Board</h3>
-            <div className="grid grid-cols-5 gap-2 text-center text-[11px]">
+          <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-5">
+            <h3 className="text-[15px] font-bold mb-4 text-white">Score Board</h3>
+            <div className="flex items-center justify-between gap-2 text-center text-[12px]">
               {players.map((p) => (
-                <div key={p.session_id}>
-                  <div className="text-white/70 truncate">{p.is_you ? "You" : p.pseudonym}</div>
-                  <div className="text-amber-300 font-bold">{scoresBySessionId.get(p.session_id) ?? 0}</div>
+                <div key={p.session_id} className="flex flex-col gap-1 items-center">
+                  <div className="text-white/60 truncate">{p.is_you ? "You" : p.pseudonym}</div>
+                  <div className="text-amber-400 font-bold">{scoresBySessionId.get(p.session_id) ?? 0}</div>
                 </div>
               ))}
             </div>
@@ -1525,68 +1589,63 @@ function AnswerModal({
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-lg rounded-3xl border border-white/15 bg-purple-950/95 shadow-elevated">
-        {/* Close button disabled during countdown */}
-        {false && (
-          <button className="absolute top-4 right-4 z-10 h-9 w-9 grid place-items-center rounded-xl bg-purple-700/40 opacity-20 cursor-not-allowed">
-            <X className="h-4 w-4" />
-          </button>
-        )}
-        <div className="p-6">
-          <div className="flex items-start gap-3">
-            <div className="h-12 w-12 rounded-full bg-purple-700/40 grid place-items-center"><ShieldCheck className="h-5 w-5 text-purple-200" /></div>
+      <div className="relative w-full max-w-lg rounded-3xl border border-[#3b2a59] bg-[#1a0f2e] shadow-elevated">
+        <button onClick={() => {}} className="absolute top-6 right-6 z-10 h-9 w-9 grid place-items-center rounded-xl bg-white/5 hover:bg-white/10 text-white opacity-80 cursor-not-allowed">
+          <X className="h-4 w-4" />
+        </button>
+        <div className="p-8">
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-full border border-white/10 bg-black/40 grid place-items-center"><ShieldCheck className="h-6 w-6 text-purple-300" /></div>
             <div>
-              <h3 className="text-lg font-bold">You have been asked a Question</h3>
-              <p className="text-xs text-white/65">By SC ({investigatorRole}) in Lie Detector Mode</p>
+              <h3 className="text-2xl font-bold tracking-tight text-white">You have been asked<br/>a Question</h3>
+              <p className="text-sm text-white/70 mt-1">By SC ({investigatorRole})</p>
             </div>
           </div>
-          <div className="mt-5 rounded-2xl border border-white/10 bg-purple-500/10 p-4 text-center">
-            <div className="text-[11px] text-white/60">Question</div>
-            <div className="mt-1 text-base">{question}</div>
+          <div className="mt-8 rounded-2xl border border-purple-500/30 bg-[#2b1754] p-6 text-center">
+            <div className="text-[13px] text-white/70 mb-2">Question</div>
+            <div className="text-[17px] text-white leading-relaxed">{question}</div>
           </div>
-          <div className={`mt-5 text-center ${
-            isTimeUp ? "rounded-2xl bg-rose-500/20 border border-rose-400/40 p-4" : ""
-          }`}>
-            <Clock className={`h-5 w-5 mx-auto ${
-              isTimeUp ? "text-rose-400" : "text-white/60"
+          <div className={`mt-6 text-center`}>
+            <Clock className={`h-6 w-6 mx-auto ${
+              isTimeUp ? "text-rose-400" : "text-white/40"
             }`} />
-            <div className={`text-xs mt-1 ${
-              isTimeUp ? "text-rose-300 font-bold" : "text-white/65"
+            <div className={`text-[13px] mt-2 ${
+              isTimeUp ? "text-rose-300 font-bold" : "text-white/80"
             }`}>Time Left to answer</div>
-            <div className={`text-2xl font-black tabular-nums ${
-              isTimeUp ? "text-rose-400" : "text-amber-300"
+            <div className={`text-4xl font-black tabular-nums tracking-wider mt-1 ${
+              isTimeUp ? "text-rose-400" : "text-amber-400"
             }`}>{fmt(secs)}</div>
             {isTimeUp && (
               <p className="text-xs text-rose-300 font-semibold mt-2">⚠️ Time's up! -10 points penalty applied.</p>
             )}
           </div>
-          <div className="mt-5">
-            <label className="text-xs text-white/70">Type your answer (max 120 characters)</label>
-            <div className="mt-1 relative">
+          <div className="mt-8">
+            <label className="text-sm text-white block mb-2">Type your answer (max 120 characters)</label>
+            <div className="relative">
               <textarea
                 value={ans}
                 onChange={(e) => setAns(e.target.value.slice(0, 120))}
                 placeholder="Type your answer here..."
                 disabled={isTimeUp}
-                className={`w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400 ${
+                className={`w-full h-24 rounded-xl bg-black/20 border border-white/20 p-4 text-[15px] text-white placeholder:text-white/40 focus:outline-none focus:border-[#a855f7] resize-none ${
                   isTimeUp ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               />
-              <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{ans.length}/120</span>
+              <span className="absolute bottom-3 right-4 text-xs text-white/40">{ans.length}/120</span>
             </div>
           </div>
           <button
             onClick={() => onSubmit(ans)}
             disabled={!ans.trim() || isTimeUp}
-            className={`mt-4 w-full rounded-full py-3 text-sm font-semibold shadow-glow ${
+            className={`mt-6 w-full rounded-full py-4 text-[15px] font-bold shadow-glow ${
               isTimeUp
                 ? "bg-white/5 text-white/40 cursor-not-allowed"
-                : "bg-gradient-primary disabled:opacity-40"
+                : "bg-gradient-to-r from-[#a855f7] to-[#d946ef] text-white disabled:opacity-40"
             }`}
           >
-            {isTimeUp ? "Time Expired" : "Submit Answer To Start Voting"}
+            Submit Answer
           </button>
-          <p className="mt-2 text-center text-[11px] text-white/60">Your answer will be visible to all players.</p>
+          <p className="mt-4 text-center text-[13px] text-white/70">Your answer will be visible to all players.</p>
         </div>
       </div>
     </div>

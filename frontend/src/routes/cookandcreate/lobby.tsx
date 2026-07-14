@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Users, CalendarClock, AlertTriangle } from 'lucide-react';
-import { CookCreateLayout } from './_components/CookCreateLayout';
-import { CookCreateHeader } from './_components/CookCreateHeader';
-import { PlayerAvatar } from './_components/PlayerAvatar';
-import { CountdownTimer } from './_components/CountdownTimer';
-import { CC } from './_components/cc-theme';
+import { CookCreateLayout } from './-components/CookCreateLayout';
+import { CookCreateHeader } from './-components/CookCreateHeader';
+import { PlayerAvatar } from './-components/PlayerAvatar';
+import { CountdownTimer } from './-components/CountdownTimer';
+import { CC } from './-components/cc-theme';
 
 export const Route = createFileRoute('/cookandcreate/lobby')({
   component: LobbyPage,

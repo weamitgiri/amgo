@@ -8,7 +8,19 @@ const KEYS = {
 } as const;
 
 /** Per-tab storage so multiple participants can play in the same browser. */
-const storage = (): Storage => sessionStorage;
+const storage = (): Storage => {
+  if (typeof window !== "undefined") {
+    return sessionStorage;
+  }
+  return {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+    clear: () => {},
+    length: 0,
+    key: () => null,
+  } as unknown as Storage;
+};
 
 export function saveParticipantSession(data: {
   groupId: number | string;
