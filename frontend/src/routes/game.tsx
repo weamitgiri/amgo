@@ -28,6 +28,93 @@ export const Route = createFileRoute("/game")({
 
 type GamePerson = GameSummaryRole & { role: string; youKnow: string[]; keep: string[] };
 
+function useCountdown(initialSeconds: number, onTimeout: (() => void) | undefined) {
+  const [seconds, setSeconds] = useState(initialSeconds);
+  const onTimeoutRef = useRef(onTimeout);
+
+  // Keep onTimeoutRef updated with latest onTimeout
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout;
+  }, [onTimeout]);
+
+  console.log("[useCountdown] Initializing", { initialSeconds, onTimeout });
+
+  useEffect(() => {
+    console.log("[useCountdown] Effect running (only initialSeconds changes!)", { initialSeconds });
+    // Reset timer if initialSeconds changes
+    setSeconds(initialSeconds);
+    let timeoutCalled = false;
+
+    console.log("[useCountdown] Setting interval");
+    const intervalId = setInterval(() => {
+      setSeconds((s) => {
+        const next = Math.max(0, s - 1);
+        console.log("[useCountdown] Tick", { previous: s, next });
+        if (next === 0 && !timeoutCalled && onTimeoutRef.current) {
+          timeoutCalled = true;
+          onTimeoutRef.current();
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => {
+      console.log("[useCountdown] Clearing interval");
+      clearInterval(intervalId);
+    };
+  }, [initialSeconds]); // Only depend on initialSeconds!
+
+  console.log("[useCountdown] Returning", { seconds });
+  return seconds;
+}
+
+/**
+ * Display-only countdown for the answering player's response window. Derives the
+ * remaining time from when the question was asked (askedAt) so every observer —
+ * the Investigator and the other suspects — sees the same clock, even after a
+ * page reload. Clamped to [0, totalSecs] so server/browser timezone skew can
+ * never show a negative or inflated value.
+ */
+function AnswerCountdown({
+  askedAt,
+  totalSecs,
+  className,
+}: {
+  askedAt?: string;
+  totalSecs: number;
+  className?: string;
+}) {
+  const computeRemaining = useCallback(() => {
+    if (!askedAt) return totalSecs;
+    const started = new Date(askedAt.replace(" ", "T")).getTime();
+    if (Number.isNaN(started)) return totalSecs;
+    const elapsed = Math.floor((Date.now() - started) / 1000);
+    return Math.min(totalSecs, Math.max(0, totalSecs - elapsed));
+  }, [askedAt, totalSecs]);
+
+  const [remaining, setRemaining] = useState(computeRemaining);
+
+  useEffect(() => {
+    setRemaining(computeRemaining());
+    const id = setInterval(() => setRemaining(computeRemaining()), 1000);
+    return () => clearInterval(id);
+  }, [computeRemaining]);
+
+  const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
+  const ss = String(remaining % 60).padStart(2, "0");
+  return <span className={className}>{mm}:{ss}</span>;
+}
+
+/** Small circular avatar for the Recent Activity feed: the player's role
+ * portrait when available, otherwise their initials. */
+function ActivityAvatar({ image, fallback }: { image?: string | null; fallback: string }) {
+  return (
+    <div className="h-8 w-8 rounded-full bg-black/40 overflow-hidden shrink-0 border border-white/10 grid place-items-center text-[10px] text-white font-bold">
+      {image ? <img src={image} alt="" className="h-full w-full object-cover" /> : fallback}
+    </div>
+  );
+}
+
 function mapRoleToPerson(r: GameSummaryRole): GamePerson {
   return {
     ...r,
@@ -66,6 +153,7 @@ type ActivityItem = {
   autoSkipped?: boolean;
   tally?: LieDetectorTally;
   fromSessionId?: number;
+  askedAt?: string;
 };
 
 function GamePage() {
@@ -108,12 +196,12 @@ function GamePage() {
   const isInvestigator = yourPerson?.role_type === "investigator";
   const isCulprit = yourPerson?.role_type === "culprit";
 
-  // Investigator sees the timed suspect-profile cards; every other role sees
-  // their own role-specific strategy cards (per FSD: "Except Investigator, all
-  // other roles can see the strategy guide").
+  // Strategy Guide cards are Investigator-only: the Investigator gets the timed
+  // suspect-profile cards, and every other role gets no strategy slides at all
+  // (they see the game screen only). Game Rules stay available to everyone.
   const guideSlides = useMemo(
     () => ({
-      strategy: isInvestigator ? gameData?.strategy_slides ?? [] : gameData?.role_strategy_slides ?? [],
+      strategy: isInvestigator ? gameData?.strategy_slides ?? [] : [],
       rules: gameData?.rules ?? [],
     }),
     [gameData, isInvestigator]
@@ -136,12 +224,18 @@ function GamePage() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [pendingAnswerForMe, setPendingAnswerForMe] = useState<ActivityItem | null>(null);
   const [answerTimeoutPenalty, setAnswerTimeoutPenalty] = useState(0);
+
+  const handleAnswerTimeout = useCallback(() => {
+    // Don't close the modal yet, just handle timeout logic (we'll wait for new_answer event from server to close)
+    setAnswerTimeoutPenalty(-10);
+  }, []);
   const [voteContext, setVoteContext] = useState<{ questionId: number; answerText: string; answererSessionId: number } | null>(null);
   const [lieTally, setLieTally] = useState<LieDetectorTally | null>(null);
   const [invElapsed, setInvElapsed] = useState(0);
   const autoCardRef = useRef<number | null>(null);
 
   const applyGameState = useCallback((state: GameStateResponse) => {
+    console.log("[GamePage] applyGameState called", { myPlayerSessionId: myPlayer?.session_id });
     setGameState(state);
     setMyAccusationSubmitted(Boolean(state.group.my_accusation_submitted));
 
@@ -149,9 +243,10 @@ function GamePage() {
     const frozen = new Set<number>();
     const scores = new Map<number, number>();
     for (const s of state.group.participant_sessions) {
-      if (s.is_online) online.add(s.id);
-      if (s.left_at) frozen.add(s.id);
-      scores.set(s.id, s.total_score);
+      const sid = Number(s.id);
+      if (s.is_online) online.add(sid);
+      if (s.left_at) frozen.add(sid);
+      scores.set(sid, Number(s.total_score));
     }
     setOnlineSessionIds(online);
     setFrozenSessionIds(frozen);
@@ -163,20 +258,33 @@ function GamePage() {
     const clueTimerUnlocked = state.group.timers.some((t) => t.timer_type === "clue_room_unlock" && !t.is_active);
     if (clueTimerUnlocked) setCluesUnlocked(true);
 
-    setActivity(
-      state.group.questions.map((q) => {
-        const ans = q.answers?.[0];
-        return {
-          questionId: q.id,
-          toSessionId: q.asked_to,
-          q: q.question_text,
-          a: ans?.answer_text,
-          autoSkipped: ans?.auto_skipped,
-          tally: activeRound?.tally,
-        };
-      })
-    );
-  }, []);
+    // Build activity items
+    const activityItems = state.group.questions.map((q) => {
+      const ans = q.answers?.[0];
+      return {
+        questionId: q.id,
+        toSessionId: q.asked_to,
+        fromSessionId: q.asked_by,
+        askedAt: q.created_at,
+        q: q.question_text,
+        a: ans?.answer_text,
+        autoSkipped: ans?.auto_skipped,
+        tally: activeRound?.tally,
+      };
+    });
+    console.log("[GamePage] Built activity items", { activityItems, myPlayerSessionId: myPlayer?.session_id });
+    setActivity(activityItems);
+
+    // Check if there's an unanswered question for the current player and set pendingAnswerForMe
+    const unansweredQuestionForMe = activityItems.find((item) => !item.a && Number(item.toSessionId) === Number(myPlayer?.session_id));
+    console.log("[GamePage] Found unanswered question for me?", { unansweredQuestionForMe });
+    if (unansweredQuestionForMe) {
+      console.log("[GamePage] Setting pendingAnswerForMe from applyGameState");
+      setPendingAnswerForMe(unansweredQuestionForMe);
+    } else {
+      setPendingAnswerForMe(null);
+    }
+  }, [myPlayer?.session_id]);
 
   useEffect(() => {
     if (!session?.groupId) {
@@ -196,6 +304,12 @@ function GamePage() {
         setGameData(data);
         applyGameState(state);
         setQuestionsLeft(Math.max(0, data.settings.max_questions - state.group.questions.length));
+
+        // The HTTP snapshot above can land after the socket's join presence
+        // broadcast and clobber it with stale offline data. Ask the server for a
+        // fresh presence event now that our snapshot is applied, so the live
+        // online set always wins.
+        getSocket().emit("request_presence", { groupId: session.groupId });
 
         const savedState = sessionStorage.getItem(uiKey);
         if (savedState) {
@@ -262,11 +376,16 @@ function GamePage() {
 
     socket.emit("join_game_group", { groupId: session.groupId, participantId: session.participantId });
 
-    const onNewQuestion = (q: { id: number; asked_to: number; question_text: string; asked_by?: number }) => {
-      const item: ActivityItem = { questionId: q.id, toSessionId: q.asked_to, q: q.question_text, fromSessionId: q.asked_by };
+    const onNewQuestion = (q: { id: number; asked_to: number; question_text: string; asked_by?: number; created_at?: string }) => {
+      console.log("[GamePage] onNewQuestion received", { q, myPlayerSessionId: myPlayer?.session_id });
+      const item: ActivityItem = { questionId: q.id, toSessionId: q.asked_to, q: q.question_text, fromSessionId: q.asked_by, askedAt: q.created_at ?? new Date().toISOString() };
+      console.log("[GamePage] Created activity item", item);
       setActivity((prev) => [item, ...prev]);
       setQuestionsLeft((n) => Math.max(0, n - 1));
-      if (myPlayer?.session_id === q.asked_to) {
+      const isForMe = myPlayer?.session_id != null && Number(myPlayer.session_id) === Number(q.asked_to);
+      console.log("[GamePage] isForMe?", isForMe);
+      if (isForMe) {
+        console.log("[GamePage] Setting pendingAnswerForMe!");
         setPendingAnswerForMe(item);
       }
     };
@@ -297,6 +416,21 @@ function GamePage() {
     const onParticipantLeft = (payload: { participant_session_id: number }) => {
       setFrozenSessionIds((prev) => new Set(prev).add(payload.participant_session_id));
     };
+    // Live presence: server broadcasts the whole group's online/left sets whenever
+    // anyone joins, leaves, or disconnects — keeps the sidebar dots in sync.
+    const onPresenceUpdated = (payload: { online: number[]; left?: number[] }) => {
+      setOnlineSessionIds(new Set(payload.online ?? []));
+      if (payload.left && payload.left.length) {
+        setFrozenSessionIds((prev) => new Set([...prev, ...payload.left!]));
+      }
+    };
+    // Live scores: server broadcasts every player's total after each question,
+    // answer, or auto-skip penalty — keeps the Score Board in sync in real time.
+    const onScoresUpdated = (payload: { scores: { session_id: number; total_score: number }[] }) => {
+      const next = new Map<number, number>();
+      for (const s of payload.scores ?? []) next.set(Number(s.session_id), Number(s.total_score));
+      setScoresBySessionId(next);
+    };
     const onGameEnded = () => {
       if (session?.groupId && session.participantId) {
         sessionStorage.setItem(
@@ -326,6 +460,8 @@ function GamePage() {
     socket.on("clues_unlocked", onCluesUnlocked);
     socket.on("accusation_submitted", onAccusationSubmitted);
     socket.on("participant_left", onParticipantLeft);
+    socket.on("presence_updated", onPresenceUpdated);
+    socket.on("scores_updated", onScoresUpdated);
     socket.on("game_ended", onGameEnded);
     socket.on("game_incomplete", onGameIncomplete);
 
@@ -343,6 +479,8 @@ function GamePage() {
       socket.off("clues_unlocked", onCluesUnlocked);
       socket.off("accusation_submitted", onAccusationSubmitted);
       socket.off("participant_left", onParticipantLeft);
+      socket.off("presence_updated", onPresenceUpdated);
+      socket.off("scores_updated", onScoresUpdated);
       socket.off("game_ended", onGameEnded);
       socket.off("game_incomplete", onGameIncomplete);
     };
@@ -365,17 +503,8 @@ function GamePage() {
     }
   }, [secsCase, phase, gameData]);
 
-  // Non-investigator roles get their strategy guide force-opened once after the
-  // configured delay (FSD: "after 2 minutes passed, forcefully open the modal").
-  useEffect(() => {
-    if (loading || !gameData || isInvestigator) return;
-    const delayMs = (gameData.settings.strategy_guide_delay_secs || 120) * 1000;
-    const timer = window.setTimeout(() => {
-      setGuideModal("strategy");
-      setGuideSlide(0);
-    }, delayMs);
-    return () => window.clearTimeout(timer);
-  }, [loading, gameData, isInvestigator]);
+  // Only the Investigator sees the Strategy Guide cards; every other role just
+  // sees the game screen, so there is no non-investigator auto-open here.
 
   // Investigation-phase elapsed clock, used to drive the investigator's timed
   // suspect-profile cards (appears_at_secs / closes_at_secs windows).
@@ -563,6 +692,7 @@ function GamePage() {
           photoUrls={photoUrls}
           fmt={fmt}
           secsCase={secsCase}
+          isInvestigator={isInvestigator}
           secretOpened={secretOpened}
           onRevealRole={() => setRoleModalOpen(true)}
           setSecretOpened={setSecretOpened}
@@ -583,6 +713,7 @@ function GamePage() {
           lieMaxQuestions={gameData.settings.lie_detector_max_questions}
           questionsLeft={questionsLeft}
           invSecs={secsHdr}
+          answerSecs={gameData.settings.question_response_secs}
           selectedAskee={selectedAskee}
           setSelectedAskee={setSelectedAskee}
           question={question}
@@ -619,14 +750,15 @@ function GamePage() {
       )}
       {pendingAnswerForMe && gameData && (
         <AnswerModal
+          key={pendingAnswerForMe.questionId}
           question={pendingAnswerForMe.q}
           answerSecs={gameData.settings.question_response_secs}
           onSubmit={submitAnswer}
           investigatorRole={isInvestigator ? "Investigator" : "Investigator"}
-          onTimeout={() => {
-            setPendingAnswerForMe(null);
-            setAnswerTimeoutPenalty(-10);
-          }}
+          onTimeout={handleAnswerTimeout}
+          activity={activity}
+          players={players}
+          isInvestigator={isInvestigator}
         />
       )}
       {voteContext && lieDetectorRoundId && (
@@ -702,6 +834,7 @@ function SummaryView(props: {
   photoUrls: string[];
   fmt: (s: number) => string;
   secsCase: number;
+  isInvestigator: boolean;
   secretOpened: boolean;
   onRevealRole: () => void;
   setSecretOpened: (b: boolean) => void;
@@ -716,6 +849,7 @@ function SummaryView(props: {
     photoUrls,
     fmt,
     secsCase,
+    isInvestigator,
     secretOpened,
     onRevealRole,
     setSecretOpened,
@@ -725,7 +859,6 @@ function SummaryView(props: {
     onOpenInfoModal,
   } = props;
   const [boxOpening, setBoxOpening] = useState(false);
-  const caseMins = Math.round(gameData.settings.case_summary_view_secs / 60);
   const orderedPeople = useMemo(
     () =>
       [...people]
@@ -768,9 +901,12 @@ function SummaryView(props: {
           <h1 className="text-xl font-bold tracking-wide">CASE SUMMARY</h1>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => onOpenInfoModal("strategy")} className="inline-flex items-center gap-2 rounded-full bg-gradient-blue px-5 py-2.5 text-sm font-semibold shadow-glow">
-            <Lightbulb className="h-4 w-4" /> Strategy Guide
-          </button>
+          {/* Strategy Guide is Investigator-only; other roles see Game Rules only. */}
+          {isInvestigator && (
+            <button onClick={() => onOpenInfoModal("strategy")} className="inline-flex items-center gap-2 rounded-full bg-gradient-blue px-5 py-2.5 text-sm font-semibold shadow-glow">
+              <Lightbulb className="h-4 w-4" /> Strategy Guide
+            </button>
+          )}
           <button onClick={() => onOpenInfoModal("rules")} className="inline-flex items-center gap-2 rounded-full bg-gradient-warm px-5 py-2.5 text-sm font-semibold shadow-glow">
             <Gamepad2 className="h-4 w-4" /> View Game Rules
           </button>
@@ -778,7 +914,7 @@ function SummaryView(props: {
       </div>
 
       <main className="mt-5 grid gap-5 lg:grid-cols-[2fr_1.4fr]">
-        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-7 relative overflow-hidden">
+        <div className="rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1c1440] to-[#140e2b] p-7 relative overflow-hidden">
           <h2 className="text-3xl font-black text-purple-200">{gameData.game.title}</h2>
           {gameData.game.tagline ? (
             <p className="mt-2 text-sm text-white/70">{gameData.game.tagline}</p>
@@ -843,7 +979,7 @@ function SummaryView(props: {
         </div>
 
         <div className="space-y-5">
-          <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-7">
+          <div className="rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1c1440] to-[#140e2b] p-7">
             <h3 className="text-center text-lg font-bold tracking-tight text-white">Key People in the Bungalow</h3>
             <div className="mt-5 grid grid-cols-5 gap-2 sm:gap-3">
               {orderedPeople.map((person: GamePerson) => {
@@ -865,7 +1001,7 @@ function SummaryView(props: {
                       <img
                         src={resolveMediaUrl(person.role_image) ?? mystery}
                         alt={displayName}
-                        className="w-full h-full object-cover object-top"
+                        className="w-full object-cover object-top"
                       />
                       <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#1b1223] to-transparent" />
                     </div>
@@ -885,7 +1021,7 @@ function SummaryView(props: {
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            <div className="rounded-[2rem] border border-white/5 bg-[#1c1132] p-8 text-center relative overflow-hidden flex flex-col justify-between items-center min-h-[360px]">
+            <div className="rounded-[2rem] border border-purple-500/20 bg-gradient-to-b from-[#241a44] to-[#160f2e] p-8 text-center relative overflow-hidden flex flex-col justify-between items-center min-h-[360px]">
               <style>{`
                 @keyframes float {
                   0%, 100% { transform: translateY(0); }
@@ -900,7 +1036,7 @@ function SummaryView(props: {
                 }
                 .animate-boxOpen { animation: boxOpen 0.8s forwards; }
               `}</style>
-              <h3 className="text-lg font-medium text-white px-4 leading-snug">
+              <h3 className="text-xl font-medium text-white px-4 leading-snug">
                 Open the Secret Box to<br />reveal your role.
               </h3>
               
@@ -930,14 +1066,14 @@ function SummaryView(props: {
                 {secretOpened ? "Role Revealed" : "Open Secret Box"}
               </button>
             </div>
-            <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-5 text-center flex flex-col">
-              <p className="text-xs text-white/80">
-                You have {caseMins} minute{caseMins === 1 ? "" : "s"} to review this case summary (set in admin). Remember the details!
+            <div className="rounded-[2rem] border border-purple-500/20 bg-gradient-to-b from-[#241a44] to-[#160f2e] p-7 text-center flex flex-col justify-center">
+              <p className="text-xl leading-relaxed text-white px-2">
+                You can view the case summary only once. Remember the details!
               </p>
-              <div className="mt-4 flex-1 rounded-2xl bg-white/5 border border-white/10 p-4 grid place-items-center">
+              <div className="mt-6 rounded-2xl border border-purple-500/30 bg-gradient-to-b from-[#2a1a4d] to-[#1a1033] px-6 py-8 grid place-items-center">
                 <div>
-                  <div className="text-xs text-white/70">Time Remaining for Case Summary</div>
-                  <div className="mt-2 text-3xl font-black tabular-nums">{fmt(secsCase)}</div>
+                  <div className="text-base text-white/80 leading-snug">Time Remaining for Case Summary</div>
+                  <div className="mt-4 text-5xl font-black tabular-nums tracking-wide">{fmt(secsCase)}</div>
                 </div>
               </div>
             </div>
@@ -968,6 +1104,7 @@ function InvestigationView(props: {
   lieMaxQuestions: number;
   questionsLeft: number;
   invSecs: number;
+  answerSecs: number;
   selectedAskee: number;
   setSelectedAskee: (i: number) => void;
   question: string;
@@ -996,6 +1133,7 @@ function InvestigationView(props: {
     lieMaxQuestions,
     questionsLeft,
     invSecs,
+    answerSecs,
     selectedAskee,
     setSelectedAskee,
     question,
@@ -1016,7 +1154,7 @@ function InvestigationView(props: {
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "00")}:${String(s % 60).padStart(2, "00")}`;
   const shortBySessionId = useMemo(() => {
     const map = new Map<number, string>();
-    for (const p of players) map.set(p.session_id, p.is_you ? `${p.pseudonym} (You)` : p.pseudonym);
+    for (const p of players) map.set(Number(p.session_id), p.is_you ? `${p.pseudonym} (You)` : p.pseudonym);
     return map;
   }, [players]);
   const initials = (pseudonym: string) => pseudonym.slice(0, 2).toUpperCase();
@@ -1028,6 +1166,14 @@ function InvestigationView(props: {
       person.role_image ? resolveMediaUrl(person.role_image) : null
     );
   }, [people]);
+
+  // Same role images keyed by the player's session_id, so Recent Activity can
+  // show the real character portrait for whoever asked / is answering.
+  const roleImageBySessionId = useMemo(() => {
+    const map = new Map<number, string | null>();
+    players.forEach((p, i) => map.set(Number(p.session_id), roleImageByIndex[i] ?? null));
+    return map;
+  }, [players, roleImageByIndex]);
 
   return (
     <>
@@ -1093,31 +1239,38 @@ function InvestigationView(props: {
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[260px_1fr_320px]">
-        {/* Players */}
-        <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-5">
-          <h3 className="text-sm font-bold mb-4 text-white">Players</h3>
-          <div className="space-y-2">
+        <div className="flex flex-col h-full bg-[#1e103c] rounded-none lg:rounded-2xl border-0 lg:border lg:border-[#3b2a59] p-5">
+          <h3 className="text-[22px] font-bold mb-5 text-white">Players</h3>
+          <div className="space-y-4">
             {players.map((p, i) => {
-              const frozen = frozenSessionIds.has(p.session_id);
-              const isOnline = onlineSessionIds.has(p.session_id);
-              const isAnswering = activity.some(a => a.toSessionId === p.session_id && !a.a);
+              const sid = Number(p.session_id);
+              const frozen = frozenSessionIds.has(sid);
+              const isOnline = onlineSessionIds.has(sid);
+              const answeringItem = activity.find(a => Number(a.toSessionId) === sid && !a.a);
+              const isAnswering = !!answeringItem;
               const roleImage = roleImageByIndex[i] ?? null;
 
-              // Determine status text and color
+              // Determine status text and color. A player who has been asked a
+              // question reads "Answering" while the response timer runs, even
+              // if their socket briefly shows offline (refresh/navigation);
+              // "Left" (frozen) still overrides everything.
               let statusText = "Offline";
               let statusColor = "text-white/40";
+              let statusDot = "bg-white/40";
               if (isOnline) {
-                if (isAnswering) {
-                  statusText = "Answering";
-                  statusColor = "text-amber-400";
-                } else {
-                  statusText = "Online";
-                  statusColor = "text-[#00d084]";
-                }
+                statusText = "Available";
+                statusColor = "text-[#10b981]";
+                statusDot = "bg-[#10b981]";
+              }
+              if (isAnswering) {
+                statusText = "Answering";
+                statusColor = "text-[#facc15]";
+                statusDot = "bg-[#facc15]";
               }
               if (frozen) {
                 statusText = "Left";
                 statusColor = "text-white/40";
+                statusDot = "bg-white/40";
               }
 
               return (
@@ -1126,37 +1279,46 @@ function InvestigationView(props: {
                   key={p.session_id}
                   disabled={p.is_you || frozen}
                   onClick={() => { if (isInvestigator) setSelectedAskee(i); }}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all ${
+                  className={`w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-all border border-[#3b2a59] bg-[#2a174c] hover:border-purple-400/40 ${
                     i === selectedAskee && isInvestigator
-                      ? "bg-purple-500/15 ring-1 ring-purple-400/40"
-                      : "hover:bg-white/5"
+                      ? "ring-1 ring-purple-400/40 border-purple-400/40"
+                      : ""
                   } ${frozen ? "opacity-40" : ""}`}
                 >
                   {/* Circular avatar */}
-                  <div className="relative h-10 w-10 rounded-full overflow-hidden flex-shrink-0">
+                  <div className="relative h-14 w-14 rounded-full overflow-hidden shrink-0 shadow-lg">
                     {roleImage ? (
-                      <img src={roleImage} alt="role" className="h-full w-full object-cover" />
+                      <img src={roleImage} alt="role" className="w-full object-cover" />
                     ) : (
-                      <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-xs font-bold text-white`}>
+                      <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold text-white`}>
                         {initials(p.pseudonym)}
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-semibold text-white truncate">
-                      {p.pseudonym} {p.is_you && <span className="text-purple-300 font-normal text-[10px]">(You)</span>}
+                    <div className="text-[17px] text-white break-words">
+                      {p.pseudonym} {p.is_you && <span className="font-normal">(You)</span>}
                     </div>
-                    <div className={`text-[10px] flex items-center gap-1 mt-0.5 ${statusColor}`}>
-                      <span className="text-[6px]">●</span> {statusText}
+                    <div className={`text-[15px] flex items-center gap-2 mt-1 ${statusColor}`}>
+                      <div className={`h-2 w-2 rounded-full shrink-0 ${statusDot}`} /> {statusText}
                     </div>
                   </div>
-                  {isAnswering && <div className="text-amber-400 text-[10px] font-bold animate-pulse">⏱ Live</div>}
+                  {isAnswering && (
+                    <AnswerCountdown
+                      askedAt={answeringItem?.askedAt}
+                      totalSecs={answerSecs}
+                      className="shrink-0 text-[#facc15] text-lg font-semibold tabular-nums whitespace-nowrap"
+                    />
+                  )}
                 </button>
               );
             })}
           </div>
+
+          {/* Your Role Section */}
           {yourRole ? (
-            <div className="mt-5 pt-4 border-t border-white/10">
+            <div className="mt-auto pt-8">
+              <div className="h-px bg-white/10 mb-6 w-full" />
               <div className="text-[10px] text-white/50 mb-1 uppercase tracking-widest">Your Role</div>
               <div className="text-purple-300 text-base font-black tracking-widest uppercase">{roleDisplayName(yourRole)}</div>
               <p className="text-[10px] text-white/50 mt-1 leading-relaxed">Ask up to 5 questions to uncover the truth</p>
@@ -1174,7 +1336,7 @@ function InvestigationView(props: {
                   ? `Investigator can ask maximum ${lieMaxQuestions} questions in Lie Detector mode.`
                   : isInvestigator
                     ? "Select a player to ask a question"
-                    : "Answer honestly when questioned. Watch the activity feed for questions and answers."}
+                    : "The Investigator is questioning suspects. If a question comes to you, an answer window will open automatically — you have limited time to respond."}
               </p>
             </div>
           </div>
@@ -1199,31 +1361,31 @@ function InvestigationView(props: {
                         className={`relative flex flex-col items-center gap-3 text-center transition disabled:opacity-40 disabled:cursor-not-allowed`}
                       >
                         {/* Rounded rect card with circular portrait inside */}
-                        <div className={`relative w-[110px] h-[140px] rounded-2xl flex flex-col items-center justify-center gap-2 border-2 px-2 py-4 transition-all ${
+                        <div className={`relative w-[120px] h-[155px] rounded-2xl flex flex-col items-center justify-center gap-3 border transition-all bg-transparent ${
                           isSelected
-                            ? "border-[#a855f7]/60 bg-[#2a174c] shadow-[0_0_20px_rgba(168,85,247,0.35)]"
-                            : "border-[#3b2a59]/60 bg-[#1e1235] hover:border-purple-400/40"
+                            ? "border-[#c492ed]"
+                            : "border-[#4a3473] hover:border-purple-400/60"
                         }`}>
                           {/* Circular portrait */}
-                          <div className="h-[80px] w-[80px] rounded-full overflow-hidden ring-2 ring-white/10 flex-shrink-0">
+                          <div className="h-[90px] w-[90px] rounded-full overflow-hidden shadow-lg flex-shrink-0">
                             {roleImage ? (
-                              <img src={roleImage} alt={p.pseudonym} className="h-full w-full object-cover" />
+                              <img src={roleImage} alt={p.pseudonym} className="object-cover" />
                             ) : (
-                              <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-xl font-bold text-white`}>
+                              <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-2xl font-bold text-white`}>
                                 {initials(p.pseudonym)}
                               </div>
                             )}
                           </div>
                           {/* Name */}
-                          <div className="text-[12px] font-semibold text-white leading-tight">
+                          <div className="text-[14px] text-white leading-tight flex flex-col items-center gap-0.5">
                             {p.pseudonym}
-                            {p.is_you && <div className="text-[10px] text-purple-300 mt-0.5">(You)</div>}
+                            {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
                           </div>
                         </div>
                         {/* Selected indicator dot */}
                         {isSelected && (
-                          <div className="h-5 w-5 rounded-full bg-[#1a0f2e] border-2 border-[#a855f7] flex items-center justify-center">
-                            <div className="h-2.5 w-2.5 bg-white rounded-full" />
+                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full bg-[#1a0f2e] border-[3px] border-[#c492ed] flex items-center justify-center">
+                            <div className="h-3 w-3 bg-white rounded-full" />
                           </div>
                         )}
                       </button>
@@ -1256,19 +1418,19 @@ function InvestigationView(props: {
                     return (
                       <div key={p.session_id} className={`flex flex-col items-center gap-0 ${frozen ? "opacity-40" : ""}`}>
                         {/* Card with circular portrait inside */}
-                        <div className="relative w-[110px] h-[140px] rounded-2xl flex flex-col items-center justify-center gap-2 border-2 border-[#3b2a59]/60 bg-[#1e1235] px-2 py-4">
-                          <div className="h-[80px] w-[80px] rounded-full overflow-hidden ring-2 ring-white/10">
+                        <div className="relative w-[120px] h-[155px] rounded-2xl flex flex-col items-center justify-center gap-3 border border-[#4a3473] bg-transparent">
+                          <div className="h-[90px] w-[90px] rounded-full overflow-hidden shadow-lg flex-shrink-0">
                             {roleImage ? (
-                              <img src={roleImage} alt={p.pseudonym} className="h-full w-full object-cover" />
+                              <img src={roleImage} alt={p.pseudonym} className="w-full object-cover" />
                             ) : (
-                              <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-xl font-bold text-white`}>
+                              <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-2xl font-bold text-white`}>
                                 {initials(p.pseudonym)}
                               </div>
                             )}
                           </div>
-                          <div className="text-[12px] font-semibold text-white leading-tight text-center">
+                          <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
                             {p.pseudonym}
-                            {p.is_you && <div className="text-[10px] text-purple-300 mt-0.5">(You)</div>}
+                            {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
                           </div>
                         </div>
                       </div>
@@ -1290,13 +1452,13 @@ function InvestigationView(props: {
                 <li className="text-xs text-white/50 text-center py-6">No activity yet.</li>
               )}
               {activity.map((a) => {
-                const targetShort = shortBySessionId.get(a.toSessionId) ?? "Player";
+                const targetShort = shortBySessionId.get(Number(a.toSessionId)) ?? "Player";
+                const targetImage = roleImageBySessionId.get(Number(a.toSessionId)) ?? null;
+                const askerImage = a.fromSessionId != null ? roleImageBySessionId.get(Number(a.fromSessionId)) ?? null : null;
                 return (
                   <li key={a.questionId} className="rounded-xl bg-[#2a174c] border border-transparent p-4 relative">
                     <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-full bg-black/40 overflow-hidden shrink-0 border border-white/10 grid place-items-center text-[10px] text-white font-bold">
-                        {isInvestigator ? "YOU" : "INV"}
-                      </div>
+                      <ActivityAvatar image={askerImage} fallback={isInvestigator ? "YOU" : "INV"} />
                       <div className="flex-1">
                         <div className="text-[11px] text-white/50">
                           {isInvestigator ? "You asked" : "Investigator asked"}{" "}
@@ -1308,7 +1470,7 @@ function InvestigationView(props: {
                     </div>
                     {a.a && (
                       <div className="mt-4 flex items-start gap-3 relative">
-                        <div className="h-8 w-8 rounded-full bg-black/40 overflow-hidden shrink-0 border border-white/10 grid place-items-center text-[10px] text-white font-bold">{targetShort.slice(0, 2).toUpperCase()}</div>
+                        <ActivityAvatar image={targetImage} fallback={targetShort.slice(0, 2).toUpperCase()} />
                         <div className="flex-1 pr-24">
                           <div className="text-[11px] text-pink-400">
                             {targetShort}{" "}
@@ -1327,7 +1489,7 @@ function InvestigationView(props: {
                     )}
                     {!a.a && (
                       <div className="mt-4 flex items-start gap-3">
-                        <div className="h-8 w-8 rounded-full bg-black/40 overflow-hidden shrink-0 border border-white/10 grid place-items-center text-[10px] text-white font-bold">{targetShort.slice(0, 2).toUpperCase()}</div>
+                        <ActivityAvatar image={targetImage} fallback={targetShort.slice(0, 2).toUpperCase()} />
                         <div className="flex-1">
                           <div className="text-[11px] text-pink-400">
                             {targetShort} <span className="text-white/50">Answering</span>
@@ -1349,7 +1511,7 @@ function InvestigationView(props: {
               {players.map((p) => (
                 <div key={p.session_id} className="flex flex-col gap-1 items-center">
                   <div className="text-white/60 truncate">{p.is_you ? "You" : p.pseudonym}</div>
-                  <div className="text-amber-400 font-bold">{scoresBySessionId.get(p.session_id) ?? 0}</div>
+                  <div className="text-amber-400 font-bold">{scoresBySessionId.get(Number(p.session_id)) ?? 0}</div>
                 </div>
               ))}
             </div>
@@ -1560,40 +1722,41 @@ function AnswerModal({
   onSubmit,
   investigatorRole = "Investigator",
   onTimeout,
+  activity,
+  players,
+  isInvestigator,
 }: {
   question: string;
   answerSecs: number;
   onSubmit: (text: string) => void;
   investigatorRole?: string;
   onTimeout?: () => void;
+  activity: ActivityItem[];
+  players: GamePlayer[];
+  isInvestigator: boolean;
 }) {
-  const [secs, setSecs] = useState(answerSecs);
+  console.log("[AnswerModal] Rendered!", { question, answerSecs, onTimeout, activity, players, isInvestigator });
   const [ans, setAns] = useState("");
+  const secs = useCountdown(answerSecs, onTimeout);
   const isTimeUp = secs === 0;
 
+  // Reset answer when question changes
   useEffect(() => {
-    const t = setInterval(() => {
-      setSecs((s) => {
-        const next = Math.max(0, s - 1);
-        if (next === 0 && s > 0 && onTimeout) {
-          onTimeout();
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [onTimeout]);
+    console.log("[AnswerModal] question changed, resetting answer", { question });
+    setAns("");
+  }, [question]);
+
+  const shortBySessionId = new Map(players.map(p => [p.session_id, p.is_you ? `${p.pseudonym} (You)` : p.pseudonym]));
 
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-  const canClose = false; // Modal cannot be closed during countdown
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-lg rounded-3xl border border-[#3b2a59] bg-[#1a0f2e] shadow-elevated">
-        <button onClick={() => {}} className="absolute top-6 right-6 z-10 h-9 w-9 grid place-items-center rounded-xl bg-white/5 hover:bg-white/10 text-white opacity-80 cursor-not-allowed">
-          <X className="h-4 w-4" />
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-3 overflow-y-auto py-4">
+      <div className="relative w-full max-w-lg rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] shadow-elevated">
+        <button onClick={() => {}} className="absolute top-4 right-4 z-10 h-8 w-8 grid place-items-center rounded-xl bg-white/5 hover:bg-white/10 text-white opacity-80 cursor-not-allowed">
+          <X className="h-3 w-3" />
         </button>
-        <div className="p-8">
+        <div className="p-6">
           <div className="flex items-start gap-4">
             <div className="h-12 w-12 rounded-full border border-white/10 bg-black/40 grid place-items-center"><ShieldCheck className="h-6 w-6 text-purple-300" /></div>
             <div>
@@ -1601,43 +1764,86 @@ function AnswerModal({
               <p className="text-sm text-white/70 mt-1">By SC ({investigatorRole})</p>
             </div>
           </div>
-          <div className="mt-8 rounded-2xl border border-purple-500/30 bg-[#2b1754] p-6 text-center">
-            <div className="text-[13px] text-white/70 mb-2">Question</div>
-            <div className="text-[17px] text-white leading-relaxed">{question}</div>
+
+          {/* Activity History */}
+          {activity.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-xs font-bold text-white/80 mb-2">Activity History</h4>
+              <div className="rounded-xl border border-white/10 bg-black/20 p-3 max-h-[180px] overflow-y-auto space-y-2">
+                {activity.map((a) => {
+                  const targetShort = shortBySessionId.get(a.toSessionId) ?? "Player";
+                  return (
+                    <div key={a.questionId} className="rounded-lg bg-[#2a174c] p-2">
+                      <div className="flex items-start gap-2">
+                        <div className="h-4 w-4 rounded-full bg-black/40 border border-white/10 grid place-items-center text-[6px] text-white font-bold shrink-0">
+                          {isInvestigator ? "YOU" : "INV"}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-[9px] text-white/50">
+                            {isInvestigator ? "You asked" : "Investigator asked"}{" "}
+                            <span className="text-pink-400">{targetShort}</span>
+                          </div>
+                          <div className="text-[11px] text-white mt-0.5">{a.q}</div>
+                        </div>
+                      </div>
+                      {a.a && (
+                        <div className="mt-2 flex items-start gap-2">
+                          <div className="h-4 w-4 rounded-full bg-black/40 border border-white/10 grid place-items-center text-[6px] text-white font-bold shrink-0">
+                            {targetShort.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-[9px] text-pink-400">
+                              {targetShort}{" "}
+                              <span className="text-white/50">{a.autoSkipped ? "did not answer" : "Answered"}</span>
+                            </div>
+                            <div className={`text-[11px] text-white mt-0.5 ${a.autoSkipped ? "text-white/50 italic" : ""}`}>{a.a}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 rounded-xl border border-purple-500/30 bg-[#2b1754] p-4 text-center">
+            <div className="text-xs text-white/70 mb-1">Current Question</div>
+            <div className="text-base text-white leading-relaxed">{question}</div>
           </div>
-          <div className={`mt-6 text-center`}>
-            <Clock className={`h-6 w-6 mx-auto ${
+          <div className={`mt-4 text-center`}>
+            <Clock className={`h-5 w-5 mx-auto ${
               isTimeUp ? "text-rose-400" : "text-white/40"
             }`} />
-            <div className={`text-[13px] mt-2 ${
+            <div className={`text-xs mt-1 ${
               isTimeUp ? "text-rose-300 font-bold" : "text-white/80"
             }`}>Time Left to answer</div>
-            <div className={`text-4xl font-black tabular-nums tracking-wider mt-1 ${
+            <div className={`text-3xl font-black tabular-nums tracking-wider mt-1 ${
               isTimeUp ? "text-rose-400" : "text-amber-400"
             }`}>{fmt(secs)}</div>
             {isTimeUp && (
-              <p className="text-xs text-rose-300 font-semibold mt-2">⚠️ Time's up! -10 points penalty applied.</p>
+              <p className="text-[11px] text-rose-300 font-semibold mt-2">⚠️ Time's up! -10 points penalty applied.</p>
             )}
           </div>
-          <div className="mt-8">
-            <label className="text-sm text-white block mb-2">Type your answer (max 120 characters)</label>
+          <div className="mt-6">
+            <label className="text-xs text-white block mb-1">Type your answer (max 120 characters)</label>
             <div className="relative">
               <textarea
                 value={ans}
                 onChange={(e) => setAns(e.target.value.slice(0, 120))}
                 placeholder="Type your answer here..."
                 disabled={isTimeUp}
-                className={`w-full h-24 rounded-xl bg-black/20 border border-white/20 p-4 text-[15px] text-white placeholder:text-white/40 focus:outline-none focus:border-[#a855f7] resize-none ${
+                className={`w-full h-20 rounded-xl bg-black/20 border border-white/20 p-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#a855f7] resize-none ${
                   isTimeUp ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               />
-              <span className="absolute bottom-3 right-4 text-xs text-white/40">{ans.length}/120</span>
+              <span className="absolute bottom-2 right-3 text-[10px] text-white/40">{ans.length}/120</span>
             </div>
           </div>
           <button
             onClick={() => onSubmit(ans)}
             disabled={!ans.trim() || isTimeUp}
-            className={`mt-6 w-full rounded-full py-4 text-[15px] font-bold shadow-glow ${
+            className={`mt-5 w-full rounded-full py-3 text-sm font-bold shadow-glow ${
               isTimeUp
                 ? "bg-white/5 text-white/40 cursor-not-allowed"
                 : "bg-gradient-to-r from-[#a855f7] to-[#d946ef] text-white disabled:opacity-40"
@@ -1645,7 +1851,7 @@ function AnswerModal({
           >
             Submit Answer
           </button>
-          <p className="mt-4 text-center text-[13px] text-white/70">Your answer will be visible to all players.</p>
+          <p className="mt-3 text-center text-xs text-white/70">Your answer will be visible to all players.</p>
         </div>
       </div>
     </div>

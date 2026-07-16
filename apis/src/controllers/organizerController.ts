@@ -11,6 +11,11 @@ import crypto from 'crypto';
 import { buildEventStats } from '../services/eventStatsService';
 import { ensureOrganizerStatusColumns } from '../utils/schemaHelpers';
 
+// Total number of days a session may be scheduled/rescheduled within, counting
+// the payment day itself. So a payment on the 27th allows dates through the 31st
+// (27 + 4). Mirrors SCHEDULE_WINDOW_DAYS on the frontend.
+const SCHEDULE_WINDOW_DAYS = 5;
+
 export const registerOrganizer = asyncHandler(async (req: Request, res: Response) => {
     const { name, email, company_name, company_website } = req.body;
 
@@ -106,9 +111,11 @@ export const verifyLoginOtp = asyncHandler(async (req: Request, res: Response) =
         throw new AppError('Email verification required before signing in.', 403);
     }
 
-    if (organizer.account_status !== 'active' || organizer.payment_status !== 'paid') {
-        throw new AppError('Please complete payment to activate your account.', 403);
-    }
+    // Payment is intentionally NOT required to sign in. An organizer who verified
+    // her email but hasn't paid yet can still log in; the dashboard then prompts
+    // her to complete payment and activate her package (payment_status is returned
+    // below so the client can show that prompt). Running an actual event stays
+    // gated on the booking being paid.
 
     // Clear OTP after successful login
     await query(
@@ -118,7 +125,13 @@ export const verifyLoginOtp = asyncHandler(async (req: Request, res: Response) =
 
     // Generate JWT Token
     const token = jwt.sign(
-        { id: organizer.id, email: email, role: 'organizer' },
+        {
+            id: organizer.id,
+            email: email,
+            role: 'organizer',
+            payment_status: organizer.payment_status,
+            account_status: organizer.account_status,
+        },
         process.env.JWT_SECRET || 'your_jwt_secret_key',
         { expiresIn: '24h' }
     );
@@ -128,8 +141,10 @@ export const verifyLoginOtp = asyncHandler(async (req: Request, res: Response) =
         organizer: {
             id: organizer.id,
             name: organizer.name,
-            email: email
-        }
+            email: email,
+            payment_status: organizer.payment_status,
+            account_status: organizer.account_status,
+        },
     });
 });
 
@@ -165,7 +180,7 @@ export const getOrganizerDashboard = asyncHandler(async (req: Request, res: Resp
     `, [organizerId]);
 
     const [organizerInfoRows] = await query(
-        'SELECT id, name, email, company_name FROM organizers WHERE id = ?',
+        'SELECT id, name, email, company_name, payment_status, account_status FROM organizers WHERE id = ?',
         [organizerId]
     );
 
@@ -354,14 +369,14 @@ export const completeBooking = asyncHandler(async (req: Request, res: Response) 
 
         const eventStart = moment(`${bookingRows[0].scheduled_date} ${bookingRows[0].scheduled_time}`, 'YYYY-MM-DD HH:mm:ss');
         const now = moment();
-        const maxAllowedSchedule = moment(now).add(5, 'days').endOf('day');
+        const maxAllowedSchedule = moment(now).add(SCHEDULE_WINDOW_DAYS - 1, 'days').endOf('day');
 
         if (eventStart.isBefore(now)) {
             throw new AppError('Scheduled session must be in the future.', 400);
         }
 
         if (eventStart.isAfter(maxAllowedSchedule)) {
-            throw new AppError('Session must be scheduled within 5 days of payment.', 400);
+            throw new AppError(`Session must be scheduled within ${SCHEDULE_WINDOW_DAYS} days of payment.`, 400);
         }
 
         const [packageRows] = await conn.query(
@@ -500,11 +515,11 @@ export const updateSession = asyncHandler(async (req: Request, res: Response) =>
         if (!paymentTime.isValid()) {
             throw new AppError('Could not determine the payment date for this booking. Please contact support.', 400);
         }
-        const allowedRescheduleUntil = moment(paymentTime).add(5, 'days').endOf('day');
+        const allowedRescheduleUntil = moment(paymentTime).add(SCHEDULE_WINDOW_DAYS - 1, 'days').endOf('day');
         const newSchedule = moment(`${scheduled_date} ${scheduled_time}`, 'YYYY-MM-DD HH:mm:ss');
 
         if (newSchedule.isAfter(allowedRescheduleUntil)) {
-            throw new AppError('Rescheduled session must remain within 5 days of payment.', 400);
+            throw new AppError(`Rescheduled session must remain within ${SCHEDULE_WINDOW_DAYS} days of payment.`, 400);
         }
     }
 

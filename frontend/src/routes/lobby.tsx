@@ -192,211 +192,229 @@ function LobbyPage() {
   const ss = String((countdown ?? 0) % 60).padStart(2, "0");
   const slots = Array.from({ length: lobby.group_capacity }, (_, i) => lobby.members[i] ?? null);
 
-  return (
-    <div className="min-h-screen bg-purple-900 text-white p-4 md:p-6">
-      <header className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur px-5 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Logo />
-          <span className="font-semibold">{lobby.activity.title}</span>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 grid place-items-center text-xs font-bold">
-            {initials(session?.name ?? "You")}
-          </div>
-          <span className="text-sm">{session?.name ?? "Participant"}</span>
-        </div>
-      </header>
+  // Rules: prefer admin-authored rules, otherwise derive a full list from the
+  // activity settings. Either way each row gets an icon from RULE_ICONS by order.
+  const toMin = (secs: number) => Math.max(1, Math.round(secs / 60));
+  const s = lobby.settings;
+  const derivedRules: React.ReactNode[] =
+    lobby.rules.length > 0
+      ? lobby.rules.map((r) => r.rule_text)
+      : [
+          <>The Investigator has <b>{s.max_questions}</b> questions to examine any participant and establish the truth.</>,
+          <>Each participant gets {toMin(s.question_response_secs)} minutes to answer.</>,
+          <>No answer in time will cost <span className="text-amber-400 font-semibold">-10 points</span>.</>,
+          <>Clue Rooms open after {toMin(s.clue_room_unlock_secs)} minutes.</>,
+          ...(s.lie_detector_enabled
+            ? [<>Use the Lie Detector round wisely to uncover suspicious answers. ({toMin(s.lie_detector_timer_secs)} minute round)</>]
+            : []),
+          <>Find the culprit before time runs out!</>,
+          <>Game Duration: {toMin(s.game_duration_secs)} Minutes</>,
+        ];
 
-      <main className="mt-4 grid gap-5 lg:grid-cols-[1fr_2fr_1.1fr]">
-        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-8 grid place-items-center min-h-[360px]">
-          <div className="text-center">
-            <div className="mx-auto h-44 w-44 rounded-3xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-purple-900 grid place-items-center shadow-glow ring-2 ring-white/20 overflow-hidden">
-              {iconUrl ? (
-                <img src={iconUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <ActivityIcon className="h-20 w-20 text-white" />
+  const leaveLobby = () => {
+    disconnectSocket();
+    clearParticipantSession();
+    const token = inviteUrl ?? session?.inviteUrl;
+    if (token) {
+      navigate({ to: "/join/$linkToken", params: { linkToken: token } });
+    } else {
+      navigate({ to: "/" });
+    }
+  };
+
+  const timerLabel =
+    lobby.lobby_phase === "lobby_timer"
+      ? "Session Starts in"
+      : lobby.lobby_phase === "before_start"
+        ? "Starts at"
+        : "Joined";
+  const timerValue =
+    lobby.lobby_phase === "lobby_timer"
+      ? `${mm}:${ss}`
+      : lobby.lobby_phase === "before_start" && lobby.scheduled_start_label
+        ? lobby.scheduled_start_label.split(",").pop()?.trim() ?? "—"
+        : `${lobby.member_count}/${lobby.group_capacity}`;
+
+  return (
+    <div className="min-h-screen bg-[#0a0715] text-white">
+      <div className="mx-auto max-w-[1400px] px-4 py-5 md:px-8 md:py-7">
+        {/* Header */}
+        <header className="flex items-center justify-between rounded-2xl border border-white/5 bg-[#100b20]/80 px-5 py-3.5 backdrop-blur">
+          <div className="flex items-center gap-3">
+            <Logo />
+            <span className="text-lg font-bold tracking-wide">{lobby.activity.title}</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-xs font-bold">
+              {initials(session?.name ?? "You")}
+            </div>
+            <span className="text-sm text-white/90">{session?.name ?? "Participant"}</span>
+          </div>
+        </header>
+
+        {/* Top row: badge / case / rules */}
+        <main className="mt-6 grid gap-5 lg:grid-cols-[1fr_2fr_1.15fr]">
+          <div className="grid place-items-center rounded-3xl p-6 min-h-[380px]">
+            <div className="text-center">
+              <div className="mx-auto grid h-48 w-48 place-items-center overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-purple-900 shadow-[0_0_50px_-10px_rgba(168,85,247,0.6)] ring-2 ring-white/20">
+                {iconUrl ? (
+                  <img src={iconUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <ActivityIcon className="h-24 w-24 text-white" />
+                )}
+              </div>
+              <div className="mt-5 text-3xl font-black tracking-wide">{titleLine1}</div>
+              <div className="-mt-1 text-xl font-semibold tracking-[0.2em] text-purple-300">{titleLine2}</div>
+              <p className="mt-3 text-xs text-white/50">{lobby.group_name}</p>
+            </div>
+          </div>
+
+          <div className="relative min-h-[380px] overflow-hidden rounded-3xl border border-white/10">
+            <img src={cover || investigation} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/40" />
+            <div className="relative p-6">
+              <div className="inline-block max-w-[80%] rounded-2xl bg-black/45 px-5 py-3.5 backdrop-blur-sm">
+                <div className="text-xl font-bold">Case: {caseTitle}</div>
+                <div className="mt-0.5 text-sm text-white/75">{caseTagline}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-h-[380px] overflow-y-auto rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1d1440] to-[#140e2b] p-6">
+            <h3 className="mb-4 text-xl font-bold">Rules</h3>
+            <ul className="space-y-3.5 text-sm">
+              {derivedRules.map((rule, i) => (
+                <Rule key={i} icon={RULE_ICONS[i % RULE_ICONS.length]}>
+                  {rule}
+                </Rule>
+              ))}
+            </ul>
+          </div>
+        </main>
+
+        {/* Bottom row: group / session status */}
+        <section className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div className="rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1c1440] to-[#140e2b] p-6">
+            <div className="flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-purple-500/20">
+                <Users className="h-5 w-5 text-purple-300" />
+              </div>
+              <h3 className="text-xl font-bold">Your Group &amp; Status</h3>
+            </div>
+
+            <div className="mt-5 grid grid-cols-3 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+              <StatCell label="Group Capacity" value={String(lobby.group_capacity)} />
+              <StatCell label="Joined" value={String(lobby.member_count)} />
+              <StatCell label="Remaining" value={String(lobby.remaining_slots)} />
+            </div>
+
+            <div className="mt-7 flex flex-wrap items-start gap-6">
+              {slots.map((member, index) =>
+                member ? (
+                  <div key={member.id} className="w-[92px] text-center">
+                    <div
+                      className={`mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br ${AVATAR_GRADS[index % AVATAR_GRADS.length]} text-base font-bold ring-2 ring-white/15`}
+                    >
+                      {member.is_you ? initials(member.name) : member.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="mt-2.5 truncate text-sm font-medium">
+                      {member.is_you ? `${member.name} (You)` : member.name}
+                    </div>
+                    <div className="text-xs capitalize text-emerald-400">({member.status})</div>
+                  </div>
+                ) : (
+                  <div key={`empty-${index}`} className="w-[92px] text-center">
+                    <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-white/5 ring-2 ring-white/10">
+                      <UserIcon className="h-7 w-7 text-white/40" />
+                    </div>
+                    <div className="mt-2.5 text-xs leading-tight text-white/55">Waiting for participant</div>
+                  </div>
+                )
               )}
             </div>
-            <div className="mt-5 text-3xl font-black tracking-wide">{titleLine1}</div>
-            <div className="text-xl font-semibold text-purple-300 -mt-1">{titleLine2}</div>
-            <p className="mt-3 text-xs text-white/60">{lobby.group_name}</p>
-          </div>
-        </div>
-
-        <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/5 relative min-h-[360px]">
-          <img src={investigation} alt="" className="absolute h-full w-full object-cover" />
-          <div className="absolute  bg-gradient-to-t from-purple-950/90 via-purple-950/40 to-transparent" />
-          <div className="relative p-6">
-            <div className="inline-block rounded-xl border-2 border-cyan-400/60 bg-purple-900/40 backdrop-blur px-4 py-3">
-              <div className="text-lg font-bold">Case: {caseTitle}</div>
-              <div className="text-xs text-white/80">{caseTagline}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-6 max-h-[360px] overflow-y-auto">
-          <h3 className="text-lg font-bold mb-4">Rules</h3>
-          <ul className="space-y-3 text-sm">
-            {lobby.rules.length > 0 ? (
-              lobby.rules.map((rule) => (
-                <Rule key={rule.id} icon={HelpCircle}>
-                  {rule.rule_text}
-                </Rule>
-              ))
-            ) : (
-              <>
-                <Rule icon={HelpCircle}>
-                  You have {lobby.settings.max_questions} questions to find the truth.
-                </Rule>
-                <Rule icon={Clock}>
-                  Each participant gets {Math.round(lobby.settings.question_response_secs / 60)} minutes to
-                  answer.
-                </Rule>
-                <Rule icon={Timer}>
-                  Game duration: {Math.round(lobby.settings.game_duration_secs / 60)} minutes
-                </Rule>
-              </>
-            )}
-          </ul>
-        </div>
-      </main>
-
-      <section className="mt-5 grid gap-5 lg:grid-cols-2">
-        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-6">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-purple-500/30 grid place-items-center">
-              <Users className="h-5 w-5 text-purple-300" />
-            </div>
-            <h3 className="text-lg font-bold">Your Group & Status</h3>
-          </div>
-          <div className="mt-5 grid grid-cols-3 gap-4 text-sm">
-            <Stat label="Group Capacity" value={String(lobby.group_capacity)} />
-            <Stat label="Joined" value={String(lobby.member_count)} />
-            <Stat label="Remaining" value={String(lobby.remaining_slots)} />
-          </div>
-          <div className="mt-6 flex items-end gap-5 flex-wrap">
-            {slots.map((member, index) =>
-              member ? (
-                <div key={member.id} className="text-center">
-                  <div
-                    className={`h-14 w-14 mx-auto rounded-full bg-gradient-to-br ${AVATAR_GRADS[index % AVATAR_GRADS.length]} grid place-items-center font-bold ring-2 ring-white/15 text-sm`}
-                  >
-                    {member.is_you ? initials(member.name) : member.name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="mt-2 text-xs max-w-[88px] truncate">
-                    {member.is_you ? `${member.name} (You)` : member.name}
-                  </div>
-                  <div className="text-[11px] text-cyan-300 capitalize">({member.status})</div>
-                </div>
-              ) : (
-                <div key={`empty-${index}`} className="text-center">
-                  <div className="h-14 w-14 mx-auto rounded-full bg-white/10 grid place-items-center ring-2 ring-white/10">
-                    <UserIcon className="h-6 w-6 text-white/50" />
-                  </div>
-                  <div className="mt-2 text-[11px] text-white/65 max-w-[80px]">Waiting for participant</div>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-6">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-purple-500/30 grid place-items-center">
-              <Gamepad2 className="h-5 w-5 text-purple-300" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold">Session Status</h3>
-              <p className="text-xs text-white/60">{lobby.status_message}</p>
-            </div>
           </div>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto] items-stretch">
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-4 flex gap-3">
-              <Info className="h-4 w-4 text-purple-300 mt-0.5 shrink-0" />
-              <p className="text-xs text-white/80 leading-relaxed">
-                {lobby.lobby_phase === "before_start" && (
-                  <>
-                    Scheduled start: <span className="text-white font-medium">{lobby.scheduled_start_label}</span>.
-                    The game opens after a {Math.round(lobby.settings.lobby_wait_secs / 60)}-minute entry window.
-                    Participants can join during that window, and the lobby timer counts down to the game start.
-                  </>
-                )}
-                {lobby.lobby_phase === "waiting_members" && (
-                  <>
-                    The activity has started
-                    {lobby.scheduled_start_label ? ` (${lobby.scheduled_start_label})` : ""}. Share the invite
-                    link so {lobby.remaining_slots} more participant
-                    {lobby.remaining_slots === 1 ? "" : "s"} can join before entry closes.
-                  </>
-                )}
-                {lobby.lobby_phase === "lobby_timer" && (
-                  <>
-                    The game started at the scheduled time
-                    {lobby.scheduled_start_label ? ` (${lobby.scheduled_start_label})` : ""}. The lobby timer shows
-                    time remaining until the {Math.round(lobby.settings.lobby_wait_secs / 60)}-minute entry window closes.
-                  </>
-                )}
-                {lobby.lobby_phase === "ready" && <>Launching the game now…</>}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-5 text-center min-w-[140px]">
-              <div className="text-xs text-white/70">
-                {lobby.lobby_phase === "lobby_timer"
-                  ? "Game Starts in"
-                  : lobby.lobby_phase === "before_start"
-                    ? "Starts at"
-                    : "Joined"}
+          <div className="rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1c1440] to-[#140e2b] p-6">
+            <div className="flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-purple-500/20">
+                <Gamepad2 className="h-5 w-5 text-purple-300" />
               </div>
-              <div className="mt-1 text-3xl font-black tabular-nums">
-                {lobby.lobby_phase === "lobby_timer"
-                  ? `${mm}:${ss}`
-                  : lobby.lobby_phase === "before_start" && lobby.scheduled_start_label
-                    ? lobby.scheduled_start_label.split(",").pop()?.trim() ?? "—"
-                    : `${lobby.member_count}/${lobby.group_capacity}`}
+              <div>
+                <h3 className="text-xl font-bold">Session Status</h3>
+                <p className="text-xs text-white/55">Ensure all the participants have joined and groups are complete</p>
               </div>
             </div>
+
+            <div className="mt-5 grid items-stretch gap-4 md:grid-cols-[1fr_auto]">
+              <div className="flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-purple-300" />
+                <p className="text-xs leading-relaxed text-white/75">
+                  {lobby.lobby_phase === "before_start" && (
+                    <>
+                      Your group requires exactly {lobby.group_capacity} participants. Scheduled start:{" "}
+                      <span className="font-medium text-white">{lobby.scheduled_start_label}</span>. The session will
+                      start automatically once all participants have joined at the scheduled time. Please contact your
+                      organiser to complete your group.
+                    </>
+                  )}
+                  {lobby.lobby_phase === "waiting_members" && (
+                    <>
+                      Your group requires exactly {lobby.group_capacity} participants. Share the invite link so{" "}
+                      {lobby.remaining_slots} more participant{lobby.remaining_slots === 1 ? "" : "s"} can join before
+                      entry closes. Please contact your organiser to complete your group.
+                    </>
+                  )}
+                  {lobby.lobby_phase === "lobby_timer" && (
+                    <>
+                      Your group requires exactly {lobby.group_capacity} participants. The session will start
+                      automatically once all participants have joined. The timer shows the time remaining until the entry
+                      window closes.
+                    </>
+                  )}
+                  {lobby.lobby_phase === "ready" && <>All participants have joined. Launching the game now…</>}
+                </p>
+              </div>
+              <div className="grid min-w-[150px] place-items-center rounded-2xl border border-purple-500/30 bg-gradient-to-b from-[#2a1a4d] to-[#1a1033] p-5 text-center">
+                <div className="text-xs text-white/70">{timerLabel}</div>
+                <div className="mt-1 text-4xl font-black tabular-nums">{timerValue}</div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={leaveLobby}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#e879f9] py-3.5 text-sm font-semibold text-white shadow-[0_8px_30px_-8px_rgba(168,85,247,0.7)] transition-opacity hover:opacity-90"
+            >
+              <LogOut className="h-4 w-4" /> Leave Lobby
+            </button>
           </div>
+        </section>
 
-          <button
-            type="button"
-            onClick={() => {
-              disconnectSocket();
-              clearParticipantSession();
-              const token = inviteUrl ?? session?.inviteUrl;
-              if (token) {
-                navigate({ to: "/join/$linkToken", params: { linkToken: token } });
-              } else {
-                navigate({ to: "/" });
-              }
-            }}
-            className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 text-white py-3 text-sm font-semibold hover:bg-white/10"
-          >
-            <LogOut className="h-4 w-4" /> Leave Lobby
-          </button>
-        </div>
-      </section>
-
-      <p className="mt-8 text-center text-xs text-white/55">
-        Powered by <span className="text-white">Zoventro</span> · © 2026 zoventro.com All Rights Reserved
-      </p>
+        <p className="mt-8 text-center text-xs text-white/45">
+          Powered by <span className="text-white/80">Zoventro</span> · © 2026 zoventro.com All Rights Reserved
+        </p>
+      </div>
     </div>
   );
 }
 
+const RULE_ICONS: LucideIcon[] = [HelpCircle, Clock, Star, Lightbulb, Hand, Search, Timer];
+
 function Rule({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
   return (
-    <li className="flex gap-3 items-start">
-      <Icon className="h-4 w-4 text-purple-300 mt-0.5 shrink-0" />
+    <li className="flex items-start gap-3">
+      <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-purple-500/15">
+        <Icon className="h-4 w-4 text-purple-300" />
+      </span>
       <span className="text-white/85">{children}</span>
     </li>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function StatCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-      <div className="text-[11px] text-white/60">{label}</div>
+    <div className="p-4">
+      <div className="text-[11px] text-white/55">{label}</div>
       <div className="mt-1 text-2xl font-bold">{value}</div>
     </div>
   );

@@ -183,6 +183,25 @@ async function handleTimerExpiration(timer: any) {
         }
     });
 
+    // A no-response auto-skip may have applied a penalty above; push the fresh
+    // scores to the group so the Score Board updates live (read after commit).
+    if (timer.timer_type === 'question_response') {
+        try {
+            const [rows] = await query<any>(
+                'SELECT id AS session_id, total_score FROM participant_sessions WHERE group_id = ?',
+                [timer.group_id]
+            );
+            io.to(`group_${timer.group_id}`).emit('scores_updated', {
+                scores: (rows || []).map((r: any) => ({
+                    session_id: Number(r.session_id),
+                    total_score: Number(r.total_score),
+                })),
+            });
+        } catch {
+            /* best-effort */
+        }
+    }
+
     // finalizeVerdict runs its own transaction (and may already have been triggered
     // by the last participant's accusation) — run it after the timer transaction
     // above commits. It's idempotent, so a race with a manual submission is safe.

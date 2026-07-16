@@ -278,7 +278,16 @@ function CreatePage() {
                     registration={registration}
                     onComplete={(link) => {
                       setInvitationLink(link);
-                      setDone(true);
+                      // A returning organizer who logged in unpaid and completed
+                      // payment here is already authenticated — send her straight
+                      // to the dashboard. A brand-new registrant has no session
+                      // token yet, so show the success card with the login link.
+                      if (authenticated) {
+                        toastSuccess("Payment successful. Your package is now active.");
+                        navigate({ to: "/dashboard" });
+                      } else {
+                        setDone(true);
+                      }
                     }}
                   />
                 )}

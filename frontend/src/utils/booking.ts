@@ -27,16 +27,18 @@ export function formatDateInputValue(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-// Matches the backend rule (organizerController): scheduling is allowed from
-// today through 5 days from now.
-export const MAX_SCHEDULE_DAYS_AHEAD = 5;
+// Total number of days a session can be scheduled within, counting today. So a
+// value of 5 with today = July 16 makes July 16–20 selectable and July 21+
+// disabled (today plus the next 4 days). Kept in sync with the backend window
+// in organizerController.
+export const SCHEDULE_WINDOW_DAYS = 5;
 
 export function getSelectableScheduleDateBounds() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const maxDate = new Date(today);
-  maxDate.setDate(maxDate.getDate() + MAX_SCHEDULE_DAYS_AHEAD);
+  maxDate.setDate(maxDate.getDate() + (SCHEDULE_WINDOW_DAYS - 1));
 
   return {
     minDate: formatDateInputValue(today),
@@ -90,7 +92,7 @@ export function validateSessionSetup(data: {
   if (data.scheduledDate) {
     const { minDate, maxDate } = getSelectableScheduleDateBounds();
     if (data.scheduledDate < minDate || data.scheduledDate > maxDate) {
-      errors.scheduledDate = `Please select a date from today through the next ${MAX_SCHEDULE_DAYS_AHEAD} days`;
+      errors.scheduledDate = `Please select a date within the next ${SCHEDULE_WINDOW_DAYS} days (including today)`;
     }
   }
 

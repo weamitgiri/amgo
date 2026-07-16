@@ -45,6 +45,28 @@ async function getActivityConfigForGroup(groupId: number | string) {
     return rows?.[0] || null;
 }
 
+/**
+ * Broadcasts every player's current score to the group so the Score Board on the
+ * investigation screen updates live (a question awards the Investigator +10, a
+ * late answer penalises the responder — see askQuestion / answerQuestion).
+ */
+async function emitScoresUpdate(groupId: number | string) {
+    try {
+        const [rows] = await query<any>(
+            'SELECT id AS session_id, total_score FROM participant_sessions WHERE group_id = ?',
+            [groupId]
+        );
+        io.to(`group_${groupId}`).emit('scores_updated', {
+            scores: (rows || []).map((r: any) => ({
+                session_id: Number(r.session_id),
+                total_score: Number(r.total_score),
+            })),
+        });
+    } catch {
+        /* score broadcast is best-effort; never fail the request over it */
+    }
+}
+
 async function getLieDetectorTallyData(roundId: number | string) {
     const [rows] = await query<any>(
         `SELECT vote_value, COUNT(*) as cnt FROM votes WHERE reference_id = ? AND reference_type = 'lie_detector' GROUP BY vote_value`,
@@ -216,6 +238,7 @@ export const askQuestion = asyncHandler(async (req: Request, res: Response) => {
     });
 
     io.to(`group_${group_id}`).emit('new_question', serializeData(question));
+    await emitScoresUpdate(group_id);
 
     return successResponse(res, 'Question asked successfully', serializeData(question));
 });
@@ -275,6 +298,7 @@ export const answerQuestion = asyncHandler(async (req: Request, res: Response) =
     });
 
     io.to(`group_${question.group_id}`).emit('new_answer', serializeData(answer));
+    await emitScoresUpdate(question.group_id);
 
     return successResponse(res, 'Answered successfully', serializeData(answer));
 });

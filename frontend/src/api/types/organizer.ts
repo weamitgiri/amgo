@@ -39,6 +39,8 @@ export interface OrganizerProfile {
   phone?: string;
   email_verified?: boolean;
   status?: string;
+  payment_status?: string | null;
+  account_status?: string | null;
 }
 
 export interface OrganizerBillingProfile {

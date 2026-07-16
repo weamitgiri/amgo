@@ -71,6 +71,8 @@ async function handlePlayerDeparture(io: Server, groupId: string | number, parti
         [groupId, participantId]
     );
 
+    await broadcastPresence(io, groupId);
+
     if (!session) return;
 
     const [groupRows] = await query<any>('SELECT status FROM game_groups WHERE id = ? LIMIT 1', [groupId]);
@@ -81,6 +83,26 @@ async function handlePlayerDeparture(io: Server, groupId: string | number, parti
         await markGroupIncomplete(groupId, 'investigator_left');
     } else {
         io.to(`group_${groupId}`).emit('participant_left', { participant_session_id: session.id, frozen: true });
+    }
+}
+
+/**
+ * Broadcasts the group's live presence to everyone in the room so each player's
+ * sidebar can show "Available" (online) / "Offline" / "Left" in real time. Sent
+ * whenever someone joins, leaves, disconnects, or is marked departed — the
+ * client keeps its own snapshot from getGameState only for the initial paint.
+ */
+async function broadcastPresence(io: Server, groupId: string | number) {
+    try {
+        const [rows] = await query<any>(
+            'SELECT id, is_online, left_at FROM participant_sessions WHERE group_id = ?',
+            [groupId]
+        );
+        const online = (rows || []).filter((r: any) => Number(r.is_online) === 1).map((r: any) => r.id);
+        const left = (rows || []).filter((r: any) => r.left_at).map((r: any) => r.id);
+        io.to(`group_${groupId}`).emit('presence_updated', { online, left });
+    } catch (err: any) {
+        logger.error(`[Socket] presence broadcast failed: ${err.message}`);
     }
 }
 
@@ -125,6 +147,10 @@ export const setupSocketHandlers = (io: Server, socket: Socket) => {
                 socket.emit('lobby_updated', payload);
             }
 
+            // Tell the whole group this player is now online (and give the joining
+            // socket a fresh snapshot of everyone else who's already here).
+            await broadcastPresence(io, groupId);
+
             socket.emit('joined_group', { groupId, success: true });
         } catch (error: any) {
             logger.error(`[Socket] join_lobby error: ${error.message}`);
@@ -134,6 +160,21 @@ export const setupSocketHandlers = (io: Server, socket: Socket) => {
 
     socket.on('join_lobby', handleJoinLobby);
     socket.on('join_game_group', handleJoinLobby);
+
+    /**
+     * Explicit presence resync. The game page loads its initial online snapshot
+     * over HTTP (getGameState), which can land AFTER the join broadcast and
+     * overwrite it with a stale "everyone offline" set. The client emits this
+     * once its snapshot is applied so an authoritative presence event always
+     * comes last.
+     */
+    socket.on('request_presence', async (data: { groupId?: string | number }) => {
+        try {
+            if (data?.groupId) await broadcastPresence(io, data.groupId);
+        } catch (error: any) {
+            logger.error(`[Socket] request_presence error: ${error.message}`);
+        }
+    });
 
     /**
      * Organizer dashboard — live event stats
@@ -173,6 +214,7 @@ export const setupSocketHandlers = (io: Server, socket: Socket) => {
                 'UPDATE participant_sessions SET is_online = 0 WHERE group_id = ? AND participant_id = ?',
                 [groupId, participantId]
             );
+            await broadcastPresence(io, groupId);
             scheduleDeparture(io, groupId, participantId);
 
             logger.info(`[Socket] Participant ${participantId} left group: group_${groupId}`);
@@ -200,6 +242,7 @@ export const setupSocketHandlers = (io: Server, socket: Socket) => {
                 await query('UPDATE participant_sessions SET is_online = 0, socket_id = NULL WHERE socket_id = ?', [
                     socket.id,
                 ]);
+                await broadcastPresence(io, row.group_id);
                 scheduleDeparture(io, row.group_id, row.participant_id);
             }
         } catch (error: any) {

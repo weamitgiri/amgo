@@ -28,11 +28,20 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         }
 
         const organizer = rows[0] as any;
-        if (organizer.status !== 'active' || organizer.account_status !== 'active' || organizer.payment_status !== 'paid') {
-            return errorResponse(res, 'Account is not active. Please complete payment to proceed.', [], 403);
+        // Payment is no longer required to authenticate. An unpaid-but-verified
+        // organizer reaches the dashboard, which prompts her to complete payment
+        // and activate her package. Only a hard-suspended account (admin set
+        // `status` to something other than 'active') is blocked here; deactivated
+        // accounts are already excluded by the `deleted_at IS NULL` filter above.
+        if (organizer.status && organizer.status !== 'active') {
+            return errorResponse(res, 'Your account is not active. Please contact support.', [], 403);
         }
 
-        (req as any).user = decoded;
+        (req as any).user = {
+            ...(decoded as any),
+            payment_status: organizer.payment_status,
+            account_status: organizer.account_status,
+        };
         next();
     } catch (error) {
         return errorResponse(res, 'Invalid or expired token', [], 401);

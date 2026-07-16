@@ -14,6 +14,7 @@ import mystery from "@/assets/mystery.jpg";
 import { resolveMediaUrl } from "@/utils/media";
 import { formatJoinedAt } from "@/lib/format-datetime";
 import { useOrganizerEventLive } from "@/hooks/useOrganizerEventLive";
+import { SCHEDULE_WINDOW_DAYS } from "@/utils/booking";
 import type { OrganizerEventStats } from "@/api/types/organizer";
 
 export const Route = createFileRoute("/dashboard")({
@@ -57,6 +58,16 @@ function DashboardPage() {
     : [];
   const eventStatusMeta = eventStats?.event_status ?? null;
   const bookingStatus = booking?.booking_status?.toLowerCase() ?? "active";
+
+  // An organizer who verified her email but hasn't paid can now log in (see
+  // backend verifyLoginOtp). When she lands here unpaid, prompt her to complete
+  // payment and activate her package. Guard on payment_status being present so an
+  // older backend that omits it never shows a false prompt.
+  const paymentPending =
+    !isLoading &&
+    !isError &&
+    !!organizer?.payment_status &&
+    organizer.payment_status !== "paid";
 
   const toNumber = (value: unknown, fallback = 0) => {
     const n = typeof value === "string" ? Number(value) : value;
@@ -188,12 +199,14 @@ function DashboardPage() {
 
   // min date = today in YYYY-MM-DD format
   const todayStr = new Date().toISOString().split("T")[0];
-  // Reschedule window: 5 days from the payment date (matches backend enforcement).
+  // Reschedule window: SCHEDULE_WINDOW_DAYS total counting the payment day, so a
+  // payment on the 27th allows rescheduling through the 31st (27 + 4). Kept in
+  // sync with the create-page scheduling window.
   const rescheduleMaxStr = (() => {
     if (!booking?.payment_date) return undefined;
     const paid = new Date(booking.payment_date);
     if (Number.isNaN(paid.getTime())) return undefined;
-    paid.setDate(paid.getDate() + 5);
+    paid.setDate(paid.getDate() + (SCHEDULE_WINDOW_DAYS - 1));
     return paid.toISOString().split("T")[0];
   })();
 
@@ -511,6 +524,18 @@ function DashboardPage() {
       )}
     </DashboardShell>
 
+    {/* Payment activation gate — shown when the organizer logged in without
+        completing payment. Blocks the dashboard until she pays or logs out. */}
+    {paymentPending && (
+      <PaymentRequiredModal
+        onPay={() => navigate({ to: "/create", search: { activity: undefined } })}
+        onLogout={() => {
+          apiClient.setToken(null);
+          navigate({ to: "/login", search: { redirect: "/dashboard" } });
+        }}
+      />
+    )}
+
     {/* Reschedule Modal */}
     {rescheduleOpen && (
       <RescheduleModal
@@ -629,6 +654,39 @@ function GroupCard({ num, count, status, tone, members = [] }: any) {
         ) : (
           <span className="inline-block rounded-full px-3 py-1 text-[11px] font-bold bg-orange-50 text-orange-500 border border-orange-200/60 shadow-sm">In Progress</span>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PaymentRequiredModal({ onPay, onLogout }: { onPay: () => void; onLogout: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-elevated w-full max-w-md overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="px-6 py-6 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-amber-100 text-amber-600">
+            <AlertCircle className="h-7 w-7" />
+          </div>
+          <h3 className="mt-4 text-xl font-bold text-foreground">Complete your payment</h3>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            Your email is verified, but your package isn't active yet. Choose your activity, package &amp;
+            schedule and complete the payment to activate your account and access the dashboard.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2.5 px-6 pb-6">
+          <button
+            onClick={onPay}
+            className="w-full rounded-full bg-gradient-primary text-white py-3 text-sm font-semibold shadow-glow hover:opacity-90 transition-opacity"
+          >
+            Complete Payment &amp; Activate
+          </button>
+          <button
+            onClick={onLogout}
+            className="w-full rounded-full border border-border py-2.5 text-sm font-medium text-foreground/80 hover:bg-muted transition-colors"
+          >
+            Log out
+          </button>
+        </div>
       </div>
     </div>
   );
