@@ -182,20 +182,42 @@ export type LieDetectorRound = {
   suspect_id: number;
   status: "active" | "completed";
   tally?: LieDetectorTally;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type SubmitAccusationResponse = { accepted: true; all_submitted: boolean };
+
+/** Verdict display states (spec §4): winner = highest scorer among correct
+ * guessers; correct = identified the killer but didn't top the scoreboard;
+ * loser = wrong guess; killer_wins = the culprit escaped unidentified. */
+export type ResultPlayerStatus = "winner" | "correct" | "loser" | "killer_wins";
+
+export type ResultPlayer = {
+  session_id: number;
+  pseudonym: string;
+  role_type: string;
+  score: number;
+  status?: ResultPlayerStatus;
+  character_name?: string | null;
+  role_image?: string | null;
+  is_you?: boolean;
+};
 
 export type GameResultsResponse = {
   is_finished: boolean;
   is_incomplete?: boolean;
   group_id?: number;
   completed_at?: string | null;
-  culprit?: { session_id: number; pseudonym: string; role_type: string; score: number } | null;
-  winners?: { session_id: number; pseudonym: string; role_type: string; score: number }[];
-  losers?: { session_id: number; pseudonym: string; role_type: string; score: number }[];
+  killer_wins?: boolean;
+  culprit?: ResultPlayer | null;
+  players?: ResultPlayer[];
+  winners?: ResultPlayer[];
+  losers?: ResultPlayer[];
   correct_guess_count?: number | null;
   total_guessers?: number;
+  tagline?: string | null;
+  full_story?: { id: number; title: string; text: string | null; image: string | null }[];
   pdf_available?: boolean;
   pdf_expires_at?: string | null;
 };

@@ -138,8 +138,13 @@ export const participantService = {
     reasoning: string;
   }) => apiClient.post<SubmitAccusationResponse>(API_ENDPOINTS.game.submitAccusation, payload, noAuth),
 
-  getGameResults: (groupId: number | string) =>
-    apiClient.get<GameResultsResponse>(API_ENDPOINTS.results.get(groupId), noAuth),
+  getGameResults: (groupId: number | string, participantId?: number | string) =>
+    apiClient.get<GameResultsResponse>(
+      `${API_ENDPOINTS.results.get(groupId)}${
+        participantId != null ? `?participant_id=${encodeURIComponent(String(participantId))}` : ""
+      }`,
+      noAuth
+    ),
 
   getResultsPdfUrl: (groupId: number | string, participantId: number | string) =>
     `${ENV.API_BASE_URL}${API_ENDPOINTS.results.pdf(groupId)}?participant_id=${encodeURIComponent(String(participantId))}`,

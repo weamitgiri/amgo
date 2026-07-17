@@ -105,6 +105,26 @@ function AnswerCountdown({
   return <span className={className}>{mm}:{ss}</span>;
 }
 
+/** Ticking mm:ss countdown to an absolute deadline (ms epoch) — used for the
+ * Lie Detector round timer so all players see the same server-driven clock. */
+function DeadlineCountdown({ endsAtMs, className }: { endsAtMs: number | null; className?: string }) {
+  const compute = useCallback(
+    () => (endsAtMs == null ? 0 : Math.max(0, Math.floor((endsAtMs - Date.now()) / 1000))),
+    [endsAtMs]
+  );
+  const [remaining, setRemaining] = useState(compute);
+
+  useEffect(() => {
+    setRemaining(compute());
+    const id = setInterval(() => setRemaining(compute()), 1000);
+    return () => clearInterval(id);
+  }, [compute]);
+
+  const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
+  const ss = String(remaining % 60).padStart(2, "0");
+  return <span className={className}>{mm}:{ss}</span>;
+}
+
 /** Small circular avatar for the Recent Activity feed: the player's role
  * portrait when available, otherwise their initials. */
 function ActivityAvatar({ image, fallback }: { image?: string | null; fallback: string }) {
@@ -154,6 +174,7 @@ type ActivityItem = {
   tally?: LieDetectorTally;
   fromSessionId?: number;
   askedAt?: string;
+  isLie?: boolean;
 };
 
 function GamePage() {
@@ -176,6 +197,10 @@ function GamePage() {
   const [showInstinctWarning, setShowInstinctWarning] = useState(false);
   const [cluesUnlocked, setCluesUnlocked] = useState(false);
   const [lieDetectorRoundId, setLieDetectorRoundId] = useState<number | null>(null);
+  // Absolute deadline (ms epoch) of the active Lie Detector round, and how many
+  // of the max-3 lie questions the Investigator has spent so far.
+  const [lieEndsAt, setLieEndsAt] = useState<number | null>(null);
+  const [lieQuestionsUsed, setLieQuestionsUsed] = useState(0);
   const [myAccusationSubmitted, setMyAccusationSubmitted] = useState(false);
   const [onlineSessionIds, setOnlineSessionIds] = useState<Set<number>>(new Set());
   const [frozenSessionIds, setFrozenSessionIds] = useState<Set<number>>(new Set());
@@ -220,7 +245,9 @@ function GamePage() {
   const [selectedAskee, setSelectedAskee] = useState(0);
   const [question, setQuestion] = useState("");
   const [modal, setModal] = useState<ModalKey>(null);
-  const [questionsLeft, setQuestionsLeft] = useState(5);
+  // Normal (non-Lie-Detector) questions the Investigator has spent so far —
+  // lie-round questions come out of their own separate 3-question budget.
+  const [questionsUsed, setQuestionsUsed] = useState(0);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [pendingAnswerForMe, setPendingAnswerForMe] = useState<ActivityItem | null>(null);
   const [answerTimeoutPenalty, setAnswerTimeoutPenalty] = useState(0);
@@ -233,6 +260,12 @@ function GamePage() {
   const [lieTally, setLieTally] = useState<LieDetectorTally | null>(null);
   const [invElapsed, setInvElapsed] = useState(0);
   const autoCardRef = useRef<number | null>(null);
+  // Lie Detector round length (secs) kept in a ref so socket handlers can start
+  // the local countdown without re-subscribing when gameData loads.
+  const lieTimerSecsRef = useRef(420);
+  useEffect(() => {
+    if (gameData) lieTimerSecsRef.current = gameData.settings.lie_detector_timer_secs || 420;
+  }, [gameData]);
 
   const applyGameState = useCallback((state: GameStateResponse) => {
     console.log("[GamePage] applyGameState called", { myPlayerSessionId: myPlayer?.session_id });
@@ -255,11 +288,38 @@ function GamePage() {
     const activeRound = state.group.lie_detector_rounds.find((r) => r.status === "active");
     setLieDetectorRoundId(activeRound ? activeRound.id : null);
 
+    // Lie Detector round deadline comes from the server's timer row so every
+    // player (and a reloaded page) sees the same countdown.
+    const lieTimer = activeRound
+      ? state.group.timers.find((t) => t.timer_type === "lie_detector" && t.is_active && Number(t.reference_id) === Number(activeRound.id))
+      : null;
+    setLieEndsAt(lieTimer ? new Date(lieTimer.expires_at.replace(" ", "T")).getTime() : null);
+
+    // Questions asked inside a Lie Detector round's time window (round start →
+    // round end, or now while still active) belong to that round's separate
+    // 3-question budget, not the normal questioning budget.
+    const parseMs = (v?: string) => {
+      if (!v) return NaN;
+      return new Date(v.replace(" ", "T")).getTime();
+    };
+    const isLieQuestion = (createdAt?: string) => {
+      const ts = parseMs(createdAt);
+      if (Number.isNaN(ts)) return false;
+      return state.group.lie_detector_rounds.some((r) => {
+        const start = parseMs(r.created_at);
+        if (Number.isNaN(start) || ts < start) return false;
+        if (r.status === "active") return true;
+        const end = parseMs(r.updated_at);
+        return !Number.isNaN(end) && ts <= end;
+      });
+    };
+
     const clueTimerUnlocked = state.group.timers.some((t) => t.timer_type === "clue_room_unlock" && !t.is_active);
     if (clueTimerUnlocked) setCluesUnlocked(true);
 
     // Build activity items
     const activityItems = state.group.questions.map((q) => {
+      const isLie = isLieQuestion(q.created_at);
       const ans = q.answers?.[0];
       return {
         questionId: q.id,
@@ -269,9 +329,13 @@ function GamePage() {
         q: q.question_text,
         a: ans?.answer_text,
         autoSkipped: ans?.auto_skipped,
-        tally: activeRound?.tally,
+        tally: isLie ? activeRound?.tally : undefined,
+        isLie,
       };
     });
+    setQuestionsUsed(activityItems.filter((item) => !item.isLie).length);
+    setLieQuestionsUsed(activityItems.filter((item) => item.isLie).length);
+    if (activeRound?.tally) setLieTally(activeRound.tally);
     console.log("[GamePage] Built activity items", { activityItems, myPlayerSessionId: myPlayer?.session_id });
     setActivity(activityItems);
 
@@ -303,7 +367,6 @@ function GamePage() {
       .then(([data, state]) => {
         setGameData(data);
         applyGameState(state);
-        setQuestionsLeft(Math.max(0, data.settings.max_questions - state.group.questions.length));
 
         // The HTTP snapshot above can land after the socket's join presence
         // broadcast and clobber it with stale offline data. Ask the server for a
@@ -378,10 +441,11 @@ function GamePage() {
 
     const onNewQuestion = (q: { id: number; asked_to: number; question_text: string; asked_by?: number; created_at?: string }) => {
       console.log("[GamePage] onNewQuestion received", { q, myPlayerSessionId: myPlayer?.session_id });
-      const item: ActivityItem = { questionId: q.id, toSessionId: q.asked_to, q: q.question_text, fromSessionId: q.asked_by, askedAt: q.created_at ?? new Date().toISOString() };
+      const item: ActivityItem = { questionId: q.id, toSessionId: q.asked_to, q: q.question_text, fromSessionId: q.asked_by, askedAt: q.created_at ?? new Date().toISOString(), isLie: lieDetectorRoundId !== null };
+      if (lieDetectorRoundId !== null) setLieQuestionsUsed((n) => n + 1);
       console.log("[GamePage] Created activity item", item);
       setActivity((prev) => [item, ...prev]);
-      setQuestionsLeft((n) => Math.max(0, n - 1));
+      if (lieDetectorRoundId === null) setQuestionsUsed((n) => n + 1);
       const isForMe = myPlayer?.session_id != null && Number(myPlayer.session_id) === Number(q.asked_to);
       console.log("[GamePage] isForMe?", isForMe);
       if (isForMe) {
@@ -402,11 +466,20 @@ function GamePage() {
     const onNewVote = ({ tally }: { round_id: number; tally: LieDetectorTally }) => {
       setLieTally(tally);
     };
-    const onLieDetectorStarted = (round: { id: number }) => setLieDetectorRoundId(round.id);
-    const onLieDetectorEnded = () => setLieDetectorRoundId(null);
+    const onLieDetectorStarted = (round: { id: number }) => {
+      setLieDetectorRoundId(round.id);
+      setLieEndsAt(Date.now() + lieTimerSecsRef.current * 1000);
+      setLieQuestionsUsed(0);
+      setLieTally(null);
+    };
+    const onLieDetectorEnded = () => {
+      setLieDetectorRoundId(null);
+      setLieEndsAt(null);
+    };
     const onPhaseChanged = (payload: { new_phase: string }) => {
       if (payload.new_phase === "questioning") {
         setLieDetectorRoundId(null);
+        setLieEndsAt(null);
       }
     };
     const onCluesUnlocked = () => setCluesUnlocked(true);
@@ -572,9 +645,14 @@ function GamePage() {
     );
   }
 
+  const questionsLeft = Math.max(0, (gameData?.settings.max_questions ?? 5) - questionsUsed);
+  const lieMaxQuestions = gameData?.settings.lie_detector_max_questions ?? 3;
+  const lieQuestionsLeft = Math.max(0, lieMaxQuestions - lieQuestionsUsed);
+
   const sendQuestion = async () => {
     const target = players[selectedAskee];
-    if (!question.trim() || questionsLeft <= 0 || !target || target.is_you || !session?.participantId) return;
+    const noQuestionsLeft = lieMode ? lieQuestionsLeft <= 0 : questionsLeft <= 0;
+    if (!question.trim() || noQuestionsLeft || !target || target.is_you || !session?.participantId) return;
     try {
       await participantService.askQuestion({
         group_id: session.groupId,
@@ -710,7 +788,10 @@ function GamePage() {
           isCulprit={isCulprit}
           caseSummaryMins={Math.round(gameData.settings.case_summary_view_secs / 60)}
           maxQuestions={gameData.settings.max_questions}
-          lieMaxQuestions={gameData.settings.lie_detector_max_questions}
+          lieMaxQuestions={lieMaxQuestions}
+          lieQuestionsUsed={lieQuestionsUsed}
+          lieQuestionsLeft={lieQuestionsLeft}
+          lieEndsAt={lieEndsAt}
           questionsLeft={questionsLeft}
           invSecs={secsHdr}
           answerSecs={gameData.settings.question_response_secs}
@@ -1102,6 +1183,9 @@ function InvestigationView(props: {
   caseSummaryMins: number;
   maxQuestions: number;
   lieMaxQuestions: number;
+  lieQuestionsUsed: number;
+  lieQuestionsLeft: number;
+  lieEndsAt: number | null;
   questionsLeft: number;
   invSecs: number;
   answerSecs: number;
@@ -1131,6 +1215,9 @@ function InvestigationView(props: {
     caseSummaryMins,
     maxQuestions,
     lieMaxQuestions,
+    lieQuestionsUsed,
+    lieQuestionsLeft,
+    lieEndsAt,
     questionsLeft,
     invSecs,
     answerSecs,
@@ -1175,6 +1262,25 @@ function InvestigationView(props: {
     return map;
   }, [players, roleImageByIndex]);
 
+  // Score Board panel — rendered in the right column normally, and under the
+  // question panel while the Lie Detector round is active (per design).
+  const scoreBoard = (
+    <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-5">
+      <h3 className="text-[15px] font-bold mb-4 text-white">Score Board</h3>
+      <div className="flex items-center justify-between gap-2 text-center text-[12px]">
+        {players.map((p) => (
+          <div key={p.session_id} className="flex flex-col gap-1 items-center">
+            <div className="text-white/60 truncate">{p.is_you ? "You" : p.pseudonym}</div>
+            <div className="text-amber-400 font-bold">{scoresBySessionId.get(Number(p.session_id)) ?? 0}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // During a Lie Detector round the right column shows only that round's Q/A.
+  const feedItems = lieMode ? activity.filter((a) => a.isLie) : activity;
+
   return (
     <>
       {/* Investigation toolbar */}
@@ -1195,13 +1301,19 @@ function InvestigationView(props: {
           </div>
 
           <div className="flex flex-col items-center justify-center gap-0.5">
-            <div className="text-[10px] text-white/50">Investigation Time Left</div>
-            <div className="text-[#facc15] text-xl font-bold tabular-nums leading-none">{fmt(invSecs)}</div>
+            <div className="text-[10px] text-white/50">{lieMode ? "Lie Detector Mode Time Left" : "Investigation Time Left"}</div>
+            {lieMode ? (
+              <DeadlineCountdown endsAtMs={lieEndsAt} className="text-[#facc15] text-xl font-bold tabular-nums leading-none" />
+            ) : (
+              <div className="text-[#facc15] text-xl font-bold tabular-nums leading-none">{fmt(invSecs)}</div>
+            )}
           </div>
 
           <div className="flex flex-col items-center justify-center gap-0.5">
             <div className="text-[10px] text-white/50">Questions Left</div>
-            <div className="text-white text-xl font-bold leading-none">{questionsLeft}/{lieMode ? lieMaxQuestions : maxQuestions}</div>
+            <div className="text-white text-xl font-bold leading-none">
+              {lieMode ? `${lieQuestionsLeft}/${lieMaxQuestions}` : `${questionsLeft}/${maxQuestions}`}
+            </div>
           </div>
 
           {isInvestigator && (
@@ -1327,18 +1439,22 @@ function InvestigationView(props: {
         </div>
 
         {/* Ask question (Investigator) / observer panel (everyone else) */}
+        <div className="space-y-5">
         <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-6">
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-lg font-bold">{lieMode ? "Lie Detector Mode Activated" : isInvestigator ? "Ask a Question" : "Investigation In Progress"}</h3>
               <p className="text-xs text-white/70 mt-1">
                 {lieMode
-                  ? `Investigator can ask maximum ${lieMaxQuestions} questions in Lie Detector mode.`
+                  ? `Investigator can ask maximum ${lieMaxQuestions} questions to any player in Lie Detector mode. Other players will vote on the answers.`
                   : isInvestigator
                     ? "Select a player to ask a question"
                     : "The Investigator is questioning suspects. If a question comes to you, an answer window will open automatically — you have limited time to respond."}
               </p>
             </div>
+            {lieMode && (
+              <div className="shrink-0 text-sm text-white whitespace-nowrap">{lieQuestionsUsed}/{lieMaxQuestions} Question</div>
+            )}
           </div>
           {isInvestigator ? (
             <>
@@ -1401,7 +1517,7 @@ function InvestigationView(props: {
                     <span className="absolute bottom-3 right-3 text-[10px] text-white/50">{question.length}/120</span>
                   </div>
                 </div>
-                <button type="button" onClick={sendQuestion} disabled={!question.trim() || questionsLeft <= 0 || locked}
+                <button type="button" onClick={sendQuestion} disabled={!question.trim() || (lieMode ? lieQuestionsLeft <= 0 : questionsLeft <= 0) || locked}
                   className="mt-5 w-full rounded-full bg-gradient-to-r from-[#a855f7] to-[#d946ef] py-3 text-sm font-bold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed text-white hover:opacity-90">
                   Send Question
                 </button>
@@ -1442,16 +1558,22 @@ function InvestigationView(props: {
           )}
           <p className="mt-2 text-center text-[11px] text-white/60">All answers are visible to everyone after the player submits.</p>
         </div>
+        {lieMode && scoreBoard}
+        </div>
 
         {/* Activity + Score */}
         <div className="space-y-5">
           <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-5">
-            <h3 className="text-[15px] font-bold mb-4 text-white">Recent Activity</h3>
-            <ul className="space-y-3 max-h-[400px] overflow-auto pr-1">
-              {activity.length === 0 && (
-                <li className="text-xs text-white/50 text-center py-6">No activity yet.</li>
+            <h3 className={`text-[15px] font-bold mb-4 ${lieMode ? "text-pink-400" : "text-white"}`}>
+              {lieMode ? "Lie Detector Mode Q/A" : "Recent Activity"}
+            </h3>
+            <ul className={`space-y-3 overflow-auto pr-1 ${lieMode ? "max-h-[560px]" : "max-h-[400px]"}`}>
+              {feedItems.length === 0 && (
+                <li className="text-xs text-white/50 text-center py-6">
+                  {lieMode ? "No questions asked yet in Lie Detector mode." : "No activity yet."}
+                </li>
               )}
-              {activity.map((a) => {
+              {feedItems.map((a) => {
                 const targetShort = shortBySessionId.get(Number(a.toSessionId)) ?? "Player";
                 const targetImage = roleImageBySessionId.get(Number(a.toSessionId)) ?? null;
                 const askerImage = a.fromSessionId != null ? roleImageBySessionId.get(Number(a.fromSessionId)) ?? null : null;
@@ -1479,10 +1601,10 @@ function InvestigationView(props: {
                           <div className={`text-[13px] text-white mt-1 ${a.autoSkipped ? "text-white/50 italic" : ""}`}>{a.a}</div>
                           <div className="text-[10px] text-white/30 mt-1">03:37</div>
                         </div>
-                        {lieMode && lieTally && (
+                        {a.isLie && (a.tally ?? lieTally) && (
                           <div className="absolute right-0 top-3 text-right space-y-2">
-                            <div className="text-sm text-emerald-400">Believable ({lieTally.believable})</div>
-                            <div className="text-sm text-rose-400">Suspicious ({lieTally.suspicious})</div>
+                            <div className="text-sm text-emerald-400">Believable ({(a.tally ?? lieTally)!.believable})</div>
+                            <div className="text-sm text-rose-400">Suspicious ({(a.tally ?? lieTally)!.suspicious})</div>
                           </div>
                         )}
                       </div>
@@ -1505,17 +1627,7 @@ function InvestigationView(props: {
             </ul>
           </div>
 
-          <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-5">
-            <h3 className="text-[15px] font-bold mb-4 text-white">Score Board</h3>
-            <div className="flex items-center justify-between gap-2 text-center text-[12px]">
-              {players.map((p) => (
-                <div key={p.session_id} className="flex flex-col gap-1 items-center">
-                  <div className="text-white/60 truncate">{p.is_you ? "You" : p.pseudonym}</div>
-                  <div className="text-amber-400 font-bold">{scoresBySessionId.get(Number(p.session_id)) ?? 0}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {!lieMode && scoreBoard}
         </div>
       </div>
     </>
@@ -1894,29 +2006,27 @@ function VoteModal({
         </div>
 
         <div className="mt-8">
-          <div className="text-sm font-bold text-white/80 mb-4 uppercase tracking-wider">📊 Cast Your Vote</div>
+          <div className="text-sm text-pink-300 font-semibold mb-4">Select Votes</div>
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setVote("believable")}
-              className={`relative rounded-2xl border-2 py-5 px-4 text-center font-semibold transition-all transform ${
+              className={`rounded-xl border py-4 px-4 text-center text-base font-semibold text-emerald-300 transition-all ${
                 vote === "believable"
-                  ? "border-emerald-400 bg-emerald-500/25 text-emerald-200 shadow-[0_0_20px_rgba(52,211,153,0.4)] scale-105"
-                  : "border-emerald-500/40 text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/15"
+                  ? "border-emerald-400 bg-emerald-500/20 shadow-[0_0_20px_rgba(52,211,153,0.35)]"
+                  : "border-emerald-500/50 hover:border-emerald-400 hover:bg-emerald-500/10"
               }`}
             >
-              <div className="text-3xl mb-2">✅</div>
-              <div className="text-sm font-bold">Believable</div>
+              Believable
             </button>
             <button
               onClick={() => setVote("suspicious")}
-              className={`relative rounded-2xl border-2 py-5 px-4 text-center font-semibold transition-all transform ${
+              className={`rounded-xl border py-4 px-4 text-center text-base font-semibold text-rose-400 transition-all ${
                 vote === "suspicious"
-                  ? "border-rose-400 bg-rose-500/25 text-rose-200 shadow-[0_0_20px_rgba(244,63,94,0.4)] scale-105"
-                  : "border-rose-500/40 text-rose-300 hover:border-rose-400 hover:bg-rose-500/15"
+                  ? "border-rose-400 bg-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.35)]"
+                  : "border-rose-500/60 hover:border-rose-400 hover:bg-rose-500/10"
               }`}
             >
-              <div className="text-3xl mb-2">❌</div>
-              <div className="text-sm font-bold">Suspicious</div>
+              Suspicious
             </button>
           </div>
         </div>
@@ -1924,11 +2034,11 @@ function VoteModal({
         <button
           onClick={() => vote && onVote(vote)}
           disabled={!vote}
-          className="mt-8 w-full rounded-full bg-gradient-primary py-4 text-base font-bold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:shadow-lg"
+          className="mt-10 w-full rounded-full bg-gradient-to-r from-[#a855f7] to-[#d946ef] py-4 text-base font-bold text-white shadow-glow disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:opacity-90"
         >
           Submit Vote
         </button>
-        <p className="mt-3 text-center text-xs text-white/50">Your vote will be visible to all players after submission.</p>
+        <p className="mt-3 text-center text-xs text-white/60">Your votes will be visible to all players.</p>
       </div>
     </ModalShell>
   );

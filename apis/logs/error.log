@@ -292,3 +292,45 @@
 2026-07-17 00:35:54:3554 error: You have already voted on this answer
 2026-07-17 00:35:57:3557 error: You have already voted on this answer
 2026-07-17 00:36:01:361 error: You have already voted on this answer
+2026-07-17 20:45:58:4558 error: Error sending OTP email: Greeting never received
+2026-07-17 20:46:49:4649 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 20:49:55:4955 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 20:50:30:5030 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 20:50:35:5035 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 20:50:48:5048 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 20:51:02:512 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 20:51:19:5119 error: You are not part of this group
+2026-07-17 20:51:19:5119 error: You are not part of this group
+2026-07-17 20:51:19:5119 error: You are not part of this group
+2026-07-17 20:51:19:5119 error: You are not part of this group
+2026-07-17 21:00:16:016 error: The Lie Detector can only be used once per game
+2026-07-17 21:00:22:022 error: The Lie Detector can only be used once per game
+2026-07-17 21:02:12:212 error: The Lie Detector can only be used once per game
+2026-07-17 21:57:22:5722 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 22:00:19:019 error: Booking not found
+2026-07-17 22:00:20:020 error: Booking not found
+2026-07-17 22:00:26:026 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 22:03:29:329 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 22:03:53:353 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 22:04:14:414 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 22:04:44:444 error: Error sending OTP email: Greeting never received
+2026-07-17 22:04:51:451 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 22:06:19:619 error: You are not part of this group
+2026-07-17 22:06:19:619 error: You are not part of this group
+2026-07-17 22:06:19:619 error: You are not part of this group
+2026-07-17 22:06:19:619 error: You are not part of this group
+2026-07-17 22:18:32:1832 error: You have already voted on this answer
+2026-07-17 22:18:35:1835 error: You have already voted on this answer
+2026-07-17 22:18:38:1838 error: You have already voted on this answer
+2026-07-17 22:18:40:1840 error: You have already voted on this answer
+2026-07-17 22:19:07:197 error: You have already voted on this answer
+2026-07-17 22:19:18:1918 error: You have already voted on this answer
+2026-07-17 22:19:23:1923 error: You have already voted on this answer
+2026-07-17 22:19:33:1933 error: You have already voted on this answer
+2026-07-17 22:19:38:1938 error: The Lie Detector can only be used once per game
+2026-07-17 22:19:55:1955 error: The Lie Detector can only be used once per game
+2026-07-17 22:19:56:1956 error: The Lie Detector can only be used once per game
+2026-07-17 22:19:56:1956 error: The Lie Detector can only be used once per game
+2026-07-17 22:26:15:2615 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 22:26:34:2634 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-17 22:40:21:4021 error: Booking not found

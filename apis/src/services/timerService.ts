@@ -112,7 +112,7 @@ async function handleTimerExpiration(timer: any) {
 
             case 'lie_detector':
                 await conn.query(
-                    "UPDATE lie_detector_rounds SET status = 'completed' WHERE group_id = ? AND status = 'active'",
+                    "UPDATE lie_detector_rounds SET status = 'completed', updated_at = NOW() WHERE group_id = ? AND status = 'active'",
                     [timer.group_id]
                 );
 

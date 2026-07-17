@@ -210,9 +210,39 @@ export const askQuestion = asyncHandler(async (req: Request, res: Response) => {
     const maxQuestions = Number(config?.max_questions ?? 5);
     const responseSecs = Number(config?.question_response_secs ?? 120);
 
-    const [countRows] = await query<any>('SELECT COUNT(*) as cnt FROM questions WHERE group_id = ?', [group_id]);
-    if (Number(countRows?.[0]?.cnt || 0) >= maxQuestions) {
-        throw new AppError(`Maximum of ${maxQuestions} questions reached`, 400);
+    // A question asked while a Lie Detector round is active belongs to that
+    // round's separate budget (lie_detector_max_questions, default 3) and never
+    // consumes the normal questioning budget — and vice versa.
+    const [roundRows] = await query<any>(
+        `SELECT * FROM lie_detector_rounds WHERE group_id = ? AND status = 'active' ORDER BY id DESC LIMIT 1`,
+        [group_id]
+    );
+    const activeLieRound = roundRows?.[0];
+
+    if (activeLieRound) {
+        const lieMax = Number(config?.lie_detector_max_questions ?? 3);
+        const [lieCountRows] = await query<any>(
+            `SELECT COUNT(*) as cnt FROM questions WHERE group_id = ? AND created_at >= ?`,
+            [group_id, activeLieRound.created_at]
+        );
+        if (Number(lieCountRows?.[0]?.cnt || 0) >= lieMax) {
+            throw new AppError(`Maximum of ${lieMax} questions reached in Lie Detector mode`, 400);
+        }
+    } else {
+        const [countRows] = await query<any>(
+            `SELECT COUNT(*) as cnt FROM questions q
+              WHERE q.group_id = ?
+                AND NOT EXISTS (
+                  SELECT 1 FROM lie_detector_rounds r
+                   WHERE r.group_id = q.group_id
+                     AND q.created_at >= r.created_at
+                     AND (r.status = 'active' OR q.created_at <= r.updated_at)
+                )`,
+            [group_id]
+        );
+        if (Number(countRows?.[0]?.cnt || 0) >= maxQuestions) {
+            throw new AppError(`Maximum of ${maxQuestions} questions reached`, 400);
+        }
     }
 
     const question = await withTransaction(async (conn) => {
@@ -271,6 +301,18 @@ export const answerQuestion = asyncHandler(async (req: Request, res: Response) =
     const lateBySecs = now.diff(moment(question.created_at), 'seconds');
     const penalty = lateBySecs > responseSecs ? noResponsePenalty : 0;
 
+    // Lie Detector engagement bonus (spec §2): answering a question directed at
+    // you during an active Lie Detector round earns +5. Awarded to whichever
+    // player is in the hot seat — gating it on the culprit role would expose the
+    // culprit through the live scoreboard.
+    const [lieRoundRows] = await query<any>(
+        `SELECT id FROM lie_detector_rounds
+            WHERE group_id = ? AND suspect_id = ? AND status = 'active' AND created_at <= ?
+            ORDER BY id DESC LIMIT 1`,
+        [question.group_id, participantSession.id, question.created_at]
+    );
+    const lieDetectorBonus = lieRoundRows?.[0] && penalty === 0 ? 5 : 0;
+
     const answer = await withTransaction(async (conn) => {
         await conn.query(
             `INSERT INTO answers (question_id, participant_session_id, answer_text, penalty_applied, answered_at, created_at, updated_at)
@@ -283,6 +325,18 @@ export const answerQuestion = asyncHandler(async (req: Request, res: Response) =
                 penalty,
                 participantSession.id,
             ]);
+        }
+
+        if (lieDetectorBonus > 0) {
+            await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
+                lieDetectorBonus,
+                participantSession.id,
+            ]);
+            await conn.query(
+                `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                    VALUES (?, ?, 'lie_detector_answer', NOW(), NOW())`,
+                [participantSession.id, lieDetectorBonus]
+            );
         }
 
         // The answer arrived — defuse the timeout timer so it doesn't also fire.
@@ -356,9 +410,13 @@ export const startLieDetector = asyncHandler(async (req: Request, res: Response)
             [group_id, roundId, moment().add(timerSecs, 'seconds').toDate()]
         );
 
+        // Flat one-time +5 bonus for initiating the Lie Detector (spec §1).
+        await conn.query(`UPDATE participant_sessions SET total_score = total_score + 5 WHERE id = ?`, [
+            investigatorSession.id,
+        ]);
         await conn.query(
             `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
-                VALUES (?, 0, 'lie_detector_used', NOW(), NOW())`,
+                VALUES (?, 5, 'lie_detector_used', NOW(), NOW())`,
             [investigatorSession.id]
         );
 
@@ -367,6 +425,7 @@ export const startLieDetector = asyncHandler(async (req: Request, res: Response)
     });
 
     io.to(`group_${group_id}`).emit('lie_detector_started', serializeData(round));
+    await emitScoresUpdate(group_id);
 
     return successResponse(res, 'Lie detector round started', serializeData(round));
 });
@@ -391,6 +450,20 @@ export const voteLieDetector = asyncHandler(async (req: Request, res: Response) 
             throw new AppError('You have already voted on this answer', 400);
         }
         throw err;
+    }
+
+    // Casting a Lie Detector vote earns +5 (spec §3 — Key Suspect, Witness,
+    // Participant; either vote value counts). The Investigator's Lie Detector
+    // bonus is for initiating the round, not voting. The unique vote constraint
+    // above guarantees this can only be awarded once per round per player.
+    if (session.role_type && session.role_type !== 'investigator') {
+        await query(`UPDATE participant_sessions SET total_score = total_score + 5 WHERE id = ?`, [session.id]);
+        await query(
+            `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                VALUES (?, 5, 'lie_detector_vote', NOW(), NOW())`,
+            [session.id]
+        );
+        await emitScoresUpdate(group_id);
     }
 
     const tally = await getLieDetectorTallyData(round_id);
@@ -418,7 +491,7 @@ export const endLieDetectorRound = asyncHandler(async (req: Request, res: Respon
         throw new AppError('Only the Investigator can end the lie detector round', 403);
     }
 
-    await query(`UPDATE lie_detector_rounds SET status = 'completed' WHERE id = ?`, [round_id]);
+    await query(`UPDATE lie_detector_rounds SET status = 'completed', updated_at = NOW() WHERE id = ?`, [round_id]);
     await query(`UPDATE timers SET is_active = 0 WHERE group_id = ? AND timer_type = 'lie_detector'`, [group_id]);
 
     io.to(`group_${group_id}`).emit('phase_changed', {
@@ -463,12 +536,27 @@ export const useWitnessPasscard = asyncHandler(async (req: Request, res: Respons
                 [group_id, witnessSession.id, new Date()]
             );
         }
+
+        // Using the Secret Passcard earns the Witness a one-time +10 (spec §3),
+        // regardless of whether the hint helps the Investigator. The "already
+        // used" guard above makes this unrepeatable.
+        await conn.query(`UPDATE participant_sessions SET total_score = total_score + 10 WHERE id = ?`, [
+            witnessSession.id,
+        ]);
+        await conn.query(
+            `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                VALUES (?, 10, 'witness_passcard_used', NOW(), NOW())`,
+            [witnessSession.id]
+        );
+
         const [rows] = await conn.query<any[]>(
             'SELECT * FROM witness_passcards WHERE group_id = ? AND participant_session_id = ? LIMIT 1',
             [group_id, witnessSession.id]
         );
         return rows?.[0];
     });
+
+    await emitScoresUpdate(group_id);
 
     const [investigatorSessions] = await query<any>(
         `SELECT ps.* FROM participant_sessions ps

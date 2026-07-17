@@ -46,6 +46,21 @@ export async function generateResultsPdf(groupId: number | string): Promise<{ pa
         : [];
     const winnerSet = new Set(winnerIds.map((id) => String(id)));
 
+    const perRoleResults: any[] = result?.per_role_results
+        ? typeof result.per_role_results === 'string'
+            ? JSON.parse(result.per_role_results)
+            : result.per_role_results
+        : [];
+    const statusBySession = new Map<string, string>(
+        perRoleResults.map((r: any) => [String(r.session_id), r.status])
+    );
+    const STATUS_LABELS: Record<string, string> = {
+        winner: 'WINNER',
+        correct: 'CORRECT — identified the killer',
+        loser: 'LOSER — wrong guess',
+        killer_wins: 'KILLER WINS — escaped!',
+    };
+
     const filename = `group-${groupId}-${crypto.randomBytes(12).toString('hex')}.pdf`;
     const filePath = path.join(STORAGE_DIR, filename);
 
@@ -74,9 +89,9 @@ export async function generateResultsPdf(groupId: number | string): Promise<{ pa
         doc.fontSize(14).text('Participants', { underline: true });
         doc.moveDown(0.5);
         for (const s of sessions) {
-            const isWinner = winnerSet.has(String(s.id));
+            const status = statusBySession.get(String(s.id)) ?? (winnerSet.has(String(s.id)) ? 'winner' : 'loser');
             doc.fontSize(12).text(
-                `${s.participant_name || 'Unknown'} (${s.participant_email || 'no email'}) — Role: ${s.role_type || 'unassigned'} — Score: ${s.total_score ?? 0} — ${isWinner ? 'WINNER' : 'LOSER'}`
+                `${s.participant_name || 'Unknown'} (${s.participant_email || 'no email'}) — Role: ${s.role_type || 'unassigned'} — Score: ${s.total_score ?? 0} — ${STATUS_LABELS[status] ?? status.toUpperCase()}`
             );
         }
 
