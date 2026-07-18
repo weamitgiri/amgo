@@ -10,9 +10,9 @@ import { organizerService } from "@/api/services/organizer.service";
 import { apiClient } from "@/api/client";
 import { mapApiFieldErrors, parseApiError } from "@/api/errors";
 import { validateOtpCode } from "@/utils/organizer";
-import hero from "@/assets/hero.jpg";
-import mystery from "@/assets/mystery.jpg";
-import cook from "@/assets/cook.jpg";
+import hero from "@/assets/login-a.jpg";
+import mystery from "@/assets/login-b.jpg";
+import cook from "@/assets/login-c.jpg";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({

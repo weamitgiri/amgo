@@ -304,33 +304,45 @@ function JoinPage() {
       <main className="relative px-4 pb-16">
         <div className="mx-auto max-w-6xl grid gap-6 lg:grid-cols-2">
           {/* LEFT — quest info */}
-          <div className="rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 p-8 shadow-elevated">
-            <img
-              src={mystery}
-              alt="Mystery Quest"
-              className="w-full h-56 object-cover rounded-2xl ring-1 ring-white/10"
-            />
-            <h1 className="mt-6 text-3xl font-bold leading-tight">
-              {activityTitle}
-            </h1>
-            <p className="mt-3 text-sm text-white/70">
-              {activityDescription ||
-                "A story-driven team challenge where employees collaborate, question, and compete to solve the case."}
-            </p>
-            <ul className="mt-5 space-y-2 text-sm text-white/85">
-              <li>• Role-based gameplay (Investigator, Culprit, Witness, and more)</li>
-              <li>• Real-time questioning and deduction</li>
-              <li>• Time-bound challenges to maintain urgency</li>
-              <li>• Built for communication and strategic thinking</li>
-            </ul>
-            <p className="mt-5 text-sm text-white/70">
-              Builds stronger communication, sharper thinking, and real team collaboration in a high-energy environment.
-            </p>
+          <div className="rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 sm:p-8 shadow-elevated flex flex-col">
+            <div className="grid gap-6 sm:grid-cols-[minmax(0,200px)_1fr] items-start">
+              <img
+                src={mystery}
+                alt={activityTitle}
+                className="w-full h-48 sm:h-full sm:max-h-[320px] object-cover rounded-2xl ring-1 ring-white/10"
+              />
+              <div>
+                <h1 className="text-3xl font-bold leading-tight">
+                  Are you ready to
+                  <br />
+                  solve the mystery?
+                </h1>
+                <p className="mt-3 text-sm text-white/70">
+                  {activityDescription ||
+                    "A story-driven team challenge where employees collaborate, question, and compete to solve the case."}
+                </p>
+                <ul className="mt-4 space-y-1.5 pl-5 text-sm text-white/85 list-disc marker:text-white/40">
+                  <li>Role-based gameplay (Investigator, Culprit, Witness, and more)</li>
+                  <li>Real-time questioning and deduction</li>
+                  <li>Time-bound challenges to maintain urgency</li>
+                  <li>Built for communication and strategic thinking</li>
+                </ul>
+                <p className="mt-4 text-sm text-white/70">
+                  Builds stronger communication, sharper thinking, and real team collaboration in a high-energy environment.
+                </p>
+              </div>
+            </div>
 
-            <div className="mt-6 grid grid-cols-3 gap-3 rounded-2xl bg-white/95 text-foreground p-4">
-              <Meta icon={User} label="Organizer" v1={organizerName || "—"} v2={organizerCompany || ""} />
-              <Meta icon={Calendar} label="Date" v1={scheduledDate || "TBA"} v2="" />
-              <Meta icon={Clock} label="Start Time" v1={scheduledTime || "TBA"} v2="" />
+            <div className="mt-6 grid grid-cols-3 rounded-2xl bg-white/95 text-foreground p-4">
+              <div className="px-3">
+                <Meta icon={User} label="Organizer" v1={organizerName || "—"} v2={organizerCompany || ""} />
+              </div>
+              <div className="px-3 border-l border-black/10">
+                <Meta icon={Calendar} label="Date" v1={scheduledDate || "TBA"} v2="" />
+              </div>
+              <div className="px-3 border-l border-black/10">
+                <Meta icon={Clock} label="Start Time" v1={scheduledTime || "TBA"} v2="" />
+              </div>
             </div>
           </div>
 
@@ -520,15 +532,15 @@ function FormStep({
       </p>
 
       <h3 className="mt-7 text-lg font-bold">Join the Game</h3>
-      <p className="text-xs text-white/60">Enter your details to join the event and receive your verification code.</p>
+      <p className="text-xs text-white/60">Enter your details to join the event and get assigned to your group.</p>
 
       <div className="mt-5 space-y-4">
         <Field icon={User} label="Full Name" placeholder="Enter your full name" value={name} onChange={setName} />
         <Field
           icon={Mail}
-          label="Email Address"
+          label="Work Email"
           hint="An OTP will be sent to this email for verification"
-          placeholder="Enter your email address"
+          placeholder="Enter your work email"
           value={email}
           onChange={setEmail}
           type="email"

@@ -6275,3 +6275,128 @@
 2026-07-17 23:44:25:4425 info: [Server] Node.js API running on port 6001 in development mode
 2026-07-17 23:44:33:4433 info: [Server] Node.js API running on port 6001 in development mode
 2026-07-17 23:48:56:4856 info: [Server] Node.js API running on port 6001 in development mode
+2026-07-18 19:41:15:4115 info: [Server] Node.js API running on port 6001 in development mode
+2026-07-18 19:58:47:5847 error: You already registered this email id. Please login.
+2026-07-18 19:58:55:5855 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 19:59:29:5929 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 19:59:31:5931 debug: [Socket] User connected: NgqHn9uFIjRKtvGZAAAB
+2026-07-18 19:59:31:5931 info: [Socket] Organizer joined dashboard room: organizer_9
+2026-07-18 19:59:31:5931 info: [Socket] Organizer joined dashboard room: organizer_9
+2026-07-18 20:01:09:19 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:01:13:113 debug: [Socket] User connected: HCnNklE9odGfcZJcAAAD
+2026-07-18 20:01:13:113 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:01:13:113 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:01:35:135 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:01:39:139 debug: [Socket] User connected: 5ktl7X45BWRfRQ8QAAAF
+2026-07-18 20:01:39:139 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:01:39:139 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:01:48:148 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:01:52:152 debug: [Socket] User connected: EtXTWI92I5Ch1V04AAAH
+2026-07-18 20:01:52:152 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:01:52:152 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:02:01:21 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:02:06:26 debug: [Socket] User connected: fOGGDDYFJfor2-fIAAAJ
+2026-07-18 20:02:06:26 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:02:06:26 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:02:12:212 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:02:16:216 debug: [Socket] User connected: cZ-wEJmnUM7PBjImAAAL
+2026-07-18 20:02:16:216 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:02:16:216 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:02:24:224 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:02:29:229 debug: [Socket] User connected: QiWog3FyEGU8q2omAAAN
+2026-07-18 20:02:29:229 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:02:29:229 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 error: You are not part of this group
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 error: You are not part of this group
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 error: You are not part of this group
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 error: You are not part of this group
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:24:424 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 error: You are not part of this group
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 error: You are not part of this group
+2026-07-18 20:04:25:425 error: You are not part of this group
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 error: You are not part of this group
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 error: You are not part of this group
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:25:425 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:29:429 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:29:429 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:29:429 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:29:429 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:29:429 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:29:429 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:29:429 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:29:429 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:04:29:429 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:20:1020 debug: [Socket] User disconnected: EtXTWI92I5Ch1V04AAAH, Reason: transport close
+2026-07-18 20:10:21:1021 debug: [Socket] User connected: xwrGtJwyfs5Nsag_AAAP
+2026-07-18 20:10:21:1021 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:21:1021 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:25:1025 debug: [Socket] User disconnected: HCnNklE9odGfcZJcAAAD, Reason: transport close
+2026-07-18 20:10:25:1025 debug: [Socket] User connected: 3H1vFhwbHzEwMdV2AAAR
+2026-07-18 20:10:25:1025 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:25:1025 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:31:1031 debug: [Socket] User disconnected: 5ktl7X45BWRfRQ8QAAAF, Reason: transport close
+2026-07-18 20:10:31:1031 debug: [Socket] User connected: 5WZPFGQpvktxS5YgAAAT
+2026-07-18 20:10:31:1031 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:31:1031 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:33:1033 debug: [Socket] User disconnected: xwrGtJwyfs5Nsag_AAAP, Reason: transport close
+2026-07-18 20:10:33:1033 debug: [Socket] User connected: Tpr5W9FhLZ_3JFfMAAAV
+2026-07-18 20:10:33:1033 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:33:1033 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:35:1035 debug: [Socket] User disconnected: fOGGDDYFJfor2-fIAAAJ, Reason: transport close
+2026-07-18 20:10:35:1035 debug: [Socket] User connected: xGoQTqe4773-rGpvAAAX
+2026-07-18 20:10:35:1035 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:35:1035 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:36:1036 debug: [Socket] User disconnected: cZ-wEJmnUM7PBjImAAAL, Reason: transport close
+2026-07-18 20:10:37:1037 debug: [Socket] User connected: _nAmEYLJsIoMfPuIAAAZ
+2026-07-18 20:10:37:1037 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:37:1037 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:10:40:1040 debug: [Socket] User disconnected: QiWog3FyEGU8q2omAAAN, Reason: transport close
+2026-07-18 20:10:40:1040 debug: [Socket] User connected: 7EjeOCfiiBuaynN-AAAb
+2026-07-18 20:10:40:1040 info: [Socket] Client joined lobby room: group_11
+2026-07-18 20:11:00:110 debug: [Socket] User disconnected: 7EjeOCfiiBuaynN-AAAb, Reason: transport close
+2026-07-18 20:11:05:115 debug: [Socket] User disconnected: _nAmEYLJsIoMfPuIAAAZ, Reason: transport close
+2026-07-18 20:11:05:115 debug: [Socket] User connected: 4y-jdGqIGhb9gPmEAAAd
+2026-07-18 20:11:05:115 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:11:05:115 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:11:44:1144 debug: [Socket] User disconnected: 4y-jdGqIGhb9gPmEAAAd, Reason: transport close
+2026-07-18 20:11:45:1145 debug: [Socket] User connected: QaQgsAW_HUDnpkCeAAAf
+2026-07-18 20:11:45:1145 info: [Socket] Client joined lobby room: group_10
+2026-07-18 20:11:45:1145 info: [Socket] Client joined lobby room: group_10

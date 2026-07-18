@@ -41,8 +41,8 @@ import { useGames, useGameDetails, usePackages } from "@/hooks/usePublicContent"
 import { resolveMediaUrl } from "@/utils/media";
 import { isOrganizerAuthenticated } from "@/lib/auth";
 import { Check, Mail, User, Copy, MessageCircle, Share2, CheckCircle2, X, Loader2, Calendar as CalendarIcon } from "lucide-react";
-import mystery from "@/assets/people-1.jpg";
-import cook from "@/assets/people-2.jpg";
+import mystery from "@/assets/login-a.jpg";
+import cook from "@/assets/login-c.jpg";
 import hero from "@/assets/hero.jpg";
 
 const FALLBACK_IMAGES = [mystery, cook];

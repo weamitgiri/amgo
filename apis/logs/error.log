@@ -334,3 +334,21 @@
 2026-07-17 22:26:15:2615 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-07-17 22:26:34:2634 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-07-17 22:40:21:4021 error: Booking not found
+2026-07-18 19:58:47:5847 error: You already registered this email id. Please login.
+2026-07-18 19:58:55:5855 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 19:59:29:5929 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:01:09:19 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:01:35:135 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:01:48:148 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:02:01:21 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:02:12:212 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:02:24:224 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-07-18 20:04:24:424 error: You are not part of this group
+2026-07-18 20:04:24:424 error: You are not part of this group
+2026-07-18 20:04:24:424 error: You are not part of this group
+2026-07-18 20:04:24:424 error: You are not part of this group
+2026-07-18 20:04:25:425 error: You are not part of this group
+2026-07-18 20:04:25:425 error: You are not part of this group
+2026-07-18 20:04:25:425 error: You are not part of this group
+2026-07-18 20:04:25:425 error: You are not part of this group
+2026-07-18 20:04:25:425 error: You are not part of this group
