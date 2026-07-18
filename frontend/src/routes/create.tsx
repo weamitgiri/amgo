@@ -40,7 +40,7 @@ import type { ApiActivity, ApiPackage } from "@/api/types/public";
 import { useGames, useGameDetails, usePackages } from "@/hooks/usePublicContent";
 import { resolveMediaUrl } from "@/utils/media";
 import { isOrganizerAuthenticated } from "@/lib/auth";
-import { Check, Mail, User, Copy, MessageCircle, Share2, CheckCircle2, X, Loader2, Calendar as CalendarIcon } from "lucide-react";
+import { Check, Mail, User, Copy, MessageCircle, Share2, CheckCircle2, X, Loader2, Calendar as CalendarIcon, Link2, Clock, Package as PackageIcon, Gamepad2, LockKeyhole, ArrowRight } from "lucide-react";
 import mystery from "@/assets/login-a.jpg";
 import cook from "@/assets/login-c.jpg";
 import hero from "@/assets/hero.jpg";
@@ -192,6 +192,8 @@ function CreatePage() {
         {done ? (
           <SuccessCard
             invitationLink={invitationLink}
+            session={session}
+            bookingId={bookingId}
             onReset={() => {
               setDone(false);
               setStep(authenticated ? 2 : 0);
@@ -1367,15 +1369,44 @@ function Row({ k, v, bold }: { k: string; v: string; bold?: boolean }) {
   );
 }
 
+function formatSessionDate(value: string): { date: string; weekday: string } | null {
+  if (!value) return null;
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return {
+    date: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+    weekday: d.toLocaleDateString("en-US", { weekday: "long" }),
+  };
+}
+
+function formatSessionTime(value: string): string | null {
+  if (!value) return null;
+  const [h, m] = value.split(":").map(Number);
+  if (!Number.isFinite(h)) return null;
+  const d = new Date();
+  d.setHours(h, Number.isFinite(m) ? m : 0, 0, 0);
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
 function SuccessCard({
   invitationLink,
+  session,
+  bookingId,
   onReset,
 }: {
   invitationLink: string | null;
+  session: SessionSetup;
+  bookingId: number | null;
   onReset: () => void;
 }) {
   const joinUrl = invitationLink ? buildJoinUrl(invitationLink) : null;
   const authed = isOrganizerAuthenticated();
+  const pkg = session.package;
+  const schedule = formatSessionDate(session.scheduledDate);
+  const startTime = formatSessionTime(session.scheduledTime);
+  const packageRef = bookingId ? `ZV-${String(bookingId).padStart(4, "0")}` : null;
+  const groupSize =
+    pkg?.max_users && pkg?.total_groups ? Math.max(1, Math.round(pkg.max_users / pkg.total_groups)) : 5;
 
   const copyLink = async () => {
     if (!joinUrl) return;
@@ -1387,67 +1418,229 @@ function SuccessCard({
     }
   };
 
-  return (
-    <div className="mx-auto max-w-3xl mt-12 rounded-3xl bg-card shadow-elevated p-10 text-center">
-      <div className="mx-auto h-16 w-16 rounded-full bg-success/15 grid place-items-center">
-        <CheckCircle2 className="h-9 w-9 text-success" />
-      </div>
-      <h2 className="mt-5 text-3xl font-bold">Your Team Activity is Ready!</h2>
-      <p className="mt-2 text-muted-foreground">
-        Congratulations! Your activity has been successfully activated.
-      </p>
+  const shareByEmail = () => {
+    if (!joinUrl) return;
+    const subject = encodeURIComponent(`You're invited: ${session.activityTitle || "Team Activity"}`);
+    const body = encodeURIComponent(
+      `Join our team activity here:\n${joinUrl}\n\nUse your work email to verify and get assigned to your group.`
+    );
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
 
-      <div className="mt-8 rounded-2xl border border-border p-5 text-left">
-        <p className="text-sm font-semibold">Event Access Link</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Share this link with participants 10 minutes before the start time
+  const shareMore = async () => {
+    if (!joinUrl) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: session.activityTitle || "Team Activity", url: joinUrl });
+      } catch {
+        /* user dismissed the share sheet */
+      }
+    } else {
+      copyLink();
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl mt-12">
+      {/* Header */}
+      <div className="text-center">
+        <div className="mx-auto h-16 w-16 rounded-full bg-success/15 grid place-items-center">
+          <CheckCircle2 className="h-9 w-9 text-success" />
+        </div>
+        <h2 className="mt-5 text-3xl font-bold">Your Team Activity is Ready!</h2>
+        <p className="mt-2 text-muted-foreground">
+          Congratulations! Your activity has been successfully activated.
+          <br />
+          Share your access link with participants and let the fun begin!
         </p>
-        <div className="mt-3 flex items-center gap-2">
-          <div className="flex-1 rounded-lg border border-input bg-muted px-4 py-2.5 text-sm font-mono truncate">
+      </div>
+
+      {/* Session Access Link */}
+      <div className="mt-8 rounded-3xl bg-card shadow-card p-6 sm:p-8 text-left">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10">
+              <Link2 className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-base font-bold">Session Access Link</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Share this link with participants 10 minutes before the start time
+              </p>
+            </div>
+          </div>
+          {packageRef && (
+            <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+              Your Unique Package ID:
+              <span className="rounded-full bg-primary/10 text-primary font-semibold px-2.5 py-0.5">
+                {packageRef}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 flex items-stretch gap-2">
+          <div className="flex-1 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm font-mono font-medium text-primary truncate flex items-center">
             {joinUrl ?? "Link will appear after activation"}
           </div>
           <button
             type="button"
             onClick={copyLink}
             disabled={!joinUrl}
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-primary text-white px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-primary text-white px-5 py-3 text-sm font-medium shadow-glow hover:opacity-90 disabled:opacity-50"
           >
             <Copy className="h-4 w-4" /> Copy
           </button>
         </div>
-       {/* <div className="mt-4 flex flex-wrap gap-2">
-          {[{ i: MessageCircle, l: "WhatsApp" }, { i: Mail, l: "Email" }, { i: Share2, l: "More" }].map(({ i: Icon, l }) => (
-            <button key={l} type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs hover:bg-accent">
-              <Icon className="h-3.5 w-3.5" /> {l}
-            </button>
-          ))}
-        </div>*/}
-      </div>
 
-      {!authed && (
-        <p className="mt-4 text-sm text-muted-foreground">
-          Log in with your registered email to manage this event from the dashboard.
-        </p>
-      )}
-
-      <div className="mt-6 flex flex-wrap gap-3 justify-center">
-        <Link to="/" className="rounded-full border border-border px-6 py-2.5 text-sm">
-          Go to Home Page
-        </Link>
-        {authed ? (
-          <Link to="/dashboard" className="rounded-full bg-gradient-primary text-white px-6 py-2.5 text-sm font-semibold shadow-glow">
-            Go to Dashboard
-          </Link>
-        ) : (
-          <Link
-            to="/login"
-            search={{ redirect: "/dashboard" }}
-            className="rounded-full bg-gradient-primary text-white px-6 py-2.5 text-sm font-semibold shadow-glow"
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm font-semibold">Share Link</span>
+          <button
+            type="button"
+            onClick={shareByEmail}
+            disabled={!joinUrl}
+            className="inline-flex items-center gap-2 rounded-full border border-border px-8 py-2.5 text-sm font-medium hover:bg-accent disabled:opacity-50"
           >
-            Login to Dashboard
-          </Link>
-        )}
+            <Mail className="h-4 w-4" /> Email
+          </button>
+          <button
+            type="button"
+            onClick={shareMore}
+            disabled={!joinUrl}
+            className="inline-flex items-center gap-2 rounded-full border border-border px-8 py-2.5 text-sm font-medium hover:bg-accent disabled:opacity-50"
+          >
+            <Share2 className="h-4 w-4" /> More
+          </button>
+        </div>
       </div>
+
+      {/* Session Summary */}
+      <div className="mt-6 rounded-3xl bg-card shadow-card p-6 sm:p-8 text-left">
+        <div className="flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10">
+            <CalendarIcon className="h-5 w-5 text-primary" />
+          </div>
+          <p className="text-base font-bold">Session Summary</p>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-y-6">
+          <SummaryMeta icon={Gamepad2} label="Activity" v1={session.activityTitle || "—"} v2="" />
+          <SummaryMeta
+            icon={PackageIcon}
+            label="Package"
+            v1={pkg?.name || "—"}
+            v2={pkg?.max_users ? `Up to ${pkg.max_users} Participants` : ""}
+            divider
+          />
+          <SummaryMeta
+            icon={CalendarIcon}
+            label="Date"
+            v1={schedule?.date || "TBA"}
+            v2={schedule ? `(${schedule.weekday})` : ""}
+            divider
+          />
+          <SummaryMeta icon={Clock} label="Start Time" v1={startTime || "TBA"} v2="(IST)" divider />
+          <SummaryMeta
+            icon={LockKeyhole}
+            label="Access Validity"
+            v1={pkg?.validity_days ? `${pkg.validity_days} Days` : "—"}
+            v2="from date of payment"
+            divider
+          />
+        </div>
+      </div>
+
+      {/* Note + Actions */}
+      <div className="mt-6 rounded-3xl bg-card shadow-card p-6 sm:p-8 text-left">
+        <div className="grid gap-6 lg:grid-cols-[1fr_auto] items-start">
+          <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5">
+            <p className="text-sm font-semibold text-sky-700">Note</p>
+            <ul className="mt-2 space-y-1.5 pl-4 text-xs text-foreground/80 list-disc marker:text-foreground/40">
+              <li>
+                Access is valid for {pkg?.validity_days ?? 5} days from the date and time of payment,
+                expiry is shown above.
+              </li>
+              <li>
+                The session will start at start time, employees need to click the access link and
+                verify email and proceed for activity
+              </li>
+              <li>
+                Share the access link with participants before your scheduled start time, they join
+                using their email ID and OTP.
+              </li>
+              <li>
+                You can reschedule your session date and time once from the dashboard. The{" "}
+                {pkg?.validity_days ?? 5}-day access window will not reset on rescheduling.
+              </li>
+              <li>
+                Your package supports up to {pkg?.max_users ?? 50} participants. For best results,
+                ensure your team size is a multiple of {groupSize}. Participants beyond a complete
+                group of {groupSize} will not be assigned.
+              </li>
+            </ul>
+          </div>
+
+          <div className="flex flex-col gap-3 w-full lg:w-56">
+            {!authed && (
+              <p className="text-xs text-muted-foreground">
+                Log in with your registered email to manage this event from the dashboard.
+              </p>
+            )}
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center rounded-full border border-border bg-white px-6 py-2.5 text-sm font-medium hover:bg-accent"
+            >
+              Go to Home Page
+            </Link>
+            {authed ? (
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center justify-between rounded-full bg-gradient-primary text-white pl-6 pr-1.5 py-1.5 text-sm font-semibold shadow-glow hover:opacity-90"
+              >
+                Go to Dashboard
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-white/20">
+                  <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                search={{ redirect: "/dashboard" }}
+                className="inline-flex items-center justify-between rounded-full bg-gradient-primary text-white pl-6 pr-1.5 py-1.5 text-sm font-semibold shadow-glow hover:opacity-90"
+              >
+                Login to Dashboard
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-white/20">
+                  <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryMeta({
+  icon: Icon,
+  label,
+  v1,
+  v2,
+  divider,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  v1: string;
+  v2: string;
+  divider?: boolean;
+}) {
+  return (
+    <div className={`px-4 first:pl-0 ${divider ? "md:border-l md:border-border" : ""}`}>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Icon className="h-4 w-4 text-primary" /> {label}
+      </div>
+      <div className="mt-1.5 text-sm font-bold">{v1}</div>
+      {v2 && <div className="mt-0.5 text-[11px] text-muted-foreground">{v2}</div>}
     </div>
   );
 }

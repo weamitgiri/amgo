@@ -17,9 +17,10 @@ export const Route = createFileRoute("/participants")({
 
 const PAGE_SIZE = 20;
 
-function initials(name: string): string {
-  return name
-    .trim()
+function initials(name: string | null | undefined): string {
+  const cleaned = (name ?? "").trim();
+  if (!cleaned) return "?";
+  return cleaned
     .split(/\s+/)
     .map((s) => s[0])
     .filter(Boolean)
@@ -47,8 +48,8 @@ function ParticipantsPage() {
     if (!q) return allParticipants;
     return allParticipants.filter(
       (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.email.toLowerCase().includes(q) ||
+        (p.name ?? "").toLowerCase().includes(q) ||
+        (p.email ?? "").toLowerCase().includes(q) ||
         (p.group_name ?? "").toLowerCase().includes(q)
     );
   }, [allParticipants, search]);
@@ -65,8 +66,8 @@ function ParticipantsPage() {
     const rows = [
       ["Name", "Email", "Group", "Joined At"],
       ...filtered.map((p) => [
-        p.name,
-        p.email,
+        p.name ?? "",
+        p.email ?? "",
         p.group_name ?? "",
         p.joined_at ?? "",
       ]),
@@ -154,8 +155,8 @@ function ParticipantsPage() {
                   {initials(p.name)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium">{p.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{p.email}</div>
+                  <div className="font-medium">{p.name || "Unnamed participant"}</div>
+                  <div className="text-xs text-muted-foreground truncate">{p.email || "—"}</div>
                 </div>
                 <div className="text-xs text-muted-foreground whitespace-nowrap">{formatJoinedAt(p.joined_at)}</div>
                 <span className="rounded-full bg-purple-100 text-primary text-xs px-2.5 py-0.5 font-medium whitespace-nowrap">
