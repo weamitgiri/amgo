@@ -1,0 +1,146 @@
+============================================================
+ FRONTEND KO AWS UBUNTU SERVER PAR RUN KARNE KE STEPS
+============================================================
+Note: Yeh app TanStack Start (Vite) hai. Build karke
+"vite preview" se chalayenge, pm2 se background me rakhenge,
+aur Nginx se port 80 par serve karenge.
+
+------------------------------------------------------------
+STEP 0: AWS Console me Security Group check karo
+------------------------------------------------------------
+Inbound rules me yeh ports open hone chahiye:
+  - 22  (SSH)
+  - 80  (HTTP)
+  - 443 (HTTPS, agar SSL lagana ho)
+
+------------------------------------------------------------
+STEP 1: Server me SSH login
+------------------------------------------------------------
+ssh -i your-key.pem ubuntu@YOUR_SERVER_IP
+
+------------------------------------------------------------
+STEP 2: System update + basic tools install
+------------------------------------------------------------
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git curl nginx
+
+------------------------------------------------------------
+STEP 3: Node.js 22 install (NodeSource se)
+------------------------------------------------------------
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Check karo:
+node -v
+npm -v
+
+------------------------------------------------------------
+STEP 4: pm2 install (app background me chalane ke liye)
+------------------------------------------------------------
+sudo npm install -g pm2
+
+------------------------------------------------------------
+STEP 5: Code server par lao
+------------------------------------------------------------
+# Option A: Git se clone (private repo hai to token/SSH key chahiye)
+cd ~
+git clone YOUR_REPO_URL p
+cd p/frontend
+
+# Option B: Apne laptop se sirf frontend folder copy karo
+# (yeh command APNE LAPTOP par chalani hai, server par nahi)
+# node_modules aur dist skip karke bhejo:
+# rsync -av --exclude node_modules --exclude dist -e "ssh -i your-key.pem" \
+#   /opt/homebrew/var/www/p/frontend ubuntu@YOUR_SERVER_IP:~/
+# phir server par: cd ~/frontend
+
+------------------------------------------------------------
+STEP 6: .env file banao (frontend folder ke andar)
+------------------------------------------------------------
+cd ~/p/frontend    # (ya ~/frontend, jahan code rakha hai)
+
+cat > .env << 'EOF'
+VITE_API_BASE_URL=http://3.25.202.185:3000
+VITE_API_PROXY_TARGET=http://3.25.202.185:3000
+VITE_STORAGE_BASE_URL=http://3.25.202.185:3000/storage
+VITE_API_TIMEOUT=30000
+EOF
+
+# NOTE: Agar API ka IP/port alag hai to upar wali values change karo.
+
+------------------------------------------------------------
+STEP 7: Dependencies install + build
+------------------------------------------------------------
+npm install
+npm run build
+
+# Agar chhoti EC2 machine (1GB RAM) par "killed" / out of memory
+# error aaye to pehle swap banao:
+# sudo fallocate -l 2G /swapfile
+# sudo chmod 600 /swapfile
+# sudo mkswap /swapfile
+# sudo swapon /swapfile
+# phir dobara: npm run build
+
+------------------------------------------------------------
+STEP 8: pm2 se app start karo (port 4173 par)
+------------------------------------------------------------
+pm2 start npm --name frontend -- run preview -- --host 0.0.0.0 --port 4173
+
+# Status dekho:
+pm2 status
+pm2 logs frontend
+
+# Server reboot ke baad bhi auto-start ho:
+pm2 save
+pm2 startup
+# (pm2 startup jo command print kare, usko copy karke chala do)
+
+------------------------------------------------------------
+STEP 9: Nginx reverse proxy (port 80 -> 4173)
+------------------------------------------------------------
+sudo tee /etc/nginx/sites-available/frontend << 'EOF'
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        proxy_pass http://127.0.0.1:4173;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+EOF
+
+sudo ln -sf /etc/nginx/sites-available/frontend /etc/nginx/sites-enabled/frontend
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl restart nginx
+
+------------------------------------------------------------
+STEP 10: Test karo
+------------------------------------------------------------
+# Browser me kholo:
+http://YOUR_SERVER_IP
+
+------------------------------------------------------------
+UPDATE KARNA HO (naya code deploy)
+------------------------------------------------------------
+cd ~/p/frontend
+git pull                # (ya rsync se naya code bhejo)
+npm install
+npm run build
+pm2 restart frontend
+
+------------------------------------------------------------
+OPTIONAL: Domain + free SSL (HTTPS)
+------------------------------------------------------------
+# Pehle domain ka A record server IP par point karo, phir:
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com
+============================================================

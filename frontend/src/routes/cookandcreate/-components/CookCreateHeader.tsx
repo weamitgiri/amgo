@@ -1,4 +1,5 @@
 import { CountdownTimer } from './CountdownTimer';
+import logoImg from '../../../assets/cookandcreate/Cook  and Create Logo.png';
 
 interface CookCreateHeaderProps {
   showGameTimer?: boolean;
@@ -7,66 +8,42 @@ interface CookCreateHeaderProps {
 }
 
 export function CookCreateHeader({
-  showGameTimer = false,
-  timerMinutes = 25,
-  timerSeconds = 0,
+  showGameTimer = true,
+  timerMinutes = 24,
+  timerSeconds = 58,
 }: CookCreateHeaderProps) {
   return (
-    <div
-      className="w-full rounded-2xl px-6 py-4 flex items-center justify-between"
-      style={{
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #F0E4D4',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-      }}
-    >
-      {/* Left: Logo */}
+    <div className="w-full bg-white rounded-2xl px-6 py-3.5 flex items-center justify-between border border-[#F0E4D4] shadow-sm">
+      {/* Left: Logo & Title */}
       <div className="flex items-center gap-3">
-        <span className="text-2xl">🍳</span>
-        <span
-          className="text-lg font-bold"
-          style={{ color: '#3D2E1F' }}
-        >
+        <img src={logoImg} alt="Cook & Create" className="w-9 h-9 object-contain" />
+        <span className="text-lg font-extrabold text-[#3D2E1F]">
           Cook &amp; Create
         </span>
       </div>
 
-      {/* Center: Game Timer (optional) */}
+      {/* Center/Right: Game Timer */}
       {showGameTimer && (
-        <div className="flex items-center gap-3">
-          <span
-            className="text-sm font-medium"
-            style={{ color: '#8B7355' }}
-          >
+        <div className="flex items-center gap-3 bg-[#FFF3E0] border border-[#E8881E]/15 rounded-xl px-4 py-2">
+          <span className="text-xs font-bold text-[#8B7355] uppercase tracking-wider">
             Game Time Remaining
           </span>
-          <CountdownTimer
-            initialMinutes={timerMinutes}
-            initialSeconds={timerSeconds}
-            variant="badge"
-          />
+          <span className="text-base font-extrabold text-[#3D2E1F] font-mono">
+            {String(timerMinutes).padStart(2, '0')}:{String(timerSeconds).padStart(2, '0')}
+          </span>
         </div>
       )}
 
       {/* Right: User Avatar */}
       <div className="flex items-center gap-3">
-        <span
-          className="text-sm font-medium"
-          style={{ color: '#3D2E1F' }}
-        >
-          Sneha Kapoor
-        </span>
-        <div
-          className="flex items-center justify-center rounded-full text-white font-semibold text-sm"
-          style={{
-            width: 40,
-            height: 40,
-            background: 'linear-gradient(135deg, #E91E63 0%, #FF5722 100%)',
-          }}
-        >
+        <div className="w-9 h-9 rounded-full bg-[#FF8A65] text-white font-bold text-xs flex items-center justify-center shadow-sm">
           SK
         </div>
+        <span className="text-sm font-bold text-[#3D2E1F]">
+          Sneha Kapoor
+        </span>
       </div>
     </div>
   );
 }
+

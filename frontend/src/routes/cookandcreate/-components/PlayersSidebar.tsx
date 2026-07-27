@@ -1,83 +1,71 @@
-import { Shield } from 'lucide-react';
-import { PlayerAvatar } from './PlayerAvatar';
+import chefHatImg from '../../../assets/cookandcreate/chef-1 1.png';
 
 interface PlayersSidebarProps {
-  currentRound: 1 | 2;
+  currentRound: 1 | 2 | 3;
   highlightPlayer?: string;
 }
 
 const players = [
-  { name: 'Ptoto79', colorIndex: 0, status: 'available' as const, isYou: false },
-  { name: 'John32', colorIndex: 1, status: 'submitting' as const, isYou: false, timer: '01:15' },
-  { name: 'James45', colorIndex: 2, status: 'available' as const, isYou: false },
-  { name: 'Fred36', colorIndex: 3, status: 'available' as const, isYou: false },
-  { name: 'Mark32', colorIndex: 4, status: 'available' as const, isYou: true },
+  { name: 'Ptoto79', initials: 'P7', bg: '#E8881E', status: 'available', time: '' },
+  { name: 'John32', initials: 'J3', bg: '#E5A023', status: 'submitting', time: '01:15' },
+  { name: 'James45', initials: 'J3', bg: '#36B37E', status: 'available', time: '' },
+  { name: 'Fred36', initials: 'J3', bg: '#00B8D9', status: 'available', time: '' },
+  { name: 'Mark32 (You)', initials: 'J3', bg: '#6554C0', status: 'available', time: '', isYou: true },
 ];
 
-export function PlayersSidebar({ currentRound, highlightPlayer }: PlayersSidebarProps) {
+export function PlayersSidebar({ highlightPlayer }: PlayersSidebarProps) {
   return (
-    <div className="bg-white rounded-2xl border border-[#F0E4D4] shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-[#F0E4D4]">
-        <h3 className="text-base font-bold text-[#3D2E1F] flex items-center gap-2">
-          <span className="text-lg">👥</span>
-          Players
-        </h3>
-      </div>
+    <div className="bg-[#FFF8EE] rounded-2xl border border-[#F5E2C8] p-3 space-y-3">
+      {/* Title */}
+      <h3 className="text-sm font-extrabold text-[#3D2E1F] px-2 pt-1">
+        Players
+      </h3>
 
-      {/* Player list */}
-      <div className="divide-y divide-[#F0E4D4]/60">
+      {/* Players list */}
+      <div className="space-y-2">
         {players.map((player) => (
           <div
             key={player.name}
             className={`
-              flex items-center gap-3 px-5 py-3 transition-colors duration-150
-              ${highlightPlayer === player.name ? 'bg-[#FFF3E0]' : 'hover:bg-[#FFFAF4]'}
+              flex items-center justify-between px-3 py-2.5 rounded-xl bg-white border border-[#F5E6D3] shadow-xs
+              ${highlightPlayer && player.name.includes(highlightPlayer) ? 'ring-2 ring-[#E8881E]' : ''}
             `}
           >
-            <PlayerAvatar
-              name={player.name}
-              colorIndex={player.colorIndex}
-              size="sm"
-              status={player.status}
-              isYou={player.isYou}
-            />
+            <div className="flex items-center gap-2.5 min-w-0">
+              {/* Avatar circle */}
+              <div
+                className="w-8 h-8 rounded-full text-white font-bold text-xs flex items-center justify-center shrink-0"
+                style={{ backgroundColor: player.bg }}
+              >
+                {player.initials}
+              </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-semibold text-[#3D2E1F] truncate">
+              {/* Player details */}
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-[#3D2E1F] block truncate">
                   {player.name}
                 </span>
-                {player.isYou && (
-                  <span className="text-[10px] font-bold text-[#E8881E] bg-[#FFF3E0] px-1.5 py-0.5 rounded-full">
-                    YOU
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      player.status === 'available' ? 'bg-[#36B37E]' : 'bg-[#E8881E] animate-pulse'
+                    }`}
+                  />
+                  <span
+                    className={`text-[10px] font-medium ${
+                      player.status === 'available' ? 'text-[#36B37E]' : 'text-[#E8881E]'
+                    }`}
+                  >
+                    {player.status === 'available' ? 'Available' : 'Submitting'}
                   </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    player.status === 'available'
-                      ? 'bg-[#4CAF50]'
-                      : 'bg-[#E8881E] animate-pulse'
-                  }`}
-                />
-                <span
-                  className={`text-xs ${
-                    player.status === 'available'
-                      ? 'text-[#4CAF50]'
-                      : 'text-[#E8881E]'
-                  }`}
-                >
-                  {player.status === 'available' ? 'Available' : 'Submitting'}
-                </span>
+                </div>
               </div>
             </div>
 
-            {/* Timer badge for submitting players */}
-            {player.status === 'submitting' && player.timer && (
-              <span className="text-xs font-mono font-semibold text-[#E8881E] bg-[#FFF3E0] px-2 py-1 rounded-lg">
-                {player.timer}
+            {/* Timer badge */}
+            {player.time && (
+              <span className="text-xs font-bold text-[#E8881E] font-mono shrink-0 ml-1">
+                {player.time}
               </span>
             )}
           </div>
@@ -85,18 +73,23 @@ export function PlayersSidebar({ currentRound, highlightPlayer }: PlayersSidebar
       </div>
 
       {/* Your Role card */}
-      <div className="m-4 mt-2">
-        <div className="bg-gradient-to-br from-[#FFF3E0] to-[#FFECCC] rounded-xl p-4 border border-[#E8881E]/20">
-          <div className="flex items-center gap-2 mb-1">
-            <Shield size={16} className="text-[#E8881E]" />
-            <span className="text-xs font-semibold text-[#8B7355] uppercase tracking-wider">
-              Your Role
-            </span>
-          </div>
-          <p className="text-lg font-extrabold text-[#E8881E] tracking-wide">CHEF</p>
-          <p className="text-xs text-[#8B7355] mt-0.5">Work with your team to win.</p>
+      <div className="bg-[#FFF3E0] rounded-xl p-3 border border-[#F5DCBD] flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-white border border-[#F5E6D3] p-1 flex items-center justify-center shrink-0">
+          <img src={chefHatImg} alt="Chef" className="w-full h-full object-contain" />
+        </div>
+        <div>
+          <span className="text-[10px] font-bold text-[#8B7355] block">
+            Your Role
+          </span>
+          <span className="text-sm font-black text-[#3D2E1F] block">
+            CHEF
+          </span>
+          <span className="text-[10px] text-[#8B7355] block leading-tight">
+            Work with your team to win.
+          </span>
         </div>
       </div>
     </div>
   );
 }
+

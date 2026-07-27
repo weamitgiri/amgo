@@ -1,4 +1,5 @@
-import { X, Lock } from 'lucide-react';
+import { X, Lock, Target, Lightbulb, Brain } from 'lucide-react';
+import chef1Img from '../../../assets/cookandcreate/chef-1 1.png';
 
 interface RoleRevealModalProps {
   isOpen: boolean;
@@ -13,112 +14,121 @@ export function RoleRevealModal({ isOpen, onClose, role = 'chef' }: RoleRevealMo
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-xs"
         onClick={onClose}
       />
 
       {/* Modal card */}
-      <div className="relative z-10 w-full max-w-[700px] bg-[#FFF8EE] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-        {/* Close button */}
+      <div className="relative z-10 w-full max-w-[820px] bg-[#FFF5E6] rounded-[28px] border border-[#F5D8B6] shadow-2xl overflow-hidden p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+        {/* Close button - Orange circle with white X */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#3D2E1F]/10 hover:bg-[#3D2E1F]/20 flex items-center justify-center transition-colors z-20 cursor-pointer"
+          className="absolute top-5 right-5 w-11 h-11 rounded-full bg-[#C06A15] hover:bg-[#A85A10] flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-md z-20 cursor-pointer"
         >
-          <X size={18} className="text-[#3D2E1F]" />
+          <X size={22} className="text-white" strokeWidth={2.5} />
         </button>
 
-        <div className="flex flex-col md:flex-row">
-          {/* LEFT: Chef illustration */}
-          <div className="md:w-[45%] p-6 flex items-center justify-center">
-            <div className="w-full aspect-square max-w-[260px] rounded-2xl bg-gradient-to-br from-[#FFB84D] via-[#E8881E] to-[#C5630F] flex items-center justify-center shadow-lg shadow-[#E8881E]/20">
-              <span className="text-[96px] select-none drop-shadow-lg">👨‍🍳</span>
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-stretch">
+          {/* LEFT: Chef portrait illustration */}
+          <div className="md:w-[42%] flex items-stretch">
+            <div className="w-full rounded-2xl bg-[#FFF8EE] border border-[#F5E2C8] overflow-hidden flex items-end justify-center p-3 shadow-inner">
+              <img
+                src={chef1Img}
+                alt="Chef 1"
+                className="w-full object-contain drop-shadow-md"
+              />
             </div>
           </div>
 
           {/* RIGHT: Role details */}
-          <div className="md:w-[55%] p-6 md:pl-2 md:pr-8 space-y-5 overflow-y-auto max-h-[80vh]">
-            {/* Role label */}
-            <div>
-              <span className="text-xs font-bold text-[#E8881E] uppercase tracking-widest">
+          <div className="md:w-[58%] flex flex-col justify-between">
+            <div className="space-y-1">
+              {/* Your Role */}
+              <span className="text-sm font-bold text-[#E8881E] tracking-wide">
                 Your Role
               </span>
-              <h2 className="text-3xl font-extrabold text-[#3D2E1F] mt-1 tracking-tight">
+              <h2 className="text-4xl font-black text-[#3D2E1F] tracking-tight">
                 CHEF 1
               </h2>
-              <p className="text-sm text-[#8B7355] mt-2 leading-relaxed">
-                You are the Chef. You are part of the cooking team. Work together to create the best dish.
+              <p className="text-sm text-[#6E5A44] leading-relaxed pt-1">
+                You are the Chef.
+                <br />
+                You are part of the cooking team. Work together to create the best dish.
               </p>
-            </div>
 
-            {/* Your Goal */}
-            <div>
-              <h3 className="text-sm font-bold text-[#C5630F] flex items-center gap-1.5 mb-2">
-                ⚙️ Your Goal
-              </h3>
-              <ul className="space-y-1.5">
-                {[
-                  'Choose useful ingredients',
-                  'Add logical cooking steps',
-                  'Help identify the impostor',
-                ].map((item) => (
-                  <li
-                    key={item}
-                    className="text-sm text-[#3D2E1F] flex items-start gap-2"
-                  >
-                    <span className="text-[#E8881E] mt-0.5 shrink-0">•</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+              <hr className="!my-4 border-t border-[#F0D5B5]" />
 
-            {/* What you know */}
-            <div>
-              <h3 className="text-sm font-bold text-[#C5630F] flex items-center gap-1.5 mb-2">
-                💡 WHAT YOU KNOW
-              </h3>
-              <ul className="space-y-1.5">
-                {[
-                  'One player is secretly sabotaging the dish',
-                  'Not all choices will make sense',
-                  'Patterns across rounds reveal the truth',
-                ].map((item) => (
-                  <li
-                    key={item}
-                    className="text-sm text-[#3D2E1F] flex items-start gap-2"
-                  >
-                    <span className="text-[#E8881E] mt-0.5 shrink-0">•</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+              {/* Your Goal */}
+              <div className="space-y-2">
+                <h3 className="text-base font-extrabold text-[#E8881E] flex items-center gap-2">
+                  <Target size={18} className="text-[#E8881E]" />
+                  Your Goal
+                </h3>
+                <ul className="space-y-1.5 pl-6">
+                  {[
+                    'Choose useful ingredients',
+                    'Add logical cooking steps',
+                    'Help identify the impostor',
+                  ].map((item) => (
+                    <li key={item} className="text-sm text-[#3D2E1F] flex items-center gap-2 font-medium">
+                      <span className="text-[#3D2E1F] font-bold">•</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-            {/* Keep in mind */}
-            <div>
-              <h3 className="text-sm font-bold text-[#C5630F] flex items-center gap-1.5 mb-2">
-                📍 KEEP IN MIND
-              </h3>
-              <p className="text-sm text-[#3D2E1F] leading-relaxed">
-                Think before you vote. One wrong decision can save the impostor.
-              </p>
-            </div>
+              <hr className="!my-4 border-t border-[#F0D5B5]" />
 
-            {/* Secret notice */}
-            <div className="bg-[#FFECCC] rounded-xl px-4 py-3 flex items-center gap-2.5 border border-[#FFB84D]/30">
-              <Lock size={16} className="text-[#E8881E] shrink-0" />
-              <p className="text-xs font-semibold text-[#3D2E1F]">
-                🔒 Keep your role secret
-              </p>
+              {/* What You Know */}
+              <div className="space-y-2">
+                <h3 className="text-base font-extrabold text-[#E8881E] flex items-center gap-2">
+                  <Lightbulb size={18} className="text-[#E8881E]" />
+                  WHAT YOU KNOW
+                </h3>
+                <ul className="space-y-1.5 pl-6">
+                  {[
+                    'One player is secretly sabotaging the dish',
+                    'Not all choices will make sense',
+                    'Patterns across rounds reveal the truth',
+                  ].map((item) => (
+                    <li key={item} className="text-sm text-[#3D2E1F] flex items-center gap-2 font-medium">
+                      <span className="text-[#3D2E1F] font-bold">•</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <hr className="!my-4 border-t border-[#F0D5B5]" />
+
+              {/* Keep in mind */}
+              <div className="space-y-2">
+                <h3 className="text-base font-extrabold text-[#E8881E] flex items-center gap-2">
+                  <Brain size={18} className="text-[#E8881E]" />
+                  KEEP IN MIND
+                </h3>
+                <p className="text-sm text-[#3D2E1F] leading-relaxed pl-6 font-medium">
+                  Think before you vote. One wrong decision can save the impostor.
+                </p>
+              </div>
+
+              {/* Secret badge */}
+              <div className="!mt-5 bg-[#FFEAD1] rounded-xl px-4 py-3 flex items-center gap-2.5 border border-[#F5CE9E]">
+                <Lock size={16} className="text-[#6E5A44] shrink-0" />
+                <span className="text-sm font-bold text-[#3D2E1F]">
+                  Keep your role secret
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom button */}
-        <div className="px-6 pb-6 pt-2">
+        {/* Bottom button - Centered Okay Continue */}
+        <div className="mt-7 flex justify-center">
           <button
             onClick={onClose}
-            className="w-full py-3.5 rounded-2xl bg-[#E8881E] hover:bg-[#D47815] text-white font-bold text-base transition-colors shadow-md shadow-[#E8881E]/25 cursor-pointer active:scale-[0.98]"
+            className="px-20 py-3.5 rounded-full bg-[#E8881E] hover:bg-[#D47815] text-white font-extrabold text-base transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-[#E8881E]/30 cursor-pointer"
           >
             Okay Continue
           </button>

@@ -5,6 +5,10 @@ import { CookCreateHeader } from './-components/CookCreateHeader';
 import { PlayerAvatar } from './-components/PlayerAvatar';
 import { CountdownTimer } from './-components/CountdownTimer';
 import { CC } from './-components/cc-theme';
+import lobbyBg from '../../assets/cookandcreate/game-2-lobby-bg.jpg';
+import lobbyLogo from '../../assets/cookandcreate/Cook  and Create Logo.png';
+import decorLeft from '../../assets/cookandcreate/decor-left.png';
+import decorRight from '../../assets/cookandcreate/decor-right.png';
 
 export const Route = createFileRoute('/cookandcreate/lobby')({
   component: LobbyPage,
@@ -78,56 +82,43 @@ function StatBox({ label, value }: { label: string; value: string | number }) {
 function LobbyPage() {
   return (
     <CookCreateLayout breadcrumb="Cook & Create / Lobby">
-      <div className="flex flex-col gap-5">
+      {/* Decorative leaves */}
+      <img src={decorLeft} alt="" className="fixed bottom-0 left-0 w-32 md:w-48 opacity-80 pointer-events-none z-0" />
+      <img src={decorRight} alt="" className="fixed bottom-0 right-0 w-40 md:w-64 opacity-80 pointer-events-none z-0" />
+      <div className="flex flex-col gap-5 relative z-10">
         {/* Header */}
         <CookCreateHeader />
 
         {/* Two-column: Hero + Rules */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
           {/* Left: Hero Banner (3 cols) */}
-          <Card className="lg:col-span-3 overflow-hidden" style={{ padding: 0 }}>
+          <Card className="lg:col-span-3 overflow-hidden relative" style={{ padding: 0 }}>
             <div
-              className="relative flex flex-col md:flex-row items-center min-h-[260px]"
-              style={{
-                background: `linear-gradient(135deg, ${CC.primaryLight} 0%, #FFE0B2 100%)`,
-              }}
+              className="relative flex flex-col md:flex-row items-center min-h-[410px] bg-center"
+              style={{ backgroundImage: `url(${lobbyBg})` }}
             >
               {/* Cooking scene area */}
-              <div className="flex-1 flex items-center justify-center p-6">
-                <div className="relative w-full max-w-[240px] aspect-square flex items-center justify-center">
-                  {/* Decorative cooking emojis */}
-                  <span className="absolute top-2 left-4 text-4xl opacity-80 animate-pulse">🍳</span>
-                  <span className="absolute top-6 right-6 text-3xl opacity-70" style={{ animationDelay: '0.5s' }}>🧑‍🍳</span>
-                  <span className="absolute bottom-8 left-8 text-3xl opacity-70">🥘</span>
-                  <span className="absolute bottom-4 right-4 text-4xl opacity-60">🍲</span>
-                  <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl">👨‍🍳</span>
-                  {/* Decorative circles */}
-                  <div
-                    className="absolute w-28 h-28 rounded-full opacity-20"
-                    style={{ backgroundColor: CC.gold, top: '20%', left: '15%' }}
-                  />
-                  <div
-                    className="absolute w-20 h-20 rounded-full opacity-15"
-                    style={{ backgroundColor: CC.primary, bottom: '15%', right: '20%' }}
-                  />
-                </div>
+              <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+                 <img src={lobbyLogo} alt="Cook & Create Logo" className="w-full max-w-[180px] drop-shadow-2xl" />
               </div>
 
               {/* Text side */}
-              <div className="flex-1 p-6 md:pr-8">
-                <h1
-                  className="text-2xl md:text-3xl font-bold leading-tight mb-3"
-                  style={{ color: CC.text }}
-                >
-                  Welcome to<br />
-                  <span style={{ color: CC.primary }}>Cook &amp; Create</span>
-                </h1>
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{ color: CC.textMuted }}
-                >
-                  Work together to create the best dish while finding the hidden imposter in your team
-                </p>
+              <div className="flex-1 p-6 md:pr-8 relative z-10">
+                <div className="bg-white/50 backdrop-blur-md rounded-2xl p-6 border border-white/50 shadow-lg">
+                  <h1
+                    className="text-2xl md:text-3xl font-bold leading-tight mb-3"
+                    style={{ color: CC.text }}
+                  >
+                    Welcome to<br />
+                    Cook &amp; Create
+                  </h1>
+                  <p
+                    className="text-sm leading-relaxed font-medium"
+                    style={{ color: CC.textMuted }}
+                  >
+                    Work together to create the best dish while finding the hidden imposter in your team
+                  </p>
+                </div>
               </div>
             </div>
           </Card>
