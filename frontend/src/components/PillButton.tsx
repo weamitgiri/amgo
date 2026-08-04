@@ -21,7 +21,7 @@ export function PillButton({
     <button className={`${base} ${styles[variant]} ${className}`} {...props}>
       {children}
       {withArrow && (variant === "light" || variant === "primary") && (
-        <span className={`grid h-8 w-8 place-items-center rounded-full transition-transform group-hover:translate-x-0.5 ${variant === "light" ? "bg-gradient-primary text-white" : "bg-white/20 text-white"}`}>
+        <span className={`grid h-8 w-8 place-items-center rounded-full transition-transform group-hover:translate-x-0.5 ${variant === "light" ? "bg-[#8B5CF6] text-white" : "bg-white/20 text-white"}`}>
           <ArrowRight className="h-4 w-4" />
         </span>
       )}

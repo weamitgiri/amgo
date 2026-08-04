@@ -6,8 +6,11 @@ import { participantService } from "@/api/services/participant.service";
 import type { JoinLinkResponse } from "@/api/types/participant";
 import { saveParticipantSession } from "@/lib/participant-session";
 import { toastError, toastInfo, toastSuccess } from "@/lib/toast";
-import mystery from "@/assets/mystery.jpg";
-
+import mystery from "@/assets/game-a-card-bg.jpg";
+import cook from "@/assets/game-a-card-bg.jpg";
+import mqlogo from "@/assets/mqlogo.png";
+import heroBg from "@/assets/hero-bg-home.jpg";
+import { resolveMediaUrl } from "@/utils/media";
 export const Route = createFileRoute("/join/$linkToken")({
   head: () => ({ meta: [{ title: "Join Activity — Zoventro" }] }),
   component: JoinPage,
@@ -36,11 +39,15 @@ function applyJoinLinkData(
     setBookingId: (id: number | null) => void;
     setActivityTitle: (v: string) => void;
     setActivityDescription: (v: string) => void;
+    setActivityIcon: (v: string | null) => void;
+    setActivityCover: (v: string | null) => void;
     setOrganizerName: (v: string) => void;
     setOrganizerCompany: (v: string) => void;
     setActivitySlug: (v: string) => void;
     setScheduledDate: (v: string) => void;
+    setScheduledDateDay: (v: string) => void;
     setScheduledTime: (v: string) => void;
+    setScheduledTimezone: (v: string) => void;
     setScheduleStart: (v: Date | null) => void;
     setRegistrationOpensAt: (v: string) => void;
     setStep: (s: "pending" | "form") => void;
@@ -49,9 +56,9 @@ function applyJoinLinkData(
   const start = new Date(data.schedule_start);
   setters.setBookingId(Number(data.booking_id));
   setters.setActivityTitle(data.activity_title || "Activity");
-  setters.setActivityDescription(
-    data.activity_description ? stripHtml(String(data.activity_description)) : ""
-  );
+  setters.setActivityDescription(data.activity_description || "");
+  setters.setActivityIcon(data.activity_icon || null);
+  setters.setActivityCover(data.activity_cover_image || null);
   setters.setOrganizerName(data.organizer_name || "");
   setters.setOrganizerCompany(data.organizer_company || "");
   setters.setActivitySlug(data.activity_slug || "");
@@ -60,12 +67,22 @@ function applyJoinLinkData(
   setters.setScheduledDate(
     Number.isNaN(start.getTime())
       ? String(data.scheduled_date)
-      : start.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+      : start.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })
+  );
+  setters.setScheduledDateDay(
+    Number.isNaN(start.getTime())
+      ? ""
+      : `(${start.toLocaleDateString(undefined, { weekday: "long" })})`
   );
   setters.setScheduledTime(
     Number.isNaN(start.getTime())
       ? String(data.scheduled_time)
       : start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true })
+  );
+  setters.setScheduledTimezone(
+    Number.isNaN(start.getTime())
+      ? ""
+      : `(${start.toLocaleTimeString(undefined, { timeZoneName: "short" }).split(" ").pop()})`
   );
 
   const nextStep = resolveJoinStep(data);
@@ -97,10 +114,14 @@ function JoinPage() {
   const [bookingId, setBookingId] = useState<number | null>(null);
   const [activityTitle, setActivityTitle] = useState("Mystery Quest");
   const [activityDescription, setActivityDescription] = useState("");
+  const [activityIcon, setActivityIcon] = useState<string | null>(null);
+  const [activityCover, setActivityCover] = useState<string | null>(null);
   const [organizerName, setOrganizerName] = useState("");
   const [organizerCompany, setOrganizerCompany] = useState("");
   const [scheduledDate, setScheduledDate] = useState<string>("");
+  const [scheduledDateDay, setScheduledDateDay] = useState<string>("");
   const [scheduledTime, setScheduledTime] = useState<string>("");
+  const [scheduledTimezone, setScheduledTimezone] = useState<string>("");
   const [registrationOpensAt, setRegistrationOpensAt] = useState("");
   const [activitySlug, setActivitySlug] = useState("");
   const [scheduleStart, setScheduleStart] = useState<Date | null>(null);
@@ -113,11 +134,15 @@ function JoinPage() {
     setBookingId,
     setActivityTitle,
     setActivityDescription,
+    setActivityIcon,
+    setActivityCover,
     setOrganizerName,
     setOrganizerCompany,
     setActivitySlug,
     setScheduledDate,
+    setScheduledDateDay,
     setScheduledTime,
+    setScheduledTimezone,
     setScheduleStart,
     setRegistrationOpensAt,
     setStep,
@@ -292,56 +317,77 @@ function JoinPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero text-white relative overflow-hidden">
-      {/* glow blobs */}
-      <div className="absolute -top-40 -left-40 h-[420px] w-[420px] rounded-full bg-purple-500/30 blur-3xl" />
-      <div className="absolute top-1/3 -right-32 h-[420px] w-[420px] rounded-full bg-fuchsia-500/20 blur-3xl" />
+    <div className="min-h-screen text-white relative overflow-hidden bg-[#0a0715]">
+      {/* Background Image */}
+      <img src={heroBg} alt="" className="absolute h-full w-full" />
+      <div className="absolute bg-gradient-to-br from-[#0a0715]/90 via-[#0a0715]/70 to-[#0a0715]/90" />
 
       <header className="relative px-6 py-5 max-w-7xl mx-auto flex items-center justify-between">
-        <Logo />
+        {/*<Logo />*/}
       </header>
 
       <main className="relative px-4 pb-16">
-        <div className="mx-auto max-w-6xl grid gap-6 lg:grid-cols-2">
+        <div className="mx-auto max-w-[1240px] grid gap-8 lg:grid-cols-2">
           {/* LEFT — quest info */}
-          <div className="rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 sm:p-8 shadow-elevated flex flex-col">
-            <div className="grid gap-6 sm:grid-cols-[minmax(0,200px)_1fr] items-start">
-              <img
-                src={mystery}
-                alt={activityTitle}
-                className="w-full h-48 sm:h-full sm:max-h-[320px] object-cover rounded-2xl ring-1 ring-white/10"
-              />
-              <div>
-                <h1 className="text-3xl font-bold leading-tight">
-                  Are you ready to
-                  <br />
-                  solve the mystery?
-                </h1>
-                <p className="mt-3 text-sm text-white/70">
-                  {activityDescription ||
-                    "A story-driven team challenge where employees collaborate, question, and compete to solve the case."}
-                </p>
-                <ul className="mt-4 space-y-1.5 pl-5 text-sm text-white/85 list-disc marker:text-white/40">
-                  <li>Role-based gameplay (Investigator, Culprit, Witness, and more)</li>
-                  <li>Real-time questioning and deduction</li>
-                  <li>Time-bound challenges to maintain urgency</li>
-                  <li>Built for communication and strategic thinking</li>
-                </ul>
-                <p className="mt-4 text-sm text-white/70">
-                  Builds stronger communication, sharper thinking, and real team collaboration in a high-energy environment.
-                </p>
-              </div>
-            </div>
+          <div className="relative rounded-[2.5rem] overflow-hidden border border-white/10 shadow-elevated flex flex-col min-h-[640px]">
+            {/* Background Image & Overlays */}
+            <img
+              src={activityCover ? (resolveMediaUrl(activityCover) ?? undefined) : (activitySlug === "mystery-quest" ? mystery : cook)}
+              alt={activityTitle}
+              className="absolute  h-full w-full"
+            />
+            <div className="absolute bg-gradient-to-r from-[#0a0715] via-[#0a0715]/70 to-transparent" />
+            <div className="absolute inset-0 bg-black/30" />
 
-            <div className="mt-6 grid grid-cols-3 rounded-2xl bg-white/95 text-foreground p-4">
-              <div className="px-3">
-                <Meta icon={User} label="Organizer" v1={organizerName || "—"} v2={organizerCompany || ""} />
+            {/* Content Container */}
+            <div className="relative z-10 flex flex-col h-full p-8 md:p-10">
+              <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+                <img
+                  src={activityIcon ? (resolveMediaUrl(activityIcon) ?? undefined) : (activitySlug === "mystery-quest" ? mystery : mqlogo)}
+                  alt="Logo"
+                  className="w-40 md:w-48 object-contain drop-shadow-2xl"
+                />
+                <div className="flex-1 pt-2">
+                  <h1 className="text-3xl font-bold leading-tight drop-shadow-md">
+                    Are you ready to<br />solve the mystery?
+                  </h1>
+                  
+                  <div className="mt-4 space-y-4 text-[13.5px] text-white/90 leading-relaxed prose-sm prose-invert max-w-none">
+                    {activityDescription ? (
+                      <div dangerouslySetInnerHTML={{ __html: activityDescription }} />
+                    ) : (
+                      <>
+                        <p>
+                          A story-driven team challenge where employees collaborate, question, and compete to solve the case.
+                        </p>
+                        <ul className="pl-4 list-disc marker:text-white/40 space-y-2">
+                          <li>Role-based gameplay (Investigator, Culprit, Witness, and more)</li>
+                          <li>Real-time questioning and deduction</li>
+                          <li>Time-bound challenges to maintain urgency</li>
+                          <li>Built for communication and strategic thinking</li>
+                        </ul>
+                        <p>
+                          Builds stronger communication, sharper thinking, and real team collaboration in a high-energy environment.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="px-3 border-l border-black/10">
-                <Meta icon={Calendar} label="Date" v1={scheduledDate || "TBA"} v2="" />
-              </div>
-              <div className="px-3 border-l border-black/10">
-                <Meta icon={Clock} label="Start Time" v1={scheduledTime || "TBA"} v2="" />
+
+              {/* Bottom Info Bar */}
+              <div className="mt-auto pt-10">
+                <div className="grid grid-cols-3 rounded-[24px] bg-white text-foreground p-5 shadow-2xl">
+                  <div className="px-3">
+                    <Meta icon={User} label="Organizer" v1={organizerName || "—"} v2={organizerCompany || ""} />
+                  </div>
+                  <div className="px-5 border-l border-black/10">
+                    <Meta icon={Calendar} label="Date" v1={scheduledDate || "TBA"} v2={scheduledDateDay} />
+                  </div>
+                  <div className="px-5 border-l border-black/10">
+                    <Meta icon={Clock} label="Start Time" v1={scheduledTime || "TBA"} v2={scheduledTimezone} />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -355,7 +401,9 @@ function JoinPage() {
                 activityTitle={activityTitle}
                 activityDescription={activityDescription}
                 scheduledDate={scheduledDate}
+                scheduledDateDay={scheduledDateDay}
                 scheduledTime={scheduledTime}
+                scheduledTimezone={scheduledTimezone}
                 registrationOpensAt={registrationOpensAt}
                 isRefreshing={isRefreshing}
                 onRefresh={handleRefreshStatus}
@@ -370,9 +418,10 @@ function JoinPage() {
                 disclaimerAccepted={disclaimerAccepted}
                 setDisclaimerAccepted={setDisclaimerAccepted}
                 onNext={handleSendOtp}
-                canProceed={canSendOtp}
+                canProceed={name.trim().length > 0 && email.includes("@")}
                 isSubmitting={isSubmitting}
                 activityTitle={activityTitle}
+                activityDescription={activityDescription}
               />
             )}
             {step === "otp" && (
@@ -449,7 +498,9 @@ function PendingStep({
   activityTitle,
   activityDescription,
   scheduledDate,
+  scheduledDateDay,
   scheduledTime,
+  scheduledTimezone,
   registrationOpensAt,
   isRefreshing,
   onRefresh,
@@ -457,24 +508,26 @@ function PendingStep({
   activityTitle: string;
   activityDescription: string;
   scheduledDate: string;
+  scheduledDateDay: string;
   scheduledTime: string;
+  scheduledTimezone: string;
   registrationOpensAt: string;
   isRefreshing: boolean;
   onRefresh: () => void;
 }) {
   return (
     <>
-      <div className="text-xs uppercase tracking-widest text-white/60">You're invited to</div>
-      <h2 className="mt-1 text-3xl font-bold">{activityTitle}</h2>
+      <div className="text-[15px] text-white/90 mb-1">You're invited to</div>
+      <h2 className="text-3xl font-bold md:text-[40px] tracking-tight">{activityTitle}</h2>
       {activityDescription ? (
-        <p className="mt-2 text-sm text-white/70">{activityDescription}</p>
+        <div className="mt-3 text-[14px] text-white/80 leading-relaxed prose-sm prose-invert max-w-none line-clamp-3" dangerouslySetInnerHTML={{ __html: activityDescription }} />
       ) : null}
 
       <div className="mt-8 rounded-3xl bg-white/10 p-6 text-left text-white/85">
         <div className="text-sm font-semibold text-white">Event Schedule</div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Meta icon={Calendar} label="Date" v1={scheduledDate || "TBA"} v2="" />
-          <Meta icon={Clock} label="Start Time" v1={scheduledTime || "TBA"} v2="" />
+          <Meta icon={Calendar} label="Date" v1={scheduledDate || "TBA"} v2={scheduledDateDay} />
+          <Meta icon={Clock} label="Start Time" v1={scheduledTime || "TBA"} v2={scheduledTimezone} />
         </div>
         <div className="mt-5 rounded-2xl bg-white/5 p-4 text-sm text-white/80">
           The game is not scheduled today. Please join at the right date and time. Please contact the organiser.
@@ -511,6 +564,7 @@ function FormStep({
   canProceed,
   isSubmitting,
   activityTitle,
+  activityDescription,
 }: {
   name: string;
   setName: (v: string) => void;
@@ -522,19 +576,25 @@ function FormStep({
   canProceed: boolean;
   isSubmitting: boolean;
   activityTitle: string;
+  activityDescription: string;
 }) {
   return (
     <>
-      <div className="text-xs uppercase tracking-widest text-white/60">You're invited to</div>
-      <h2 className="mt-1 text-3xl font-bold">{activityTitle}</h2>
-      <p className="mt-2 text-sm text-white/70">
-        A story-driven team challenge where employees collaborate, question, and compete to solve the case.
-      </p>
+      <div className="text-[15px] text-white/90 mb-1">You're invited to</div>
+      <h2 className="text-3xl font-bold md:text-[40px] tracking-tight">{activityTitle}</h2>
+      
+      {activityDescription ? (
+        <div className="mt-3 text-[14px] text-white/80 leading-relaxed prose-sm prose-invert max-w-none line-clamp-3" dangerouslySetInnerHTML={{ __html: activityDescription }} />
+      ) : (
+        <p className="mt-3 text-[14px] text-white/80 leading-relaxed">
+          A story-driven team challenge where employees collaborate, question, and compete to solve the case.
+        </p>
+      )}
 
-      <h3 className="mt-7 text-lg font-bold">Join the Game</h3>
-      <p className="text-xs text-white/60">Enter your details to join the event and get assigned to your group.</p>
+      <h3 className="mt-8 text-[22px] font-bold">Join the Game</h3>
+      <p className="mt-1 text-[14px] text-white/80">Enter your details to join the event and get assigned to your group.</p>
 
-      <div className="mt-5 space-y-4">
+      <div className="mt-6 space-y-5">
         <Field icon={User} label="Full Name" placeholder="Enter your full name" value={name} onChange={setName} />
         <Field
           icon={Mail}
@@ -547,32 +607,22 @@ function FormStep({
         />
       </div>
 
-      <label className="mt-5 flex items-start gap-3 text-xs text-white/75 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={disclaimerAccepted}
-          onChange={(e) => setDisclaimerAccepted(e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/30 bg-white/10 accent-purple-500"
-        />
-        <span>
-          I understand that all characters, names, roles, incidents, and storylines in this game are
-          entirely fictional and created for entertainment purposes only. Any resemblance to real
-          persons, events, or situations is purely coincidental.
-        </span>
-      </label>
-
       <button
         type="button"
         onClick={onNext}
         disabled={!canProceed || isSubmitting}
-        className={`mt-6 self-start inline-flex items-center gap-2 rounded-full pl-5 pr-1.5 py-2 text-sm font-medium shadow-glow transition ${
+        className={`mt-8 self-start inline-flex items-center justify-between gap-4 rounded-full pl-6 pr-1.5 py-1.5 text-[15px] font-medium shadow-md transition-all border-0 ${
           canProceed && !isSubmitting
-            ? "bg-gradient-primary text-white hover:opacity-90"
-            : "bg-white/15 text-white/60 cursor-not-allowed"
+            ? "bg-gradient-blue text-white hover:opacity-90"
+            : "bg-white/10 text-white/40 cursor-not-allowed"
         }`}
       >
         {isSubmitting ? "Sending…" : "Send Verification Code"}
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-white/20"><ArrowRight className="h-4 w-4" /></span>
+        <span className={`grid h-9 w-9 place-items-center rounded-full transition-colors ${
+          canProceed && !isSubmitting ? "bg-white text-[#8B5CF6]" : "bg-white/10 text-white/40"
+        }`}>
+          <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+        </span>
       </button>
     </>
   );
@@ -606,20 +656,22 @@ function OtpStep({
     <>
       <button
         onClick={onBack}
-        className="self-start inline-flex items-center gap-2 text-xs text-white/80 bg-white/10 rounded-full px-3 py-1.5 hover:bg-white/15"
+        className="self-start inline-flex items-center gap-3 text-[14px] text-white/90 hover:text-white transition-colors"
       >
-        <ArrowLeft className="h-3.5 w-3.5" /> Go Back
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-[#3B82F6]">
+          <ArrowLeft className="h-4 w-4" strokeWidth={2.5} />
+        </span>
+        Go Back
       </button>
 
-      <h2 className="mt-6 text-3xl font-bold">Verify Your Email</h2>
-      <p className="mt-2 text-sm text-white/70">Enter the OTP sent to your email to continue.</p>
+      <h2 className="mt-8 text-3xl font-bold md:text-[40px] tracking-tight">Verify Your Email</h2>
+      <p className="mt-3 text-[14px] text-white/80">Enter the OTP sent to your email to continue.</p>
 
-      <p className="mt-6 text-xs text-white/65">
-        We have sent a 6-digit code to your email{' '}
-        <span className="text-white font-medium">{email || 'you@company.com'}</span>
+      <p className="mt-8 text-[14px] text-white/90">
+        We have sent a 6 digit code to your email {email || 'you@company.com'}
       </p>
 
-      <div className="mt-4 flex gap-2.5">
+      <div className="mt-5 flex gap-3">
         {values.map((value, index) => (
           <input
             key={index}
@@ -640,18 +692,20 @@ function OtpStep({
             type="text"
             inputMode="numeric"
             maxLength={1}
-            className="h-14 w-14 rounded-3xl border border-white/10 bg-white/5 text-center text-lg font-semibold text-white outline-none transition focus:border-primary focus:bg-white/10"
+            className={`h-[56px] w-[56px] rounded-[14px] border pl-1 pr-1 text-center text-[22px] font-bold text-white outline-none transition focus:border-primary focus:ring-1 focus:ring-primary ${
+              value ? "bg-[#3B82F6]/20 border-[#3B82F6]/40" : "bg-transparent border-white/20"
+            }`}
           />
         ))}
       </div>
 
-      <p className="mt-4 text-xs text-white/55">
-        Didn't receive the code?{" "}
+      <p className="mt-8 text-[14px] text-white/80">
+        Didn't receive code?{" "}
         <button
           type="button"
           onClick={onResend}
           disabled={isSubmitting}
-          className="text-primary font-medium disabled:opacity-50"
+          className="text-[#F43F5E] hover:text-[#E11D48] transition-colors disabled:opacity-50"
         >
           Resend
         </button>
@@ -661,14 +715,18 @@ function OtpStep({
         type="button"
         onClick={onVerify}
         disabled={!filled || isSubmitting}
-        className={`mt-6 self-start inline-flex items-center gap-2 rounded-full pl-5 pr-1.5 py-2 text-sm font-medium shadow-glow transition ${
+        className={`mt-8 self-start inline-flex items-center justify-between gap-4 rounded-full pl-6 pr-1.5 py-1.5 text-[15px] font-medium shadow-md transition-all border-0 ${
           filled && !isSubmitting
-            ? "bg-gradient-primary text-white hover:opacity-90"
-            : "bg-white/15 text-white/60 cursor-not-allowed"
+            ? "bg-gradient-blue text-white hover:opacity-90"
+            : "bg-white/10 text-white/40 cursor-not-allowed"
         }`}
       >
         {isSubmitting ? 'Verifying…' : 'Verify & Proceed'}
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-white/20"><ArrowRight className="h-4 w-4" /></span>
+        <span className={`grid h-9 w-9 place-items-center rounded-full transition-colors ${
+          filled && !isSubmitting ? "bg-white text-[#8B5CF6]" : "bg-white/10 text-white/40"
+        }`}>
+          <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+        </span>
       </button>
     </>
   );
@@ -714,17 +772,17 @@ function Field({
 }: { icon: any; label: string; hint?: string; placeholder: string; value: string; onChange: (v: string) => void; type?: string }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold">{label}</span>
-      {hint && <span className="block text-[11px] text-white/55 mt-0.5">{hint}</span>}
+      <span className="text-[15px] font-bold text-white">{label}</span>
+      {hint && <span className="block text-[11px] text-white/60 mt-0.5">{hint}</span>}
       <div className="mt-2 relative">
         <input
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-xl bg-white/5 border border-white/15 pl-4 pr-11 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+          className="w-full rounded-xl bg-transparent border border-white/30 pl-4 pr-11 py-3.5 text-[15px] text-white placeholder:text-white/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />
-        <Icon className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+        <Icon className="absolute right-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-white/70" strokeWidth={2} />
       </div>
     </label>
   );
@@ -733,11 +791,11 @@ function Field({
 function Meta({ icon: Icon, label, v1, v2 }: { icon: any; label: string; v1: string; v2: string }) {
   return (
     <div>
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 text-primary" /> {label}
+      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground font-medium">
+        <Icon className="h-[18px] w-[18px] text-[#8B5CF6]" strokeWidth={2} /> {label}
       </div>
-      <div className="mt-1 text-sm font-semibold">{v1}</div>
-      <div className="text-[11px] text-muted-foreground">{v2}</div>
+      <div className="mt-1.5 text-[14px] font-bold text-black">{v1}</div>
+      <div className="text-[12px] text-muted-foreground mt-0.5">{v2}</div>
     </div>
   );
 }

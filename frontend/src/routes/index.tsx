@@ -45,12 +45,12 @@ type FeatureCard = {
 };
 
 const FEATURES: FeatureCard[] = [
-  { icon: HandHeart, color: "text-info", bg: "bg-info/15", title: "Drive Real Participation, Not Just Attendance", desc: "Move beyond passive sessions where people just show up. Every participant actively contributes, interacts, and plays a role." },
-  { icon: Users, color: "text-primary", bg: "bg-primary/15", title: "Turn Employees Into Active Contributors", desc: "Encourage real collaboration, not just observation. Participants think, respond, and engage with each other continuously." },
-  { icon: Target, color: "text-success", bg: "bg-success/15", title: "Structured Activities With Clear Outcomes", desc: "Each activity is built with defined roles, rules, and objectives. Outcomes are clear, measurable, and aligned with team goals." },
-  { icon: Zap, color: "text-pink", bg: "bg-pink/15", title: "Setup in Minutes, No Training Needed", desc: "Get started quickly without lengthy onboarding. The platform is intuitive and easy for both organizers and participants." },
-  { icon: MonitorPlay, color: "text-warning", bg: "bg-warning/15", title: "No IT Required, Just Open and Play", desc: "Zoventro runs entirely in the browser. No app installations, no infrastructure, no IT tickets — just open and participate." },
-  { icon: MonitorPlay, color: "text-warning", bg: "bg-warning/15", title: "Secure and Time-Bound Access", desc: "Each package generates unique access credentials per participant. All access expiresautomatically after 5 days." },
+  { icon: Users, color: "text-[#0EA5E9]", bg: "bg-[#0EA5E9]/10", title: "Drive Real Participation, Not Just Attendance", desc: "Move beyond passive sessions where people just show up. Every participant actively contributes, interacts, and plays a role. Designed to keep energy high and involvement consistent throughout." },
+  { icon: HandHeart, color: "text-[#8B5CF6]", bg: "bg-[#8B5CF6]/10", title: "Turn Employees Into Active Contributors", desc: "Encourage real collaboration, not just observation. Participants think, respond, and engage with each other continuously. Every individual becomes part of the experience, not just a spectator." },
+  { icon: Target, color: "text-[#10B981]", bg: "bg-[#10B981]/10", title: "Structured Activities With Clear Outcomes", desc: "Each activity is built with defined roles, rules, and objectives. No confusion, no randomness, just guided, meaningful interaction. Outcomes are clear, measurable, and aligned with team goals." },
+  { icon: Zap, color: "text-[#F43F5E]", bg: "bg-[#F43F5E]/10", title: "Setup in Minutes, No Training Needed", desc: "Get started quickly without lengthy onboarding or instructions. The platform is intuitive and easy for both organizers and participants. Register, select your activity package, and distribute access credentials. The platform handles everything else automatically." },
+  { icon: MonitorPlay, color: "text-[#F59E0B]", bg: "bg-[#F59E0B]/10", title: "No IT Required, Just Open and Play", desc: "Zoventro runs entirely in the browser. No app installations, no infrastructure, no IT tickets — just open and participate." },
+  { icon: ShieldCheck, color: "text-white", bg: "bg-white/20", title: "Secure and Time-Bound Access", desc: "Each package generates unique access credentials per participant. All access expires automatically after 5 days. No data is retained beyond the activity window.", featured: false },
 ];
 
 type StepCard = {
@@ -93,15 +93,17 @@ function Home() {
     <div className="min-h-screen">
       {/* HERO */}
       <section className="relative px-4 pt-6">
-        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-hero">
-          <img src={hero} alt="" width={1536} height={1024} className="absolute inset-0 h-full w-full object-cover opacity-70" />
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-900/80 via-purple-900/40 to-transparent" />
+        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-[#100720]">
+          <img src={hero} alt="" width={1536} height={1024} className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#170B2F]/90 via-[#170B2F]/40 to-transparent" />
           <Header floating />
-          <div className="relative px-6 md:px-14 pt-44 pb-24 max-w-2xl">
-            <h1 className="text-5xl md:text-6xl font-bold text-white leading-[1.05]">
-              Turn Teams Activities Into Interactive Experiences
+          <div className="relative px-6 md:px-14 pt-44 pb-32 max-w-3xl">
+            <h1 className="text-[52px] md:text-[64px] font-extrabold text-white leading-[1.1] tracking-tight">
+              Turn Teams Activities <br className="hidden md:block" />
+              Into Interactive <br className="hidden md:block" />
+              Experiences
             </h1>
-            <p className="mt-5 text-white/80 max-w-md">
+            <p className="mt-6 text-white/80 text-base md:text-lg whitespace-nowrap">
               Boost engagement, collaboration, and energy, without complicated setups.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -124,25 +126,25 @@ function Home() {
             return (
               <div
                 key={f.title}
-                className={`rounded-2xl p-7 text-center shadow-card border transition-all duration-300 group ${
+                className={`rounded-[2rem] p-8 text-center shadow-card border transition-all duration-300 group ${
                   featured 
                     ? "bg-gradient-primary text-white border-transparent shadow-elevated hover:-translate-y-1 hover:shadow-glow" 
                     : "bg-card text-foreground border-border hover:bg-gradient-primary hover:text-white hover:border-transparent hover:-translate-y-1 hover:shadow-glow"
                 }`}
               >
-                <div className={`mx-auto h-14 w-14 rounded-full grid place-items-center transition-colors duration-300 ${
+                <div className={`mx-auto h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300 ${
                   featured 
-                    ? "bg-white/20" 
-                    : `${f.bg} group-hover:bg-white/20`
+                    ? "border border-white/20 bg-white/10" 
+                    : `${f.bg} group-hover:border group-hover:border-white/20 group-hover:bg-white/10`
                 }`}>
-                  <f.icon className={`h-6 w-6 transition-colors duration-300 ${
+                  <f.icon className={`h-7 w-7 transition-colors duration-300 ${
                     featured 
                       ? "text-white" 
                       : `${f.color} group-hover:text-white`
                   }`} />
                 </div>
                 
-                <h3 className={`mt-5 font-semibold text-lg transition-colors duration-300 ${
+                <h3 className={`mt-6 font-bold text-[20px] leading-tight transition-colors duration-300 ${
                   featured 
                     ? "text-white" 
                     : "text-foreground group-hover:text-white"
@@ -150,10 +152,10 @@ function Home() {
                   {f.title}
                 </h3>
                 
-                <p className={`mt-3 text-sm leading-relaxed transition-colors duration-300 ${
+                <p className={`mt-3.5 text-[13px] leading-relaxed transition-colors duration-300 ${
                   featured 
-                    ? "text-white/85" 
-                    : "text-muted-foreground group-hover:text-white/85"
+                    ? "text-white/90" 
+                    : "text-muted-foreground group-hover:text-white/90"
                 }`}>
                   {f.desc}
                 </p>
@@ -164,14 +166,13 @@ function Home() {
       </section>
 
       {/* ACTIVITIES */}
-      {/* ACTIVITIES */}
       <section id="activities" className="px-4 mt-24">
-        <div className="mx-auto max-w-6xl rounded-[2rem] bg-gradient-soft p-10 md:p-16">
+        <div className="mx-auto max-w-[1320px] rounded-[3rem] bg-gradient-soft p-10 md:p-16">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold">Explore Interactive Experiences</h2>
             <p className="mt-3 text-muted-foreground">Designed to engage people, spark thinking, and create memorable moments.</p>
           </div>
-          <div className="mt-10 grid md:grid-cols-2 gap-6">
+          <div className="mt-12 grid md:grid-cols-2 gap-8">
             {gamesLoading ? (
               <>
                 <CardSkeleton />
@@ -199,11 +200,11 @@ function Home() {
 
       {/* PRICING */}
       <section id="pricing" className="px-4 mt-24">
-        <div className="mx-auto max-w-6xl text-center">
+        <div className="mx-auto max-w-[1320px] text-center">
           <h2 className="text-3xl md:text-4xl font-bold">Choose Your Package</h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">Packages are non-refundable once activated, as access is delivered digitally and instantly upon payment.</p>
         </div>
-        <div className="mx-auto max-w-6xl mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mx-auto max-w-[1320px] mt-12 grid gap-8 md:grid-cols-3">
           {packagesLoading ? (
             <>
               <CardSkeleton tall />
@@ -318,7 +319,7 @@ function ActivityCard({
   // Fix: replace the ENTIRE <ul ...> opening tag (including any attributes like role="list")
   // so stray attributes don't leak as visible text.
   const descriptionHtml = (game.description ?? "")
-    .replace(/<ul[^>]*>/gi, '<ul class="list-disc pl-5 space-y-1 text-sm text-white/90 mt-2 mb-3">')
+    .replace(/<ul[^>]*>/gi, '<ul class="list-disc pl-5 space-y-1.5 text-[13px] md:text-sm text-white/90 mt-3 mb-4">')
     .replace(/<li[^>]*>/gi, "<li>")
     .replace(/<\/li>/gi, "</li>");
 
@@ -339,69 +340,73 @@ function ActivityCard({
   const closingText = closingMatch ? closingMatch[1].trim() : null;
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] min-h-[420px] shadow-elevated group">
+    <div className="relative overflow-hidden rounded-[2.5rem] min-h-[480px] shadow-elevated group flex flex-col justify-between">
       <img
         src={image}
         alt={game.title}
-        width={1024}
-        height={768}
         loading="lazy"
         className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-700"
       />
       <div
-        className={`absolute inset-0 ${accent === "warm" ? "bg-gradient-to-t from-orange-950/80 via-orange-900/50 to-orange-900/20" : "bg-gradient-to-t from-purple-900/85 via-purple-900/50 to-purple-900/20"}`}
+        className={`absolute inset-0 ${
+          accent === "warm" 
+            ? "bg-gradient-to-b from-orange-950/95 via-orange-950/70 to-orange-900/30" 
+            : "bg-gradient-to-b from-[#0F0826]/95 via-[#0F0826]/70 to-[#0F0826]/30"
+        }`}
       />
-      <div className="relative flex h-full flex-col p-8 md:p-10 text-white">
-        <div className="grid gap-6 sm:grid-cols-[auto_1fr] flex-1">
-          {/* Left: large badge */}
-          <div className="shrink-0">
-            {iconImage ? (
-              <img
-                src={iconImage}
-                alt={`${game.title} badge`}
-                className="h-28 w-28 md:h-36 md:w-36 object-contain drop-shadow-2xl"
-              />
-            ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/15 border border-white/20 shadow-lg backdrop-blur-lg">
-                <Icon className="h-9 w-9 text-white" />
-              </div>
-            )}
-          </div>
-
-          {/* Right: title + description + button */}
-          <div className="flex flex-col">
-            <h3 className="text-3xl md:text-4xl font-bold tracking-tight">{game.title}</h3>
-
+      
+      <div className="relative flex flex-col p-8 md:p-10 text-white h-full z-10">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+          {/* Badge */}
+          {iconImage ? (
+            <img
+              src={iconImage}
+              alt={`${game.title} badge`}
+              className="w-28 h-28 md:w-[140px] md:h-[140px] object-contain drop-shadow-2xl shrink-0"
+            />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 border border-white/20 shadow-md backdrop-blur-sm shrink-0">
+              <Icon className="h-10 w-10 text-white" />
+            </div>
+          )}
+          
+          {/* Content */}
+          <div className="flex-1">
+            <h3 className="text-3xl md:text-[36px] font-bold tracking-tight leading-tight">{game.title}</h3>
+            
             <div className="mt-4 flex-1">
               {hasHtml ? (
                 <div
-                  className="text-sm text-white/85 leading-relaxed prose prose-invert max-w-none prose-li:text-white/85 prose-ul:my-2"
+                  className="text-[14px] md:text-[15px] text-white/90 leading-relaxed prose prose-invert max-w-none prose-li:text-white/90 prose-ul:my-2"
                   dangerouslySetInnerHTML={{ __html: descriptionHtml }}
                 />
               ) : (
                 <>
-                  <p className="text-sm text-white/85 leading-relaxed">{summary}</p>
+                  <p className="text-[14px] md:text-[15px] text-white/90 leading-relaxed">{summary}</p>
                   {bullets.length > 0 && (
-                    <ul className="mt-3 list-disc pl-5 space-y-1 text-sm text-white/85">
+                    <ul className="mt-4 list-disc pl-5 space-y-2 text-[14px] md:text-[15px] text-white/90">
                       {bullets.map((bullet, index) => (
                         <li key={index}>{bullet}</li>
                       ))}
                     </ul>
                   )}
+                  {closingText && (
+                    <p className="mt-5 text-[14px] md:text-[15px] text-white/90 leading-relaxed">{closingText}</p>
+                  )}
                 </>
               )}
             </div>
-
-            <div className="mt-6">
-              <Link
-                to="/create"
-                search={{ activity: game.slug }}
-                className="inline-flex items-center justify-center rounded-full border border-white/40 px-10 py-3 text-sm font-semibold text-white transition hover:bg-white hover:text-foreground backdrop-blur-sm"
-              >
-                Explore Activity
-              </Link>
-            </div>
           </div>
+        </div>
+
+        <div className="mt-8 pt-6 flex justify-center mt-auto">
+          <Link
+            to="/create"
+            search={{ activity: game.slug }}
+            className="inline-flex items-center justify-center rounded-full border border-white/80 px-10 py-2.5 text-sm font-semibold text-white transition hover:bg-white hover:text-black backdrop-blur-sm"
+          >
+            Explore Activity
+          </Link>
         </div>
       </div>
     </div>
@@ -418,37 +423,37 @@ function PriceCard({ plan }: { plan: ApiPackage }) {
 
   return (
     <div
-      className={`relative rounded-2xl p-7 shadow-card bg-card border transition-all duration-300 ${
-        popular ? "border-primary/40 shadow-elevated" : "border-border hover:border-primary/20 hover:shadow-elevated"
+      className={`relative rounded-[2.5rem] p-8 lg:p-10 shadow-card bg-card border transition-all duration-300 ${
+        popular ? "border-transparent shadow-elevated ring-1 ring-primary/20" : "border-border hover:border-primary/20 hover:shadow-elevated"
       }`}
     >
       {popular && (
-        <div className="absolute -top-3.5 right-6 inline-flex items-center gap-1 rounded-full bg-gradient-primary text-white text-[10px] font-semibold uppercase tracking-wider px-3.5 py-1 shadow-sm">
-          <Crown className="h-3 w-3 text-warning fill-warning" /> Most Popular
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 inline-flex items-center rounded-full bg-gradient-blue text-white text-[11px] font-medium tracking-wide px-4 py-1.5 shadow-sm">
+          Most Popular
         </div>
       )}
-      <h3 className="font-semibold text-lg text-foreground">{plan.name}</h3>
+      <h3 className="font-bold text-[26px] text-foreground">{plan.name}</h3>
       {bestFor && (
-        <p className="mt-1 text-xs text-muted-foreground">Best for: {bestFor}</p>
+        <p className="mt-2 text-[14px] text-muted-foreground leading-relaxed">Best for: {bestFor}</p>
       )}
 
-      <div className="mt-5 flex items-start justify-between min-h-[48px]">
+      <div className="mt-7 flex items-start justify-between min-h-[52px]">
         <div>
-          <span className="text-3xl font-bold text-foreground">{formatPrice(plan.price)}</span>
+          <span className="text-[44px] font-extrabold text-foreground tracking-tight leading-none">{formatPrice(plan.price)}</span>
           {perUser && (
-            <p className="text-xs text-muted-foreground font-medium mt-0.5">{perUser}</p>
+            <p className="text-[13px] text-muted-foreground font-medium mt-1.5">{perUser}</p>
           )}
         </div>
-        <span className="text-xs text-muted-foreground mt-2">One Time Payment</span>
+        <span className="text-[11px] text-muted-foreground mt-3 font-medium">One Time<br/>Payment</span>
       </div>
 
-      <div className="mt-5 pt-5 border-t border-border">
-        <p className="text-xs font-semibold mb-3 text-foreground/90">This plan includes:</p>
-        <ul className="space-y-2.5">
+      <div className="mt-8 pt-7 border-t border-border/80">
+        <p className="text-[14px] font-medium mb-4 text-foreground/80">This plan includes:</p>
+        <ul className="space-y-4">
           {features.map((inc) => (
-            <li key={inc} className="flex items-start gap-2 text-sm">
-              <Check className="h-4 w-4 mt-0.5 shrink-0 text-success" />
-              <span className="text-foreground/80">{inc}</span>
+            <li key={inc} className="flex items-start gap-3 text-[14px]">
+              <Check className="h-4 w-4 mt-0.5 shrink-0 text-success" strokeWidth={2.5} />
+              <span className="text-foreground/90 leading-snug">{inc}</span>
             </li>
           ))}
         </ul>
@@ -457,11 +462,19 @@ function PriceCard({ plan }: { plan: ApiPackage }) {
       <Link
         to="/create"
         search={{ activity: undefined }}
-        className="mt-6 w-full inline-flex items-center justify-between rounded-full pl-5 pr-1.5 py-1.5 text-sm font-medium border border-border bg-white text-foreground/80 hover:bg-gradient-primary hover:text-white hover:border-transparent hover:outline hover:outline-2 hover:outline-primary hover:outline-offset-2 transition-all duration-300 group cursor-pointer"
+        className={`mt-10 w-full inline-flex items-center justify-between rounded-full pl-6 pr-1.5 py-1.5 text-[15px] font-medium border transition-all duration-300 group cursor-pointer ${
+          popular 
+            ? "border-transparent bg-gradient-blue text-white hover:opacity-90 hover:shadow-md" 
+            : "border-border bg-white text-foreground hover:bg-gradient-blue hover:text-white hover:border-transparent hover:shadow-md"
+        }`}
       >
         Pay &amp; Activate
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-primary group-hover:bg-white group-hover:text-primary transition-all duration-300">
-          <ArrowRight className="h-4 w-4" />
+        <span className={`grid h-9 w-9 place-items-center rounded-full transition-all duration-300 group-hover:translate-x-0.5 ${
+          popular
+            ? "bg-white text-[#8B5CF6]"
+            : "bg-purple-100 text-[#8B5CF6] group-hover:bg-white"
+        }`}>
+          <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
         </span>
       </Link>
     </div>
@@ -538,92 +551,54 @@ function CostCalculator() {
           </div>
         </div>
 
-        {/* Middle part: Row metrics and Simple Cost Breakdown split */}
-        <div className="grid md:grid-cols-12 gap-6 items-stretch">
-          {/* Metrics + Recommended (Col span 7) */}
-          <div className="md:col-span-7 flex flex-col gap-4">
-            {/* Row of 3 metrics cards */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-card rounded-2xl p-4 text-center border border-border/40 shadow-sm flex flex-col justify-center">
-                <span className="text-xl md:text-2xl font-bold text-primary">₹{data.costPerEmployee}</span>
-                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1.5 leading-tight">
-                  Cost per<br />employee
-                </span>
-              </div>
-              <div className="bg-card rounded-2xl p-4 text-center border border-border/40 shadow-sm flex flex-col justify-center">
-                <span className="text-xl md:text-2xl font-bold text-primary">₹{data.totalCost.toLocaleString("en-IN")}</span>
-                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1.5 leading-tight">
-                  Total package<br />cost
-                </span>
-              </div>
-              <div className="bg-card rounded-2xl p-4 text-center border border-border/40 shadow-sm flex flex-col justify-center">
-                <span className="text-xl md:text-2xl font-bold text-primary">{data.groups}</span>
-                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1.5 leading-tight">
-                  Groups<br />auto-formed
-                </span>
+        {/* Bottom part: Metrics and Donut chart side-by-side */}
+        <div className="grid lg:grid-cols-2 gap-6 items-stretch mt-2">
+          {/* Metrics + Recommended */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-border/40 flex flex-col justify-between gap-5">
+            <div>
+              <h4 className="font-bold text-sm text-foreground mb-4">See your cost per employee</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-purple-50/50 rounded-xl p-3 text-center border border-purple-100 flex flex-col justify-center">
+                  <span className="text-lg md:text-xl font-bold text-primary">₹{data.costPerEmployee}</span>
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 leading-tight">
+                    Cost per<br />employee
+                  </span>
+                </div>
+                <div className="bg-purple-50/50 rounded-xl p-3 text-center border border-purple-100 flex flex-col justify-center">
+                  <span className="text-lg md:text-xl font-bold text-primary">₹{data.totalCost.toLocaleString("en-IN")}</span>
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 leading-tight">
+                    Total package<br />cost
+                  </span>
+                </div>
+                <div className="bg-purple-50/50 rounded-xl p-3 text-center border border-purple-100 flex flex-col justify-center">
+                  <span className="text-lg md:text-xl font-bold text-primary">{data.groups}</span>
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 leading-tight">
+                    Groups<br />auto-formed
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Recommended package card */}
-            <div className="bg-card/40 backdrop-blur-md rounded-2xl p-5 border border-border/40 flex-1 flex flex-col justify-center">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Recommended:
-              </span>
-              <div className="mt-2 flex items-center">
-                <span className="inline-flex bg-gradient-primary text-white font-semibold px-4 py-1.5 rounded-full text-xs shadow-sm">
+            <div className="bg-purple-50/50 rounded-xl p-4 border border-purple-100 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                  Recommended:
+                </span>
+                <span className="inline-flex bg-gradient-primary text-white font-semibold px-3 py-1 rounded-full text-xs shadow-sm mt-1.5">
                   {data.name}
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
-                Zoventro is up to 5x more cost-effective than traditional team activities
+              <p className="text-[10px] text-muted-foreground max-w-[120px] leading-relaxed text-right">
+                Zoventro is up to 5x more cost-effective
               </p>
             </div>
           </div>
 
-          {/* Simple Cost Breakdown Card (Col span 5) */}
-          <div className="md:col-span-5 bg-card/40 backdrop-blur-md rounded-2xl p-5 border border-border/40 flex flex-col justify-between min-h-[220px]">
-            <div>
-              <h4 className="font-bold text-xs text-foreground tracking-wide uppercase text-muted-foreground mb-3">
-                Simple Cost Breakdown:
-              </h4>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs font-semibold text-primary leading-tight">
-                    Zoventro Standard
-                  </p>
-                  <p className="text-[11px] text-primary/80 mt-0.5">
-                    ({count} people) = ₹{data.totalCost.toLocaleString("en-IN")} | ₹{data.costPerEmployee}/person
-                  </p>
-                </div>
-                
-                <div className="border-t border-border/30 pt-2.5">
-                  <p className="text-xs font-semibold text-muted-foreground leading-tight">
-                    Hired facilitator
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/80 mt-0.5">
-                    = ₹35,000 - ₹40,500 | no reporting
-                  </p>
-                </div>
-
-                <div className="border-t border-border/30 pt-2.5">
-                  <p className="text-xs font-semibold text-muted-foreground leading-tight">
-                    Team Lunch
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/80 mt-0.5">
-                    = ₹50,000 | forgotten by next week
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom part: Donut chart card */}
-        <div className="bg-card/40 backdrop-blur-md rounded-2xl p-5 border border-border/40 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            {/* Donut chart drawing using conic-gradient */}
+          {/* Donut chart card */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-border/40 flex flex-col sm:flex-row items-center justify-center gap-6">
+            {/* Donut chart */}
             <div
-              className="w-24 h-24 rounded-full relative flex items-center justify-center shrink-0 shadow-sm transition-all duration-300"
+              className="w-28 h-28 rounded-full relative flex items-center justify-center shrink-0 shadow-sm"
               style={{
                 background: `conic-gradient(
                   #8B5CF6 0% 15%, 
@@ -633,54 +608,44 @@ function CostCalculator() {
                 )`,
               }}
             >
-              {/* Inner hole */}
-              <div className="w-16 h-16 rounded-full bg-card absolute flex items-center justify-center">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <div className="w-16 h-16 rounded-full bg-white absolute flex items-center justify-center">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center leading-tight">
                   Cost
                 </span>
               </div>
             </div>
 
-            {/* Donut Legend */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              <div className="flex items-start gap-2">
+            {/* Legend */}
+            <div className="grid grid-cols-2 sm:grid-cols-1 gap-y-3 gap-x-4">
+              <div className="flex items-start gap-2.5">
                 <span className="w-3 h-3 rounded-full bg-[#8B5CF6] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-[11px] font-semibold text-foreground leading-none">Zoventro</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">₹{data.totalCost.toLocaleString("en-IN")}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 font-medium">₹{data.totalCost.toLocaleString("en-IN")}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2.5">
                 <span className="w-3 h-3 rounded-full bg-[#10B981] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-[11px] font-semibold text-foreground leading-none">Facilitator-led</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">₹23,000</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 font-medium">₹23,000</p>
                 </div>
               </div>
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2.5">
                 <span className="w-3 h-3 rounded-full bg-[#EC4899] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-[11px] font-semibold text-foreground leading-none">Team Lunch</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">₹35,000</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 font-medium">₹35,000</p>
                 </div>
               </div>
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2.5">
                 <span className="w-3 h-3 rounded-full bg-[#F59E0B] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-[11px] font-semibold text-foreground leading-none">DIY Activities</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">₹17,000</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 font-medium">₹17,000</p>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="text-right hidden sm:block">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-              Dynamic Cost comparison
-            </span>
-            <span className="text-xs font-bold text-primary mt-1 block">
-              Zoventro is up to 80% cheaper!
-            </span>
           </div>
         </div>
       </div>

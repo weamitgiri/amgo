@@ -4,6 +4,8 @@ export type JoinLinkResponse = {
   activity_title: string;
   activity_slug?: string;
   activity_description?: string | null;
+  activity_icon?: string | null;
+  activity_cover_image?: string | null;
   organizer_name?: string;
   organizer_company?: string;
   scheduled_date: string;

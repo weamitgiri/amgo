@@ -740,28 +740,28 @@ function GamePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0820] text-white p-4 md:p-6">
+    <div className="min-h-screen bg-[#0e0817] text-white p-4 md:p-6 font-sans">
       {/* Header */}
-      <header className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur px-5 py-3 flex items-center justify-between">
+      <header className="rounded-2xl border border-[#2c1b44] bg-[#140b22] px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Logo />
-          <span className="font-semibold">{gameData.activity.title}</span>
+          <span className="font-bold text-lg tracking-wide">{gameData.activity.title}</span>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-sm">
-            Game Time Remaining <span className="ml-2 font-bold tabular-nums">{fmt(secsHdr)}</span>
+        <div className="flex items-center gap-5">
+          <div className="rounded-lg border border-[#2c1b44] px-4 py-2 text-sm text-[#b8b8b8]">
+            Game Time Remaining <span className="ml-2 font-bold text-white tabular-nums">{fmt(secsHdr)}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 grid place-items-center text-xs font-bold">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-[#f36b8e] grid place-items-center text-xs font-bold text-white">
               {(gameData.participant.name[0] ?? "P").toUpperCase()}
             </div>
-            <span className="text-sm">{gameData.participant.name}</span>
+            <span className="text-sm font-medium">{gameData.participant.name}</span>
           </div>
         </div>
       </header>
 
-      <div className="mt-4">
-      </div>
+
+
 
       {phase === "summary" ? (
         <SummaryView
@@ -974,124 +974,132 @@ function SummaryView(props: {
   }, [boxOpening, revealSecretBox, secretOpened]);
   return (
     <>
-      <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-purple-500/30 grid place-items-center">
-            <FileText className="h-5 w-5 text-purple-200" />
+      <div className="mt-8 flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-[14px] bg-[#2a1348] border border-[#442371] grid place-items-center">
+            <FileText className="h-6 w-6 text-[#c788fa]" />
           </div>
-          <h1 className="text-xl font-bold tracking-wide">CASE SUMMARY</h1>
+          <h1 className="text-2xl font-bold tracking-wide">CASE SUMMARY</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Strategy Guide is Investigator-only; other roles see Game Rules only. */}
           {isInvestigator && (
-            <button onClick={() => onOpenInfoModal("strategy")} className="inline-flex items-center gap-2 rounded-full bg-gradient-blue px-5 py-2.5 text-sm font-semibold shadow-glow">
-              <Lightbulb className="h-4 w-4" /> Strategy Guide
+            <button onClick={() => onOpenInfoModal("strategy")} className="inline-flex items-center gap-2 rounded-full bg-[#3ca9f9] px-6 py-2.5 text-[15px] font-bold text-white hover:opacity-90 transition-opacity">
+              <Lightbulb className="h-5 w-5" /> Strategy Guide
             </button>
           )}
-          <button onClick={() => onOpenInfoModal("rules")} className="inline-flex items-center gap-2 rounded-full bg-gradient-warm px-5 py-2.5 text-sm font-semibold shadow-glow">
-            <Gamepad2 className="h-4 w-4" /> View Game Rules
+          <button onClick={() => onOpenInfoModal("rules")} className="inline-flex items-center gap-2 rounded-full bg-[#f4be47] px-6 py-2.5 text-[15px] font-bold text-white hover:opacity-90 transition-opacity">
+            <Gamepad2 className="h-5 w-5" /> View Game Rules
           </button>
         </div>
       </div>
 
-      <main className="mt-5 grid gap-5 lg:grid-cols-[2fr_1.4fr]">
-        <div className="rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1c1440] to-[#140e2b] p-7 relative overflow-hidden">
-          <h2 className="text-3xl font-black text-purple-200">{gameData.game.title}</h2>
-          {gameData.game.tagline ? (
-            <p className="mt-2 text-sm text-white/70">{gameData.game.tagline}</p>
-          ) : null}
-          <div className="mt-5 grid gap-6 md:grid-cols-2">
-            <div className="space-y-4 text-sm leading-relaxed">
-              {gameData.game.case_summary_html ? (
-                <div
-                  className="prose prose-invert prose-sm max-w-none [&_p]:mb-3"
-                  dangerouslySetInnerHTML={{ __html: gameData.game.case_summary_html }}
-                />
-              ) : null}
-              {gameData.game.timeline.length > 0 ? (
-                <>
-                  <p className="font-bold uppercase tracking-wider text-white/90">On the night of the murder</p>
-                  <ol className="space-y-3 border-l-2 border-purple-500/40 pl-4">
-                    {gameData.game.timeline.map((step) => (
-                      <Step key={`${step.time}-${step.event}`} time={step.time} text={step.event} />
-                    ))}
-                  </ol>
-                </>
-              ) : null}
-              <div className="inline-block bg-amber-100/95 text-zinc-900 text-xs px-3 py-1.5 rounded-sm rotate-[-1deg]">
-                Now, <span className="text-rose-700 font-bold">everyone</span> present in the house is a{" "}
-                <span className="text-rose-700 font-bold">suspect.</span>
-              </div>
-            </div>
-            <div className="relative min-h-[320px]">
-              <div className="absolute top-2 left-4 rotate-[-6deg] rounded-md bg-white p-2 shadow-elevated">
-                <img src={photoUrls[0] ?? mystery} alt="" className="h-32 w-44 object-cover" />
-              </div>
-              <div className="absolute top-12 right-2 rotate-[5deg] rounded-md bg-white p-2 shadow-elevated">
-                <img src={photoUrls[1] ?? mystery} alt="" className="h-28 w-40 object-cover" />
-              </div>
-              {gameData.game.quick_facts.length > 0 ? (
-                <div className="absolute bottom-0 left-2 right-6 rotate-[-2deg] rounded-md bg-amber-100/95 text-zinc-900 p-4 shadow-elevated">
-                  <div className="text-xs font-bold tracking-wider">QUICK FACTS</div>
-                  <ul className="mt-2 space-y-1 text-[12px]">
-                    {gameData.game.quick_facts.map((fact) => {
-                      const Icon = FACT_ICONS[fact.icon] ?? MapPin;
-                      return (
-                        <li key={`${fact.label}-${fact.value}`} className="flex gap-2 items-center">
-                          <Icon className="h-3.5 w-3.5 shrink-0" />
-                          {fact.label}: {fact.value}
-                        </li>
-                      );
-                    })}
-                  </ul>
+      <main className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <div className="rounded-3xl border border-[#3b235d] bg-[#1a0c27] p-8 relative overflow-hidden flex flex-col justify-between">
+          <div>
+            <h2 className="text-[34px] font-bold text-[#ddc1ff]">{gameData.game.title}</h2>
+            {gameData.game.tagline ? (
+              <p className="mt-2 text-[15px] text-white/70">{gameData.game.tagline}</p>
+            ) : null}
+            <div className="mt-8 grid gap-8 md:grid-cols-[1.3fr_1fr]">
+              <div className="space-y-6 text-[15px] leading-[1.6]">
+                {gameData.game.case_summary_html ? (
+                  <div
+                    className="prose prose-invert max-w-none text-white/80 [&_p]:mb-4 [&_.text-red-500]:text-[#fb5f5f]"
+                    dangerouslySetInnerHTML={{ __html: gameData.game.case_summary_html }}
+                  />
+                ) : null}
+                {gameData.game.timeline.length > 0 ? (
+                  <>
+                    <p className="font-bold text-[13px] uppercase tracking-wider text-white">ON THE NIGHT OF THE MURDER</p>
+                    <ol className="relative border-l-2 border-[#69429e] ml-2 space-y-7">
+                      {gameData.game.timeline.map((step) => (
+                        <Step key={`${step.time}-${step.event}`} time={step.time} text={step.event} />
+                      ))}
+                    </ol>
+                  </>
+                ) : null}
+                
+                <div className="inline-block mt-4 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] bg-[#c9a773] text-[#331100] text-sm px-5 py-3 shadow-lg rotate-[-1deg] border border-[#a68653]" style={{ boxShadow: '2px 3px 6px rgba(0,0,0,0.4)', borderRadius: '2px 6px 3px 5px' }}>
+                  Now, <span className="text-[#c11c1c] font-bold">everyone</span> present in the house is a{" "}
+                  <span className="text-[#c11c1c] font-bold">suspect.</span>
                 </div>
-              ) : null}
+              </div>
+              <div className="relative min-h-[400px]">
+                <div className="absolute top-2 left-0 rotate-[-5deg] bg-[#eae6e1] p-1.5 shadow-[2px_4px_12px_rgba(0,0,0,0.5)] w-[180px] z-10 border border-[#b4aea4]">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl drop-shadow-md z-20">📌</div>
+                  <img src={photoUrls[0] ?? mystery} alt="" className="h-[120px] w-full object-cover border border-[#c9c5be]" />
+                </div>
+                <div className="absolute top-[80px] left-[70px] rotate-[6deg] bg-[#1a1a1a] p-1.5 shadow-[2px_4px_12px_rgba(0,0,0,0.5)] w-[190px] z-20 border border-[#333]">
+                  <img src={photoUrls[1] ?? mystery} alt="" className="h-[130px] w-full object-cover opacity-90 sepia-[0.3]" />
+                </div>
+                <div className="absolute top-[170px] left-[10px] w-14 h-14 z-30">
+                  <div className="w-full h-full rounded-full border-4 border-[#b59a60] bg-[#e1c583] flex items-center justify-center shadow-[2px_3px_8px_rgba(0,0,0,0.6)] rotate-[-15deg]">
+                    <div className="w-1 h-8 bg-[#333] rotate-45 relative">
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[3px] border-r-[3px] border-b-[8px] border-l-transparent border-r-transparent border-b-red-600"></div>
+                    </div>
+                  </div>
+                </div>
+                {gameData.game.quick_facts.length > 0 ? (
+                  <div className="absolute bottom-[20px] right-[10px] rotate-[-3deg] bg-[#c3a478] text-[#331800] p-4 shadow-[3px_5px_15px_rgba(0,0,0,0.5)] w-[190px] z-40 border border-[#a68653]" style={{ background: 'linear-gradient(135deg, #ccae81 0%, #ba9866 100%)' }}>
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-xl drop-shadow-md z-50 text-red-600">📌</div>
+                    <div className="text-[11px] font-bold tracking-wider mb-2 text-[#4a2600]">QUICK FACTS</div>
+                    <ul className="space-y-2 text-[10px] font-medium">
+                      {gameData.game.quick_facts.map((fact) => {
+                        const Icon = FACT_ICONS[fact.icon] ?? MapPin;
+                        return (
+                          <li key={`${fact.label}-${fact.value}`} className="flex gap-1.5 items-start">
+                            <Icon className="h-3 w-3 shrink-0 mt-0.5 opacity-80" />
+                            <span className="leading-tight">{fact.label}: {fact.value}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
 
-          <div className="mt-7 flex flex-wrap gap-3">
-            <button onClick={() => setOpenPhotos(true)} className="inline-flex items-center gap-2 rounded-full bg-gradient-primary px-6 py-3 text-sm font-semibold shadow-glow">
-              <Camera className="h-4 w-4" /> View Investigation Photos
-            </button>
-            <button onClick={onBegin} className="inline-flex items-center gap-2 rounded-full bg-gradient-warm px-6 py-3 text-sm font-semibold shadow-glow">
-              <ScanSearch className="h-4 w-4" /> Begin Investigation
+          <div className="mt-10 flex justify-center w-full">
+            <button onClick={() => setOpenPhotos(true)} className="inline-flex items-center gap-2 rounded-[20px] bg-[#b15cf7] px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_0_15px_rgba(177,92,247,0.3)] hover:bg-[#a643f8] transition-colors">
+              <Camera className="h-5 w-5" /> View Investigation Photos
             </button>
           </div>
         </div>
 
-        <div className="space-y-5">
-          <div className="rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1c1440] to-[#140e2b] p-7">
-            <h3 className="text-center text-lg font-bold tracking-tight text-white">Key People in the Bungalow</h3>
-            <div className="mt-5 grid grid-cols-5 gap-2 sm:gap-3">
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-[#3b235d] bg-[#1a0c27] p-6 pb-8">
+            <h3 className="text-center text-lg font-bold tracking-tight text-white mb-6">Key People in the Bungalow</h3>
+            <div className="grid grid-cols-5 gap-2.5">
               {orderedPeople.map((person: GamePerson) => {
                 const { displayName, title } = splitCharacterName(person.name);
                 const roleLabel = title ?? roleDisplayName(person);
-                // Your character is only revealed after the Secret Box is opened —
-                // before that, every card looks the same.
                 const bottomLabel = secretOpened && person.is_you ? "(You)" : displayName;
+                const isYou = person.is_you;
                 return (
                   <div
                     key={person.id}
-                    className={`overflow-hidden rounded-xl border shadow-sm transition-all ${
-                      secretOpened && person.is_you
-                        ? "ring-2 ring-fuchsia-500 border-fuchsia-500/80 bg-[#241334]"
-                        : "bg-[#1b1223] border-white/10"
+                    className={`overflow-hidden rounded-xl border transition-all ${
+                      isYou
+                        ? "border-[#b15cf7] ring-1 ring-[#b15cf7] bg-[#2a1348]"
+                        : "border-[#3b235d] bg-[#1a0c27]"
                     }`}
                   >
                     <div className="relative w-full aspect-[4/5] bg-black overflow-hidden">
                       <img
                         src={resolveMediaUrl(person.role_image) ?? mystery}
                         alt={displayName}
-                        className="w-full object-cover object-top"
+                        className="w-full h-full object-cover object-top opacity-90"
                       />
-                      <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#1b1223] to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#1a0c27] to-transparent" />
                     </div>
 
-                    <div className="px-1 py-2 bg-[#2a1830] text-center">
-                      <div className="truncate text-[10px] leading-tight text-white/80" title={roleLabel}>
+                    <div className="px-1 py-2 text-center h-[46px] flex flex-col justify-center">
+                      <div className="truncate text-[9.5px] leading-tight text-white/90" title={roleLabel}>
                         {roleLabel}
                       </div>
-                      <div className="mt-0.5 truncate text-[11px] font-semibold leading-tight text-pink-400" title={bottomLabel}>
+                      <div className={`mt-0.5 truncate text-[10.5px] font-semibold leading-tight ${isYou ? 'text-[#e675ff]' : 'text-[#de6df2]'}`} title={bottomLabel}>
                         {bottomLabel}
                       </div>
                     </div>
@@ -1101,14 +1109,14 @@ function SummaryView(props: {
             </div>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="rounded-[2rem] border border-purple-500/20 bg-gradient-to-b from-[#241a44] to-[#160f2e] p-8 text-center relative overflow-hidden flex flex-col justify-between items-center min-h-[360px]">
+          <div className="grid gap-6 md:grid-cols-2 h-[340px]">
+            <div className="rounded-3xl border border-[#3b235d] bg-[#1a0c27] p-6 text-center relative overflow-hidden flex flex-col justify-between items-center h-full">
               <style>{`
                 @keyframes float {
                   0%, 100% { transform: translateY(0); }
-                  50% { transform: translateY(-12px); }
+                  50% { transform: translateY(-10px); }
                 }
-                .animate-float { animation: float 3s ease-in-out infinite; }
+                .animate-float { animation: float 3.5s ease-in-out infinite; }
                 @keyframes boxOpen {
                   0% { transform: scale(1); filter: brightness(1); }
                   40% { transform: scale(1.15) rotate(3deg); filter: brightness(1.3); }
@@ -1117,45 +1125,44 @@ function SummaryView(props: {
                 }
                 .animate-boxOpen { animation: boxOpen 0.8s forwards; }
               `}</style>
-              <h3 className="text-xl font-medium text-white px-4 leading-snug">
+              <h3 className="text-[15px] font-medium text-white px-2 leading-snug">
                 Open the Secret Box to<br />reveal your role.
               </h3>
               
               <div 
-                className={`my-6 relative w-48 h-48 transition-transform ${secretOpened ? 'opacity-50 grayscale pointer-events-none' : 'hover:scale-105'}`}
+                className={`my-3 relative w-40 h-40 transition-transform flex items-center justify-center ${secretOpened ? 'opacity-50 grayscale pointer-events-none' : 'hover:scale-105'}`}
               >
-                {!secretOpened && <div className="absolute inset-0 bg-purple-500/20 blur-2xl rounded-full" />}
+                {!secretOpened && <div className="absolute inset-0 bg-[#b15cf7]/20 blur-[30px] rounded-full scale-75" />}
                 <button
                   type="button"
                   disabled={secretOpened || boxOpening}
                   onClick={revealSecretBox}
-                  className="relative z-10 h-full w-full rounded-[28px] overflow-hidden"
+                  className="relative z-10 w-full h-full flex items-center justify-center"
                 >
-                  <img src={secretBoxImg} alt="Secret Box" className={`h-full w-full object-contain ${secretOpened ? "opacity-50" : boxOpening ? "animate-boxOpen" : "animate-float"}`} />
+                  <img src={secretBoxImg} alt="Secret Box" className={`h-[120%] w-[120%] object-contain max-w-none ${secretOpened ? "opacity-50" : boxOpening ? "animate-boxOpen" : "animate-float"}`} />
                 </button>
               </div>
 
               <button
                 disabled={secretOpened || boxOpening}
                 onClick={revealSecretBox}
-                className={`w-full rounded-full py-3.5 text-[15px] font-bold shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all ${
+                className={`w-full rounded-[20px] py-3 text-[14.5px] font-bold transition-all ${
                   secretOpened 
-                    ? "bg-white/5 text-white/40 cursor-not-allowed shadow-none" 
-                    : "bg-gradient-to-r from-[#a855f7] to-[#d946ef] hover:opacity-90 hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] text-white"
+                    ? "bg-[#2a1b3d] text-white/40 cursor-not-allowed border border-[#3b235d]" 
+                    : "bg-gradient-to-r from-[#b15cf7] to-[#da61f6] hover:opacity-90 shadow-[0_0_15px_rgba(177,92,247,0.3)] text-white"
                 }`}
               >
                 {secretOpened ? "Role Revealed" : "Open Secret Box"}
               </button>
             </div>
-            <div className="rounded-[2rem] border border-purple-500/20 bg-gradient-to-b from-[#241a44] to-[#160f2e] p-7 text-center flex flex-col justify-center">
-              <p className="text-xl leading-relaxed text-white px-2">
+            
+            <div className="rounded-3xl border border-[#3b235d] bg-[#1a0c27] p-6 text-center flex flex-col justify-between h-full">
+              <p className="text-[15px] leading-relaxed text-white/90 px-1 mt-2">
                 You can view the case summary only once. Remember the details!
               </p>
-              <div className="mt-6 rounded-2xl border border-purple-500/30 bg-gradient-to-b from-[#2a1a4d] to-[#1a1033] px-6 py-8 grid place-items-center">
-                <div>
-                  <div className="text-base text-white/80 leading-snug">Time Remaining for Case Summary</div>
-                  <div className="mt-4 text-5xl font-black tabular-nums tracking-wide">{fmt(secsCase)}</div>
-                </div>
+              <div className="mt-4 rounded-3xl border border-[#3b235d] bg-[#221035] p-6 h-[170px] flex flex-col items-center justify-center shadow-inner">
+                <div className="text-[13px] text-white/70 leading-snug mb-3">Time Remaining for Case Summary</div>
+                <div className="text-[44px] font-bold tabular-nums tracking-wide text-white">{fmt(secsCase)}</div>
               </div>
             </div>
           </div>
@@ -1637,10 +1644,12 @@ function InvestigationView(props: {
 /* -------- Modals -------- */
 function Step({ time, text }: { time: string; text: string }) {
   return (
-    <li className="relative flex gap-4">
-      <span className="absolute -left-[22px] top-1.5 h-3 w-3 rounded-full bg-purple-400 ring-4 ring-purple-500/20" />
-      <span className="text-purple-200 font-medium w-20 shrink-0">{time}</span>
-      <span className="text-white/85">{text}</span>
+    <li className="relative pl-7">
+      <div className="absolute left-[-9px] top-0.5 h-[18px] w-[18px] rounded-full border-[3px] border-[#9352e8] bg-[#1a0c27]" />
+      <div className="flex gap-3">
+        <span className="text-white text-[13px] w-[70px] shrink-0 font-medium">{time}</span>
+        <span className="text-white/80 text-[13px] leading-[1.6]">{text}</span>
+      </div>
     </li>
   );
 }

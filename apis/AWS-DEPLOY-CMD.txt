@@ -1,0 +1,181 @@
+============================================================
+ APIS (Node.js + TypeScript + MySQL) KO AWS UBUNTU SERVER
+ PAR RUN KARNE KE STEPS
+============================================================
+Note: Yeh Express + TypeScript API hai. "npm run build" se
+dist/ banega, "node dist/server.js" pm2 se background me
+chalega. Frontend already API ko http://3.25.202.185:3000
+par expect karta hai, isliye production me PORT=3000 rakhenge.
+
+------------------------------------------------------------
+STEP 0: AWS Console me Security Group check karo
+------------------------------------------------------------
+Inbound rules me yeh ports open hone chahiye:
+  - 22   (SSH)
+  - 3000 (API — frontend directly is port par call karta hai)
+  - 80   (HTTP — agar frontend bhi isi server par hai)
+
+NOTE: MySQL ka port 3306 BAHAR OPEN MAT KARO. DB sirf
+localhost se access hoga.
+
+------------------------------------------------------------
+STEP 1: Server me SSH login
+------------------------------------------------------------
+ssh -i your-key.pem ubuntu@3.25.202.185
+
+------------------------------------------------------------
+STEP 2: System update + basic tools
+------------------------------------------------------------
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git curl
+
+------------------------------------------------------------
+STEP 3: Node.js 22 install (agar pehle se nahi hai)
+------------------------------------------------------------
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+node -v
+npm -v
+
+# pm2 (agar frontend deploy me install nahi kiya tha):
+sudo npm install -g pm2
+
+------------------------------------------------------------
+STEP 4: MySQL install + database banao
+------------------------------------------------------------
+sudo apt install -y mysql-server
+sudo systemctl enable --now mysql
+
+# Root se login karke DB + user banao:
+sudo mysql << 'EOF'
+CREATE DATABASE IF NOT EXISTS ppp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'ppp_user'@'localhost' IDENTIFIED BY 'STRONG_DB_PASSWORD_YAHAN';
+GRANT ALL PRIVILEGES ON ppp.* TO 'ppp_user'@'localhost';
+FLUSH PRIVILEGES;
+EOF
+
+# NOTE: 'STRONG_DB_PASSWORD_YAHAN' apna strong password rakho,
+# aur wahi password STEP 7 ke .env me dalna.
+
+------------------------------------------------------------
+STEP 5: Local DB ka data server par le jao
+------------------------------------------------------------
+# (a) APNE LAPTOP par dump banao:
+mysqldump -h 127.0.0.1 -u root -proot ppp > /tmp/ppp.sql
+
+# (b) APNE LAPTOP se server par bhejo:
+scp -i your-key.pem /tmp/ppp.sql ubuntu@3.25.202.185:/tmp/
+
+# (c) SERVER par import karo:
+sudo mysql ppp < /tmp/ppp.sql
+rm /tmp/ppp.sql
+
+------------------------------------------------------------
+STEP 6: Code server par lao
+------------------------------------------------------------
+# Option A: Git se clone (private repo hai to token/SSH key chahiye)
+cd ~
+git clone YOUR_REPO_URL p
+cd p/apis
+
+# Option B: Apne laptop se sirf apis folder copy karo
+# (yeh command APNE LAPTOP par chalani hai, server par nahi)
+# node_modules, dist aur logs skip karke bhejo:
+# rsync -av --exclude node_modules --exclude dist --exclude logs \
+#   -e "ssh -i your-key.pem" \
+#   /opt/homebrew/var/www/p/apis ubuntu@3.25.202.185:~/
+# phir server par: cd ~/apis
+
+------------------------------------------------------------
+STEP 7: Production .env banao (apis folder ke andar)
+------------------------------------------------------------
+cd ~/p/apis    # (ya ~/apis, jahan code rakha hai)
+
+cat > .env << 'EOF'
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=ppp_user
+DB_PASSWORD="STRONG_DB_PASSWORD_YAHAN"
+DB_NAME=ppp
+PORT=3000
+CORS_ORIGINS=http://3.25.202.185,http://3.25.202.185:3000,http://3.25.202.185:4173,http://localhost:5173,http://127.0.0.1:5173
+JWT_SECRET=NAYA_LAMBA_RANDOM_SECRET_YAHAN
+NODE_ENV=production
+
+MAIL_HOST=smtp-relay.sendinblue.com
+MAIL_PORT=587
+MAIL_USERNAME=info@jinjoodock.com
+MAIL_PASSWORD=APNA_MAIL_PASSWORD
+MAIL_FROM_ADDRESS=support@brsoftech.com
+MAIL_FROM_NAME=Zoventro
+EOF
+
+# IMPORTANT:
+# - DB_PASSWORD wahi rakho jo STEP 4 me banaya.
+# - JWT_SECRET production ke liye NAYA banao (local wala reuse
+#   mat karo). Naya banane ke liye:
+#     openssl rand -base64 48
+# - PORT=3000 hi rakho — frontend ka .env isi par point karta hai.
+
+------------------------------------------------------------
+STEP 8: Dependencies install + build
+------------------------------------------------------------
+npm install
+npm run build
+
+# storage folders check karo (PDF yahan bante hain):
+mkdir -p storage/invoices storage/results-pdfs logs
+
+# Agar chhoti EC2 machine (1GB RAM) par "killed" / out of memory
+# error aaye to pehle swap banao:
+# sudo fallocate -l 2G /swapfile
+# sudo chmod 600 /swapfile
+# sudo mkswap /swapfile
+# sudo swapon /swapfile
+# phir dobara: npm run build
+
+------------------------------------------------------------
+STEP 9: pm2 se API start karo
+------------------------------------------------------------
+pm2 start dist/server.js --name api
+
+# Status / logs dekho:
+pm2 status
+pm2 logs api
+
+# Server reboot ke baad bhi auto-start ho:
+pm2 save
+pm2 startup
+# (pm2 startup jo command print kare, usko copy karke chala do)
+
+------------------------------------------------------------
+STEP 10: Test karo
+------------------------------------------------------------
+# Server par:
+curl http://127.0.0.1:3000
+
+# Apne laptop se / browser me:
+curl http://3.25.202.185:3000
+
+# Frontend kholke login/API calls check karo:
+http://3.25.202.185
+
+------------------------------------------------------------
+UPDATE KARNA HO (naya code deploy)
+------------------------------------------------------------
+cd ~/p/apis
+git pull                # (ya rsync se naya code bhejo)
+npm install
+npm run build
+pm2 restart api
+
+------------------------------------------------------------
+OPTIONAL: Nginx ke through API (port 3000 open na rakhna ho)
+------------------------------------------------------------
+# Agar chaaho to API ko bhi nginx ke peeche rakh sakte ho
+# (e.g. http://3.25.202.185/api -> 127.0.0.1:3000), lekin phir
+# frontend ke .env me VITE_API_BASE_URL bhi change karna padega
+# aur frontend rebuild karna padega. Abhi ke liye direct
+# port 3000 wala setup simple hai.
+============================================================

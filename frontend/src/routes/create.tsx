@@ -306,33 +306,39 @@ function CreatePage() {
 
 function Stepper({ step }: { step: number }) {
   return (
-    <div className="flex items-center justify-between">
-      {STEPS.map((label, i) => {
-        const active = i === step;
-        const complete = i < step;
-        return (
-          <div key={label} className="flex-1 flex items-center last:flex-none">
-            <div className="flex flex-col items-center gap-2">
-              <div className={`grid h-10 w-10 place-items-center rounded-full text-sm font-semibold transition-colors ${
-                complete ? "bg-primary/20 text-primary" : active ? "bg-primary text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground"
+    <div className="relative mb-10 mt-2 px-2 md:px-6">
+      {/* Connecting lines track */}
+      <div className="absolute top-5 left-[12%] right-[12%] h-[2px] bg-border" />
+      {/* Active progress line */}
+      <div 
+        className="absolute top-5 left-[12%] h-[2px] bg-[#8B5CF6] transition-all duration-500" 
+        style={{ width: `${(step / (STEPS.length - 1)) * 76}%` }} 
+      />
+      
+      <div className="relative z-10 flex items-start justify-between">
+        {STEPS.map((label, i) => {
+          const active = i === step;
+          const complete = i < step;
+          return (
+            <div key={label} className="flex flex-col items-center gap-2.5 bg-card px-2">
+              <div className={`grid h-10 w-10 place-items-center rounded-full text-sm font-medium transition-colors border ${
+                complete || active 
+                  ? "border-[#8B5CF6] bg-purple-100 text-[#8B5CF6]" 
+                  : "border-gray-300 bg-white text-muted-foreground"
               }`}>
-                {complete ? <Check className="h-5 w-5" /> : String(i + 1).padStart(2, "0")}
+                {complete ? <Check className="h-5 w-5 text-[#8B5CF6]" strokeWidth={2.5} /> : String(i + 1).padStart(2, "0")}
               </div>
-              <span className={`text-xs ${active ? "text-primary font-semibold" : "text-muted-foreground"}`}>{label}</span>
+              <span className={`text-[12px] font-medium ${complete || active ? "text-[#8B5CF6]" : "text-muted-foreground"}`}>{label}</span>
             </div>
-            {i < STEPS.length - 1 && (
-              <div className={`flex-1 h-[2px] mx-2 mb-6 rounded ${i < step ? "bg-primary" : "bg-border"}`} />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 function Field({
   label,
-  hint,
   icon: Icon,
   type = "text",
   placeholder,
@@ -340,8 +346,7 @@ function Field({
   onChange,
   error,
 }: {
-  label: string;
-  hint?: string;
+  label: ReactNode;
   icon?: ComponentType<{ className?: string }>;
   type?: string;
   placeholder?: string;
@@ -351,16 +356,15 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-sm font-medium">{label}</label>
-      {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
-      <div className="mt-1.5 relative">
+      <label className="text-sm font-medium flex items-center">{label}</label>
+      <div className="mt-2 relative">
         <input
           value={value}
           onChange={onChange}
           type={type}
           placeholder={placeholder}
           aria-invalid={!!error}
-          className={`w-full rounded-lg border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+          className={`w-full rounded-lg border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
             error ? "border-destructive" : "border-input"
           }`}
         />
@@ -432,8 +436,11 @@ function DetailsStep({
         Provide basic details to set up your team engagement activity.
       </p>
       <Field
-        label="Full Name"
-        hint="Primary Contact Person"
+        label={
+          <span className="flex items-center gap-1.5">
+            Full Name <span className="text-muted-foreground font-normal text-xs">(Primary Contact Person)</span>
+          </span>
+        }
         icon={User}
         placeholder="Enter your full name"
         value={registration.name}
@@ -441,8 +448,11 @@ function DetailsStep({
         error={errors.name}
       />
       <Field
-        label="Official Email ID"
-        hint="An OTP will be sent to this email for verification"
+        label={
+          <span className="flex items-center gap-1.5">
+            Official Email ID <span className="text-muted-foreground font-normal text-xs invisible md:visible">An OTP will be sent to this email for verification</span>
+          </span>
+        }
         icon={Mail}
         type="email"
         placeholder="Enter your work email"
@@ -464,12 +474,29 @@ function DetailsStep({
         onChange={(e) => update("company_website", e.target.value)}
         error={errors.company_website}
       />
-      <PillButton type="submit" variant="primary" disabled={isSubmitting}>
-        {isSubmitting ? "Submitting..." : "Submit & Verify Email"}
-      </PillButton>
+      <div className="pt-2">
+        <Button
+          type="submit"
+          className="w-full sm:w-auto min-w-[240px] h-12 bg-gradient-blue hover:opacity-90 text-white rounded-full flex items-center justify-between pl-6 pr-1.5 shadow-md border-0"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center justify-center w-full">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...
+            </span>
+          ) : (
+            <>
+              <span className="font-medium text-[15px]">Submit &amp; Verify Email</span>
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#8B5CF6] ml-4">
+                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+              </span>
+            </>
+          )}
+        </Button>
+      </div>
       <p className="text-xs text-muted-foreground pt-2">
         Already have an account?{" "}
-        <Link to="/login" className="text-primary font-semibold">
+        <Link to="/login" search={{ redirect: undefined }} className="text-[#8B5CF6] font-semibold">
           Login
         </Link>
       </p>
@@ -604,9 +631,26 @@ function VerifyStep({
           Change details
         </button>
       </p>
-      <PillButton type="submit" variant="primary" disabled={isVerifying}>
-        {isVerifying ? "Verifying..." : "Verify & Continue"}
-      </PillButton>
+      <div className="pt-3">
+        <Button
+          type="submit"
+          className="w-full sm:w-auto min-w-[240px] h-12 bg-gradient-blue hover:opacity-90 text-white rounded-full flex items-center justify-between pl-6 pr-1.5 shadow-md border-0"
+          disabled={isVerifying}
+        >
+          {isVerifying ? (
+            <span className="flex items-center justify-center w-full">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...
+            </span>
+          ) : (
+            <>
+              <span className="font-medium text-[15px]">Verify &amp; Continue</span>
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#8B5CF6] ml-4">
+                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+              </span>
+            </>
+          )}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -717,8 +761,12 @@ function SetupStep({
     }
   };
 
-  const activityImage = (game: ApiActivity, index: number) =>
-    resolveMediaUrl(game.cover_image) ?? FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+  const activityImage = (activity: ApiActivity) => {
+    if (activity.icon) return resolveMediaUrl(activity.icon) ?? undefined;
+    // fallback mapping if icon missing
+    if (activity.slug === "mystery-quest" || activity.title === "Detective Mystery") return mystery;
+    return cook;
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -737,33 +785,35 @@ function SetupStep({
           </div>
         ) : games?.length ? (
           <div className="mt-2 grid grid-cols-2 gap-3">
-            {games.map((activity, index) => (
+            {games.map((activity) => (
               <button
                 key={activity.id}
                 type="button"
                 onClick={() => selectActivity(activity)}
-                className={`flex items-center justify-between gap-3 rounded-xl border-2 p-2 pl-4 transition ${
+                className={`flex items-center justify-between gap-3 rounded-2xl border-2 p-2.5 pl-4 transition-all duration-300 ${
                   session.activityId === activity.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border"
+                    ? "border-[#8B5CF6] bg-purple-50"
+                    : "border-gray-200 hover:border-gray-300"
                 }`}
               >
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
                   <span
-                    className={`h-4 w-4 shrink-0 rounded-full border-2 ${
-                      session.activityId === activity.id ? "border-primary" : "border-muted-foreground"
+                    className={`h-[18px] w-[18px] shrink-0 rounded-full border-[1.5px] ${
+                      session.activityId === activity.id ? "border-[#8B5CF6] bg-white" : "border-gray-400 bg-white"
                     } grid place-items-center`}
                   >
                     {session.activityId === activity.id && (
-                      <span className="h-2 w-2 rounded-full bg-primary" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#8B5CF6]" />
                     )}
                   </span>
-                  <span className="text-sm font-medium truncate">{activity.title}</span>
+                  <span className="text-sm font-bold text-foreground truncate">
+                    {activity.slug === "mystery-quest" || activity.title === "Detective Mystery" ? "Mystery Quest" : activity.title}
+                  </span>
                 </div>
                 <img
-                  src={activityImage(activity, index)}
+                  src={activityImage(activity)}
                   alt={activity.title}
-                  className="h-10 w-12 rounded-md object-cover shrink-0"
+                  className="h-10 w-10 md:h-12 md:w-12 object-contain drop-shadow-md shrink-0"
                 />
               </button>
             ))}
@@ -835,7 +885,7 @@ function SetupStep({
         {errors.package && <p className="mt-1 text-xs text-destructive">{errors.package}</p>}
       </div>
 
-      <div className="rounded-xl bg-purple-50 p-4 text-xs text-foreground/80 space-y-1.5">
+      <div className="rounded-xl bg-white-50 p-4 text-xs text-foreground/80 space-y-1.5">
         <p className="font-semibold text-foreground">Schedule Your Session</p>
         <p>• Session access is valid for 5 days from the moment of payment activation.</p>
         <p>• Share the session link with participants 10 minutes before scheduled start time.</p>
@@ -1323,7 +1373,7 @@ function BField({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`mt-1 w-full rounded-lg border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+          className={`mt-1 w-full rounded-lg border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
             error ? "border-destructive" : "border-input"
           }`}
         >
@@ -1342,7 +1392,7 @@ function BField({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`mt-1 w-full rounded-lg border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+          className={`mt-1 w-full rounded-lg border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
             error ? "border-destructive" : "border-input"
           }`}
         />

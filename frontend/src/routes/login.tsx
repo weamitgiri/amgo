@@ -226,7 +226,7 @@ function EmailStep({
           type="email"
           placeholder="Enter your work email"
           aria-invalid={!!emailError}
-          className={`w-full rounded-xl border bg-background pl-4 pr-11 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+          className={`w-full rounded-xl border pl-4 pr-11 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
             emailError ? "border-destructive" : "border-border"
           }`}
         />
