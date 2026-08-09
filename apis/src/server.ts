@@ -76,6 +76,7 @@ import organizerRoutes from './routes/organizerRoutes';
 import publicRoutes from './routes/publicRoutes';
 import participantRoutes from './routes/participantRoutes';
 import resultsRoutes from './routes/resultsRoutes';
+import cookandcreateRoutes from './routes/cookandcreate';
 
 // Use Routes
 app.use('/v1/game', gameRoutes);
@@ -83,6 +84,7 @@ app.use('/v1/organizer', organizerRoutes);
 app.use('/v1/public', publicRoutes);
 app.use('/v1/participant', participantRoutes);
 app.use('/v1/results', resultsRoutes);
+app.use('/v1/cookandcreate', cookandcreateRoutes);
 
 // Socket.IO connection
 import { setupSocketHandlers } from './socket/socketHandler';

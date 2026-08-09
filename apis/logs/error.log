@@ -603,3 +603,58 @@
 2026-08-03 20:23:20:2320 error: You are not part of this group
 2026-08-03 20:23:20:2320 error: You are not part of this group
 2026-08-03 21:56:24:5624 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-07 23:21:21:2121 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-07 23:25:58:2558 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-07 23:37:51:3751 error: Access Denied: You have joined after the allowed time. The session started at 10:53 PM and entry was closed at 11:08 PM. Please contact the Organiser for assistance.
+2026-08-07 23:40:02:402 error: Access Denied: You have joined after the allowed time. The session started at 10:53 PM and entry was closed at 11:08 PM. Please contact the Organiser for assistance.
+2026-08-07 23:42:13:4213 error: Game not found
+2026-08-07 23:42:14:4214 error: Game not found
+2026-08-07 23:42:16:4216 error: Game not found
+2026-08-07 23:42:20:4220 error: Error sending OTP email: Greeting never received
+2026-08-07 23:42:34:4234 error: Error sending OTP email: Greeting never received
+2026-08-07 23:47:17:4717 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-07 23:48:25:4825 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-07 23:50:23:5023 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-07 23:50:59:5059 error: Error sending OTP email: Greeting never received
+2026-08-07 23:51:20:5120 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-07 23:51:36:5136 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-07 23:52:15:5215 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 19:46:05:465 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 19:47:22:4722 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 20:15:04:154 error: Access Denied: You have joined after the allowed time. The session started at 8:00 PM and entry was closed at 8:15 PM. Please contact the Organiser for assistance.
+2026-08-08 20:15:07:157 error: Access Denied: You have joined after the allowed time. The session started at 8:00 PM and entry was closed at 8:15 PM. Please contact the Organiser for assistance.
+2026-08-08 20:15:07:157 error: Access Denied: You have joined after the allowed time. The session started at 8:00 PM and entry was closed at 8:15 PM. Please contact the Organiser for assistance.
+2026-08-08 20:15:08:158 error: Access Denied: You have joined after the allowed time. The session started at 8:00 PM and entry was closed at 8:15 PM. Please contact the Organiser for assistance.
+2026-08-08 20:15:08:158 error: Access Denied: You have joined after the allowed time. The session started at 8:00 PM and entry was closed at 8:15 PM. Please contact the Organiser for assistance.
+2026-08-08 20:15:13:1513 error: Access Denied: You have joined after the allowed time. The session started at 8:00 PM and entry was closed at 8:15 PM. Please contact the Organiser for assistance.
+2026-08-08 20:17:33:1733 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 20:18:18:1818 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 20:30:34:3034 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 20:31:02:312 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 20:31:20:3120 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 20:31:33:3133 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 20:31:46:3146 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-08 20:31:59:3159 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 16:36:25:3625 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 16:37:21:3721 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 16:38:08:388 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 16:39:13:3913 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 16:39:30:3930 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 16:39:48:3948 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 16:40:13:4013 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:04:21:421 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:05:46:546 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:07:11:711 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:07:23:723 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:07:36:736 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:07:47:747 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:07:58:758 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:08:12:812 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:20:07:207 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:21:04:214 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:23:25:2325 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:23:40:2340 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:23:51:2351 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:24:01:241 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:24:19:2419 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 17:55:14:5514 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed

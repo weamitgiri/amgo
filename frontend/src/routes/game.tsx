@@ -12,6 +12,7 @@ import type { GameSummaryResponse, GameSummaryRole, GamePlayer, LieDetectorTally
 import { getParticipantSession, participantGameKey } from "@/lib/participant-session";
 import { getSocket } from "@/lib/socket";
 import { resolveMediaUrl } from "@/utils/media";
+import { isCookAndCreateSlug } from "@/utils/common";
 import { toastError } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
 import secretBoxImg from "@/assets/secret_box.png";
@@ -181,6 +182,16 @@ function GamePage() {
   const navigate = useNavigate();
   const { game: gameSlug } = Route.useSearch();
   const session = useMemo(() => getParticipantSession(), []);
+
+  const slugCandidate = gameSlug ?? session?.gameSlug;
+  useEffect(() => {
+    if (isCookAndCreateSlug(slugCandidate)) {
+      navigate({
+        to: "/cookandcreate/game",
+        search: { game: slugCandidate ?? "" },
+      });
+    }
+  }, [slugCandidate, navigate]);
 
   const [loading, setLoading] = useState(true);
   const [gameData, setGameData] = useState<GameSummaryResponse | null>(null);

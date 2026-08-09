@@ -34,6 +34,38 @@ export function formatDate(date: Date | string, format: "short" | "long" = "shor
   });
 }
 
+const COOK_AND_CREATE_SLUGS = ["cook-and-create", "cook-create", "cookandcreate", "cook_create"];
+
+export function isCookAndCreateSlug(slug: string | null | undefined): boolean {
+  if (!slug) return false;
+  const s = slug.trim().toLowerCase();
+  return COOK_AND_CREATE_SLUGS.some((c) => s === c) || s.startsWith("cook");
+}
+
+export function resolveLobbyRoute(slug: string | null | undefined): {
+  to: "/lobby" | "/cookandcreate/lobby";
+  search: Record<string, string>;
+} {
+  const baseSearch: Record<string, string> = {};
+  if (slug) baseSearch.game = slug;
+  if (isCookAndCreateSlug(slug)) {
+    return { to: "/cookandcreate/lobby", search: baseSearch };
+  }
+  return { to: "/lobby", search: baseSearch };
+}
+
+export function resolveGameRoute(slug: string | null | undefined): {
+  to: "/game" | "/cookandcreate/game";
+  search: Record<string, string>;
+} {
+  const baseSearch: Record<string, string> = {};
+  if (slug) baseSearch.game = slug;
+  if (isCookAndCreateSlug(slug)) {
+    return { to: "/cookandcreate/game", search: baseSearch };
+  }
+  return { to: "/game", search: baseSearch };
+}
+
 /**
  * Format time to readable string
  */

@@ -3,6 +3,13 @@ import moment from 'moment';
 import { io } from '../server';
 import { finalizeVerdict } from './verdictScoringService';
 import { runRetentionSweep } from './retentionService';
+import {
+    finalizeRound1 as finalizeCCRound1,
+    advanceRound2ToReview as advanceCCRound2ToReview,
+    finalizeRound2Review as finalizeCCRound2Review,
+    advanceRound3ToVoting as advanceCCRound3ToVoting,
+    finalizeRound3 as finalizeCCRound3,
+} from './cookandcreateService';
 
 /**
  * Timer Service
@@ -179,6 +186,33 @@ async function handleTimerExpiration(timer: any) {
                     new_phase: 'final_verdict',
                     message: 'Questioning time is up! Please submit your final accusation.',
                 });
+                break;
+
+            // ---- Cook & Create timer safety nets --------------------------------
+            // Each of these is the fallback path — the primary path is the
+            // "everyone finished early" checks in cookandcreateController.ts.
+            // Every handler here is idempotent (guarded by a status/phase claim
+            // inside cookandcreateService.ts), so firing after the round already
+            // advanced via the fast path is a safe no-op. reference_id carries the
+            // cc_game_instances id (see cookandcreateService.ensureCCTimer).
+            case 'cc_round1':
+                if (timer.reference_id) await finalizeCCRound1(timer.reference_id, timer.group_id);
+                break;
+
+            case 'cc_round2_submit':
+                if (timer.reference_id) await advanceCCRound2ToReview(timer.reference_id, timer.group_id);
+                break;
+
+            case 'cc_round2_review':
+                if (timer.reference_id) await finalizeCCRound2Review(timer.reference_id, timer.group_id);
+                break;
+
+            case 'cc_round3_discussion':
+                if (timer.reference_id) await advanceCCRound3ToVoting(timer.reference_id, timer.group_id);
+                break;
+
+            case 'cc_round3_voting':
+                if (timer.reference_id) await finalizeCCRound3(timer.reference_id, timer.group_id);
                 break;
         }
     });

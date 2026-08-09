@@ -149,6 +149,20 @@ Route::group(
             Route::get('/get-packages/{gameId}', [\App\Http\Controllers\Admin\OrganizerController::class, 'getPackages'])->name('organizers.getPackages');
         });
 
+        // Cook & Create Management (content) + read-only session browser (reports)
+        Route::prefix('cook-and-create')->group(function () {
+            Route::resource('ingredients', \App\Http\Controllers\Admin\CookAndCreateIngredientController::class)
+                ->names('cook-and-create.ingredients');
+            Route::resource('templates', \App\Http\Controllers\Admin\CookAndCreateTemplateController::class)
+                ->names('cook-and-create.templates');
+            Route::resource('rating-categories', \App\Http\Controllers\Admin\CookAndCreateRatingCategoryController::class)
+                ->names('cook-and-create.rating-categories');
+            Route::get('sessions', [\App\Http\Controllers\Admin\CookAndCreateSessionController::class, 'index'])
+                ->name('cook-and-create.sessions.index');
+            Route::get('sessions/{session}', [\App\Http\Controllers\Admin\CookAndCreateSessionController::class, 'show'])
+                ->name('cook-and-create.sessions.show');
+        });
+
         Route::post("settings/SeoupdateSettings", [SettingController::class, "SeoupdateSettings"])->name("settings.SeoupdateSettings");
     }
 );

@@ -6,11 +6,14 @@ import { participantService } from "@/api/services/participant.service";
 import type { JoinLinkResponse } from "@/api/types/participant";
 import { saveParticipantSession } from "@/lib/participant-session";
 import { toastError, toastInfo, toastSuccess } from "@/lib/toast";
-import mystery from "@/assets/game-a-card-bg.jpg";
-import cook from "@/assets/game-a-card-bg.jpg";
+import mystery from "@/assets/mystery.jpg";
+import cooka from "@/assets/cook.jpg";
+import cook from "@/assets/cookandcreate/game-2-lobby-bg-expanded.jpg";
 import mqlogo from "@/assets/mqlogo.png";
+import cclogo from "@/assets/cookandcreate/Cook  and Create Logo.png";
 import heroBg from "@/assets/hero-bg-home.jpg";
 import { resolveMediaUrl } from "@/utils/media";
+import { resolveLobbyRoute, isCookAndCreateSlug } from "@/utils/common";
 export const Route = createFileRoute("/join/$linkToken")({
   head: () => ({ meta: [{ title: "Join Activity — Zoventro" }] }),
   component: JoinPage,
@@ -294,11 +297,12 @@ function JoinPage() {
         });
         setStep("done");
         toastSuccess("Verified successfully. Entering the lobby...");
+        const lobby = resolveLobbyRoute(slug);
         setTimeout(
           () =>
             navigate({
-              to: "/lobby",
-              search: { invite_url: linkToken, game: slug },
+              to: lobby.to,
+              search: { ...lobby.search, invite_url: linkToken },
             }),
           1200
         );
@@ -332,7 +336,7 @@ function JoinPage() {
           <div className="relative rounded-[2.5rem] overflow-hidden border border-white/10 shadow-elevated flex flex-col min-h-[640px]">
             {/* Background Image & Overlays */}
             <img
-              src={activityCover ? (resolveMediaUrl(activityCover) ?? undefined) : (activitySlug === "mystery-quest" ? mystery : cook)}
+              src={activityCover ? (resolveMediaUrl(activityCover) ?? undefined) : (isCookAndCreateSlug(activitySlug) ? cook : mystery)}
               alt={activityTitle}
               className="absolute  h-full w-full"
             />
@@ -343,18 +347,37 @@ function JoinPage() {
             <div className="relative z-10 flex flex-col h-full p-8 md:p-10">
               <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
                 <img
-                  src={activityIcon ? (resolveMediaUrl(activityIcon) ?? undefined) : (activitySlug === "mystery-quest" ? mystery : mqlogo)}
+                  src={activityIcon ? (resolveMediaUrl(activityIcon) ?? undefined) : (isCookAndCreateSlug(activitySlug) ? cclogo : mqlogo)}
                   alt="Logo"
                   className="w-40 md:w-48 object-contain drop-shadow-2xl"
                 />
                 <div className="flex-1 pt-2">
                   <h1 className="text-3xl font-bold leading-tight drop-shadow-md">
-                    Are you ready to<br />solve the mystery?
+                    {isCookAndCreateSlug(activitySlug) ? (
+                      <>Ready to cook up<br />some chaos?</>
+                    ) : (
+                      <>Are you ready to<br />solve the mystery?</>
+                    )}
                   </h1>
-                  
-                  <div className="mt-4 space-y-4 text-[13.5px] text-white/90 leading-relaxed prose-sm prose-invert max-w-none">
+
+                  <div className="mt-4 space-y-4 text-[13.5px] text-white/90 leading-relaxed max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-2 [&_li]:marker:text-white/40">
                     {activityDescription ? (
                       <div dangerouslySetInnerHTML={{ __html: activityDescription }} />
+                    ) : isCookAndCreateSlug(activitySlug) ? (
+                      <>
+                        <p>
+                          Work together to cook up the best dish — while one hidden impostor secretly tries to sabotage it.
+                        </p>
+                        <ul className="pl-4 list-disc marker:text-white/40 space-y-2">
+                          <li>Vote on ingredients, submit cooking steps, and vote out the impostor</li>
+                          <li>Every action is anonymous — watch for suspicious patterns</li>
+                          <li>Time-bound rounds to keep the energy up</li>
+                          <li>Built for creativity and quick team thinking</li>
+                        </ul>
+                        <p>
+                          A fast, funny team-building challenge that rewards collaboration and sharp observation.
+                        </p>
+                      </>
                     ) : (
                       <>
                         <p>
@@ -422,6 +445,7 @@ function JoinPage() {
                 isSubmitting={isSubmitting}
                 activityTitle={activityTitle}
                 activityDescription={activityDescription}
+                activitySlug={activitySlug}
               />
             )}
             {step === "otp" && (
@@ -520,7 +544,7 @@ function PendingStep({
       <div className="text-[15px] text-white/90 mb-1">You're invited to</div>
       <h2 className="text-3xl font-bold md:text-[40px] tracking-tight">{activityTitle}</h2>
       {activityDescription ? (
-        <div className="mt-3 text-[14px] text-white/80 leading-relaxed prose-sm prose-invert max-w-none line-clamp-3" dangerouslySetInnerHTML={{ __html: activityDescription }} />
+        <div className="mt-3 text-[14px] text-white/80 leading-relaxed max-w-none line-clamp-3 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_li]:marker:text-white/40" dangerouslySetInnerHTML={{ __html: activityDescription }} />
       ) : null}
 
       <div className="mt-8 rounded-3xl bg-white/10 p-6 text-left text-white/85">
@@ -565,6 +589,7 @@ function FormStep({
   isSubmitting,
   activityTitle,
   activityDescription,
+  activitySlug,
 }: {
   name: string;
   setName: (v: string) => void;
@@ -577,17 +602,20 @@ function FormStep({
   isSubmitting: boolean;
   activityTitle: string;
   activityDescription: string;
+  activitySlug: string;
 }) {
   return (
     <>
       <div className="text-[15px] text-white/90 mb-1">You're invited to</div>
       <h2 className="text-3xl font-bold md:text-[40px] tracking-tight">{activityTitle}</h2>
-      
+
       {activityDescription ? (
-        <div className="mt-3 text-[14px] text-white/80 leading-relaxed prose-sm prose-invert max-w-none line-clamp-3" dangerouslySetInnerHTML={{ __html: activityDescription }} />
+        <div className="mt-3 text-[14px] text-white/80 leading-relaxed max-w-none line-clamp-3 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_li]:marker:text-white/40" dangerouslySetInnerHTML={{ __html: activityDescription }} />
       ) : (
         <p className="mt-3 text-[14px] text-white/80 leading-relaxed">
-          A story-driven team challenge where employees collaborate, question, and compete to solve the case.
+          {isCookAndCreateSlug(activitySlug)
+            ? "Work together to cook up the best dish while spotting the hidden impostor in your kitchen."
+            : "A story-driven team challenge where employees collaborate, question, and compete to solve the case."}
         </p>
       )}
 

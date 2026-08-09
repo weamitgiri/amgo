@@ -1,23 +1,21 @@
 import { useState } from 'react';
 import step2Img from '../../../assets/cookandcreate/game-flow-step-2.png';
-import chickenImg from '../../../assets/cookandcreate/chicken.jpg';
-import tomatoesImg from '../../../assets/cookandcreate/tomatoes.jpg';
-import onionsImg from '../../../assets/cookandcreate/onions.jpg';
-import garlicImg from '../../../assets/cookandcreate/garlic.jpg';
+
+export type CCNameDishIngredient = {
+  id: number;
+  name: string;
+  image_url: string | null;
+};
 
 interface NameDishModalProps {
   isOpen: boolean;
   onSubmit: (dishName: string) => void;
+  topIngredients: CCNameDishIngredient[];
+  canSubmit: boolean;
+  waitingLabel?: string | null;
 }
 
-const topIngredients = [
-  { img: chickenImg, name: 'Chicken' },
-  { img: tomatoesImg, name: 'Tomatoes' },
-  { img: onionsImg, name: 'Onions' },
-  { img: garlicImg, name: 'Garlic' },
-];
-
-export function NameDishModal({ isOpen, onSubmit }: NameDishModalProps) {
+export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, waitingLabel }: NameDishModalProps) {
   const [dishName, setDishName] = useState('');
 
   if (!isOpen) return null;
@@ -61,14 +59,14 @@ export function NameDishModal({ isOpen, onSubmit }: NameDishModalProps) {
           <div className="flex items-center gap-3">
             {topIngredients.map((item) => (
               <div
-                key={item.name}
+                key={item.id}
                 className="flex flex-col items-center gap-1.5 bg-white rounded-xl px-3 py-2 border border-[#F5E6D3] shadow-xs"
               >
-                <img
-                  src={item.img}
-                  alt={item.name}
-                  className="w-8 h-8 object-contain drop-shadow-xs"
-                />
+                {item.image_url ? (
+                  <img src={item.image_url} alt={item.name} className="w-8 h-8 object-contain drop-shadow-xs" />
+                ) : (
+                  <span className="text-xl">🥘</span>
+                )}
                 <span className="text-xs font-bold text-[#3D2E1F]">
                   {item.name}
                 </span>
@@ -84,33 +82,43 @@ export function NameDishModal({ isOpen, onSubmit }: NameDishModalProps) {
           Name your Team Dish.
         </p>
 
-        {/* Name input */}
-        <div className="mb-6">
-          <label className="block text-sm font-bold text-[#3D2E1F] mb-2">
-            Name your Dish
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={dishName}
-              onChange={(e) => setDishName(e.target.value.slice(0, 40))}
-              placeholder="Example: Creamy hub paneer pasta"
-              className="w-full rounded-xl border border-[#E0D4C4] focus:border-[#E8881E] focus:ring-2 focus:ring-[#E8881E]/20 outline-none px-4 py-3 text-sm text-[#3D2E1F] placeholder:text-[#B8A898] bg-white pr-14"
-            />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-[#8B7355]">
-              {dishName.length}/40
-            </span>
-          </div>
-        </div>
+        {canSubmit ? (
+          <>
+            {/* Name input */}
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-[#3D2E1F] mb-2">
+                Name your Dish
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={dishName}
+                  onChange={(e) => setDishName(e.target.value.slice(0, 40))}
+                  placeholder="Example: Creamy hub paneer pasta"
+                  className="w-full rounded-xl border border-[#E0D4C4] focus:border-[#E8881E] focus:ring-2 focus:ring-[#E8881E]/20 outline-none px-4 py-3 text-sm text-[#3D2E1F] placeholder:text-[#B8A898] bg-white pr-14"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-[#8B7355]">
+                  {dishName.length}/40
+                </span>
+              </div>
+            </div>
 
-        {/* Submit button */}
-        <button
-          onClick={handleSubmit}
-          disabled={!dishName.trim()}
-          className="w-full py-4 rounded-2xl bg-[#E8881E] hover:bg-[#D47815] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-base transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-[#E8881E]/30 cursor-pointer"
-        >
-          Submit
-        </button>
+            {/* Submit button */}
+            <button
+              onClick={handleSubmit}
+              disabled={!dishName.trim()}
+              className="w-full py-4 rounded-2xl bg-[#E8881E] hover:bg-[#D47815] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-base transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-[#E8881E]/30 cursor-pointer"
+            >
+              Submit
+            </button>
+          </>
+        ) : (
+          <div className="bg-[#FFEAD1] border border-[#F5CE9E] rounded-xl p-5 text-center">
+            <p className="text-sm font-bold text-[#3D2E1F]">
+              {waitingLabel || 'Waiting for the Show Host to name the dish…'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

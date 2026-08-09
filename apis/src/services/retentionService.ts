@@ -30,6 +30,44 @@ export async function purgeGroupParticipantData(groupId: number | string): Promi
         await conn.query('DELETE FROM timers WHERE group_id = ?', [groupId]);
         await conn.query('DELETE FROM results WHERE group_id = ?', [groupId]);
 
+        // Cook & Create — a no-op for Mystery groups (no matching instance_id),
+        // additive to this shared sweep. Scoped via the group's own cc_game_instances
+        // row, so ratings this group's participants GAVE to other groups are purged
+        // too; ratings this group RECEIVED are tied to the other (rating) group's own
+        // instance_id and get purged on that group's own retention schedule instead.
+        await conn.query(
+            `DELETE FROM cc_round1_votes WHERE instance_id IN (SELECT id FROM cc_game_instances WHERE group_id = ?)`,
+            [groupId]
+        );
+        await conn.query(
+            `DELETE FROM cc_round1_selected_ingredients WHERE instance_id IN (SELECT id FROM cc_game_instances WHERE group_id = ?)`,
+            [groupId]
+        );
+        await conn.query(
+            `DELETE FROM cc_round2_steps WHERE instance_id IN (SELECT id FROM cc_game_instances WHERE group_id = ?)`,
+            [groupId]
+        );
+        await conn.query(
+            `DELETE FROM cc_round2_step_votes WHERE instance_id IN (SELECT id FROM cc_game_instances WHERE group_id = ?)`,
+            [groupId]
+        );
+        await conn.query(
+            `DELETE FROM cc_round2_released_clues WHERE instance_id IN (SELECT id FROM cc_game_instances WHERE group_id = ?)`,
+            [groupId]
+        );
+        await conn.query(
+            `DELETE FROM cc_round3_messages WHERE instance_id IN (SELECT id FROM cc_game_instances WHERE group_id = ?)`,
+            [groupId]
+        );
+        await conn.query(
+            `DELETE FROM cc_round3_impostor_votes WHERE instance_id IN (SELECT id FROM cc_game_instances WHERE group_id = ?)`,
+            [groupId]
+        );
+        await conn.query(
+            `DELETE FROM cc_ratings WHERE instance_id IN (SELECT id FROM cc_game_instances WHERE group_id = ?)`,
+            [groupId]
+        );
+
         await conn.query('UPDATE participant_sessions SET role_id = NULL, total_score = 0, socket_id = NULL WHERE group_id = ?', [groupId]);
 
         // Run last: every statement above is scoped by group_id against other tables,

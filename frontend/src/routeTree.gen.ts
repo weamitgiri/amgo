@@ -28,6 +28,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CookandcreateIndexRouteImport } from './routes/cookandcreate/index'
 import { Route as JoinLinkTokenRouteImport } from './routes/join.$linkToken'
 import { Route as CookandcreateSummaryRouteImport } from './routes/cookandcreate/summary'
+import { Route as CookandcreateRatingRouteImport } from './routes/cookandcreate/rating'
 import { Route as CookandcreateLobbyRouteImport } from './routes/cookandcreate/lobby'
 import { Route as CookandcreateGameRouteImport } from './routes/cookandcreate/game'
 
@@ -126,6 +127,11 @@ const CookandcreateSummaryRoute = CookandcreateSummaryRouteImport.update({
   path: '/summary',
   getParentRoute: () => CookandcreateRouteRoute,
 } as any)
+const CookandcreateRatingRoute = CookandcreateRatingRouteImport.update({
+  id: '/rating',
+  path: '/rating',
+  getParentRoute: () => CookandcreateRouteRoute,
+} as any)
 const CookandcreateLobbyRoute = CookandcreateLobbyRouteImport.update({
   id: '/lobby',
   path: '/lobby',
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/cookandcreate/game': typeof CookandcreateGameRoute
   '/cookandcreate/lobby': typeof CookandcreateLobbyRoute
+  '/cookandcreate/rating': typeof CookandcreateRatingRoute
   '/cookandcreate/summary': typeof CookandcreateSummaryRoute
   '/join/$linkToken': typeof JoinLinkTokenRoute
   '/cookandcreate/': typeof CookandcreateIndexRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/cookandcreate/game': typeof CookandcreateGameRoute
   '/cookandcreate/lobby': typeof CookandcreateLobbyRoute
+  '/cookandcreate/rating': typeof CookandcreateRatingRoute
   '/cookandcreate/summary': typeof CookandcreateSummaryRoute
   '/join/$linkToken': typeof JoinLinkTokenRoute
   '/cookandcreate': typeof CookandcreateIndexRoute
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/cookandcreate/game': typeof CookandcreateGameRoute
   '/cookandcreate/lobby': typeof CookandcreateLobbyRoute
+  '/cookandcreate/rating': typeof CookandcreateRatingRoute
   '/cookandcreate/summary': typeof CookandcreateSummaryRoute
   '/join/$linkToken': typeof JoinLinkTokenRoute
   '/cookandcreate/': typeof CookandcreateIndexRoute
@@ -227,6 +236,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/cookandcreate/game'
     | '/cookandcreate/lobby'
+    | '/cookandcreate/rating'
     | '/cookandcreate/summary'
     | '/join/$linkToken'
     | '/cookandcreate/'
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/cookandcreate/game'
     | '/cookandcreate/lobby'
+    | '/cookandcreate/rating'
     | '/cookandcreate/summary'
     | '/join/$linkToken'
     | '/cookandcreate'
@@ -272,6 +283,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/cookandcreate/game'
     | '/cookandcreate/lobby'
+    | '/cookandcreate/rating'
     | '/cookandcreate/summary'
     | '/join/$linkToken'
     | '/cookandcreate/'
@@ -432,6 +444,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CookandcreateSummaryRouteImport
       parentRoute: typeof CookandcreateRouteRoute
     }
+    '/cookandcreate/rating': {
+      id: '/cookandcreate/rating'
+      path: '/rating'
+      fullPath: '/cookandcreate/rating'
+      preLoaderRoute: typeof CookandcreateRatingRouteImport
+      parentRoute: typeof CookandcreateRouteRoute
+    }
     '/cookandcreate/lobby': {
       id: '/cookandcreate/lobby'
       path: '/lobby'
@@ -452,6 +471,7 @@ declare module '@tanstack/react-router' {
 interface CookandcreateRouteRouteChildren {
   CookandcreateGameRoute: typeof CookandcreateGameRoute
   CookandcreateLobbyRoute: typeof CookandcreateLobbyRoute
+  CookandcreateRatingRoute: typeof CookandcreateRatingRoute
   CookandcreateSummaryRoute: typeof CookandcreateSummaryRoute
   CookandcreateIndexRoute: typeof CookandcreateIndexRoute
 }
@@ -459,6 +479,7 @@ interface CookandcreateRouteRouteChildren {
 const CookandcreateRouteRouteChildren: CookandcreateRouteRouteChildren = {
   CookandcreateGameRoute: CookandcreateGameRoute,
   CookandcreateLobbyRoute: CookandcreateLobbyRoute,
+  CookandcreateRatingRoute: CookandcreateRatingRoute,
   CookandcreateSummaryRoute: CookandcreateSummaryRoute,
   CookandcreateIndexRoute: CookandcreateIndexRoute,
 }

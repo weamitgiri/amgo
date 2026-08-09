@@ -1,0 +1,193 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getBookingLimits = getBookingLimits;
+exports.countVerifiedParticipants = countVerifiedParticipants;
+exports.isParticipantVerified = isParticipantVerified;
+exports.assertCanJoinBooking = assertCanJoinBooking;
+exports.buildEventStats = buildEventStats;
+exports.emitEventStatsUpdate = emitEventStatsUpdate;
+const db_1 = require("../config/db");
+const moment_1 = __importDefault(require("moment"));
+const PLAYERS_PER_GROUP = 5;
+function initialsFromName(name) {
+    return String(name || '')
+        .trim()
+        .split(/\s+/)
+        .map((s) => s[0])
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('')
+        .toUpperCase() || '?';
+}
+function groupStatus(memberCount, playersPerGroup) {
+    if (memberCount >= playersPerGroup)
+        return 'Complete';
+    if (memberCount > 0)
+        return 'In Progress';
+    return 'Pending';
+}
+async function getBookingLimits(bookingId) {
+    const [rows] = await (0, db_1.query)(`SELECT p.max_users, p.total_groups, a.group_size
+         FROM organizer_bookings ob
+         JOIN packages p ON ob.package_id = p.id
+         JOIN activities a ON ob.activity_id = a.id
+         WHERE ob.id = ?`, [bookingId]);
+    if (rows.length === 0)
+        return null;
+    return {
+        maxUsers: Number(rows[0].max_users) || 0,
+        maxGroups: Number(rows[0].total_groups) || 0,
+        // Admin-configured per activity (activities.group_size)
+        playersPerGroup: Number(rows[0].group_size) || PLAYERS_PER_GROUP,
+    };
+}
+async function countVerifiedParticipants(bookingId, conn) {
+    const sql = 'SELECT COUNT(*) as total FROM game_participants WHERE booking_id = ? AND email_verified_at IS NOT NULL';
+    const params = [bookingId];
+    if (conn) {
+        const [rows] = (await conn.query(sql, params));
+        return Number(rows[0]?.total ?? 0);
+    }
+    const [rows] = await (0, db_1.query)(sql, params);
+    return Number(rows[0]?.total ?? 0);
+}
+async function isParticipantVerified(bookingId, email, conn) {
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const sql = 'SELECT id FROM game_participants WHERE booking_id = ? AND LOWER(email) = ? AND email_verified_at IS NOT NULL LIMIT 1';
+    const params = [bookingId, normalizedEmail];
+    if (conn) {
+        const [rows] = (await conn.query(sql, params));
+        return rows.length > 0;
+    }
+    const [rows] = await (0, db_1.query)(sql, params);
+    return rows.length > 0;
+}
+async function assertCanJoinBooking(bookingId, email, conn) {
+    const limits = await getBookingLimits(bookingId);
+    if (!limits) {
+        throw new Error('Booking not found');
+    }
+    if (limits.maxUsers <= 0) {
+        return limits;
+    }
+    const alreadyVerified = await isParticipantVerified(bookingId, email, conn);
+    if (alreadyVerified) {
+        return limits;
+    }
+    const verifiedCount = await countVerifiedParticipants(bookingId, conn);
+    if (verifiedCount >= limits.maxUsers) {
+        const err = new Error(`Join limit reached. This package allows a maximum of ${limits.maxUsers} participants.`);
+        err.statusCode = 403;
+        throw err;
+    }
+    return limits;
+}
+async function buildEventStats(bookingId) {
+    const [bookingRows] = await (0, db_1.query)(`SELECT
+            ob.id, ob.link_clicks, ob.scheduled_date, ob.scheduled_time, ob.is_rescheduled,
+            p.max_users, p.total_groups, a.group_size
+         FROM organizer_bookings ob
+         JOIN packages p ON ob.package_id = p.id
+         JOIN activities a ON ob.activity_id = a.id
+         WHERE ob.id = ?`, [bookingId]);
+    if (bookingRows.length === 0)
+        return null;
+    const booking = bookingRows[0];
+    const maxParticipants = Number(booking.max_users) || 0;
+    const maxGroups = Number(booking.total_groups) || 0;
+    const playersPerGroup = Number(booking.group_size) || PLAYERS_PER_GROUP;
+    const totalJoined = await countVerifiedParticipants(bookingId);
+    const [groupRows] = await (0, db_1.query)(`SELECT
+            g.id, g.group_name, g.status,
+            (SELECT COUNT(*) FROM game_participants
+             WHERE group_id = g.id AND email_verified_at IS NOT NULL) as member_count
+         FROM game_groups g
+         WHERE g.booking_id = ?
+         ORDER BY g.id ASC`, [bookingId]);
+    const groupsFormed = groupRows.filter((g) => Number(g.member_count) === playersPerGroup).length;
+    const currentIncompleteGroup = groupRows.find((g) => Number(g.member_count) > 0 && Number(g.member_count) < playersPerGroup);
+    const membersInIncompleteGroup = currentIncompleteGroup
+        ? Number(currentIncompleteGroup.member_count)
+        : 0;
+    const remainingToFormGroup = membersInIncompleteGroup > 0 ? playersPerGroup - membersInIncompleteGroup : 0;
+    const eventStart = (0, moment_1.default)(`${booking.scheduled_date} ${booking.scheduled_time}`, 'YYYY-MM-DD HH:mm:ss');
+    const cutoffTime = (0, moment_1.default)(eventStart).subtract(1, 'hour');
+    const [allParticipants] = await (0, db_1.query)(`SELECT
+            p.id, p.name, p.email,
+            p.email_verified_at as joined_at,
+            p.group_id,
+            g.group_name
+         FROM game_participants p
+         LEFT JOIN game_groups g ON p.group_id = g.id
+         WHERE p.booking_id = ? AND p.email_verified_at IS NOT NULL
+         ORDER BY p.email_verified_at DESC`, [bookingId]);
+    const recentParticipants = allParticipants.slice(0, 20);
+    const groupsList = [];
+    for (const g of groupRows) {
+        const [memberRows] = await (0, db_1.query)(`SELECT id, name, email_verified_at
+             FROM game_participants
+             WHERE group_id = ? AND email_verified_at IS NOT NULL
+             ORDER BY email_verified_at ASC`, [g.id]);
+        const members = memberRows.map((m) => ({
+            id: m.id,
+            name: m.name,
+            initials: initialsFromName(m.name),
+        }));
+        const memberCount = members.length;
+        const lastMember = memberRows[memberRows.length - 1];
+        const lastUpdated = lastMember?.email_verified_at ?? g.updated_at ?? g.created_at ?? null;
+        groupsList.push({
+            id: g.id,
+            name: g.group_name,
+            team_lead: members[0]?.name ?? null,
+            member_count: memberCount,
+            capacity: playersPerGroup,
+            status: groupStatus(memberCount, playersPerGroup),
+            last_updated: lastUpdated,
+            members,
+        });
+    }
+    return {
+        event_progress: {
+            participants_joined: totalJoined,
+            max_participants: maxParticipants,
+            groups_formed: groupsFormed,
+            max_groups: maxGroups,
+            remaining_to_form_group: remainingToFormGroup,
+            access_link_clicks: booking.link_clicks ?? 0,
+        },
+        event_status: {
+            scheduled_at: `${booking.scheduled_date} ${booking.scheduled_time}`,
+            reschedule_cutoff: cutoffTime.format('DD MMM YYYY, hh:mm A'),
+            is_reschedule_allowed: !booking.is_rescheduled && (0, moment_1.default)().isBefore(cutoffTime),
+            min_players_per_group: playersPerGroup,
+        },
+        recent_groups: groupRows.slice(-10).map((g) => ({
+            id: g.id,
+            name: g.group_name,
+            fill_status: `${g.member_count}/${playersPerGroup}`,
+            is_complete: Number(g.member_count) === playersPerGroup,
+        })),
+        recent_participants: recentParticipants,
+        participants: allParticipants.map((p) => ({
+            id: p.id,
+            name: p.name,
+            email: p.email,
+            joined_at: p.joined_at,
+            group_id: p.group_id ?? null,
+            group_name: p.group_name,
+        })),
+        groups: groupsList,
+    };
+}
+async function emitEventStatsUpdate(io, bookingId) {
+    if (!io)
+        return;
+    const stats = await buildEventStats(bookingId);
+    if (stats) {
+        io.to(`organizer_${bookingId}`).emit('event_stats_updated', stats);
+    }
+}

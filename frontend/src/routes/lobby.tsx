@@ -15,6 +15,7 @@ import {
   saveParticipantSession,
 } from "@/lib/participant-session";
 import { resolveMediaUrl } from "@/utils/media";
+import { isCookAndCreateSlug, resolveGameRoute } from "@/utils/common";
 import { toastError } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
 import investigation from "@/assets/investigation-photos.png";
@@ -69,6 +70,16 @@ function LobbyPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const session = useMemo(() => getParticipantSession(), []);
+
+  const slugCandidate = gameSlug ?? session?.gameSlug ?? lobby?.activity?.slug;
+  useEffect(() => {
+    if (isCookAndCreateSlug(slugCandidate)) {
+      navigate({
+        to: "/cookandcreate/lobby",
+        search: { invite_url: inviteUrl ?? "", game: slugCandidate ?? "" },
+      });
+    }
+  }, [slugCandidate, inviteUrl, navigate]);
 
   const fetchLobby = useCallback(async (groupId: string, participantId: string) => {
     const data = await participantService.getLobby(groupId, participantId);
@@ -142,7 +153,8 @@ function LobbyPage() {
       lobby.lobby_phase === "ready" ||
       (lobby.lobby_phase === "lobby_timer" && countdown === 0)
     ) {
-      navigate({ to: "/game", search: { game: slug } });
+      const target = resolveGameRoute(slug);
+      navigate({ to: target.to, search: target.search });
     }
   }, [lobby, countdown, navigate, slug]);
 

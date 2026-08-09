@@ -162,6 +162,18 @@ export const setupSocketHandlers = (io: Server, socket: Socket) => {
     socket.on('join_game_group', handleJoinLobby);
 
     /**
+     * Cook & Create gameplay room. A stateless join (no DB writes) separate
+     * from the group_${groupId} presence room above — every cc_* round event
+     * cookandcreateController/Service emits targets `cc-instance-${instanceId}`.
+     * Presence (online/offline/left) still rides the shared group_${groupId}
+     * room via join_lobby, same as Mystery.
+     */
+    socket.on('join_cc_instance', (data: { instanceId: string | number }) => {
+        if (!data?.instanceId) return;
+        socket.join(`cc-instance-${data.instanceId}`);
+    });
+
+    /**
      * Explicit presence resync. The game page loads its initial online snapshot
      * over HTTP (getGameState), which can land AFTER the join broadcast and
      * overwrite it with a stale "everyone offline" set. The client emits this

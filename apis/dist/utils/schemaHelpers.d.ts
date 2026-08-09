@@ -1,0 +1,13 @@
+export declare function ensureOrganizerStatusColumns(): Promise<void>;
+export declare function ensureGameGroupRetentionColumns(): Promise<void>;
+export declare function ensureParticipantSessionsLeftAt(): Promise<void>;
+export declare function ensureTimersReferenceId(): Promise<void>;
+export declare function ensureVotesTable(): Promise<void>;
+export declare function ensureGroupAccusationsTable(): Promise<void>;
+export declare function ensureResultsScoringColumns(): Promise<void>;
+export declare function ensureActivityGamesVictimName(): Promise<void>;
+export declare function ensureGameDurationDefault(): Promise<void>;
+export declare function ensureGameGroupsGameId(): Promise<void>;
+export declare function ensureCookAndCreateSchema(): Promise<void>;
+export declare function ensureGameSchemaUpdates(): Promise<void>;
+export default ensureOrganizerStatusColumns;
