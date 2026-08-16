@@ -73,6 +73,7 @@ Route::group(
         Route::post("settings/email", [SettingController::class, "emailUpdate"])->name("settings.emailUpdate");
         Route::post("settings/otp", [SettingController::class, "otpUpdate"])->name("settings.otpUpdate");
         Route::post("settings/payment", [SettingController::class, "paymentUpdate"])->name("settings.paymentUpdate");
+        Route::post("settings/invoice", [SettingController::class, "invoiceUpdate"])->name("settings.invoiceUpdate");
 
         // CMS Pages Management
         Route::prefix('cms')->group(function () {

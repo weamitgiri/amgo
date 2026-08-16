@@ -658,3 +658,131 @@
 2026-08-09 17:24:01:241 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-08-09 17:24:19:2419 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-08-09 17:55:14:5514 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:19:15:1915 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:20:15:2015 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:22:40:2240 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:23:13:2313 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:23:31:2331 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:23:53:2353 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:25:36:2536 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-10 22:37:36:3736 error: Error sending OTP email: Greeting never received
+2026-08-10 22:38:04:384 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-10 22:39:36:3936 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-10 22:39:48:3948 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-10 22:40:00:400 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-10 22:40:20:4020 error: Error sending OTP email: Greeting never received
+2026-08-10 22:40:31:4031 error: Error sending OTP email: Greeting never received
+2026-08-11 20:08:52:852 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:13:19:1319 error: Error sending OTP email: connect ENETUNREACH 1.179.116.2:587 - Local (0.0.0.0:51943)
+2026-08-11 20:14:03:143 error: Error sending OTP email: connect EHOSTUNREACH 64:ff9b::1b3:7402:587 - Local (:::52070)
+2026-08-11 20:14:45:1445 error: Error sending OTP email: connect EHOSTUNREACH 64:ff9b::1b3:7402:587 - Local (:::52092)
+2026-08-11 20:17:45:1745 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:18:28:1828 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:18:46:1846 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:19:18:1918 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:20:07:207 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:23:53:2353 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:31:00:310 error: You are not part of this group
+2026-08-11 20:31:00:310 error: You are not part of this group
+2026-08-11 20:31:00:310 error: You are not part of this group
+2026-08-11 22:02:38:238 error: Error sending OTP email: connect ENETUNREACH 1.179.116.2:587 - Local (0.0.0.0:52970)
+2026-08-11 22:03:14:314 error: Error sending OTP email: connect EHOSTUNREACH 64:ff9b::1b3:7402:587 - Local (:::52982)
+2026-08-11 22:04:20:420 error: Error sending OTP email: connect ENETUNREACH 1.179.116.2:587 - Local (0.0.0.0:53006)
+2026-08-11 22:04:54:454 error: Error sending OTP email: Greeting never received
+2026-08-11 22:05:07:57 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 22:05:17:517 error: Error sending OTP email: Greeting never received
+2026-08-11 22:05:22:522 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:03:26:326 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:04:25:425 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:05:13:513 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:05:28:528 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:05:43:543 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:05:45:545 error: Invalid OTP
+2026-08-11 23:06:09:69 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:06:20:620 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:09:57:957 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:41:54:4154 error: Access Denied: You have joined after the allowed time. The session started at 11:05 PM and entry was closed at 11:20 PM. Please contact the Organiser for assistance.
+2026-08-11 23:43:21:4321 error: Access Denied: You have joined after the allowed time. The session started at 11:05 PM and entry was closed at 11:20 PM. Please contact the Organiser for assistance.
+2026-08-12 00:25:36:2536 error: Access Denied: You have joined after the allowed time. The session started at 11:05 PM and entry was closed at 11:20 PM. Please contact the Organiser for assistance.
+2026-08-12 00:41:36:4136 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 00:57:55:5755 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 00:58:27:5827 error: Scheduled session must be in the future.
+2026-08-12 00:58:51:5851 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 00:59:31:5931 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:00:07:07 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:00:25:025 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:00:36:036 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:00:51:051 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:01:02:12 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:01:27:127 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:17:42:1742 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:42:1742 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:42:1742 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:52:1752 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:52:1752 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:52:1752 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:02:182 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:02:182 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:02:182 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:12:1812 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:12:1812 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 20:13:02:132 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:13:27:1327 error: You already registered this email id. Please login.
+2026-08-12 20:13:36:1336 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:16:08:168 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:16:38:1638 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:16:49:1649 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:17:00:170 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:17:14:1714 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 23:54:27:5427 error: Invoice not found for this booking
+2026-08-12 23:59:28:5928 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:00:04:04 error: Scheduled session must be in the future.
+2026-08-13 00:00:19:019 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:02:56:256 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:03:28:328 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:03:40:340 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:03:50:350 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:04:01:41 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:04:18:418 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:04:48:448 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:28:50:2850 error: Error sending OTP email: getaddrinfo ENOTFOUND smtp-relay.sendinblue.com
+2026-08-13 00:29:29:2929 error: Error sending OTP email: getaddrinfo ENOTFOUND smtp-relay.sendinblue.com
+2026-08-13 00:32:54:3254 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:33:02:332 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:33:13:3313 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:33:26:3326 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:33:38:3338 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:48:45:4845 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:50:05:505 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:09:519 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:19:5119 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:29:5129 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:39:5139 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:52:5152 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:05:19:519 error: You already registered this email id. Please login.
+2026-08-16 20:05:27:527 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:06:09:69 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:09:57:957 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:10:22:1022 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:10:34:1034 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:10:46:1046 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:10:59:1059 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:28:58:2858 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:30:13:3013 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:31:31:3131 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:31:41:3141 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:31:51:3151 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:32:09:329 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:32:23:3223 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:28:19:2819 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:28:51:2851 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:30:16:3016 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:30:27:3027 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:30:37:3037 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:30:48:3048 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:01:311 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:10:3110 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:22:3122 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:32:3132 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:41:3141 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:50:3150 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed

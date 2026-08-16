@@ -7,7 +7,6 @@ import {
     assignCCRoles,
     checkRound1Completion,
     checkRound2ReviewCompletion,
-    checkRound2SubmitCompletion,
     checkRound3VotingCompletion,
     finalizeRound1,
     finalizeRound3,
@@ -18,7 +17,15 @@ import {
     getInstanceById,
     getOrCreateCCInstance,
     getOtherDishes as getOtherDishesService,
+    advanceRound2Turn,
     advanceRound3ToVoting,
+    getRound2TurnParticipantId,
+    getRound2TurnCount,
+    getMyRound2TurnIndex,
+    ensureRound2TurnState,
+    ensureRound2ReviewStartedAt,
+    round2StepLetter,
+    respondToDoubleDown,
     saveRound1Votes,
     submitRating,
     saveRound2Step,
@@ -29,6 +36,10 @@ import {
     ensureCCTimer,
 } from '../services/cookandcreateService';
 import { shortName } from '../utils/pseudonym';
+// Read-only reuse of Mystery's schedule parser so both activities interpret a
+// booking's date/time identically. buildLobbyPayload itself is NOT used here —
+// it starts Mystery's case-summary timer as a side effect.
+import { parseBookingSchedule } from '../services/lobbyService';
 
 /**
  * Get Cook & Create game state for a group + current participant
@@ -41,7 +52,9 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
 
     // Get group + booking + activity/game info
     const [groupRows] = await query(
-        `SELECT gg.id, gg.booking_id, gg.game_id, ob.activity_id, ob.game_id as booking_game_id, a.slug AS activity_slug, a.group_size
+        `SELECT gg.id, gg.booking_id, gg.game_id, ob.activity_id, ob.game_id as booking_game_id,
+                ob.scheduled_date, ob.scheduled_time,
+                a.slug AS activity_slug, a.group_size, a.lobby_wait_secs, a.game_duration_secs
          FROM game_groups gg
          JOIN organizer_bookings ob ON gg.booking_id = ob.id
          JOIN activities a ON ob.activity_id = a.id
@@ -60,17 +73,31 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
     }
     const { instance, template } = ccData;
 
-    // Get participants in group
+    // Get participants in group. Online/offline is live socket presence
+    // (participant_sessions.is_online, kept current by socketHandler.ts on
+    // join_lobby/disconnect) — NOT game_participants.status, which is an
+    // unrelated account-level field and was previously (wrongly) used here,
+    // making every participant but yourself show as permanently offline.
+    // GROUP BY gp.id is load-bearing, not cosmetic: participant_sessions has no
+    // unique key on (group_id, participant_id), and a duplicate row there would
+    // otherwise fan this LEFT JOIN out and list the same player twice — which
+    // also inflates participants.length, the value the auto-start check below
+    // compares against the group capacity.
     const [participantRows] = await query(
-        `SELECT id, name, status, COALESCE(email_verified_at, created_at) AS joined_at
-         FROM game_participants WHERE group_id = ? ORDER BY joined_at ASC`,
+        `SELECT gp.id, gp.name, MAX(ps.is_online) AS is_online,
+                COALESCE(gp.email_verified_at, gp.created_at) AS joined_at
+         FROM game_participants gp
+         LEFT JOIN participant_sessions ps ON ps.group_id = gp.group_id AND ps.participant_id = gp.id
+         WHERE gp.group_id = ?
+         GROUP BY gp.id, gp.name, joined_at
+         ORDER BY joined_at ASC, gp.id ASC`,
         [group_id]
     );
     const participants = participantRows.map((p: any) => ({
         id: Number(p.id),
         name: myParticipantId === Number(p.id) ? p.name : shortName(p.name, Number(p.id)),
         isYou: myParticipantId === Number(p.id),
-        status: p.status,
+        status: Number(p.is_online) === 1 ? 'online' : 'offline',
     }));
     const participantIds = participants.map((p) => p.id);
 
@@ -93,6 +120,30 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
         await ensureCCTimer(group_id, instance.id, 'cc_round1', template.round1_timer_secs);
     }
 
+    // Heal a Round 2 that began before turn-based submission existed: without
+    // turn state no turn is ever open, so every submission is rejected and no
+    // timer runs — the group would sit stuck forever. Done here, before the
+    // round-2 reads below, so they all see consistent state (the heal can also
+    // move the round straight to review if every step was already in). No-op
+    // for every instance that already has turn state.
+    if (instance.status === 'round2' && instance.round2_phase === 'submit' && instance.round2_turn_index === null) {
+        await ensureRound2TurnState(instance.id, group_id);
+        const healed = await getInstanceById(instance.id);
+        if (healed) {
+            instance.round2_phase = healed.instance.round2_phase;
+            instance.round2_turn_index = healed.instance.round2_turn_index;
+            instance.round2_turn_started_at = healed.instance.round2_turn_started_at;
+        }
+    }
+
+    // Same idea for the review countdown's anchor on rounds that reached review
+    // before that column existed. No-op once it is set.
+    if (instance.status === 'round2' && instance.round2_phase === 'review' && !instance.round2_review_started_at) {
+        await ensureRound2ReviewStartedAt(instance.id, group_id);
+        const healed = await getInstanceById(instance.id);
+        if (healed) instance.round2_review_started_at = healed.instance.round2_review_started_at;
+    }
+
     // Public role labels — the Show Host's identity is public per the game
     // design (everyone sees who's "Chef 1"/"Chef 2"/"Show Host" for Round 3
     // voting), but this must NEVER leak who the impostor is: the impostor gets
@@ -106,8 +157,9 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
         return { ...p, role_label: `Chef ${chefCounter}` };
     });
 
-    // Get default CC ingredients
-    const allIngredients = await getCCIngredients(group.activity_id || 2);
+    // Get this template's ingredient pool (admin-selected per template — see
+    // getCCIngredients for why this is no longer activity_id-scoped)
+    const allIngredients = await getCCIngredients(template.id);
     // Get my ingredient votes
     let myIngredientVotes: number[] = [];
     if (myParticipantId) {
@@ -234,11 +286,11 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
         );
         submittedParticipantIds = rows.map((r: any) => Number(r.participant_id));
     } else if (instance.status === 'round2' && instance.round2_phase === 'submit') {
-        const [rows] = await query(
-            'SELECT DISTINCT participant_id FROM cc_round2_steps WHERE instance_id = ?',
-            [instance.id]
-        );
-        submittedParticipantIds = rows.map((r: any) => Number(r.participant_id));
+        // Deliberately left EMPTY. Turns advance one at a time and everyone can
+        // see the current turn index, so publishing who has submitted would let
+        // anyone correlate "turn N advanced" with "player X just became
+        // submitted" and rebuild the hidden step->author mapping. Round 2's
+        // progress is shown per step letter (round2_turn.steps) instead.
     } else if (instance.status === 'round2' && instance.round2_phase === 'review') {
         const submittedStepIds = cookingSteps.filter((s) => s.status === 'submitted').map((s) => s.id);
         if (submittedStepIds.length > 0) {
@@ -258,6 +310,69 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
         );
         submittedParticipantIds = rows.map((r: any) => Number(r.participant_id));
     }
+
+    // Round 2 turn state. Deliberately ANONYMOUS: everyone learns which step
+    // letter is being written right now and which are done, but never WHO is
+    // writing which step — the review phase depends on steps being untraceable
+    // (a step that maps back to a player would hand the group the impostor).
+    // The only identity revealed is your own, via is_my_turn/my_turn_index.
+    let round2Turn: {
+        total: number;
+        current_index: number | null;
+        started_at: string | null;
+        turn_secs: number;
+        is_my_turn: boolean;
+        my_turn_index: number | null;
+        steps: { letter: string; status: 'submitted' | 'current' | 'awaiting' | 'missed' }[];
+    } | null = null;
+    if (instance.status === 'round2' && instance.round2_phase === 'submit') {
+        const turnCount = await getRound2TurnCount(instance.id, group_id);
+        const currentIndex = instance.round2_turn_index;
+        const turnParticipantId = await getRound2TurnParticipantId(instance.id, group_id, currentIndex);
+        // Which letters actually produced a step (a turn can expire unused).
+        const submittedLetters = new Set(cookingSteps.map((s) => s.letter));
+        // From the hidden shuffled order — NOT this participant's position in
+        // the displayed list, which would make every step letter derivable.
+        const myTurnIndex = await getMyRound2TurnIndex(instance.id, group_id, myParticipantId);
+
+        round2Turn = {
+            total: turnCount,
+            current_index: currentIndex,
+            started_at: instance.round2_turn_started_at,
+            turn_secs: template.round2_submit_timer_secs,
+            is_my_turn: myParticipantId != null && turnParticipantId === myParticipantId,
+            my_turn_index: myTurnIndex,
+            steps: Array.from({ length: turnCount }, (_, i) => {
+                const letter = String.fromCharCode(65 + i);
+                let status: 'submitted' | 'current' | 'awaiting' | 'missed';
+                if (currentIndex !== null && i === currentIndex) status = 'current';
+                else if (currentIndex !== null && i < currentIndex) status = submittedLetters.has(letter) ? 'submitted' : 'missed';
+                else status = 'awaiting';
+                return { letter, status };
+            }),
+        };
+    }
+
+    // Absolute schedule timestamps for the lobby/header countdowns.
+    //
+    // These are sent as instants rather than "seconds remaining" on purpose: a
+    // duration handed to the client restarts from full on every page load, which
+    // is exactly why the lobby countdown reset to 2:00 on each refresh. Anchored
+    // to a fixed point in time, a refresh just recomputes the same remainder.
+    // server_time lets the client cancel out any clock skew between the two.
+    const scheduleStart = parseBookingSchedule(group.scheduled_date, group.scheduled_time);
+    const lobbyWaitSecs = Number(group.lobby_wait_secs) || 120;
+    const gameDurationSecs = Number(group.game_duration_secs) || 1500;
+    const gameStartsAt = scheduleStart ? scheduleStart.clone().add(lobbyWaitSecs, 'seconds') : null;
+    const schedule = {
+        scheduled_start_at: scheduleStart ? scheduleStart.toISOString() : null,
+        // When the lobby's entry window closes and play begins.
+        game_starts_at: gameStartsAt ? gameStartsAt.toISOString() : null,
+        game_ends_at: gameStartsAt ? gameStartsAt.clone().add(gameDurationSecs, 'seconds').toISOString() : null,
+        lobby_wait_secs: lobbyWaitSecs,
+        game_duration_secs: gameDurationSecs,
+        server_time: new Date().toISOString(),
+    };
 
     // Rating categories
     const ratingCategories = await getCCRatingCategories();
@@ -302,12 +417,23 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
     // cc_round3_complete at that point).
     const revealImpostor = instance.status === 'completed' || isImpostor;
 
+    // The Double Down offer is "secretly selected" per the game design — only
+    // the chosen participant (or everyone, once the game is over) should see
+    // who it went to. Everyone else gets my_double_down: null and a redacted
+    // instance field, mirroring the impostor redaction above.
+    const isDoubleDownTarget = myParticipantId != null && myParticipantId === instance.double_down_participant_id;
+    const revealDoubleDown = instance.status === 'completed' || isDoubleDownTarget;
+    const myDoubleDown = isDoubleDownTarget ? { offered: true, status: instance.double_down_status } : null;
+
     // Success response
     return successResponse(res, 'Cook & Create state loaded', {
         instance: {
             ...instance,
             impostor_participant_id: revealImpostor ? instance.impostor_participant_id : null,
+            double_down_participant_id: revealDoubleDown ? instance.double_down_participant_id : null,
+            double_down_status: revealDoubleDown ? instance.double_down_status : null,
         },
+        my_double_down: myDoubleDown,
         template,
         participants: participantsWithRoles,
         submitted_participant_ids: submittedParticipantIds,
@@ -328,6 +454,7 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
         cooking_steps: cookingSteps,
         my_cooking_step: myCookingStep,
         my_step_votes: myStepVotes,
+        round2_turn: round2Turn,
         released_clues: releasedClues,
         // Round 3
         chat_messages: chatMessages,
@@ -339,6 +466,8 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
         dish_name: instance.dish_name,
         // Admin-editable game rules (lobby screen)
         rules,
+        // Absolute instants for the lobby / header countdowns
+        schedule,
     });
 });
 
@@ -410,9 +539,9 @@ export const finalizeRound1Results = asyncHandler(async (req: Request, res: Resp
  * Round 2: Submit cooking step
  */
 export const submitRound2Step = asyncHandler(async (req: Request, res: Response) => {
-    const { instance_id, participant_id, step_text, step_letter } = req.body;
-    if (!instance_id || !participant_id || !step_text || !step_letter) {
-        throw new AppError('instance_id, participant_id, step_text, and step_letter are required', 400);
+    const { instance_id, participant_id, step_text } = req.body;
+    if (!instance_id || !participant_id || !step_text) {
+        throw new AppError('instance_id, participant_id, and step_text are required', 400);
     }
 
     const data = await getInstanceById(instance_id);
@@ -425,7 +554,29 @@ export const submitRound2Step = asyncHandler(async (req: Request, res: Response)
         throw new AppError(`Step text must be ${template.round2_step_max_chars} characters or fewer`, 400);
     }
 
-    const stepId = await saveRound2Step(instance_id, participant_id, step_text, step_letter);
+    // Round 2 is turn-based: only the player whose turn is currently open may
+    // submit, and the step's letter comes from that turn's position — never
+    // from the client, which can't see enough to assign it without racing.
+    // (Heal first, so a round carried over from before turn-based submission
+    // can't reject every player for lack of turn state.)
+    let turnIndex = instance.round2_turn_index;
+    if (turnIndex === null) {
+        await ensureRound2TurnState(instance_id, instance.group_id);
+        const healed = await getInstanceById(instance_id);
+        turnIndex = healed?.instance.round2_turn_index ?? null;
+        if (healed && healed.instance.round2_phase !== 'submit') {
+            throw new AppError('Cooking step submission is not open right now', 400);
+        }
+    }
+    const turnParticipantId = await getRound2TurnParticipantId(instance_id, instance.group_id, turnIndex);
+    if (turnParticipantId === null) {
+        throw new AppError('Cooking step submission is not open right now', 400);
+    }
+    if (turnParticipantId !== Number(participant_id)) {
+        throw new AppError("It's not your turn yet — wait for the players before you.", 403);
+    }
+
+    const stepId = await saveRound2Step(instance_id, participant_id, step_text, round2StepLetter(turnIndex as number));
 
     try {
         const { io } = require('../server');
@@ -436,7 +587,8 @@ export const submitRound2Step = asyncHandler(async (req: Request, res: Response)
         /* ignore */
     }
 
-    await checkRound2SubmitCompletion(instance_id, instance.group_id);
+    // Hand the turn to the next player (or close the round if that was the last).
+    await advanceRound2Turn(instance_id, instance.group_id);
 
     return successResponse(res, 'Step submitted successfully', { step_id: stepId });
 });
@@ -622,6 +774,32 @@ export const submitRound3ImpostorVote = asyncHandler(async (req: Request, res: R
     await checkRound3VotingCompletion(instance_id, instance.group_id);
 
     return successResponse(res, 'Vote submitted', {});
+});
+
+/**
+ * Round 3: respond to the private "Double Down" offer (Accept doubles this
+ * participant's vote weight but risks -50 points if their target is wrong;
+ * Decline leaves their vote at normal weight with no risk).
+ */
+export const respondToDoubleDownHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { instance_id, participant_id, accept } = req.body;
+    if (!instance_id || !participant_id || typeof accept !== 'boolean') {
+        throw new AppError('instance_id, participant_id, and accept (boolean) are required', 400);
+    }
+
+    const data = await getInstanceById(instance_id);
+    if (!data) throw new AppError('Cook & Create instance not found', 404);
+    const { instance } = data;
+    if (instance.double_down_participant_id !== Number(participant_id)) {
+        throw new AppError('You were not offered the Double Down power', 403);
+    }
+    if (instance.double_down_status !== 'offered') {
+        throw new AppError('You have already responded to the Double Down offer', 400);
+    }
+
+    await respondToDoubleDown(instance_id, participant_id, accept);
+
+    return successResponse(res, accept ? 'Double Down accepted' : 'Double Down declined', {});
 });
 
 /**

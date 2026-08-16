@@ -1,4 +1,5 @@
 import { X, AlertTriangle } from 'lucide-react';
+import { resolveMediaUrl } from '@/utils/media';
 
 export type CCTopIngredient = {
   id: number;
@@ -11,12 +12,23 @@ interface RoundResultsModalProps {
   isOpen: boolean;
   onClose: () => void;
   topIngredients: CCTopIngredient[];
+  /**
+   * Every absurd ingredient that drew at least one vote — including ones that
+   * did NOT make the top 4. That's the whole point of the callout: it hints
+   * that someone in the group is steering the dish somewhere strange, which
+   * the top-4 list alone would hide.
+   */
+  absurdVoted: CCTopIngredient[];
 }
 
-export function RoundResultsModal({ isOpen, onClose, topIngredients }: RoundResultsModalProps) {
+export function RoundResultsModal({ isOpen, onClose, topIngredients, absurdVoted }: RoundResultsModalProps) {
   if (!isOpen) return null;
 
-  const absurdOnes = topIngredients.filter((i) => i.is_absurd);
+  const absurdNames = absurdVoted.map((a) => a.name);
+  const absurdLabel =
+    absurdNames.length > 1
+      ? `${absurdNames.slice(0, -1).join(', ')} and ${absurdNames[absurdNames.length - 1]}`
+      : absurdNames[0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -53,7 +65,7 @@ export function RoundResultsModal({ isOpen, onClose, topIngredients }: RoundResu
                 className="flex flex-col items-center gap-2 bg-white rounded-xl p-3 border border-[#F0E4D4] shadow-sm min-w-[80px]"
               >
                 {item.image_url ? (
-                  <img src={item.image_url} alt={item.name} className="w-10 h-10 object-contain" />
+                  <img src={resolveMediaUrl(item.image_url) ?? item.image_url} alt={item.name} className="w-10 h-10 object-contain" />
                 ) : (
                   <span className="text-3xl select-none">🥘</span>
                 )}
@@ -64,12 +76,13 @@ export function RoundResultsModal({ isOpen, onClose, topIngredients }: RoundResu
         </div>
 
         {/* Warning */}
-        {absurdOnes.length > 0 && (
+        {absurdVoted.length > 0 && (
           <div className="mx-6 mb-5">
             <div className="bg-[#FFF3E0] border border-[#E8881E]/20 rounded-xl p-4 flex items-start gap-3">
               <AlertTriangle size={18} className="text-[#E8881E] shrink-0 mt-0.5" />
               <p className="text-sm text-[#3D2E1F] leading-relaxed">
-                <span className="font-bold">⚠️ {absurdOnes.map((a) => a.name).join(' and ')}</span> also received votes.
+                <span className="font-bold">{absurdLabel}</span> also received votes.
+                <br />
                 Interesting choices from someone in your group.
               </p>
             </div>

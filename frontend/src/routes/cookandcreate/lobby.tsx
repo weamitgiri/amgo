@@ -14,6 +14,8 @@ import type { CCGameStateResponse } from '@/api/types/cookandcreate';
 import { getParticipantSession } from '@/lib/participant-session';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toastError } from '@/lib/toast';
+import { getSocket } from '@/lib/socket';
+import { clockOffsetMs } from './-components/clock';
 
 export const Route = createFileRoute('/cookandcreate/lobby')({
   component: LobbyPage,
@@ -85,13 +87,15 @@ function LobbyPage() {
   const session = useMemo(() => getParticipantSession(), []);
   const [gameState, setGameState] = useState<CCGameStateResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [countdown, setCountdown] = useState<number | null>(null);
+  const [onlineParticipantIds, setOnlineParticipantIds] = useState<Set<number> | null>(null);
+  const [clockOffset, setClockOffset] = useState(0);
 
   const fetchState = useCallback(async () => {
     if (!session?.groupId || !session.participantId) return;
     try {
       const data = await cookAndCreateService.getGameState(session.groupId, session.participantId);
       setGameState(data);
+      setClockOffset(clockOffsetMs(data.schedule, Date.now()));
     } catch (err) {
       toastError(err instanceof Error ? err.message : 'Could not load Cook & Create state.');
     } finally {
@@ -106,6 +110,33 @@ function LobbyPage() {
     }
     fetchState();
   }, [session?.groupId, session?.participantId, navigate, fetchState]);
+
+  // The lobby used to be a one-shot fetch with no live connection at all —
+  // other players joining, or going online/offline, never showed up without
+  // a manual refresh. Join the presence room and poll as a fallback (same
+  // pattern as game.tsx) so the player list here actually stays live.
+  useEffect(() => {
+    if (!session?.groupId || !session.participantId) return;
+    const socket = getSocket();
+    socket.emit('join_lobby', { groupId: session.groupId, participantId: session.participantId });
+    socket.emit('request_presence', { groupId: session.groupId });
+
+    const onPresenceUpdated = (payload: { online_participant_ids?: number[] }) => {
+      setOnlineParticipantIds(new Set(payload.online_participant_ids ?? []));
+    };
+    socket.on('presence_updated', onPresenceUpdated);
+
+    const refetch = () => fetchState();
+    socket.on('lobby_updated', refetch);
+
+    const interval = setInterval(fetchState, 10000);
+
+    return () => {
+      socket.off('presence_updated', onPresenceUpdated);
+      socket.off('lobby_updated', refetch);
+      clearInterval(interval);
+    };
+  }, [session?.groupId, session?.participantId, fetchState]);
 
   useEffect(() => {
     if (gameState && gameState.instance.status !== 'waiting') {
@@ -129,7 +160,11 @@ function LobbyPage() {
       <img src={decorLeft} alt="" className="fixed bottom-0 left-0 w-32 md:w-48 opacity-80 pointer-events-none z-0" />
       <img src={decorRight} alt="" className="fixed bottom-0 right-0 w-40 md:w-64 opacity-80 pointer-events-none z-0" />
       <div className="flex flex-col gap-5 relative z-10">
-        <CookCreateHeader />
+        <CookCreateHeader
+          participantName={session?.name}
+          gameEndsAt={gameState?.schedule.game_ends_at ?? null}
+          clockOffsetMs={clockOffset}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
           <Card className="lg:col-span-3 overflow-hidden relative" style={{ padding: 0 }}>
@@ -199,7 +234,11 @@ function LobbyPage() {
                   name={p.name}
                   colorIndex={AVATAR_COLORS[i % AVATAR_COLORS.length]}
                   size="lg"
-                  status={p.status === 'online' ? 'ready' : 'waiting'}
+                  status={
+                    p.isYou || (onlineParticipantIds ? onlineParticipantIds.has(p.id) : p.status === 'online')
+                      ? 'ready'
+                      : 'waiting'
+                  }
                   isYou={p.isYou}
                 />
               ))}
@@ -257,10 +296,11 @@ function LobbyPage() {
 
               <div className="flex flex-col items-center justify-center">
                 <CountdownTimer
-                  initialMinutes={gameState?.template.round1_timer_secs ? 0 : 2}
-                  initialSeconds={gameState?.template.round1_timer_secs || 165}
+                  targetAt={gameState?.schedule.game_starts_at ?? null}
+                  clockOffsetMs={clockOffset}
                   variant="large"
                   label="Game Starts in"
+                  emptyLabel="--:--"
                 />
               </div>
             </div>

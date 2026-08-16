@@ -64,6 +64,7 @@
                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#tab-email" role="tab">Email</a></li>
                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#tab-otp" role="tab">OTP</a></li>
                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#tab-payment" role="tab">Payment</a></li>
+               <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#tab-invoice" role="tab">Invoice / GST</a></li>
                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#tab-social" role="tab">Social Media</a></li>
             </ul>
          </div>
@@ -75,6 +76,7 @@
                <div class="tab-pane fade" id="tab-email" role="tabpanel">@include('admin.setting.email')</div>
                <div class="tab-pane fade" id="tab-otp" role="tabpanel">@include('admin.setting.otp')</div>
                <div class="tab-pane fade" id="tab-payment" role="tabpanel">@include('admin.setting.payment')</div>
+               <div class="tab-pane fade" id="tab-invoice" role="tabpanel">@include('admin.setting.invoice')</div>
                <div class="tab-pane fade" id="tab-social" role="tabpanel">@include('admin.setting.social-links')</div>
             </div>
          </div>

@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import * as organizerController from '../controllers/organizerController';
 import * as profileController from '../controllers/profileController';
 import * as notificationController from '../controllers/notificationController';
+import * as invoiceController from '../controllers/invoiceController';
 import { validateRequest } from '../middlewares/validateRequest';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
@@ -200,6 +201,10 @@ router.post(
 
 // Results tab — completed/incomplete groups with results-PDF availability
 router.get('/results', authMiddleware, organizerController.getOrganizerResults);
+
+// Payment history + GST invoice download (both scoped to the caller's own bookings)
+router.get('/invoices', authMiddleware, invoiceController.getInvoices);
+router.get('/invoices/:booking_id/pdf', authMiddleware, invoiceController.downloadInvoice);
 
 // Account deactivation (soft delete — billing/GST records retained)
 router.post('/account/delete', authMiddleware, organizerController.deactivateAccount);

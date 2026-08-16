@@ -53,7 +53,7 @@ export function PlayerAvatar({
         ready: { color: '#4CAF50', label: 'Ready' },
         available: { color: '#4CAF50', label: 'Available' },
         submitting: { color: '#FF9800', label: 'Submitting' },
-        waiting: { color: '#9E9E9E', label: 'Waiting for participant' },
+        waiting: { color: '#9E9E9E', label: 'Waiting for...' },
       }[status]
     : null;
 

@@ -575,6 +575,76 @@ export async function ensureCookAndCreateSchema(): Promise<void> {
             await query(`ALTER TABLE cc_game_templates ADD COLUMN background_image VARCHAR(255) NULL DEFAULT NULL AFTER description`);
         }
 
+        // 14. Round 3's "Double Down Moment" — the system secretly offers one
+        // non-impostor voter double vote-weight, at the risk of a point
+        // penalty if their target is wrong (see advanceRound3ToVoting /
+        // finalizeRound3 in cookandcreateService.ts).
+        const [ddCol] = await query<any>(`SHOW COLUMNS FROM cc_game_instances LIKE 'double_down_participant_id'`);
+        if ((ddCol as any).length === 0) {
+            await query(
+                `ALTER TABLE cc_game_instances
+                    ADD COLUMN double_down_participant_id BIGINT UNSIGNED NULL DEFAULT NULL,
+                    ADD COLUMN double_down_status ENUM('offered','accepted','declined') NULL DEFAULT NULL`
+            );
+        }
+
+        // 15. Per-template character portraits — same admin-uploadable/
+        // fallback-to-bundled-art pattern as background_image, so different
+        // Cook & Create games/templates can look visually distinct.
+        const [portraitCol] = await query<any>(`SHOW COLUMNS FROM cc_game_templates LIKE 'chef1_image'`);
+        if ((portraitCol as any).length === 0) {
+            await query(
+                `ALTER TABLE cc_game_templates
+                    ADD COLUMN chef1_image VARCHAR(255) NULL DEFAULT NULL,
+                    ADD COLUMN chef2_image VARCHAR(255) NULL DEFAULT NULL,
+                    ADD COLUMN chef3_image VARCHAR(255) NULL DEFAULT NULL,
+                    ADD COLUMN chef4_image VARCHAR(255) NULL DEFAULT NULL,
+                    ADD COLUMN show_host_image VARCHAR(255) NULL DEFAULT NULL`
+            );
+        }
+
+        // 16. Round 2's turn-based submission. Players write their cooking step
+        // one at a time (Step A, then B, ...), each with their own countdown,
+        // instead of everyone typing simultaneously. round2_turn_index is the
+        // 0-based position in the group's join order whose turn it currently is;
+        // round2_turn_started_at anchors that turn's countdown. NULL on both
+        // means Round 2 hasn't started (or this is a pre-existing instance from
+        // before turn-based submission, which finalizeRound1 seeds on entry).
+        const [turnCol] = await query<any>(`SHOW COLUMNS FROM cc_game_instances LIKE 'round2_turn_index'`);
+        if ((turnCol as any).length === 0) {
+            await query(
+                `ALTER TABLE cc_game_instances
+                    ADD COLUMN round2_turn_index INT NULL DEFAULT NULL AFTER round2_phase,
+                    ADD COLUMN round2_turn_started_at DATETIME NULL DEFAULT NULL AFTER round2_turn_index`
+            );
+        }
+
+        // 17. The Round-2 turn order itself, as a JSON array of participant ids,
+        // SHUFFLED once when Round 2 opens and never sent to any client.
+        // It must NOT be the participant display order: step letters come from
+        // turn position, so a derivable order would let everyone map "Step C" to
+        // the 3rd player in the sidebar and unmask the impostor during review —
+        // the exact opposite of the documented "steps appear with no names" rule.
+        const [turnOrderCol] = await query<any>(`SHOW COLUMNS FROM cc_game_instances LIKE 'round2_turn_order'`);
+        if ((turnOrderCol as any).length === 0) {
+            await query(
+                `ALTER TABLE cc_game_instances ADD COLUMN round2_turn_order TEXT NULL DEFAULT NULL AFTER round2_turn_started_at`
+            );
+        }
+
+        // 18. When the review sub-phase actually opened. The review countdown
+        // used to be measured from round2_started_at, which is when the whole of
+        // Round 2 began — by the time every player has taken their turn that is
+        // minutes in the past, so the review timer rendered 00:00 immediately.
+        const [reviewStartCol] = await query<any>(
+            `SHOW COLUMNS FROM cc_game_instances LIKE 'round2_review_started_at'`
+        );
+        if ((reviewStartCol as any).length === 0) {
+            await query(
+                `ALTER TABLE cc_game_instances ADD COLUMN round2_review_started_at DATETIME NULL DEFAULT NULL AFTER round2_turn_order`
+            );
+        }
+
     } catch (err: any) {
         console.warn('[schemaHelpers] Could not ensure Cook & Create schema:', err.message || err);
     }

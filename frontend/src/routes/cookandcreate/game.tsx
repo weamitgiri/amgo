@@ -9,11 +9,15 @@ import { ActivityFeed, type CCActivityItem } from './-components/ActivityFeed';
 import { RoundResultsModal } from './-components/RoundResultsModal';
 import { CookingStepReviewModal } from './-components/CookingStepReviewModal';
 import { NameDishModal } from './-components/NameDishModal';
+import { DoubleDownModal } from './-components/DoubleDownModal';
+import { portraitForRole } from './-components/portraits';
+import { clockOffsetMs } from './-components/clock';
 import { cookAndCreateService } from '@/api/services/cookandcreate.service';
-import type { CCGameStateResponse } from '@/api/types/cookandcreate';
+import type { CCGameStateResponse, CCRound2Turn, CCTemplate } from '@/api/types/cookandcreate';
 import { getParticipantSession } from '@/lib/participant-session';
 import { getSocket } from '@/lib/socket';
 import { toastError } from '@/lib/toast';
+import { resolveMediaUrl } from '@/utils/media';
 
 export const Route = createFileRoute('/cookandcreate/game')({
   component: GamePage,
@@ -47,13 +51,24 @@ function GamePage() {
   const [stepText, setStepText] = useState('');
   const [chatText, setChatText] = useState('');
   const [selectedVoteId, setSelectedVoteId] = useState<number | null>(null);
+  const [removeStepId, setRemoveStepId] = useState<number | null>(null);
+  // Whether this player has clicked through the read-only vote-result screen
+  // that sits between voting and dish-naming.
+  const [reviewResultSeen, setReviewResultSeen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [onlineParticipantIds, setOnlineParticipantIds] = useState<Set<number> | null>(null);
+  const [clockOffset, setClockOffset] = useState(0);
+  // Forces a re-render once a second purely so the round countdown (derived
+  // from Date.now() on every render) actually ticks — without this the timer
+  // only ever updates when a socket event or the 10s poll happens to refetch.
+  const [, setClockTick] = useState(0);
 
   const fetchState = useCallback(async () => {
     if (!groupId || !participantId) return;
     try {
       const data = await cookAndCreateService.getGameState(groupId, participantId);
       setGameState(data);
+      setClockOffset(clockOffsetMs(data.schedule, Date.now()));
     } catch (err) {
       toastError(err instanceof Error ? err.message : 'Could not load game state.');
     } finally {
@@ -70,6 +85,11 @@ function GamePage() {
     fetchState();
   }, [groupId, participantId, navigate, fetchState]);
 
+  useEffect(() => {
+    const id = setInterval(() => setClockTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   // Join the presence room (group_${groupId}) and the gameplay room
   // (cc-instance-${instanceId}) once we know the instance id.
   useEffect(() => {
@@ -77,7 +97,27 @@ function GamePage() {
     const socket = getSocket();
     socket.emit('join_lobby', { groupId, participantId });
     socket.emit('join_cc_instance', { instanceId: gameState.instance.id });
+    // The HTTP snapshot above can land after the join's presence broadcast
+    // and clobber it with a stale "everyone offline" set — ask for a fresh
+    // one now that we've definitely joined (same fix Mystery Quest's
+    // game.tsx uses for the same race).
+    socket.emit('request_presence', { groupId });
   }, [gameState?.instance.id, groupId, participantId]);
+
+  // Live presence — keeps the sidebar's online/offline dots accurate between
+  // full refetches (someone closing their tab shouldn't take up to 10s to
+  // show as offline).
+  useEffect(() => {
+    if (!groupId) return;
+    const socket = getSocket();
+    const onPresenceUpdated = (payload: { online_participant_ids?: number[] }) => {
+      setOnlineParticipantIds(new Set(payload.online_participant_ids ?? []));
+    };
+    socket.on('presence_updated', onPresenceUpdated);
+    return () => {
+      socket.off('presence_updated', onPresenceUpdated);
+    };
+  }, [groupId]);
 
   // The instance transitioning to 'completed' sends everyone to the rating /
   // leaderboard flow — outside the game page entirely.
@@ -104,6 +144,7 @@ function GamePage() {
     socket.on('cc_round1_vote_submitted', refetch);
     socket.on('cc_round1_complete', onRound1Complete);
     socket.on('cc_round2_step_submitted', refetch);
+    socket.on('cc_round2_turn_changed', refetch);
     socket.on('cc_round2_review_started', refetch);
     socket.on('cc_round2_step_vote_submitted', refetch);
     socket.on('cc_round2_review_complete', refetch);
@@ -113,12 +154,17 @@ function GamePage() {
     socket.on('cc_round3_voting_started', refetch);
     socket.on('cc_round3_impostor_vote_submitted', refetch);
     socket.on('cc_round3_complete', refetch);
+    // Private — only the one participant the server secretly picked ever
+    // receives this event. Refetching populates `my_double_down` so the
+    // offer modal below can gate on it.
+    socket.on('cc_double_down_offer', refetch);
 
     return () => {
       socket.off('cc_round1_started', refetch);
       socket.off('cc_round1_vote_submitted', refetch);
       socket.off('cc_round1_complete', onRound1Complete);
       socket.off('cc_round2_step_submitted', refetch);
+      socket.off('cc_round2_turn_changed', refetch);
       socket.off('cc_round2_review_started', refetch);
       socket.off('cc_round2_step_vote_submitted', refetch);
       socket.off('cc_round2_review_complete', refetch);
@@ -128,6 +174,7 @@ function GamePage() {
       socket.off('cc_round3_voting_started', refetch);
       socket.off('cc_round3_impostor_vote_submitted', refetch);
       socket.off('cc_round3_complete', refetch);
+      socket.off('cc_double_down_offer', refetch);
     };
   }, [groupId, participantId, fetchState]);
 
@@ -158,7 +205,10 @@ function GamePage() {
     id: p.id,
     name: p.name,
     isYou: p.isYou,
-    online: p.status === 'online' || p.status === 'active' || p.isYou,
+    // Live socket presence wins once it's arrived; the HTTP snapshot's
+    // `status` (also real presence — see getCCGameState) covers the gap
+    // before the first `presence_updated` event lands.
+    online: p.isYou || (onlineParticipantIds ? onlineParticipantIds.has(p.id) : p.status === 'online'),
     submitted: submittedIds.includes(p.id),
   }));
 
@@ -202,28 +252,29 @@ function GamePage() {
   const handleSubmitStep = () =>
     submit(async () => {
       if (!myId || !stepText.trim()) return;
-      // Steps are anonymous once submitted (never shown to who wrote them),
-      // so the letter is just a stable display order — assign it from how
-      // many steps exist so far.
-      const nextLetter = String.fromCharCode(65 + gameState.cooking_steps.length);
       await cookAndCreateService.submitRound2Step({
         instance_id: instance.id,
         participant_id: myId,
         step_text: stepText.trim(),
-        step_letter: nextLetter,
       });
       await fetchState();
     });
 
-  const handleStepVote = (stepId: number, vote: 'keep' | 'remove') =>
+  // Round 2 review is one decision, not one-vote-per-step: the player picks the
+  // single step to remove and everything else is implicitly kept. Those implied
+  // 'keep' votes are only written on Continue — the server still needs a vote
+  // row per participant per step for checkRound2ReviewCompletion to fire.
+  const handleSubmitStepVotes = () =>
     submit(async () => {
-      if (!myId) return;
-      await cookAndCreateService.submitRound2StepVote({
-        instance_id: instance.id,
-        participant_id: myId,
-        step_id: stepId,
-        vote,
-      });
+      if (!myId || removeStepId === null) return;
+      for (const step of gameState.cooking_steps) {
+        await cookAndCreateService.submitRound2StepVote({
+          instance_id: instance.id,
+          participant_id: myId,
+          step_id: step.id,
+          vote: step.id === removeStepId ? 'remove' : 'keep',
+        });
+      }
       await fetchState();
     });
 
@@ -261,6 +312,17 @@ function GamePage() {
       await fetchState();
     });
 
+  const handleDoubleDownRespond = (accept: boolean) =>
+    submit(async () => {
+      if (!myId) return;
+      await cookAndCreateService.respondToDoubleDown({
+        instance_id: instance.id,
+        participant_id: myId,
+        accept,
+      });
+      await fetchState();
+    });
+
   const getRoundLabel = () => {
     if (currentRound === 1) return 'Ingredient Market';
     if (currentRound === 2) return instance.round2_phase === 'review' ? 'Review & Vote' : 'Cooking Steps';
@@ -270,9 +332,21 @@ function GamePage() {
   const roundTimer = (() => {
     if (currentRound === 1) return secondsRemaining(instance.round1_started_at, template.round1_timer_secs);
     if (currentRound === 2) {
-      return instance.round2_phase === 'review'
-        ? secondsRemaining(instance.round2_started_at, template.round2_review_timer_secs)
-        : secondsRemaining(instance.round2_started_at, template.round2_submit_timer_secs);
+      if (instance.round2_phase === 'review') {
+        // Anchored to when REVIEW opened, not to round2_started_at — by review
+        // time every player's turn has already elapsed, so the round's own start
+        // is minutes stale and the countdown rendered 00:00 instantly.
+        return secondsRemaining(
+          instance.round2_review_started_at ?? instance.round2_started_at,
+          template.round2_review_timer_secs
+        );
+      }
+      // Submit phase is turn-based — the clock belongs to the CURRENT turn,
+      // not to the round as a whole.
+      return secondsRemaining(
+        instance.round2_turn_started_at ?? instance.round2_started_at,
+        template.round2_submit_timer_secs
+      );
     }
     if (instance.status === 'round3_voting') {
       return secondsRemaining(instance.round3_voting_started_at, template.round3_voting_timer_secs);
@@ -295,15 +369,33 @@ function GamePage() {
       ];
     }
     if (currentRound === 2 && instance.round2_phase === 'submit') {
-      return [
-        {
-          id: 'r2s',
-          name: 'Round 2',
-          text: `${submittedIds.length}/${participants.length} steps submitted.`,
-          time: '',
-          type: 'info',
-        },
-      ];
+      const turn = gameState.round2_turn;
+      if (!turn) return [];
+      // Step-by-step turn board. Intentionally shows no player names — the
+      // server never sends them for Round 2, because a step traceable to a
+      // player would give the impostor away in review.
+      const textByLetter = new Map(gameState.cooking_steps.map((s) => [s.letter, s.text]));
+      return turn.steps.map((s) => ({
+        id: `turn-${s.letter}`,
+        name: `Step ${s.letter}`,
+        text:
+          s.status === 'submitted'
+            ? textByLetter.get(s.letter) ?? 'Submitted'
+            : s.status === 'current'
+              ? 'Currently submitting…'
+              : s.status === 'missed'
+                ? 'Missed their turn'
+                : 'Awaiting turn',
+        time: s.status === 'current' ? `${timerMm}:${timerSs}` : '',
+        type:
+          s.status === 'submitted'
+            ? ('submitted' as const)
+            : s.status === 'current'
+              ? ('submitting' as const)
+              : s.status === 'missed'
+                ? ('missed' as const)
+                : ('info' as const),
+      }));
     }
     if (currentRound === 2 && instance.round2_phase === 'review') {
       return gameState.cooking_steps.map((s) => ({
@@ -350,15 +442,40 @@ function GamePage() {
     image_url: i.image_url,
   }));
 
+  // Absurd ingredients the group voted for, whether or not they made the top 4
+  // — an absurd pick that lost the vote is exactly the signal players are meant
+  // to notice, so it can't be derived from `selected_ingredients` alone.
+  const absurdVotedIngredients = gameState.all_ingredients.filter(
+    (i) => i.is_absurd && (gameState.ingredient_vote_counts[i.id] ?? 0) > 0
+  );
+
+  const doubleDownOpen =
+    gameState.my_double_down?.offered === true && gameState.my_double_down.status === 'offered';
+
   const canNameDish = !template.show_host_role_enabled || gameState.is_show_host;
   const reviewResolved = gameState.cooking_steps.length > 0 && gameState.cooking_steps.every((s) => s.status !== 'submitted');
+
+  // Once my votes are on the server they win over the local pick, so a refresh
+  // mid-phase still shows what I actually chose (and keeps the table locked).
+  const myStepVoteEntries = Object.entries(gameState.my_step_votes);
+  const reviewSubmitted = myStepVoteEntries.length > 0;
+  const submittedRemoveId = myStepVoteEntries.find(([, v]) => v === 'remove')?.[0];
+  const effectiveRemoveStepId = reviewSubmitted
+    ? submittedRemoveId != null
+      ? Number(submittedRemoveId)
+      : null
+    : removeStepId;
   const myMessagesSent = gameState.chat_messages.filter((m) => m.is_you && !m.is_impostor_private).length;
   const messagesRemaining = Math.max(0, template.round3_max_messages_per_player - myMessagesSent);
 
   return (
-    <CookCreateLayout breadcrumb="Cook & Create / Game">
+    <CookCreateLayout breadcrumb="">
       <div className="relative z-10 space-y-4">
-        <CookCreateHeader showGameTimer={false} />
+        <CookCreateHeader
+          participantName={session?.name}
+          gameEndsAt={gameState.schedule.game_ends_at}
+          clockOffsetMs={clockOffset}
+        />
 
         {/* Sub-header status bar */}
         <div className="bg-[#FFF3E0] border border-[#F5DCBD] rounded-2xl px-5 py-3 shadow-xs">
@@ -413,6 +530,8 @@ function GamePage() {
                 selectedIngredients={gameState.selected_ingredients}
                 allSubmitted={reviewResolved}
                 phase={instance.round2_phase}
+                turn={gameState.round2_turn}
+                turnTimerLabel={`${timerMm}:${timerSs}`}
               />
             ) : (
               <Round3Content
@@ -431,6 +550,7 @@ function GamePage() {
                 isImpostor={gameState.is_impostor}
                 impostorBiasCard={gameState.impostor_bias_card}
                 submitting={submitting}
+                template={template}
               />
             )}
           </div>
@@ -444,20 +564,49 @@ function GamePage() {
           isOpen={showRound1Results}
           onClose={() => setShowRound1Results(false)}
           topIngredients={gameState.selected_ingredients}
+          absurdVoted={absurdVotedIngredients}
         />
 
         <CookingStepReviewModal
           isOpen={currentRound === 2 && instance.round2_phase === 'review' && !reviewResolved}
-          onClose={() => undefined}
           steps={gameState.cooking_steps}
-          myVotes={gameState.my_step_votes}
-          onVote={handleStepVote}
+          removeStepId={effectiveRemoveStepId}
+          onSelectRemove={setRemoveStepId}
+          onSubmit={handleSubmitStepVotes}
+          submitted={reviewSubmitted}
+          submitting={submitting}
           timerLabel={`${timerMm}:${timerSs}`}
-          canContinue={false}
+        />
+
+        {/* Read-only outcome of the vote — same modal, checkboxes locked — shown
+            after votes resolve and before the dish-naming step. */}
+        <CookingStepReviewModal
+          isOpen={
+            currentRound === 2 &&
+            instance.round2_phase === 'review' &&
+            reviewResolved &&
+            !reviewResultSeen &&
+            !instance.dish_name
+          }
+          steps={gameState.cooking_steps}
+          removeStepId={null}
+          onSelectRemove={() => undefined}
+          onSubmit={() => undefined}
+          submitted
+          submitting={false}
+          timerLabel={`${timerMm}:${timerSs}`}
+          resultMode
+          onContinue={() => setReviewResultSeen(true)}
         />
 
         <NameDishModal
-          isOpen={currentRound === 2 && instance.round2_phase === 'review' && reviewResolved && !instance.dish_name}
+          isOpen={
+            currentRound === 2 &&
+            instance.round2_phase === 'review' &&
+            reviewResolved &&
+            reviewResultSeen &&
+            !instance.dish_name
+          }
           onSubmit={handleDishNameSubmit}
           topIngredients={topIngredientsForNameDish}
           canSubmit={canNameDish}
@@ -466,6 +615,13 @@ function GamePage() {
               ? 'Waiting for the Show Host to name the dish…'
               : 'Waiting for a teammate to name the dish…'
           }
+        />
+
+        <DoubleDownModal
+          isOpen={doubleDownOpen}
+          onAccept={() => handleDoubleDownRespond(true)}
+          onDecline={() => handleDoubleDownRespond(false)}
+          submitting={submitting}
         />
       </div>
     </CookCreateLayout>
@@ -531,7 +687,7 @@ function Round1Content({
               )}
               <div className="flex-1 flex items-center justify-center w-full my-1">
                 {item.image_url ? (
-                  <img src={item.image_url} alt={item.name} className="max-w-[65px] max-h-[65px] object-contain drop-shadow-sm" />
+                  <img src={resolveMediaUrl(item.image_url) ?? item.image_url} alt={item.name} className="max-w-[65px] max-h-[65px] object-contain drop-shadow-sm" />
                 ) : (
                   <span className="text-3xl">🥘</span>
                 )}
@@ -574,6 +730,8 @@ function Round2Content({
   selectedIngredients,
   allSubmitted,
   phase,
+  turn,
+  turnTimerLabel,
 }: {
   stepText: string;
   setStepText: (v: string) => void;
@@ -584,7 +742,15 @@ function Round2Content({
   selectedIngredients: { id: number; name: string; image_url: string | null }[];
   allSubmitted: boolean;
   phase: 'submit' | 'review';
+  turn: CCRound2Turn | null;
+  turnTimerLabel: string;
 }) {
+  const isMyTurn = turn?.is_my_turn ?? false;
+  const currentLetter =
+    turn?.current_index != null ? String.fromCharCode(65 + turn.current_index) : null;
+  const myLetter = turn?.my_turn_index != null ? String.fromCharCode(65 + turn.my_turn_index) : null;
+  const myTurnHasPassed =
+    turn?.current_index != null && turn.my_turn_index != null && turn.current_index > turn.my_turn_index;
   return (
     <div className="bg-[#FFF8EE] rounded-2xl border border-[#F5E2C8] p-6 space-y-5">
       <div className="text-center">
@@ -601,7 +767,7 @@ function Round2Content({
           {selectedIngredients.map((item) => (
             <div key={item.id} className="flex flex-col items-center gap-1.5 bg-white rounded-xl px-3 py-2 border border-[#F5E6D3] shadow-xs">
               {item.image_url ? (
-                <img src={item.image_url} alt={item.name} className="w-8 h-8 object-contain drop-shadow-xs" />
+                <img src={resolveMediaUrl(item.image_url) ?? item.image_url} alt={item.name} className="w-8 h-8 object-contain drop-shadow-xs" />
               ) : (
                 <span className="text-xl">🥘</span>
               )}
@@ -619,11 +785,14 @@ function Round2Content({
             {allSubmitted ? 'Steps reviewed — waiting on the dish name…' : 'Review the steps in the popup and vote to keep or remove each one.'}
           </h3>
         </div>
-      ) : !mySubmittedStep ? (
+      ) : isMyTurn && !mySubmittedStep ? (
         <div className="space-y-4">
-          <div>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FFEAD1] border border-[#F5CE9E] text-xs font-extrabold text-[#E8881E]">
-              ✋ It's your Turn
+              ✋ It's your Turn{myLetter ? ` — Step ${myLetter}` : ''}
+            </span>
+            <span className="text-xs font-bold text-[#8B7355]">
+              Time left <span className="font-mono font-black text-[#3D2E1F]">{turnTimerLabel}</span>
             </span>
           </div>
           <p className="text-xs text-[#3D2E1F] font-medium">Submit one cooking step using the selected ingredients.</p>
@@ -653,11 +822,34 @@ function Round2Content({
             </button>
           </div>
         </div>
-      ) : (
+      ) : mySubmittedStep ? (
         <div className="bg-[#F0FFF0] border border-[#4CAF50]/30 rounded-xl p-5 text-center">
           <span className="text-2xl block mb-1">✅</span>
-          <p className="text-xs font-bold text-[#36B37E]">Your step has been submitted!</p>
-          <p className="text-[11px] text-[#8B7355] mt-0.5">Waiting for other players to complete their steps...</p>
+          <p className="text-xs font-bold text-[#36B37E]">
+            Your step has been submitted{myLetter ? ` as Step ${myLetter}` : ''}!
+          </p>
+          <p className="text-[11px] text-[#8B7355] mt-0.5">
+            {currentLetter ? `Step ${currentLetter} is being written now…` : 'Waiting for the other players…'}
+          </p>
+        </div>
+      ) : myTurnHasPassed ? (
+        <div className="bg-[#FDECEC] border border-[#F5C6C6] rounded-xl p-5 text-center">
+          <span className="text-2xl block mb-1">⌛</span>
+          <p className="text-xs font-bold text-[#C0392B]">Your turn ran out.</p>
+          <p className="text-[11px] text-[#8B7355] mt-0.5">
+            {currentLetter ? `Step ${currentLetter} is being written now…` : 'Waiting for the other players…'}
+          </p>
+        </div>
+      ) : (
+        <div className="bg-[#FFF3E0] border border-[#F5CE9E] rounded-xl p-5 text-center space-y-1">
+          <span className="text-2xl block mb-1">⏳</span>
+          <p className="text-xs font-bold text-[#E8881E]">
+            {currentLetter ? `Step ${currentLetter} is being written…` : 'Waiting for the round to start…'}
+          </p>
+          <p className="text-[11px] text-[#8B7355]">
+            {myLetter ? `You're up on Step ${myLetter}. Get your step ready!` : 'Your turn is coming up.'}
+          </p>
+          <p className="text-[11px] font-mono font-black text-[#3D2E1F] pt-1">{turnTimerLabel}</p>
         </div>
       )}
     </div>
@@ -681,6 +873,7 @@ function Round3Content({
   isImpostor,
   impostorBiasCard,
   submitting,
+  template,
 }: {
   status: string;
   participants: { id: number; name: string; isYou: boolean; role_label: string }[];
@@ -697,6 +890,7 @@ function Round3Content({
   isImpostor: boolean;
   impostorBiasCard: string | null;
   submitting: boolean;
+  template: CCTemplate;
 }) {
   if (status === 'round3_discussion') {
     return (
@@ -797,11 +991,16 @@ function Round3Content({
                     </div>
                   )}
                   <div
-                    className={`w-16 h-20 sm:w-20 sm:h-24 rounded-2xl bg-white border-2 flex items-center justify-center text-2xl transition-all ${
+                    className={`w-16 h-20 sm:w-20 sm:h-24 rounded-2xl bg-white border-2 overflow-hidden transition-all ${
                       isSelected ? 'border-[#E8881E] ring-2 ring-[#E8881E]/30 shadow-lg' : 'border-[#F5E2C8] shadow-xs'
                     }`}
                   >
-                    🧑‍🍳
+                    <img
+                      src={portraitForRole(player.role_label, template)}
+                      alt={player.role_label}
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: 'center 15%' }}
+                    />
                   </div>
                   <span className="text-[11px] font-bold text-[#6E5A44]">{player.name}</span>
                   <span className="text-[10px] font-semibold text-[#8B7355]">{player.role_label}</span>

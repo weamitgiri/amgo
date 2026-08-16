@@ -339,7 +339,7 @@ function LobbyPage() {
                     <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-white/5 ring-2 ring-white/10">
                       <UserIcon className="h-7 w-7 text-white/40" />
                     </div>
-                    <div className="mt-2.5 text-xs leading-tight text-white/55">Waiting for participant</div>
+                    <div className="mt-2.5 text-xs leading-tight text-white/55">Waiting for...</div>
                   </div>
                 )
               )}

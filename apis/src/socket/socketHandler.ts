@@ -95,12 +95,25 @@ async function handlePlayerDeparture(io: Server, groupId: string | number, parti
 async function broadcastPresence(io: Server, groupId: string | number) {
     try {
         const [rows] = await query<any>(
-            'SELECT id, is_online, left_at FROM participant_sessions WHERE group_id = ?',
+            'SELECT id, participant_id, is_online, left_at FROM participant_sessions WHERE group_id = ?',
             [groupId]
         );
         const online = (rows || []).filter((r: any) => Number(r.is_online) === 1).map((r: any) => r.id);
         const left = (rows || []).filter((r: any) => r.left_at).map((r: any) => r.id);
-        io.to(`group_${groupId}`).emit('presence_updated', { online, left });
+        // Mystery Quest's players are keyed by participant_session_id (`online`/`left`
+        // above, untouched for it). Cook & Create has a simpler 1:1 session-per-participant
+        // model and keys its UI by participant_id directly, so it also gets a
+        // participant_id-keyed view of the same snapshot rather than duplicating this query.
+        const onlineParticipantIds = (rows || [])
+            .filter((r: any) => Number(r.is_online) === 1)
+            .map((r: any) => Number(r.participant_id));
+        const leftParticipantIds = (rows || []).filter((r: any) => r.left_at).map((r: any) => Number(r.participant_id));
+        io.to(`group_${groupId}`).emit('presence_updated', {
+            online,
+            left,
+            online_participant_ids: onlineParticipantIds,
+            left_participant_ids: leftParticipantIds,
+        });
     } catch (err: any) {
         logger.error(`[Socket] presence broadcast failed: ${err.message}`);
     }

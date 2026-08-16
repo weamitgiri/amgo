@@ -19,16 +19,42 @@ class CookAndCreateTemplateController extends Controller
         $this->middleware('auth:admin');
     }
 
+    /**
+     * Cook & Create activities aren't always named/slugged identically —
+     * this dev database alone has both "cook-and-create" and "cook-create".
+     * Match broadly (mirrors the Node API's isCookAndCreateSlug fallback
+     * rule) instead of an exact slug, so every Cook & Create game a super
+     * admin has created shows up here, not just the first one.
+     */
+    private function cookAndCreateActivityGames()
+    {
+        return ActivityGame::whereHas('activity', fn ($q) => $q->where('slug', 'like', 'cook%'));
+    }
+
     public function index()
     {
-        $templates = CcGameTemplate::with('activityGame')->orderByDesc('id')->get();
-        return view('admin.cook-and-create.templates.index', compact('templates'));
+        $templates = CcGameTemplate::with(['activityGame.activity', 'templateIngredients'])->orderByDesc('id')->get();
+
+        // "Configured" means both a template row exists AND it has enough
+        // ingredients to actually play Round 1 (min:4, same floor the create/
+        // update validation enforces) — a template with zero ingredients
+        // linked 404s Round 1 exactly like a missing template does.
+        $wellConfiguredGameIds = $templates
+            ->filter(fn ($t) => $t->templateIngredients->count() >= 4)
+            ->pluck('activity_game_id')
+            ->all();
+        $incompleteGames = $this->cookAndCreateActivityGames()
+            ->with('activity')
+            ->whereNotIn('id', $wellConfiguredGameIds ?: [0])
+            ->get();
+
+        return view('admin.cook-and-create.templates.index', compact('templates', 'incompleteGames'));
     }
 
     public function create()
     {
         $ingredients = CcIngredient::active()->orderBy('name')->get();
-        $activityGames = ActivityGame::whereHas('activity', fn ($q) => $q->where('slug', 'cook-and-create'))->get();
+        $activityGames = $this->cookAndCreateActivityGames()->with('activity')->get();
         return view('admin.cook-and-create.templates.create', compact('ingredients', 'activityGames'));
     }
 
@@ -40,6 +66,11 @@ class CookAndCreateTemplateController extends Controller
             'tagline' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'background_image' => 'nullable|image|max:4096',
+            'chef1_image' => 'nullable|image|max:2048',
+            'chef2_image' => 'nullable|image|max:2048',
+            'chef3_image' => 'nullable|image|max:2048',
+            'chef4_image' => 'nullable|image|max:2048',
+            'show_host_image' => 'nullable|image|max:2048',
             'round1_votes_per_player' => 'required|integer|min:1|max:5',
             'round1_top_ingredients' => 'required|integer|min:2|max:10',
             'round1_timer_secs' => 'required|integer|min:15',
@@ -62,16 +93,25 @@ class CookAndCreateTemplateController extends Controller
         ];
     }
 
+    /** background_image + the 5 portrait fields — same upload/keep-existing rule for each. */
+    private const IMAGE_FIELDS = ['background_image', 'chef1_image', 'chef2_image', 'chef3_image', 'chef4_image', 'show_host_image'];
+
+    private function handleImageUploads(Request $request, array &$validated): void
+    {
+        foreach (self::IMAGE_FIELDS as $field) {
+            if ($request->hasFile($field)) {
+                $validated[$field] = $request->file($field)->store('cook-and-create/templates', 'public');
+            } else {
+                unset($validated[$field]); // no new file — stays NULL on create, keeps existing value on update
+            }
+        }
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate($this->rules());
         $validated['show_host_role_enabled'] = $request->has('show_host_role_enabled');
-
-        if ($request->hasFile('background_image')) {
-            $validated['background_image'] = $request->file('background_image')->store('cook-and-create/templates', 'public');
-        } else {
-            unset($validated['background_image']); // stays NULL on create — frontend falls back to bundled art
-        }
+        $this->handleImageUploads($request, $validated);
 
         DB::transaction(function () use ($validated) {
             $template = CcGameTemplate::create(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules'])->toArray());
@@ -87,7 +127,7 @@ class CookAndCreateTemplateController extends Controller
     {
         $template->load(['templateIngredients', 'clues', 'rules']);
         $ingredients = CcIngredient::active()->orderBy('name')->get();
-        $activityGames = ActivityGame::whereHas('activity', fn ($q) => $q->where('slug', 'cook-and-create'))->get();
+        $activityGames = $this->cookAndCreateActivityGames()->with('activity')->get();
         $selectedIngredientIds = $template->templateIngredients->pluck('ingredient_id')->all();
         return view('admin.cook-and-create.templates.edit', compact('template', 'ingredients', 'activityGames', 'selectedIngredientIds'));
     }
@@ -96,12 +136,7 @@ class CookAndCreateTemplateController extends Controller
     {
         $validated = $request->validate($this->rules());
         $validated['show_host_role_enabled'] = $request->has('show_host_role_enabled');
-
-        if ($request->hasFile('background_image')) {
-            $validated['background_image'] = $request->file('background_image')->store('cook-and-create/templates', 'public');
-        } else {
-            unset($validated['background_image']); // keep the existing image if no new file was uploaded
-        }
+        $this->handleImageUploads($request, $validated);
 
         DB::transaction(function () use ($template, $validated) {
             $template->update(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules'])->toArray());

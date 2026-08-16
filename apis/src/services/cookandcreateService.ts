@@ -16,6 +16,11 @@ export type CCGameTemplate = {
     tagline: string | null;
     description: string | null;
     background_image: string | null;
+    chef1_image: string | null;
+    chef2_image: string | null;
+    chef3_image: string | null;
+    chef4_image: string | null;
+    show_host_image: string | null;
     round1_ingredients_count: number;
     round1_votes_per_player: number;
     round1_top_ingredients: number;
@@ -46,15 +51,32 @@ export type CCGameInstance = {
     finished_at: string | null;
     group_won: boolean | null;
     round2_phase: 'submit' | 'review';
+    /** 0-based position in the group's join order whose Round-2 turn it is; null before Round 2. */
+    round2_turn_index: number | null;
+    round2_turn_started_at: string | null;
+    /** When the review sub-phase opened — anchors the review countdown. */
+    round2_review_started_at: string | null;
+    double_down_participant_id: number | null;
+    double_down_status: 'offered' | 'accepted' | 'declined' | null;
 };
 
 /**
- * Get default ingredients for Cook & Create activity
+ * Get the ingredient pool for a specific template — via cc_game_template_ingredients,
+ * not cc_ingredients.activity_id. The admin Template form already lets an admin pick
+ * which ingredients belong to a template (so different games CAN have different
+ * ingredient sets); this makes gameplay actually respect that pick instead of
+ * ignoring it. (Previously filtered by activity_id, which was hardcoded to a single
+ * orphaned default activity on cc_ingredients and returned zero rows for every real
+ * Cook & Create booking — see git history for the incident.)
  */
-export async function getCCIngredients(activityId: number | string = 2): Promise<CCIngredient[]> {
+export async function getCCIngredients(templateId: number | string): Promise<CCIngredient[]> {
     const [rows] = await query(
-        `SELECT id, name, image_url, is_absurd FROM cc_ingredients WHERE activity_id = ? AND status = 'active' ORDER BY id ASC`,
-        [activityId]
+        `SELECT i.id, i.name, i.image_url, i.is_absurd
+         FROM cc_game_template_ingredients ti
+         JOIN cc_ingredients i ON i.id = ti.ingredient_id
+         WHERE ti.template_id = ? AND i.status = 'active'
+         ORDER BY ti.\`order\` ASC`,
+        [templateId]
     );
     return rows.map((r: any) => ({
         id: Number(r.id),
@@ -72,6 +94,11 @@ function mapTemplateRow(r: any): CCGameTemplate {
         tagline: r.tagline,
         description: r.description,
         background_image: r.background_image ?? null,
+        chef1_image: r.chef1_image ?? null,
+        chef2_image: r.chef2_image ?? null,
+        chef3_image: r.chef3_image ?? null,
+        chef4_image: r.chef4_image ?? null,
+        show_host_image: r.show_host_image ?? null,
         round1_ingredients_count: Number(r.round1_ingredients_count),
         round1_votes_per_player: Number(r.round1_votes_per_player),
         round1_top_ingredients: Number(r.round1_top_ingredients),
@@ -125,6 +152,11 @@ function mapInstanceRow(r: any): CCGameInstance {
         finished_at: r.finished_at,
         group_won: r.group_won == null ? null : Boolean(r.group_won),
         round2_phase: r.round2_phase || 'submit',
+        round2_turn_index: r.round2_turn_index == null ? null : Number(r.round2_turn_index),
+        round2_turn_started_at: r.round2_turn_started_at ?? null,
+        round2_review_started_at: r.round2_review_started_at ?? null,
+        double_down_participant_id: r.double_down_participant_id ? Number(r.double_down_participant_id) : null,
+        double_down_status: r.double_down_status ?? null,
     };
 }
 
@@ -153,7 +185,199 @@ async function getGroupParticipantIds(groupId: number | string): Promise<number[
     return (rows || []).map((r: any) => Number(r.id));
 }
 
-const CC_TIMER_TYPES = ['cc_round1', 'cc_round2_submit', 'cc_round2_review', 'cc_round3_discussion', 'cc_round3_voting'];
+const CC_TIMER_TYPES = [
+    'cc_round1',
+    'cc_round2_submit',
+    'cc_round2_turn',
+    'cc_round2_review',
+    'cc_round3_discussion',
+    'cc_round3_voting',
+];
+
+/**
+ * The Round-2 turn order, as persisted on the instance when Round 2 opened.
+ *
+ * CRITICAL: this is a SHUFFLE, not the participant display order, and it is
+ * never sent to any client. A step's letter comes from its author's turn
+ * position, so if turn order matched the order players are listed in, everyone
+ * could map "Step C" to the third name in the sidebar — handing them the
+ * impostor during review and breaking the game's documented anonymity rule
+ * ("Steps appear on screen with no names — just Step A, B, C, D, E").
+ *
+ * Falls back to join order only for instances that predate this column, which
+ * can only be ones already past Round 2.
+ */
+async function getRound2TurnOrder(instanceId: number | string, groupId: number | string): Promise<number[]> {
+    const [rows] = await query<any>('SELECT round2_turn_order FROM cc_game_instances WHERE id = ? LIMIT 1', [
+        instanceId,
+    ]);
+    const raw = rows?.[0]?.round2_turn_order;
+    if (raw) {
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed.map((v: any) => Number(v));
+        } catch {
+            /* fall through to join order */
+        }
+    }
+    const [fallback] = await query<any>(
+        `SELECT id FROM game_participants WHERE group_id = ?
+         ORDER BY COALESCE(email_verified_at, created_at) ASC, id ASC`,
+        [groupId]
+    );
+    return (fallback || []).map((r: any) => Number(r.id));
+}
+
+/**
+ * Shuffles and persists the turn order for this instance. Called once, when
+ * Round 1 finalizes — idempotent via the NULL guard so a re-entrant
+ * finalizeRound1 can't reshuffle a round already in progress.
+ */
+async function assignRound2TurnOrder(instanceId: number | string, groupId: number | string): Promise<void> {
+    const [rows] = await query<any>(
+        `SELECT id FROM game_participants WHERE group_id = ?
+         ORDER BY COALESCE(email_verified_at, created_at) ASC, id ASC`,
+        [groupId]
+    );
+    const ids = (rows || []).map((r: any) => Number(r.id));
+    for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+    }
+    await query('UPDATE cc_game_instances SET round2_turn_order = ? WHERE id = ? AND round2_turn_order IS NULL', [
+        JSON.stringify(ids),
+        instanceId,
+    ]);
+}
+
+/** Turn 0 -> 'A', turn 1 -> 'B', ... Group size is capped well under 26. */
+export function round2StepLetter(turnIndex: number): string {
+    return String.fromCharCode(65 + turnIndex);
+}
+
+/**
+ * Back-fills round2_review_started_at for a round that entered review before
+ * that column existed, which would otherwise render its countdown as 00:00.
+ *
+ * Derived from the review timer that is actually running (expiry minus the
+ * configured review length) rather than simply stamping "now", so the clock the
+ * players see matches the moment the server will really close the phase.
+ */
+export async function ensureRound2ReviewStartedAt(
+    instanceId: number | string,
+    groupId: number | string
+): Promise<void> {
+    const data = await getInstanceById(instanceId);
+    if (!data) return;
+    const { instance, template } = data;
+    if (instance.status !== 'round2' || instance.round2_phase !== 'review') return;
+    if (instance.round2_review_started_at) return;
+
+    const [timerRows] = await query<any>(
+        `SELECT expires_at FROM timers
+         WHERE group_id = ? AND timer_type = 'cc_round2_review' AND is_active = 1
+         ORDER BY id DESC LIMIT 1`,
+        [groupId]
+    );
+    const expiresAt = timerRows?.[0]?.expires_at;
+    // Only back-fill when there is a live timer to align to. With no active
+    // timer the phase's clock has already run out, and inventing a fresh window
+    // here (e.g. stamping NOW()) would show players a countdown that the server
+    // has no intention of honouring. Left NULL, the client falls back to the
+    // round's start and correctly renders 00:00.
+    if (!expiresAt) return;
+
+    await query(
+        `UPDATE cc_game_instances
+         SET round2_review_started_at = DATE_SUB(?, INTERVAL ? SECOND)
+         WHERE id = ? AND round2_review_started_at IS NULL`,
+        [expiresAt, template.round2_review_timer_secs, instanceId]
+    );
+}
+
+/**
+ * Repairs a Round-2 instance that has no turn state.
+ *
+ * Any game that was already mid-Round-2 when turn-based submission shipped has
+ * round2_turn_index / round2_turn_order NULL. Under the turn rules that means
+ * no turn is ever open, so every submission is rejected and no turn timer runs
+ * — the group is stuck with nothing to advance it. This heals such an instance
+ * on the next state read.
+ *
+ * Steps already submitted keep their existing letters: the recovered order puts
+ * their authors first, in that letter order, and shuffles only the players who
+ * have yet to go. Resuming at the count of existing steps therefore hands the
+ * turn to the first player who hasn't submitted, exactly where the round left off.
+ */
+export async function ensureRound2TurnState(instanceId: number | string, groupId: number | string): Promise<void> {
+    const data = await getInstanceById(instanceId);
+    if (!data) return;
+    const { instance, template } = data;
+    if (instance.status !== 'round2' || instance.round2_phase !== 'submit') return;
+    if (instance.round2_turn_index !== null) return;
+
+    const [stepRows] = await query<any>(
+        'SELECT participant_id, step_letter FROM cc_round2_steps WHERE instance_id = ? ORDER BY step_letter ASC',
+        [instanceId]
+    );
+    const alreadySubmitted = (stepRows || []).map((r: any) => Number(r.participant_id));
+
+    const [participantRows] = await query<any>(
+        `SELECT id FROM game_participants WHERE group_id = ?
+         ORDER BY COALESCE(email_verified_at, created_at) ASC, id ASC`,
+        [groupId]
+    );
+    const remaining = (participantRows || [])
+        .map((r: any) => Number(r.id))
+        .filter((id: number) => !alreadySubmitted.includes(id));
+    for (let i = remaining.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+    }
+    const order = [...alreadySubmitted, ...remaining];
+    if (order.length === 0) return;
+
+    const resumeAt = alreadySubmitted.length;
+    const [claimHeader] = await query<any>(
+        `UPDATE cc_game_instances SET round2_turn_order = ?, round2_turn_index = ?, round2_turn_started_at = NOW(), updated_at = NOW()
+         WHERE id = ? AND round2_turn_index IS NULL`,
+        [JSON.stringify(order), resumeAt, instanceId]
+    );
+    if (Number((claimHeader as any)?.affectedRows || 0) === 0) return;
+
+    if (resumeAt >= order.length) {
+        await advanceRound2ToReview(instanceId, groupId);
+        return;
+    }
+    io.to(`cc-instance-${instanceId}`).emit('cc_round2_turn_changed', { turn_index: resumeAt });
+    await ensureCCTimer(groupId, instanceId, 'cc_round2_turn', template.round2_submit_timer_secs);
+}
+
+export async function getRound2TurnParticipantId(
+    instanceId: number | string,
+    groupId: number | string,
+    turnIndex: number | null
+): Promise<number | null> {
+    if (turnIndex === null || turnIndex < 0) return null;
+    const order = await getRound2TurnOrder(instanceId, groupId);
+    return order[turnIndex] ?? null;
+}
+
+export async function getRound2TurnCount(instanceId: number | string, groupId: number | string): Promise<number> {
+    return (await getRound2TurnOrder(instanceId, groupId)).length;
+}
+
+/** Where THIS participant sits in the hidden turn order (null if not playing). */
+export async function getMyRound2TurnIndex(
+    instanceId: number | string,
+    groupId: number | string,
+    participantId: number | null
+): Promise<number | null> {
+    if (participantId == null) return null;
+    const order = await getRound2TurnOrder(instanceId, groupId);
+    const idx = order.indexOf(Number(participantId));
+    return idx >= 0 ? idx : null;
+}
 
 /**
  * Starts (or restarts) the single active timer for a Cook & Create group's
@@ -240,12 +464,22 @@ export async function ensureCCParticipantSessions(groupId: number | string): Pro
         const existing = new Set((existingRows || []).map((r: any) => Number(r.participant_id)));
         const missing = participantIds.filter((id) => !existing.has(id));
         if (missing.length === 0) return;
-        const values = missing.map((id) => [groupId, id, 0]);
-        await query(
-            'INSERT INTO participant_sessions (group_id, participant_id, is_online) VALUES ?',
-            // @ts-ignore
-            [values]
-        );
+        // participant_sessions has no unique key on (group_id, participant_id),
+        // so the read-then-insert above is racy: two concurrent state fetches can
+        // both see the same participant as missing and both insert, leaving a
+        // duplicate session that fans out every JOIN against this table. Insert
+        // each row only if it still doesn't exist, in one statement, so the
+        // duplicate window closes at the database rather than in JS.
+        for (const id of missing) {
+            await query(
+                `INSERT INTO participant_sessions (group_id, participant_id, is_online)
+                 SELECT ?, ?, 0 FROM DUAL
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM participant_sessions WHERE group_id = ? AND participant_id = ?
+                 )`,
+                [groupId, id, groupId, id]
+            );
+        }
     } catch (err: any) {
         // Best-effort — presence is a nice-to-have, never block gameplay over it.
         console.warn('[cookandcreateService] ensureCCParticipantSessions failed:', err.message || err);
@@ -344,7 +578,16 @@ export async function finalizeRound1(instanceId: number | string, groupId: numbe
     const results = await calculateRound1Results(instanceId, template.round1_top_ingredients);
 
     io.to(`cc-instance-${instanceId}`).emit('cc_round1_complete', { top_ingredients: results });
-    await ensureCCTimer(groupId, instanceId, 'cc_round2_submit', template.round2_submit_timer_secs);
+
+    // Round 2 is turn-based: fix a hidden, shuffled turn order and open the
+    // first player's turn rather than starting one shared submission window.
+    await assignRound2TurnOrder(instanceId, groupId);
+    await query(
+        `UPDATE cc_game_instances SET round2_turn_index = 0, round2_turn_started_at = NOW(), updated_at = NOW() WHERE id = ?`,
+        [instanceId]
+    );
+    io.to(`cc-instance-${instanceId}`).emit('cc_round2_turn_changed', { turn_index: 0 });
+    await ensureCCTimer(groupId, instanceId, 'cc_round2_turn', template.round2_submit_timer_secs);
 }
 
 /**
@@ -403,8 +646,12 @@ export async function advanceRound2ToReview(instanceId: number | string, groupId
     if (!data) return;
     const { template } = data;
 
+    // round2_review_started_at anchors the review countdown. It must be stamped
+    // here rather than reusing round2_started_at, which by now is however long
+    // every player's turn took in the past.
     const [claimHeader] = await query<any>(
-        `UPDATE cc_game_instances SET round2_phase = 'review', updated_at = NOW() WHERE id = ? AND status = 'round2' AND round2_phase = 'submit'`,
+        `UPDATE cc_game_instances SET round2_phase = 'review', round2_review_started_at = NOW(), updated_at = NOW()
+         WHERE id = ? AND status = 'round2' AND round2_phase = 'submit'`,
         [instanceId]
     );
     if (Number((claimHeader as any)?.affectedRows || 0) === 0) return;
@@ -414,22 +661,50 @@ export async function advanceRound2ToReview(instanceId: number | string, groupId
 }
 
 /**
- * Called after every round-2 step submission — every participant (impostor
- * included, per the game design) submits one step. Once everyone has, move
- * straight to the review/voting sub-phase instead of waiting for the timer.
+ * Closes the current Round-2 turn and opens the next one — or moves the whole
+ * round on to review once the last player has had their turn.
+ *
+ * Two things race to call this: the player submitting their step (fast path)
+ * and their turn timer expiring (safety net, via timerService). The
+ * compare-and-set on round2_turn_index means only the first one for a given
+ * turn actually advances it, so a submission landing at the same moment the
+ * timer fires can't skip a player.
+ *
+ * A turn that expires without a step simply produces no step for that player —
+ * they miss their slot, matching how Round 1 treats a missed vote.
  */
-export async function checkRound2SubmitCompletion(instanceId: number | string, groupId: number | string): Promise<void> {
-    const participantIds = await getGroupParticipantIds(groupId);
-    if (participantIds.length === 0) return;
-    const [stepRows] = await query<any>(
-        'SELECT DISTINCT participant_id FROM cc_round2_steps WHERE instance_id = ?',
-        [instanceId]
+export async function advanceRound2Turn(instanceId: number | string, groupId: number | string): Promise<void> {
+    const data = await getInstanceById(instanceId);
+    if (!data) return;
+    const { instance, template } = data;
+    if (instance.status !== 'round2' || instance.round2_phase !== 'submit') return;
+
+    const current = instance.round2_turn_index;
+    if (current === null || current === undefined) return;
+
+    const next = Number(current) + 1;
+    const [claimHeader] = await query<any>(
+        `UPDATE cc_game_instances SET round2_turn_index = ?, round2_turn_started_at = NOW(), updated_at = NOW()
+         WHERE id = ? AND status = 'round2' AND round2_phase = 'submit' AND round2_turn_index = ?`,
+        [next, instanceId, current]
     );
-    const submitted = new Set((stepRows || []).map((r: any) => Number(r.participant_id)));
-    if (participantIds.every((id) => submitted.has(id))) {
+    if (Number((claimHeader as any)?.affectedRows || 0) === 0) return;
+
+    const turnCount = await getRound2TurnCount(instanceId, groupId);
+    if (next >= turnCount) {
         await advanceRound2ToReview(instanceId, groupId);
+        return;
     }
+
+    io.to(`cc-instance-${instanceId}`).emit('cc_round2_turn_changed', { turn_index: next });
+    await ensureCCTimer(groupId, instanceId, 'cc_round2_turn', template.round2_submit_timer_secs);
 }
+
+// NOTE: the old checkRound2SubmitCompletion ("has everyone submitted a step
+// yet?") was removed when Round 2 became turn-based — "everyone has had their
+// turn" is now exactly advanceRound2Turn running past the last turn index, and
+// keeping a second path to review would have let a group with a skipped turn
+// resolve twice.
 
 /**
  * Resolves every step's final keep/remove status by simple majority (a tie
@@ -525,7 +800,7 @@ export async function startRound3DiscussionTimer(groupId: number | string, insta
 export async function advanceRound3ToVoting(instanceId: number | string, groupId: number | string): Promise<void> {
     const data = await getInstanceById(instanceId);
     if (!data) return;
-    const { template } = data;
+    const { template, instance } = data;
 
     const [claimHeader] = await query<any>(
         `UPDATE cc_game_instances SET status = 'round3_voting', round3_discussion_ended_at = NOW(), round3_voting_started_at = NOW(), updated_at = NOW() WHERE id = ? AND status = 'round3_discussion'`,
@@ -535,6 +810,59 @@ export async function advanceRound3ToVoting(instanceId: number | string, groupId
 
     io.to(`cc-instance-${instanceId}`).emit('cc_round3_voting_started', {});
     await ensureCCTimer(groupId, instanceId, 'cc_round3_voting', template.round3_voting_timer_secs);
+    await offerDoubleDown(instanceId, groupId, instance.impostor_participant_id);
+}
+
+/**
+ * The "Double Down Moment" — the system secretly offers ONE random
+ * non-impostor participant the power to double their Round 3 vote's weight,
+ * at the risk of a -50 point penalty if their target turns out not to be the
+ * impostor (see finalizeRound3). Excludes the impostor — they always "know"
+ * who's guilty, so the risk/reward framing doesn't apply to them. Delivered
+ * privately via the target's own socket only, the same pattern Mystery's
+ * witness-passcard bonus uses (gameEngineController.useWitnessPasscard) —
+ * never broadcast to the room. Best-effort: never blocks the round
+ * transition if it fails.
+ */
+async function offerDoubleDown(instanceId: number | string, groupId: number | string, impostorId: number | null): Promise<void> {
+    try {
+        const participantIds = await getGroupParticipantIds(groupId);
+        const eligible = participantIds.filter((id) => id !== impostorId);
+        if (eligible.length === 0) return;
+
+        const chosen = eligible[Math.floor(Math.random() * eligible.length)];
+        await query(
+            `UPDATE cc_game_instances SET double_down_participant_id = ?, double_down_status = 'offered' WHERE id = ?`,
+            [chosen, instanceId]
+        );
+
+        const [sessionRows] = await query<any>(
+            'SELECT socket_id FROM participant_sessions WHERE group_id = ? AND participant_id = ? LIMIT 1',
+            [groupId, chosen]
+        );
+        const socketId = sessionRows?.[0]?.socket_id;
+        if (socketId) {
+            io.to(socketId).emit('cc_double_down_offer', {});
+        }
+    } catch (err: any) {
+        console.warn('[cookandcreateService] offerDoubleDown failed:', err.message || err);
+    }
+}
+
+/**
+ * Records the targeted participant's Accept/Decline response to the Double
+ * Down offer. Idempotent — only the first response is honored.
+ */
+export async function respondToDoubleDown(
+    instanceId: number | string,
+    participantId: number | string,
+    accept: boolean
+): Promise<void> {
+    await query(
+        `UPDATE cc_game_instances SET double_down_status = ?
+         WHERE id = ? AND double_down_participant_id = ? AND double_down_status = 'offered'`,
+        [accept ? 'accepted' : 'declined', instanceId, participantId]
+    );
 }
 
 /**
@@ -551,20 +879,59 @@ export async function finalizeRound3(instanceId: number | string, groupId: numbe
     );
     if (Number((claimHeader as any)?.affectedRows || 0) === 0) return;
 
-    const [voteRows] = await query<any>(
-        `SELECT voted_for_participant_id, COUNT(*) AS vote_count
-         FROM cc_round3_impostor_votes WHERE instance_id = ?
-         GROUP BY voted_for_participant_id ORDER BY vote_count DESC LIMIT 1`,
+    const [instRows] = await query<any>(
+        `SELECT impostor_participant_id, double_down_participant_id, double_down_status FROM cc_game_instances WHERE id = ?`,
         [instanceId]
     );
-    const mostVotedId = voteRows.length > 0 ? Number(voteRows[0].voted_for_participant_id) : null;
+    const instRow = instRows?.[0] || {};
+    const actualImpostorId = instRow.impostor_participant_id ? Number(instRow.impostor_participant_id) : null;
+    const doubleDownParticipantId = instRow.double_down_participant_id ? Number(instRow.double_down_participant_id) : null;
+    const doubleDownAccepted = instRow.double_down_status === 'accepted';
 
-    const [instRows] = await query<any>(`SELECT impostor_participant_id FROM cc_game_instances WHERE id = ?`, [instanceId]);
-    const actualImpostorId =
-        instRows.length > 0 && instRows[0].impostor_participant_id ? Number(instRows[0].impostor_participant_id) : null;
+    // The Double Down participant's vote counts twice if they accepted.
+    const [voteRows] = await query<any>(
+        `SELECT voted_for_participant_id,
+                SUM(CASE WHEN participant_id = ? AND ? THEN 2 ELSE 1 END) AS vote_count
+         FROM cc_round3_impostor_votes WHERE instance_id = ?
+         GROUP BY voted_for_participant_id ORDER BY vote_count DESC LIMIT 1`,
+        [doubleDownParticipantId, doubleDownAccepted, instanceId]
+    );
+    const mostVotedId = voteRows.length > 0 ? Number(voteRows[0].voted_for_participant_id) : null;
     const groupWon = mostVotedId != null && actualImpostorId != null && mostVotedId === actualImpostorId;
 
     await query(`UPDATE cc_game_instances SET group_won = ? WHERE id = ?`, [groupWon ? 1 : 0, instanceId]);
+
+    // Double Down penalty: -50 points if the participant doubled down and
+    // their own vote target wasn't the actual impostor. Reuses the same
+    // participant_sessions.total_score + score_logs infra Mystery's own
+    // per-action scoring already writes to (e.g. witness-passcard bonus in
+    // gameEngineController.useWitnessPasscard) — this stays a single-event
+    // adjustment for this one participant, not a general CC leaderboard.
+    let doubleDownPenaltyApplied = false;
+    if (doubleDownAccepted && doubleDownParticipantId != null) {
+        const [ddVoteRows] = await query<any>(
+            `SELECT voted_for_participant_id FROM cc_round3_impostor_votes WHERE instance_id = ? AND participant_id = ? LIMIT 1`,
+            [instanceId, doubleDownParticipantId]
+        );
+        const ddTarget = ddVoteRows?.[0]?.voted_for_participant_id ? Number(ddVoteRows[0].voted_for_participant_id) : null;
+        const ddWasWrong = ddTarget != null && actualImpostorId != null && ddTarget !== actualImpostorId;
+        if (ddWasWrong) {
+            const [sessionRows] = await query<any>(
+                'SELECT id FROM participant_sessions WHERE group_id = ? AND participant_id = ? LIMIT 1',
+                [groupId, doubleDownParticipantId]
+            );
+            const sessionId = sessionRows?.[0]?.id;
+            if (sessionId) {
+                await query('UPDATE participant_sessions SET total_score = total_score - 50 WHERE id = ?', [sessionId]);
+                await query(
+                    `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                        VALUES (?, -50, 'cc_double_down_wrong', NOW(), NOW())`,
+                    [sessionId]
+                );
+                doubleDownPenaltyApplied = true;
+            }
+        }
+    }
 
     const completedAt = new Date();
     const retentionPurgeAt = moment(completedAt).add(1, 'hour').toDate();
@@ -577,6 +944,9 @@ export async function finalizeRound3(instanceId: number | string, groupId: numbe
         most_voted_id: mostVotedId,
         actual_impostor_id: actualImpostorId,
         group_won: groupWon,
+        double_down_participant_id: doubleDownParticipantId,
+        double_down_used: doubleDownAccepted,
+        double_down_penalty_applied: doubleDownPenaltyApplied,
     });
 }
 
@@ -635,6 +1005,8 @@ export type CCOtherDish = {
     group_name: string;
     dish_name: string;
     nomination_counts: Record<string, number>;
+    /** The dish's final recipe — its kept Round-2 steps, in order. */
+    steps: { letter: string; text: string }[];
 };
 
 /**
@@ -648,7 +1020,7 @@ export async function getOtherDishes(groupId: number | string, participantId: nu
     const bookingId = groupRows[0].booking_id;
 
     const [rows] = await query<any>(
-        `SELECT gg.id as group_id, gg.group_name, ci.dish_name
+        `SELECT gg.id as group_id, gg.group_name, ci.id AS instance_id, ci.dish_name
          FROM game_groups gg
          JOIN cc_game_instances ci ON ci.group_id = gg.id
          WHERE gg.booking_id = ? AND gg.id != ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL
@@ -674,11 +1046,28 @@ export async function getOtherDishes(groupId: number | string, participantId: nu
         countsByGroup.get(gid)![c.slug] = Number(c.c);
     }
 
+    // Each dish's final recipe = its kept Round-2 steps, in letter order. Removed
+    // steps are excluded (they aren't part of the finished dish).
+    const instanceIds = rows.map((r: any) => Number(r.instance_id));
+    const [stepRows] = await query<any>(
+        `SELECT instance_id, step_letter, step_text FROM cc_round2_steps
+         WHERE instance_id IN (?) AND status != 'removed'
+         ORDER BY instance_id, step_letter ASC`,
+        [instanceIds]
+    );
+    const stepsByInstance = new Map<number, { letter: string; text: string }[]>();
+    for (const s of stepRows || []) {
+        const iid = Number(s.instance_id);
+        if (!stepsByInstance.has(iid)) stepsByInstance.set(iid, []);
+        stepsByInstance.get(iid)!.push({ letter: s.step_letter, text: s.step_text });
+    }
+
     return rows.map((r: any) => ({
         group_id: Number(r.group_id),
         group_name: r.group_name,
         dish_name: r.dish_name,
         nomination_counts: countsByGroup.get(Number(r.group_id)) || {},
+        steps: stepsByInstance.get(Number(r.instance_id)) || [],
     }));
 }
 
@@ -715,6 +1104,11 @@ export type CCAwardsBoard = {
         most_voted_participant_id: number | null;
         group_won: boolean | null;
         dish_name: string | null;
+        double_down_participant_id: number | null;
+        double_down_used: boolean;
+        double_down_penalty_applied: boolean;
+        /** How many nominations this group's dish received, per category slug. */
+        reaction_counts: Record<string, number>;
     };
 };
 
@@ -790,19 +1184,51 @@ export async function getAwards(groupId: number | string): Promise<CCAwardsBoard
     });
 
     const [myInstanceRows] = await query<any>(
-        'SELECT id, impostor_participant_id, group_won, dish_name FROM cc_game_instances WHERE group_id = ?',
+        `SELECT id, impostor_participant_id, group_won, dish_name, double_down_participant_id, double_down_status
+         FROM cc_game_instances WHERE group_id = ?`,
         [groupId]
     );
     const myInstance = myInstanceRows?.[0];
+    const doubleDownParticipantId = myInstance?.double_down_participant_id ? Number(myInstance.double_down_participant_id) : null;
+    const doubleDownAccepted = myInstance?.double_down_status === 'accepted';
 
     let mostVotedId: number | null = null;
+    let doubleDownWasWrong = false;
     if (myInstance) {
+        // Same weighting finalizeRound3 used to decide the actual outcome —
+        // keep this display query consistent with it.
         const [voteRows] = await query<any>(
-            `SELECT voted_for_participant_id, COUNT(*) AS c FROM cc_round3_impostor_votes
-             WHERE instance_id = ? GROUP BY voted_for_participant_id ORDER BY c DESC LIMIT 1`,
-            [myInstance.id]
+            `SELECT voted_for_participant_id,
+                    SUM(CASE WHEN participant_id = ? AND ? THEN 2 ELSE 1 END) AS vote_count
+             FROM cc_round3_impostor_votes WHERE instance_id = ?
+             GROUP BY voted_for_participant_id ORDER BY vote_count DESC LIMIT 1`,
+            [doubleDownParticipantId, doubleDownAccepted, myInstance.id]
         );
         mostVotedId = voteRows.length > 0 ? Number(voteRows[0].voted_for_participant_id) : null;
+
+        if (doubleDownAccepted && doubleDownParticipantId != null) {
+            const [ddVoteRows] = await query<any>(
+                `SELECT voted_for_participant_id FROM cc_round3_impostor_votes WHERE instance_id = ? AND participant_id = ? LIMIT 1`,
+                [myInstance.id, doubleDownParticipantId]
+            );
+            const ddTarget = ddVoteRows?.[0]?.voted_for_participant_id ? Number(ddVoteRows[0].voted_for_participant_id) : null;
+            const actualImpostorId = myInstance.impostor_participant_id ? Number(myInstance.impostor_participant_id) : null;
+            doubleDownWasWrong = ddTarget != null && actualImpostorId != null && ddTarget !== actualImpostorId;
+        }
+    }
+
+    // Reaction tallies this group's own dish received — the same per-category
+    // nomination counts getOtherDishes exposes for other teams, surfaced here so
+    // the results screen can show "your dish's reactions".
+    const reactionCounts: Record<string, number> = {};
+    if (myInstance) {
+        const [reactionRows] = await query<any>(
+            `SELECT rc.slug, COUNT(*) AS c
+             FROM cc_ratings r JOIN cc_rating_categories rc ON rc.id = r.category_id
+             WHERE r.rated_group_id = ? GROUP BY rc.slug`,
+            [groupId]
+        );
+        for (const row of reactionRows || []) reactionCounts[row.slug] = Number(row.c);
     }
 
     return {
@@ -812,6 +1238,10 @@ export async function getAwards(groupId: number | string): Promise<CCAwardsBoard
             most_voted_participant_id: mostVotedId,
             group_won: myInstance?.group_won == null ? null : Boolean(myInstance.group_won),
             dish_name: myInstance?.dish_name ?? null,
+            double_down_participant_id: doubleDownParticipantId,
+            double_down_used: doubleDownAccepted,
+            double_down_penalty_applied: doubleDownAccepted && doubleDownWasWrong,
+            reaction_counts: reactionCounts,
         },
     };
 }

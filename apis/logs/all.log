@@ -8727,3 +8727,1768 @@
 2026-08-09 17:54:49:5449 info: [Socket] Organizer joined dashboard room: organizer_28
 2026-08-09 17:55:14:5514 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-08-09 17:56:13:5613 debug: [Socket] User disconnected: LhptZmCkfAJgHxQJAACD, Reason: transport close
+2026-08-09 21:34:51:3451 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:35:57:3557 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:36:36:3636 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:37:04:374 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:37:40:3740 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:38:01:381 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:39:07:397 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:39:27:3927 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:40:51:4051 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:41:05:415 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:50:42:5042 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:51:12:5112 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:53:50:5350 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 21:56:43:5643 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 22:16:56:1656 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-09 22:19:15:1915 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:20:15:2015 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:20:18:2018 debug: [Socket] User connected: vRMrY6ri2-UEJMBnAAAB
+2026-08-09 22:20:18:2018 info: [Socket] Organizer joined dashboard room: organizer_30
+2026-08-09 22:20:18:2018 info: [Socket] Organizer joined dashboard room: organizer_30
+2026-08-09 22:22:40:2240 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:23:13:2313 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:23:31:2331 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:23:53:2353 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:25:36:2536 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-09 22:26:06:266 debug: [Socket] User connected: hRr-mYjjlSBTEjv1AAAD
+2026-08-09 22:26:06:266 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:26:46:2646 debug: [Socket] User connected: 76Gyiy4exvk9Kt9NAAAF
+2026-08-09 22:26:46:2646 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:26:54:2654 debug: [Socket] User connected: DZDg0jBFn8X9SnQ-AAAH
+2026-08-09 22:26:54:2654 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:27:06:276 debug: [Socket] User disconnected: DZDg0jBFn8X9SnQ-AAAH, Reason: transport close
+2026-08-09 22:27:10:2710 debug: [Socket] User connected: 8sL4mWR_QkEqDpKwAAAJ
+2026-08-09 22:27:10:2710 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:27:18:2718 debug: [Socket] User connected: K3jAGM5eqDVIe38jAAAL
+2026-08-09 22:27:18:2718 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:27:41:2741 debug: [Socket] User connected: _0kjtMjhvXnjqNhwAAAN
+2026-08-09 22:27:41:2741 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:29:10:2910 debug: [Socket] User disconnected: 8sL4mWR_QkEqDpKwAAAJ, Reason: transport close
+2026-08-09 22:29:10:2910 debug: [Socket] User connected: 8OUT6t5RwHxghgmiAAAP
+2026-08-09 22:29:10:2910 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:29:11:2911 debug: [Socket] User disconnected: _0kjtMjhvXnjqNhwAAAN, Reason: transport close
+2026-08-09 22:29:19:2919 debug: [Socket] User disconnected: 8OUT6t5RwHxghgmiAAAP, Reason: transport close
+2026-08-09 22:29:19:2919 debug: [Socket] User connected: SmlEr22iRh3WSDsRAAAR
+2026-08-09 22:29:19:2919 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:29:21:2921 debug: [Socket] User disconnected: SmlEr22iRh3WSDsRAAAR, Reason: transport close
+2026-08-09 22:29:21:2921 debug: [Socket] User connected: p9W361BKAAjEW3C8AAAT
+2026-08-09 22:29:21:2921 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:29:22:2922 debug: [Socket] User disconnected: p9W361BKAAjEW3C8AAAT, Reason: transport close
+2026-08-09 22:29:22:2922 debug: [Socket] User connected: 0KHKMn6bCG-0lI5dAAAV
+2026-08-09 22:29:22:2922 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:29:22:2922 debug: [Socket] User disconnected: 0KHKMn6bCG-0lI5dAAAV, Reason: transport close
+2026-08-09 22:29:22:2922 debug: [Socket] User connected: 19d-fHwkSC-LBebYAAAX
+2026-08-09 22:29:22:2922 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:29:22:2922 debug: [Socket] User disconnected: 19d-fHwkSC-LBebYAAAX, Reason: transport close
+2026-08-09 22:29:22:2922 debug: [Socket] User connected: UQDHz8FyxgPJW0QeAAAZ
+2026-08-09 22:29:22:2922 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:29:22:2922 debug: [Socket] User disconnected: UQDHz8FyxgPJW0QeAAAZ, Reason: transport close
+2026-08-09 22:29:22:2922 debug: [Socket] User connected: 59T9R8lN2rwOyvsyAAAb
+2026-08-09 22:29:22:2922 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:29:22:2922 debug: [Socket] User disconnected: 59T9R8lN2rwOyvsyAAAb, Reason: transport close
+2026-08-09 22:29:23:2923 debug: [Socket] User connected: M75SjrHQ_MsZ251sAAAd
+2026-08-09 22:29:23:2923 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:31:58:3158 debug: [Socket] User disconnected: 76Gyiy4exvk9Kt9NAAAF, Reason: transport close
+2026-08-09 22:31:58:3158 debug: [Socket] User disconnected: K3jAGM5eqDVIe38jAAAL, Reason: transport close
+2026-08-09 22:31:58:3158 debug: [Socket] User disconnected: M75SjrHQ_MsZ251sAAAd, Reason: transport close
+2026-08-09 22:31:58:3158 debug: [Socket] User disconnected: vRMrY6ri2-UEJMBnAAAB, Reason: transport close
+2026-08-09 22:31:58:3158 debug: [Socket] User disconnected: hRr-mYjjlSBTEjv1AAAD, Reason: transport close
+2026-08-09 22:32:33:3233 debug: [Socket] User connected: acPKppylYuIca6WRAAAf
+2026-08-09 22:32:33:3233 debug: [Socket] User disconnected: acPKppylYuIca6WRAAAf, Reason: transport close
+2026-08-09 22:32:35:3235 debug: [Socket] User connected: Yy55A6olnnO3QuSrAAAh
+2026-08-09 22:32:35:3235 debug: [Socket] User connected: WaS2rrJ4fHKDWmsCAAAk
+2026-08-09 22:32:36:3236 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:32:36:3236 debug: [Socket] User connected: awumwzXQi9Kd5ZgIAAAm
+2026-08-09 22:32:36:3236 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:32:36:3236 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:32:36:3236 debug: [Socket] User connected: h56BntOjtLnAINeMAAAo
+2026-08-09 22:32:36:3236 debug: [Socket] User connected: oSk6Q-OSSXTtZzQaAAAp
+2026-08-09 22:32:36:3236 info: [Socket] Client joined lobby room: group_28
+2026-08-09 22:32:36:3236 info: [Socket] Organizer joined dashboard room: organizer_30
+2026-08-09 22:32:36:3236 info: [Socket] Organizer joined dashboard room: organizer_30
+2026-08-10 22:05:17:517 debug: [Socket] User disconnected: awumwzXQi9Kd5ZgIAAAm, Reason: transport close
+2026-08-10 22:05:18:518 debug: [Socket] User connected: bfy0w4giyJW01oh4AAAr
+2026-08-10 22:05:18:518 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:05:21:521 debug: [Socket] User disconnected: h56BntOjtLnAINeMAAAo, Reason: transport close
+2026-08-10 22:05:22:522 debug: [Socket] User connected: 6FVfsT9NCC0lM1jnAAAt
+2026-08-10 22:05:22:522 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:11:57:1157 debug: [Socket] User disconnected: bfy0w4giyJW01oh4AAAr, Reason: transport close
+2026-08-10 22:11:57:1157 debug: [Socket] User disconnected: 6FVfsT9NCC0lM1jnAAAt, Reason: transport close
+2026-08-10 22:11:57:1157 debug: [Socket] User disconnected: WaS2rrJ4fHKDWmsCAAAk, Reason: transport close
+2026-08-10 22:11:58:1158 debug: [Socket] User disconnected: Yy55A6olnnO3QuSrAAAh, Reason: transport close
+2026-08-10 22:12:00:120 debug: [Socket] User disconnected: oSk6Q-OSSXTtZzQaAAAp, Reason: transport close
+2026-08-10 22:12:00:120 debug: [Socket] User connected: Re4s173dQWwI8I-BAAAv
+2026-08-10 22:12:00:120 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:12:01:121 debug: [Socket] User connected: aM-JFnXUM4isCL8tAAAx
+2026-08-10 22:12:01:121 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:12:01:121 debug: [Socket] User connected: Y5mnjkK9XNU6s6l2AAAz
+2026-08-10 22:12:02:122 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:12:05:125 debug: [Socket] User connected: d4ANFy8I7tjgBWAJAAA1
+2026-08-10 22:12:05:125 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:12:06:126 debug: [Socket] User connected: kymud2itZsLdqbOnAAA3
+2026-08-10 22:12:06:126 info: [Socket] Organizer joined dashboard room: organizer_30
+2026-08-10 22:12:06:126 info: [Socket] Organizer joined dashboard room: organizer_30
+2026-08-10 22:13:58:1358 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:13:59:1359 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:13:59:1359 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:13:59:1359 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:15:59:1559 debug: [Socket] User disconnected: Re4s173dQWwI8I-BAAAv, Reason: transport close
+2026-08-10 22:16:00:160 debug: [Socket] User connected: SpYkYm_fjNtZYouVAAA5
+2026-08-10 22:16:00:160 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:19:59:1959 debug: [Socket] User disconnected: aM-JFnXUM4isCL8tAAAx, Reason: transport close
+2026-08-10 22:19:59:1959 debug: [Socket] User connected: fMMfIjxCWlt6QRAOAAA7
+2026-08-10 22:20:00:200 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:20:06:206 debug: [Socket] User disconnected: fMMfIjxCWlt6QRAOAAA7, Reason: transport close
+2026-08-10 22:20:07:207 debug: [Socket] User connected: 6cuT71dbcFcuKj5pAAA9
+2026-08-10 22:20:07:207 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:20:58:2058 debug: [Socket] User disconnected: SpYkYm_fjNtZYouVAAA5, Reason: transport close
+2026-08-10 22:20:58:2058 debug: [Socket] User connected: wmXc3LghlcAYxYMrAAA_
+2026-08-10 22:20:58:2058 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:21:05:215 debug: [Socket] User disconnected: d4ANFy8I7tjgBWAJAAA1, Reason: transport close
+2026-08-10 22:21:05:215 debug: [Socket] User connected: xDlFd1hq4zvyV4bYAABB
+2026-08-10 22:21:05:215 info: [Socket] Client joined lobby room: group_28
+2026-08-10 22:21:06:216 debug: [Socket] User disconnected: xDlFd1hq4zvyV4bYAABB, Reason: transport close
+2026-08-10 22:21:07:217 debug: [Socket] User disconnected: 6cuT71dbcFcuKj5pAAA9, Reason: transport close
+2026-08-10 22:21:07:217 debug: [Socket] User disconnected: Y5mnjkK9XNU6s6l2AAAz, Reason: transport close
+2026-08-10 22:21:08:218 debug: [Socket] User disconnected: wmXc3LghlcAYxYMrAAA_, Reason: transport close
+2026-08-10 22:21:09:219 debug: [Socket] User disconnected: kymud2itZsLdqbOnAAA3, Reason: transport close
+2026-08-10 22:37:36:3736 error: Error sending OTP email: Greeting never received
+2026-08-10 22:38:04:384 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-10 22:38:07:387 debug: [Socket] User connected: dcniWW72Wlv1_UyZAABD
+2026-08-10 22:38:07:387 info: [Socket] Organizer joined dashboard room: organizer_31
+2026-08-10 22:38:07:387 info: [Socket] Organizer joined dashboard room: organizer_31
+2026-08-10 22:39:36:3936 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-10 22:39:48:3948 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-10 22:40:00:400 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-10 22:40:20:4020 error: Error sending OTP email: Greeting never received
+2026-08-10 22:40:31:4031 error: Error sending OTP email: Greeting never received
+2026-08-10 22:41:13:4113 debug: [Socket] User connected: izQygc9laP-kLMOJAABF
+2026-08-10 22:41:13:4113 info: [Socket] Client joined lobby room: group_29
+2026-08-10 22:41:18:4118 debug: [Socket] User disconnected: izQygc9laP-kLMOJAABF, Reason: transport close
+2026-08-10 22:41:18:4118 debug: [Socket] User connected: o_YURAHzQlp3qRYiAABH
+2026-08-10 22:41:18:4118 info: [Socket] Client joined lobby room: group_29
+2026-08-10 22:41:55:4155 debug: [Socket] User connected: EBMUpBSgp7n47ohsAABJ
+2026-08-10 22:41:55:4155 info: [Socket] Client joined lobby room: group_29
+2026-08-10 22:42:02:422 debug: [Socket] User connected: HCAMT0j-PjU-ceKnAABL
+2026-08-10 22:42:02:422 info: [Socket] Client joined lobby room: group_29
+2026-08-10 22:42:06:426 debug: [Socket] User connected: U4h7Xfv1mw801FixAABN
+2026-08-10 22:42:06:426 info: [Socket] Client joined lobby room: group_29
+2026-08-10 22:42:07:427 debug: [Socket] User connected: IoCWnw0Ym4SbgI9UAABP
+2026-08-10 22:42:07:427 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:01:21:121 debug: [Socket] User disconnected: U4h7Xfv1mw801FixAABN, Reason: transport close
+2026-08-10 23:01:22:122 debug: [Socket] User connected: xco8n75QBbe6fXs-AABR
+2026-08-10 23:01:22:122 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:01:26:126 debug: [Socket] User disconnected: IoCWnw0Ym4SbgI9UAABP, Reason: transport close
+2026-08-10 23:01:26:126 debug: [Socket] User connected: 0qtfxE2gUzyzawY7AABT
+2026-08-10 23:01:26:126 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:02:14:214 debug: [Socket] User disconnected: HCAMT0j-PjU-ceKnAABL, Reason: transport close
+2026-08-10 23:02:14:214 debug: [Socket] User connected: 9_FMlZT1_vxX7iO0AABV
+2026-08-10 23:02:14:214 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:15:04:154 debug: [Socket] User disconnected: 9_FMlZT1_vxX7iO0AABV, Reason: transport close
+2026-08-10 23:15:04:154 debug: [Socket] User disconnected: dcniWW72Wlv1_UyZAABD, Reason: transport close
+2026-08-10 23:15:04:154 debug: [Socket] User disconnected: o_YURAHzQlp3qRYiAABH, Reason: transport close
+2026-08-10 23:15:04:154 debug: [Socket] User disconnected: EBMUpBSgp7n47ohsAABJ, Reason: transport close
+2026-08-10 23:15:04:154 debug: [Socket] User disconnected: xco8n75QBbe6fXs-AABR, Reason: transport close
+2026-08-10 23:15:04:154 debug: [Socket] User disconnected: 0qtfxE2gUzyzawY7AABT, Reason: transport close
+2026-08-10 23:15:05:155 debug: [Socket] User connected: R9EC_jdcsC_VTwwUAABX
+2026-08-10 23:15:05:155 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:15:06:156 debug: [Socket] User connected: g8_zpt-hgMynT3ggAABZ
+2026-08-10 23:15:06:156 debug: [Socket] User disconnected: g8_zpt-hgMynT3ggAABZ, Reason: transport close
+2026-08-10 23:15:08:158 debug: [Socket] User connected: kzhcoz7nQtu8UStCAABb
+2026-08-10 23:15:08:158 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:15:10:1510 debug: [Socket] User connected: 4Y6I5VULLwr0C_cjAABd
+2026-08-10 23:15:10:1510 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:15:10:1510 debug: [Socket] User connected: Lbj3Gqr9_QDFO4uIAABg
+2026-08-10 23:15:10:1510 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:15:10:1510 debug: [Socket] User connected: ToPMCNOFznqrRwbRAABh
+2026-08-10 23:15:10:1510 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:19:28:1928 debug: [Socket] User connected: cD343Z5TpR6fRDy9AABj
+2026-08-10 23:19:28:1928 info: [Socket] Organizer joined dashboard room: organizer_31
+2026-08-10 23:19:28:1928 info: [Socket] Organizer joined dashboard room: organizer_31
+2026-08-10 23:19:29:1929 debug: [Socket] User disconnected: kzhcoz7nQtu8UStCAABb, Reason: transport close
+2026-08-10 23:19:29:1929 debug: [Socket] User disconnected: R9EC_jdcsC_VTwwUAABX, Reason: transport close
+2026-08-10 23:19:29:1929 debug: [Socket] User disconnected: 4Y6I5VULLwr0C_cjAABd, Reason: transport close
+2026-08-10 23:19:29:1929 debug: [Socket] User disconnected: Lbj3Gqr9_QDFO4uIAABg, Reason: transport close
+2026-08-10 23:19:29:1929 debug: [Socket] User disconnected: ToPMCNOFznqrRwbRAABh, Reason: transport close
+2026-08-10 23:19:29:1929 debug: [Socket] User disconnected: cD343Z5TpR6fRDy9AABj, Reason: transport close
+2026-08-10 23:19:31:1931 debug: [Socket] User connected: LGIoWyL-IS81Yi0NAABl
+2026-08-10 23:19:31:1931 debug: [Socket] User connected: ovUL0HoDfg_PHHT7AABp
+2026-08-10 23:19:31:1931 debug: [Socket] User connected: itZMVEK-9QKzy7MfAABq
+2026-08-10 23:19:31:1931 debug: [Socket] User connected: 3Jj9sHVdUpHJNlCHAABs
+2026-08-10 23:19:31:1931 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:19:31:1931 debug: [Socket] User connected: Vf1gbRYDDezzlvVfAABt
+2026-08-10 23:19:31:1931 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:19:31:1931 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:19:31:1931 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:19:31:1931 info: [Socket] Client joined lobby room: group_29
+2026-08-10 23:19:32:1932 debug: [Socket] User connected: geirpCpNP01XwWORAABv
+2026-08-10 23:19:32:1932 info: [Socket] Organizer joined dashboard room: organizer_31
+2026-08-10 23:19:32:1932 info: [Socket] Organizer joined dashboard room: organizer_31
+2026-08-11 20:06:38:638 debug: [Socket] User disconnected: LGIoWyL-IS81Yi0NAABl, Reason: transport close
+2026-08-11 20:06:38:638 debug: [Socket] User disconnected: ovUL0HoDfg_PHHT7AABp, Reason: transport close
+2026-08-11 20:06:38:638 debug: [Socket] User disconnected: itZMVEK-9QKzy7MfAABq, Reason: transport close
+2026-08-11 20:06:38:638 debug: [Socket] User disconnected: Vf1gbRYDDezzlvVfAABt, Reason: transport close
+2026-08-11 20:06:39:639 debug: [Socket] User disconnected: 3Jj9sHVdUpHJNlCHAABs, Reason: transport close
+2026-08-11 20:06:40:640 debug: [Socket] User disconnected: geirpCpNP01XwWORAABv, Reason: transport close
+2026-08-11 20:07:36:736 debug: [Socket] User connected: 6B3b_uDfAgZLajnGAABx
+2026-08-11 20:07:36:736 info: [Socket] Organizer joined dashboard room: organizer_31
+2026-08-11 20:07:36:736 info: [Socket] Organizer joined dashboard room: organizer_31
+2026-08-11 20:08:29:829 debug: [Socket] User disconnected: 6B3b_uDfAgZLajnGAABx, Reason: transport close
+2026-08-11 20:08:52:852 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:13:19:1319 error: Error sending OTP email: connect ENETUNREACH 1.179.116.2:587 - Local (0.0.0.0:51943)
+2026-08-11 20:14:03:143 error: Error sending OTP email: connect EHOSTUNREACH 64:ff9b::1b3:7402:587 - Local (:::52070)
+2026-08-11 20:14:45:1445 error: Error sending OTP email: connect EHOSTUNREACH 64:ff9b::1b3:7402:587 - Local (:::52092)
+2026-08-11 20:14:48:1448 debug: [Socket] User connected: YZcPcLl4HLzDlsikAABz
+2026-08-11 20:14:48:1448 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:14:48:1448 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:17:45:1745 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:18:04:184 debug: [Socket] User connected: NdMImA-K-FqHihgHAAB1
+2026-08-11 20:18:04:184 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:18:04:184 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:18:28:1828 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:18:32:1832 debug: [Socket] User connected: 8ARtZqSMAsiiO7MSAAB3
+2026-08-11 20:18:32:1832 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:18:32:1832 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:18:46:1846 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:18:51:1851 debug: [Socket] User connected: pftOsnpQdEYjQpV-AAB5
+2026-08-11 20:18:51:1851 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:18:51:1851 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:19:18:1918 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:19:22:1922 debug: [Socket] User connected: q9YAT73wgTuGMHnPAAB7
+2026-08-11 20:19:22:1922 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:19:22:1922 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:20:07:207 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:20:11:2011 debug: [Socket] User connected: xZ5z0NAqKQe5xX54AAB9
+2026-08-11 20:20:11:2011 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:20:11:2011 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:21:10:2110 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:21:10:2110 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:23:20:2320 debug: [Socket] User disconnected: pftOsnpQdEYjQpV-AAB5, Reason: transport close
+2026-08-11 20:23:20:2320 debug: [Socket] User connected: uEOqDgvVl0Let1AnAAB_
+2026-08-11 20:23:20:2320 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:23:23:2323 debug: [Socket] User disconnected: q9YAT73wgTuGMHnPAAB7, Reason: transport close
+2026-08-11 20:23:23:2323 debug: [Socket] User connected: umyX4Lg5UNi0nTCDAACB
+2026-08-11 20:23:23:2323 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:23:27:2327 debug: [Socket] User disconnected: xZ5z0NAqKQe5xX54AAB9, Reason: transport close
+2026-08-11 20:23:27:2327 debug: [Socket] User connected: fK6ntdq0yTEZmM83AACD
+2026-08-11 20:23:27:2327 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:23:53:2353 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 20:28:08:288 debug: [Socket] User disconnected: 8ARtZqSMAsiiO7MSAAB3, Reason: transport close
+2026-08-11 20:28:08:288 debug: [Socket] User disconnected: uEOqDgvVl0Let1AnAAB_, Reason: transport close
+2026-08-11 20:28:08:288 debug: [Socket] User disconnected: umyX4Lg5UNi0nTCDAACB, Reason: transport close
+2026-08-11 20:28:08:288 debug: [Socket] User disconnected: fK6ntdq0yTEZmM83AACD, Reason: transport close
+2026-08-11 20:28:08:288 debug: [Socket] User disconnected: YZcPcLl4HLzDlsikAABz, Reason: transport close
+2026-08-11 20:28:08:288 debug: [Socket] User disconnected: NdMImA-K-FqHihgHAAB1, Reason: transport close
+2026-08-11 20:28:09:289 debug: [Socket] User connected: _lwF0So7ea1T4nRHAACF
+2026-08-11 20:28:09:289 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:28:14:2814 debug: [Socket] User connected: cnO1bBKX0xOmQ5vLAACK
+2026-08-11 20:28:14:2814 debug: [Socket] User connected: QuAVDWvZtJ_EQ-V9AACL
+2026-08-11 20:28:14:2814 debug: [Socket] User connected: voX_f9FgI_27BQbIAACM
+2026-08-11 20:28:14:2814 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:28:14:2814 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:28:14:2814 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:28:14:2814 debug: [Socket] User connected: 6aNMHoUzcXnGoJ8GAACN
+2026-08-11 20:28:14:2814 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:28:14:2814 debug: [Socket] User connected: y8da5f-UBGNmqo4-AACP
+2026-08-11 20:28:14:2814 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 error: You are not part of this group
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 error: You are not part of this group
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 error: You are not part of this group
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:00:310 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:10:3110 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:10:3110 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:10:3110 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:19:3119 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:19:3119 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:19:3119 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:25:3125 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:25:3125 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:25:3125 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:25:3125 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:25:3125 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:31:25:3125 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:32:31:3231 debug: [Socket] User disconnected: _lwF0So7ea1T4nRHAACF, Reason: transport close
+2026-08-11 20:32:32:3232 debug: [Socket] User connected: 8BkfBtwZ6vUEcvpCAACR
+2026-08-11 20:32:32:3232 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:32:32:3232 info: [Socket] Client joined lobby room: group_30
+2026-08-11 20:37:31:3731 debug: [Socket] User disconnected: 8BkfBtwZ6vUEcvpCAACR, Reason: transport close
+2026-08-11 20:37:31:3731 debug: [Socket] User disconnected: QuAVDWvZtJ_EQ-V9AACL, Reason: transport close
+2026-08-11 20:37:32:3732 debug: [Socket] User disconnected: 6aNMHoUzcXnGoJ8GAACN, Reason: transport close
+2026-08-11 20:37:32:3732 debug: [Socket] User disconnected: cnO1bBKX0xOmQ5vLAACK, Reason: transport close
+2026-08-11 20:37:32:3732 debug: [Socket] User disconnected: voX_f9FgI_27BQbIAACM, Reason: transport close
+2026-08-11 20:37:33:3733 debug: [Socket] User disconnected: y8da5f-UBGNmqo4-AACP, Reason: transport close
+2026-08-11 20:37:34:3734 debug: [Socket] User connected: IY2w3-p8F7ELqG0lAACT
+2026-08-11 20:37:34:3734 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:35:3735 debug: [Socket] User disconnected: IY2w3-p8F7ELqG0lAACT, Reason: transport close
+2026-08-11 20:37:35:3735 debug: [Socket] User connected: nGvnU71WEQiqrA54AACV
+2026-08-11 20:37:35:3735 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:37:3737 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:37:3737 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:37:3737 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:37:3737 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:37:3737 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:37:3737 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:37:3737 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:37:3737 info: [Socket] Organizer joined dashboard room: organizer_32
+2026-08-11 20:37:40:3740 debug: [Socket] User disconnected: nGvnU71WEQiqrA54AACV, Reason: transport close
+2026-08-11 22:02:38:238 error: Error sending OTP email: connect ENETUNREACH 1.179.116.2:587 - Local (0.0.0.0:52970)
+2026-08-11 22:03:14:314 error: Error sending OTP email: connect EHOSTUNREACH 64:ff9b::1b3:7402:587 - Local (:::52982)
+2026-08-11 22:03:18:318 debug: [Socket] User connected: cEVpTzQt9KVEAW3-AACX
+2026-08-11 22:03:18:318 info: [Socket] Organizer joined dashboard room: organizer_33
+2026-08-11 22:03:18:318 info: [Socket] Organizer joined dashboard room: organizer_33
+2026-08-11 22:04:20:420 error: Error sending OTP email: connect ENETUNREACH 1.179.116.2:587 - Local (0.0.0.0:53006)
+2026-08-11 22:04:54:454 error: Error sending OTP email: Greeting never received
+2026-08-11 22:05:07:57 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 22:05:17:517 error: Error sending OTP email: Greeting never received
+2026-08-11 22:05:22:522 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 22:05:40:540 debug: [Socket] User connected: UYHCw664spWokwy5AACZ
+2026-08-11 22:05:40:540 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:07:07:77 debug: [Socket] User disconnected: UYHCw664spWokwy5AACZ, Reason: transport close
+2026-08-11 22:07:08:78 debug: [Socket] User connected: q32ST_HBHQ6YAHHQAACb
+2026-08-11 22:07:08:78 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:07:19:719 debug: [Socket] User disconnected: q32ST_HBHQ6YAHHQAACb, Reason: transport close
+2026-08-11 22:07:19:719 debug: [Socket] User connected: Mx1LXDrsA64XjP-pAACd
+2026-08-11 22:07:19:719 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:07:38:738 debug: [Socket] User connected: vSAEA0oZTVG1rH5VAACf
+2026-08-11 22:07:38:738 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:07:52:752 debug: [Socket] User connected: f4rxInRc5LKDf-FgAACh
+2026-08-11 22:07:52:752 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:08:39:839 debug: [Socket] User disconnected: Mx1LXDrsA64XjP-pAACd, Reason: transport close
+2026-08-11 22:08:39:839 debug: [Socket] User connected: _YRlfvWNDCzVZFV4AACj
+2026-08-11 22:08:39:839 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:08:44:844 debug: [Socket] User disconnected: _YRlfvWNDCzVZFV4AACj, Reason: transport close
+2026-08-11 22:08:44:844 debug: [Socket] User connected: 7OnnPu7PGpJXbvswAACl
+2026-08-11 22:08:44:844 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:08:45:845 debug: [Socket] User disconnected: 7OnnPu7PGpJXbvswAACl, Reason: transport close
+2026-08-11 22:08:45:845 debug: [Socket] User connected: IKU43k1632p5Yg1rAACn
+2026-08-11 22:08:45:845 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:08:45:845 debug: [Socket] User disconnected: IKU43k1632p5Yg1rAACn, Reason: transport close
+2026-08-11 22:08:45:845 debug: [Socket] User connected: 0waOmKGv_6zlObNxAACp
+2026-08-11 22:08:45:845 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:08:46:846 debug: [Socket] User disconnected: 0waOmKGv_6zlObNxAACp, Reason: transport close
+2026-08-11 22:08:46:846 debug: [Socket] User connected: sGhIzrZTfQc_cC87AACr
+2026-08-11 22:08:46:846 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:08:46:846 debug: [Socket] User disconnected: sGhIzrZTfQc_cC87AACr, Reason: transport close
+2026-08-11 22:08:46:846 debug: [Socket] User connected: TMfGQAEqmDjUQOvDAACt
+2026-08-11 22:08:46:846 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:08:48:848 debug: [Socket] User disconnected: vSAEA0oZTVG1rH5VAACf, Reason: transport close
+2026-08-11 22:08:48:848 debug: [Socket] User connected: 8jfDVSi4qC69OWrIAACv
+2026-08-11 22:08:48:848 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:08:48:848 debug: [Socket] User disconnected: 8jfDVSi4qC69OWrIAACv, Reason: transport close
+2026-08-11 22:08:48:848 debug: [Socket] User connected: vmaMfW-8OTEW83RHAACx
+2026-08-11 22:08:48:848 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:11:50:1150 debug: [Socket] User disconnected: f4rxInRc5LKDf-FgAACh, Reason: transport close
+2026-08-11 22:11:50:1150 debug: [Socket] User connected: J244vbJdm0Bl94y-AACz
+2026-08-11 22:11:50:1150 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:11:51:1151 debug: [Socket] User disconnected: J244vbJdm0Bl94y-AACz, Reason: transport close
+2026-08-11 22:11:51:1151 debug: [Socket] User connected: NR5rUY9-i3d0DzwqAAC1
+2026-08-11 22:11:51:1151 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:11:52:1152 debug: [Socket] User disconnected: NR5rUY9-i3d0DzwqAAC1, Reason: transport close
+2026-08-11 22:11:52:1152 debug: [Socket] User connected: N9PN39RpGg_uLrVHAAC3
+2026-08-11 22:11:52:1152 debug: [Socket] User disconnected: N9PN39RpGg_uLrVHAAC3, Reason: transport close
+2026-08-11 22:11:52:1152 debug: [Socket] User connected: FibmPb77ndfLra09AAC5
+2026-08-11 22:11:52:1152 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:11:54:1154 debug: [Socket] User disconnected: vmaMfW-8OTEW83RHAACx, Reason: transport close
+2026-08-11 22:11:54:1154 debug: [Socket] User connected: LAj8f0JA3SQ_hYdfAAC7
+2026-08-11 22:11:54:1154 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:11:55:1155 debug: [Socket] User disconnected: LAj8f0JA3SQ_hYdfAAC7, Reason: transport close
+2026-08-11 22:11:55:1155 debug: [Socket] User connected: ldvekg9zmSJ_Cqp_AAC9
+2026-08-11 22:11:55:1155 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:11:58:1158 debug: [Socket] User connected: 9j8uZOLjW9Qen16AAAC_
+2026-08-11 22:11:58:1158 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:00:120 debug: [Socket] User disconnected: 9j8uZOLjW9Qen16AAAC_, Reason: transport close
+2026-08-11 22:12:00:120 debug: [Socket] User connected: GwYFPgRqeAkjBjPFAADB
+2026-08-11 22:12:00:120 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:00:120 debug: [Socket] User disconnected: GwYFPgRqeAkjBjPFAADB, Reason: transport close
+2026-08-11 22:12:00:120 debug: [Socket] User connected: f6AnJLY8ay0IkmaiAADD
+2026-08-11 22:12:00:120 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:05:125 debug: [Socket] User disconnected: TMfGQAEqmDjUQOvDAACt, Reason: transport close
+2026-08-11 22:12:06:126 debug: [Socket] User connected: NaQ4APxigJGw75WHAADF
+2026-08-11 22:12:06:126 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:13:1213 debug: [Socket] User disconnected: NaQ4APxigJGw75WHAADF, Reason: transport close
+2026-08-11 22:12:13:1213 debug: [Socket] User connected: ZI0lkvXBGfw3nVXpAADH
+2026-08-11 22:12:13:1213 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:19:1219 debug: [Socket] User disconnected: ZI0lkvXBGfw3nVXpAADH, Reason: transport close
+2026-08-11 22:12:20:1220 debug: [Socket] User connected: TCuHXQ-3EReJ8sDuAADJ
+2026-08-11 22:12:20:1220 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:28:1228 debug: [Socket] User disconnected: TCuHXQ-3EReJ8sDuAADJ, Reason: transport close
+2026-08-11 22:12:29:1229 debug: [Socket] User connected: EXbI40hkgzsFRvQGAADL
+2026-08-11 22:12:29:1229 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:32:1232 debug: [Socket] User disconnected: EXbI40hkgzsFRvQGAADL, Reason: transport close
+2026-08-11 22:12:32:1232 debug: [Socket] User connected: 6AIWeJozioqlC9ahAADN
+2026-08-11 22:12:32:1232 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:32:1232 debug: [Socket] User disconnected: 6AIWeJozioqlC9ahAADN, Reason: transport close
+2026-08-11 22:12:32:1232 debug: [Socket] User connected: w3XpUgeSeTKtI4JtAADP
+2026-08-11 22:12:32:1232 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:32:1232 debug: [Socket] User disconnected: w3XpUgeSeTKtI4JtAADP, Reason: transport close
+2026-08-11 22:12:32:1232 debug: [Socket] User connected: hqYvRW2QcKdATpc4AADR
+2026-08-11 22:12:32:1232 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:12:32:1232 debug: [Socket] User disconnected: hqYvRW2QcKdATpc4AADR, Reason: transport close
+2026-08-11 22:12:32:1232 debug: [Socket] User connected: zxWBxjibEsd5_pC9AADT
+2026-08-11 22:12:32:1232 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:13:34:1334 debug: [Socket] User disconnected: zxWBxjibEsd5_pC9AADT, Reason: transport close
+2026-08-11 22:13:35:1335 debug: [Socket] User connected: 0tz5dfINDBXrNtv4AADV
+2026-08-11 22:13:35:1335 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:14:18:1418 debug: [Socket] User disconnected: 0tz5dfINDBXrNtv4AADV, Reason: transport close
+2026-08-11 22:14:18:1418 debug: [Socket] User connected: 6Xzd-OMN0O5H90qOAADX
+2026-08-11 22:14:18:1418 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:14:23:1423 debug: [Socket] User disconnected: 6Xzd-OMN0O5H90qOAADX, Reason: transport close
+2026-08-11 22:14:23:1423 debug: [Socket] User connected: mNgXX2rQxG5boqjxAADZ
+2026-08-11 22:14:23:1423 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:14:41:1441 debug: [Socket] User disconnected: mNgXX2rQxG5boqjxAADZ, Reason: transport close
+2026-08-11 22:14:41:1441 debug: [Socket] User connected: 7AlKpzrWOzv2uTOxAADb
+2026-08-11 22:14:41:1441 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:14:49:1449 debug: [Socket] User disconnected: FibmPb77ndfLra09AAC5, Reason: transport close
+2026-08-11 22:14:49:1449 debug: [Socket] User connected: 4UQgk7FJTfcGgFr_AADd
+2026-08-11 22:14:49:1449 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:14:51:1451 debug: [Socket] User disconnected: ldvekg9zmSJ_Cqp_AAC9, Reason: transport close
+2026-08-11 22:14:51:1451 debug: [Socket] User connected: apFX_R2HUd4TLAsIAADf
+2026-08-11 22:14:51:1451 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:14:53:1453 debug: [Socket] User disconnected: f6AnJLY8ay0IkmaiAADD, Reason: transport close
+2026-08-11 22:14:53:1453 debug: [Socket] User connected: tJjtoZVDWVmQnREHAADh
+2026-08-11 22:14:53:1453 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:14:57:1457 debug: [Socket] User disconnected: 7AlKpzrWOzv2uTOxAADb, Reason: transport close
+2026-08-11 22:14:57:1457 debug: [Socket] User connected: GM6r_Fv9e2QeBBYkAADj
+2026-08-11 22:14:57:1457 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:16:36:1636 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-11 22:16:38:1638 debug: [Socket] User connected: 8T39Pk6nXQxjSExwAAAC
+2026-08-11 22:16:38:1638 debug: [Socket] User connected: aVo2ed89hVRQmPRuAAAD
+2026-08-11 22:16:39:1639 debug: [Socket] User connected: RkmUPdI5QRTx1InMAAAF
+2026-08-11 22:16:40:1640 debug: [Socket] User connected: sco6JR7DRIHfJQM2AAAH
+2026-08-11 22:16:40:1640 debug: [Socket] User connected: 11c1zE1wqavnIWNHAAAJ
+2026-08-11 22:16:45:1645 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-11 22:16:45:1645 debug: [Socket] User connected: umzQTx8kULl53L0EAAAB
+2026-08-11 22:16:45:1645 debug: [Socket] User connected: NI5V_VLqtNv-MpiwAAAD
+2026-08-11 22:16:45:1645 debug: [Socket] User connected: ddv0JWLOQ0ZqZD2aAAAF
+2026-08-11 22:16:46:1646 debug: [Socket] User connected: 977S5GfuM-rJMHBCAAAH
+2026-08-11 22:16:46:1646 debug: [Socket] User connected: FDb4Rb8Wpone4L3xAAAJ
+2026-08-11 22:16:50:1650 debug: [Socket] User disconnected: umzQTx8kULl53L0EAAAB, Reason: transport close
+2026-08-11 22:16:51:1651 debug: [Socket] User connected: WyxkiFSkNdyrE-9yAAAL
+2026-08-11 22:16:51:1651 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:16:55:1655 debug: [Socket] User disconnected: NI5V_VLqtNv-MpiwAAAD, Reason: transport close
+2026-08-11 22:16:55:1655 debug: [Socket] User connected: mE1WR-fK1UeYG75sAAAN
+2026-08-11 22:16:55:1655 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:16:56:1656 debug: [Socket] User disconnected: mE1WR-fK1UeYG75sAAAN, Reason: transport close
+2026-08-11 22:16:56:1656 debug: [Socket] User connected: Vcv4NdmqZe_hRFVjAAAP
+2026-08-11 22:16:56:1656 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:17:00:170 debug: [Socket] User disconnected: Vcv4NdmqZe_hRFVjAAAP, Reason: transport close
+2026-08-11 22:17:00:170 debug: [Socket] User connected: CkJmLGb0jInj4ZoQAAAR
+2026-08-11 22:17:00:170 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:17:04:174 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:17:04:174 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:17:05:175 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:17:05:175 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:21:43:2143 debug: [Socket] User disconnected: CkJmLGb0jInj4ZoQAAAR, Reason: transport close
+2026-08-11 22:21:44:2144 debug: [Socket] User disconnected: ddv0JWLOQ0ZqZD2aAAAF, Reason: transport close
+2026-08-11 22:21:44:2144 debug: [Socket] User disconnected: 977S5GfuM-rJMHBCAAAH, Reason: transport close
+2026-08-11 22:21:44:2144 debug: [Socket] User disconnected: FDb4Rb8Wpone4L3xAAAJ, Reason: transport close
+2026-08-11 22:21:44:2144 debug: [Socket] User disconnected: WyxkiFSkNdyrE-9yAAAL, Reason: transport close
+2026-08-11 22:21:48:2148 debug: [Socket] User connected: a_6TTsTQlAcTPWvuAAAT
+2026-08-11 22:21:48:2148 debug: [Socket] User connected: RSiCSPAUk-MDfFXsAAAV
+2026-08-11 22:21:48:2148 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:21:48:2148 debug: [Socket] User connected: dM2PwP6dyDPLAcOzAAAX
+2026-08-11 22:21:48:2148 debug: [Socket] User connected: 8G5wVhXlaM0eWFUZAAAZ
+2026-08-11 22:21:48:2148 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:21:48:2148 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:21:48:2148 info: [Socket] Client joined lobby room: group_31
+2026-08-11 22:21:49:2149 debug: [Socket] User connected: E-2erVeyFuTLxYa-AAAb
+2026-08-11 22:21:49:2149 info: [Socket] Organizer joined dashboard room: organizer_33
+2026-08-11 22:21:49:2149 info: [Socket] Organizer joined dashboard room: organizer_33
+2026-08-11 23:01:45:145 debug: [Socket] User disconnected: a_6TTsTQlAcTPWvuAAAT, Reason: transport close
+2026-08-11 23:01:46:146 debug: [Socket] User disconnected: RSiCSPAUk-MDfFXsAAAV, Reason: transport close
+2026-08-11 23:01:47:147 debug: [Socket] User disconnected: 8G5wVhXlaM0eWFUZAAAZ, Reason: transport close
+2026-08-11 23:01:49:149 debug: [Socket] User disconnected: dM2PwP6dyDPLAcOzAAAX, Reason: transport close
+2026-08-11 23:01:51:151 debug: [Socket] User disconnected: E-2erVeyFuTLxYa-AAAb, Reason: transport close
+2026-08-11 23:01:51:151 debug: [Socket] User connected: yxjgmtLpFp-NViBcAAAd
+2026-08-11 23:01:51:151 info: [Socket] Organizer joined dashboard room: organizer_33
+2026-08-11 23:01:51:151 info: [Socket] Organizer joined dashboard room: organizer_33
+2026-08-11 23:03:26:326 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:04:25:425 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:04:29:429 debug: [Socket] User connected: R8XcxSjamFGCTLFNAAAf
+2026-08-11 23:04:29:429 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-11 23:04:29:429 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-11 23:05:13:513 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:05:18:518 debug: [Socket] User connected: xwavWcCbr2jMp0rWAAAh
+2026-08-11 23:05:18:518 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:05:18:518 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:05:28:528 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:05:33:533 debug: [Socket] User connected: 9AN9DNSCvGBoDjOAAAAj
+2026-08-11 23:05:33:533 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:05:33:533 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:05:43:543 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:05:45:545 error: Invalid OTP
+2026-08-11 23:05:54:554 debug: [Socket] User connected: G25ir6SGYJK0kuB-AAAl
+2026-08-11 23:05:54:554 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:05:54:554 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:06:00:60 debug: [Socket] User disconnected: R8XcxSjamFGCTLFNAAAf, Reason: transport close
+2026-08-11 23:06:00:60 debug: [Socket] User connected: 2x60eo3BjtKF6h70AAAn
+2026-08-11 23:06:00:60 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-11 23:06:00:60 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-11 23:06:09:69 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:06:13:613 debug: [Socket] User connected: k_wZjeH-wYKsFfu1AAAp
+2026-08-11 23:06:13:613 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:06:13:613 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:06:20:620 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:06:25:625 debug: [Socket] User connected: 7eN8L7RYa-A39N9tAAAr
+2026-08-11 23:06:25:625 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:06:25:625 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:06:45:645 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:07:01:71 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:07:01:71 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:07:03:73 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:07:14:714 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:09:57:957 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-11 23:33:55:3355 debug: [Socket] User disconnected: 9AN9DNSCvGBoDjOAAAAj, Reason: transport close
+2026-08-11 23:33:55:3355 debug: [Socket] User connected: VnyEou_ggmKrI6onAAAt
+2026-08-11 23:33:55:3355 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:41:45:4145 debug: [Socket] User disconnected: 2x60eo3BjtKF6h70AAAn, Reason: transport close
+2026-08-11 23:41:45:4145 debug: [Socket] User disconnected: 7eN8L7RYa-A39N9tAAAr, Reason: transport close
+2026-08-11 23:41:45:4145 debug: [Socket] User disconnected: VnyEou_ggmKrI6onAAAt, Reason: transport close
+2026-08-11 23:41:45:4145 debug: [Socket] User disconnected: yxjgmtLpFp-NViBcAAAd, Reason: transport close
+2026-08-11 23:41:45:4145 debug: [Socket] User disconnected: k_wZjeH-wYKsFfu1AAAp, Reason: transport close
+2026-08-11 23:41:45:4145 debug: [Socket] User disconnected: xwavWcCbr2jMp0rWAAAh, Reason: transport close
+2026-08-11 23:41:45:4145 debug: [Socket] User disconnected: G25ir6SGYJK0kuB-AAAl, Reason: transport close
+2026-08-11 23:41:46:4146 debug: [Socket] User connected: oMpl8rO-HThdLxp-AAAv
+2026-08-11 23:41:48:4148 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:41:49:4149 debug: [Socket] User connected: UofsgqDw1I0bRDQaAAAx
+2026-08-11 23:41:49:4149 debug: [Socket] User connected: at6zwEhje69muvbNAAAz
+2026-08-11 23:41:49:4149 debug: [Socket] User disconnected: UofsgqDw1I0bRDQaAAAx, Reason: transport close
+2026-08-11 23:41:49:4149 debug: [Socket] User disconnected: at6zwEhje69muvbNAAAz, Reason: transport close
+2026-08-11 23:41:50:4150 debug: [Socket] User connected: b_y5FyimH-4mgY4gAAA1
+2026-08-11 23:41:51:4151 debug: [Socket] User disconnected: b_y5FyimH-4mgY4gAAA1, Reason: transport close
+2026-08-11 23:41:52:4152 debug: [Socket] User connected: yF_oBt5apvoTBOqTAAA3
+2026-08-11 23:41:52:4152 debug: [Socket] User disconnected: yF_oBt5apvoTBOqTAAA3, Reason: transport close
+2026-08-11 23:41:53:4153 debug: [Socket] User connected: lx3rsrhLze53IpEDAAA5
+2026-08-11 23:41:54:4154 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:41:54:4154 debug: [Socket] User connected: gDgX5invzyHNTI69AAA7
+2026-08-11 23:41:54:4154 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:41:54:4154 error: Access Denied: You have joined after the allowed time. The session started at 11:05 PM and entry was closed at 11:20 PM. Please contact the Organiser for assistance.
+2026-08-11 23:41:54:4154 debug: [Socket] User connected: aulgsMeK2TwwwPVlAAA9
+2026-08-11 23:41:54:4154 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:41:54:4154 debug: [Socket] User connected: winVbj6UyrYohJFlAAA_
+2026-08-11 23:41:55:4155 debug: [Socket] User connected: ny6ohrrJy4VmwPM5AABB
+2026-08-11 23:41:55:4155 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:41:55:4155 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-11 23:41:55:4155 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-11 23:43:18:4318 debug: [Socket] User disconnected: lx3rsrhLze53IpEDAAA5, Reason: transport close
+2026-08-11 23:43:18:4318 debug: [Socket] User disconnected: gDgX5invzyHNTI69AAA7, Reason: transport close
+2026-08-11 23:43:18:4318 debug: [Socket] User disconnected: aulgsMeK2TwwwPVlAAA9, Reason: transport close
+2026-08-11 23:43:18:4318 debug: [Socket] User disconnected: winVbj6UyrYohJFlAAA_, Reason: transport close
+2026-08-11 23:43:18:4318 debug: [Socket] User disconnected: ny6ohrrJy4VmwPM5AABB, Reason: transport close
+2026-08-11 23:43:18:4318 debug: [Socket] User disconnected: oMpl8rO-HThdLxp-AAAv, Reason: transport close
+2026-08-11 23:43:20:4320 debug: [Socket] User connected: YKYxS-_B5xMZcIlUAABD
+2026-08-11 23:43:20:4320 debug: [Socket] User connected: PI1sZjZ5H4L_dhDRAABF
+2026-08-11 23:43:20:4320 debug: [Socket] User connected: d6wvAcKVB3r70ZjIAABH
+2026-08-11 23:43:20:4320 debug: [Socket] User connected: edH8-O9W9Vw0dhy_AABJ
+2026-08-11 23:43:20:4320 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:43:20:4320 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:43:20:4320 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:43:20:4320 debug: [Socket] User connected: __Rzo8LHt4sut34yAABL
+2026-08-11 23:43:20:4320 info: [Socket] Client joined lobby room: group_32
+2026-08-11 23:43:21:4321 error: Access Denied: You have joined after the allowed time. The session started at 11:05 PM and entry was closed at 11:20 PM. Please contact the Organiser for assistance.
+2026-08-11 23:43:21:4321 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-11 23:43:21:4321 debug: [Socket] User connected: lK0X8rYCvzpsIdr4AABN
+2026-08-11 23:43:21:4321 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-11 23:43:21:4321 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:25:31:2531 debug: [Socket] User disconnected: lK0X8rYCvzpsIdr4AABN, Reason: transport close
+2026-08-12 00:25:31:2531 debug: [Socket] User disconnected: YKYxS-_B5xMZcIlUAABD, Reason: transport close
+2026-08-12 00:25:31:2531 debug: [Socket] User disconnected: PI1sZjZ5H4L_dhDRAABF, Reason: transport close
+2026-08-12 00:25:31:2531 debug: [Socket] User disconnected: d6wvAcKVB3r70ZjIAABH, Reason: transport close
+2026-08-12 00:25:31:2531 debug: [Socket] User disconnected: edH8-O9W9Vw0dhy_AABJ, Reason: transport close
+2026-08-12 00:25:31:2531 debug: [Socket] User disconnected: __Rzo8LHt4sut34yAABL, Reason: transport close
+2026-08-12 00:25:32:2532 debug: [Socket] User connected: zdlTq-_bc6WBdCnpAABP
+2026-08-12 00:25:32:2532 debug: [Socket] User disconnected: zdlTq-_bc6WBdCnpAABP, Reason: transport close
+2026-08-12 00:25:33:2533 debug: [Socket] User connected: Zy5-86C-EdFaOzNiAABR
+2026-08-12 00:25:33:2533 debug: [Socket] User disconnected: Zy5-86C-EdFaOzNiAABR, Reason: transport close
+2026-08-12 00:25:36:2536 debug: [Socket] User connected: xqa8s5QP9o0ZJw3fAABT
+2026-08-12 00:25:36:2536 error: Access Denied: You have joined after the allowed time. The session started at 11:05 PM and entry was closed at 11:20 PM. Please contact the Organiser for assistance.
+2026-08-12 00:25:36:2536 debug: [Socket] User connected: 0Dsfj2ljvzCumJIzAABV
+2026-08-12 00:25:36:2536 debug: [Socket] User connected: 4DREtU_tt_Ra_4ZMAABX
+2026-08-12 00:25:36:2536 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:25:36:2536 debug: [Socket] User connected: 50PZR1fNCTQEXpyyAABZ
+2026-08-12 00:25:36:2536 debug: [Socket] User connected: geGmqsVjBGqyFMC-AABb
+2026-08-12 00:25:36:2536 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:25:36:2536 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:25:36:2536 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:25:36:2536 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:25:36:2536 debug: [Socket] User connected: Tnu3k69AENgcSaV3AABd
+2026-08-12 00:25:37:2537 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-12 00:25:37:2537 info: [Socket] Organizer joined dashboard room: organizer_34
+2026-08-12 00:32:02:322 debug: [Socket] User disconnected: 50PZR1fNCTQEXpyyAABZ, Reason: transport close
+2026-08-12 00:32:02:322 debug: [Socket] User connected: Pi2RdOobgmXN07MkAABf
+2026-08-12 00:32:02:322 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:33:55:3355 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:33:55:3355 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:33:55:3355 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:33:55:3355 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:33:56:3356 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:34:46:3446 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:34:47:3447 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:34:47:3447 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:34:47:3447 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:34:47:3447 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:40:28:4028 debug: [Socket] User disconnected: Pi2RdOobgmXN07MkAABf, Reason: transport close
+2026-08-12 00:40:29:4029 debug: [Socket] User connected: QloJ13Wkqe6c4xwRAABh
+2026-08-12 00:40:29:4029 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:40:32:4032 debug: [Socket] User disconnected: QloJ13Wkqe6c4xwRAABh, Reason: transport close
+2026-08-12 00:40:32:4032 debug: [Socket] User connected: lNrXH4Y1iXHMobtaAABj
+2026-08-12 00:40:32:4032 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:40:32:4032 debug: [Socket] User disconnected: lNrXH4Y1iXHMobtaAABj, Reason: transport close
+2026-08-12 00:40:32:4032 debug: [Socket] User connected: fdy_WsQXCAbz5LJrAABl
+2026-08-12 00:40:32:4032 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:40:33:4033 debug: [Socket] User disconnected: fdy_WsQXCAbz5LJrAABl, Reason: transport close
+2026-08-12 00:40:33:4033 debug: [Socket] User connected: X3njLQPRByx9sEpNAABn
+2026-08-12 00:40:33:4033 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:40:33:4033 debug: [Socket] User disconnected: X3njLQPRByx9sEpNAABn, Reason: transport close
+2026-08-12 00:40:33:4033 debug: [Socket] User connected: tP2GAxhGAWXodpflAABp
+2026-08-12 00:40:33:4033 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:40:33:4033 debug: [Socket] User disconnected: tP2GAxhGAWXodpflAABp, Reason: transport close
+2026-08-12 00:40:33:4033 debug: [Socket] User connected: xGrmTGcoZq-fnKjKAABr
+2026-08-12 00:40:33:4033 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:40:33:4033 debug: [Socket] User disconnected: xGrmTGcoZq-fnKjKAABr, Reason: transport close
+2026-08-12 00:40:33:4033 debug: [Socket] User connected: 5_zHcjl_64T6JcbWAABt
+2026-08-12 00:40:33:4033 info: [Socket] Client joined lobby room: group_32
+2026-08-12 00:40:46:4046 debug: [Socket] User disconnected: 5_zHcjl_64T6JcbWAABt, Reason: transport close
+2026-08-12 00:41:11:4111 debug: [Socket] User disconnected: xqa8s5QP9o0ZJw3fAABT, Reason: transport close
+2026-08-12 00:41:11:4111 debug: [Socket] User disconnected: geGmqsVjBGqyFMC-AABb, Reason: transport close
+2026-08-12 00:41:12:4112 debug: [Socket] User disconnected: 4DREtU_tt_Ra_4ZMAABX, Reason: transport close
+2026-08-12 00:41:12:4112 debug: [Socket] User disconnected: 0Dsfj2ljvzCumJIzAABV, Reason: transport close
+2026-08-12 00:41:20:4120 debug: [Socket] User disconnected: Tnu3k69AENgcSaV3AABd, Reason: transport close
+2026-08-12 00:41:36:4136 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 00:57:55:5755 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 00:58:27:5827 error: Scheduled session must be in the future.
+2026-08-12 00:58:51:5851 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 00:59:31:5931 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 00:59:34:5934 debug: [Socket] User connected: NcTBeupaa1sLoI_pAABv
+2026-08-12 00:59:34:5934 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 00:59:34:5934 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:00:07:07 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:00:12:012 debug: [Socket] User connected: fkyKiokY83uhfS45AABx
+2026-08-12 01:00:12:012 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:00:12:012 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:00:19:019 debug: [Socket] User disconnected: fkyKiokY83uhfS45AABx, Reason: transport close
+2026-08-12 01:00:19:019 debug: [Socket] User disconnected: NcTBeupaa1sLoI_pAABv, Reason: transport close
+2026-08-12 01:00:20:020 debug: [Socket] User connected: fNsNlCrC0i8P1pklAABz
+2026-08-12 01:00:20:020 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:00:20:020 debug: [Socket] User connected: QM5CNIF9omsO-6HFAAB1
+2026-08-12 01:00:20:020 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:00:20:020 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:00:25:025 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:00:29:029 debug: [Socket] User disconnected: fNsNlCrC0i8P1pklAABz, Reason: transport close
+2026-08-12 01:00:29:029 debug: [Socket] User disconnected: QM5CNIF9omsO-6HFAAB1, Reason: transport close
+2026-08-12 01:00:30:030 debug: [Socket] User connected: 1dJ9psRZhrtKdkEJAAB3
+2026-08-12 01:00:30:030 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:00:30:030 debug: [Socket] User connected: TJgfuY9eKWeN4J-AAAB5
+2026-08-12 01:00:30:030 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:00:30:030 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:00:36:036 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:00:41:041 debug: [Socket] User connected: Y98ZrMttbWDWOeusAAB7
+2026-08-12 01:00:41:041 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:00:41:041 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:00:51:051 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:00:56:056 debug: [Socket] User connected: RHp2VHW326KdpYVzAAB9
+2026-08-12 01:00:56:056 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:00:56:056 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:01:02:12 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:01:07:17 debug: [Socket] User connected: LxLJogNMegQeosMYAAB_
+2026-08-12 01:01:07:17 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:01:07:17 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:01:20:120 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:01:21:121 debug: [Socket] User connected: btEvtXtRALKu5zwqAAAB
+2026-08-12 01:01:21:121 debug: [Socket] User connected: 9dexYpa0M8xRHw1ZAAAD
+2026-08-12 01:01:21:121 debug: [Socket] User connected: CS4_s----i8ol_8QAAAF
+2026-08-12 01:01:21:121 debug: [Socket] User connected: EfMuh_80rHO1XOXUAAAH
+2026-08-12 01:01:22:122 debug: [Socket] User connected: R4HNtRBpeDijOnHqAAAJ
+2026-08-12 01:01:27:127 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 01:01:32:132 debug: [Socket] User connected: zCkZVWcdMnNoOycRAAAL
+2026-08-12 01:01:32:132 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:01:32:132 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:01:36:136 debug: [Socket] User disconnected: zCkZVWcdMnNoOycRAAAL, Reason: transport close
+2026-08-12 01:01:36:136 debug: [Socket] User connected: lMeZcOfeE7fdRKYXAAAN
+2026-08-12 01:01:36:136 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:01:38:138 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:01:43:143 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:01:48:148 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:01:50:150 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:02:14:214 debug: [Socket] User disconnected: lMeZcOfeE7fdRKYXAAAN, Reason: transport close
+2026-08-12 01:02:14:214 debug: [Socket] User connected: 0BxjMAeoLFV7Zjb5AAAP
+2026-08-12 01:02:14:214 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:04:19:419 debug: [Socket] User disconnected: 0BxjMAeoLFV7Zjb5AAAP, Reason: transport close
+2026-08-12 01:04:19:419 debug: [Socket] User connected: e0xL5HgvYdLcpzE6AAAR
+2026-08-12 01:04:19:419 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:04:21:421 debug: [Socket] User disconnected: e0xL5HgvYdLcpzE6AAAR, Reason: transport close
+2026-08-12 01:04:21:421 debug: [Socket] User connected: c50J4ztOTxGZO3YUAAAT
+2026-08-12 01:04:21:421 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:04:29:429 debug: [Socket] User disconnected: 9dexYpa0M8xRHw1ZAAAD, Reason: transport close
+2026-08-12 01:04:29:429 debug: [Socket] User connected: 3TQBci50hOZD4PE4AAAV
+2026-08-12 01:04:29:429 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:06:11:611 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:06:12:612 debug: [Socket] User connected: ymcfgjijX8RzQMH2AAAB
+2026-08-12 01:06:12:612 debug: [Socket] User connected: GFw6eK_lcGSRN8yqAAAD
+2026-08-12 01:06:12:612 debug: [Socket] User connected: lP8o6QnH4cXsmA0QAAAF
+2026-08-12 01:06:12:612 debug: [Socket] User connected: gYoWbb8mb_dBmsKQAAAH
+2026-08-12 01:06:13:613 debug: [Socket] User connected: zfX1zAMwl9aeTqXoAAAJ
+2026-08-12 01:06:13:613 debug: [Socket] User connected: qrSXOCSXCZ2Jmdw4AAAL
+2026-08-12 01:06:18:618 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:06:19:619 debug: [Socket] User connected: uaWe10MntH8LqaAsAAAB
+2026-08-12 01:06:20:620 debug: [Socket] User connected: -LVmRFnp58Y90hCVAAAD
+2026-08-12 01:06:20:620 debug: [Socket] User connected: -Pj9crVk6telwsoGAAAF
+2026-08-12 01:06:20:620 debug: [Socket] User connected: j5j6vK9d3rt8pr_EAAAH
+2026-08-12 01:06:20:620 debug: [Socket] User connected: KiZSN8Csjxn3AH3YAAAJ
+2026-08-12 01:06:21:621 debug: [Socket] User connected: IbxEN8zv_qj8cJuqAAAL
+2026-08-12 01:06:59:659 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:06:59:659 debug: [Socket] User connected: 0BoLwRcDbQYMUt_jAAAB
+2026-08-12 01:07:02:72 debug: [Socket] User connected: YMGJnCpp2kt1kviSAAAD
+2026-08-12 01:07:02:72 debug: [Socket] User connected: 78Gy4Hy2rWqZAHs0AAAF
+2026-08-12 01:07:02:72 debug: [Socket] User connected: Vn8tDy1Ahq1pcFoNAAAH
+2026-08-12 01:07:03:73 debug: [Socket] User connected: gF6IgO1KrvfD5e2IAAAJ
+2026-08-12 01:07:04:74 debug: [Socket] User connected: jbA3exFg_YptpY2dAAAL
+2026-08-12 01:07:09:79 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:07:09:79 debug: [Socket] User connected: OLodZaX5rE4ukkk1AAAB
+2026-08-12 01:07:10:710 debug: [Socket] User connected: MyFky-_dskHpNcPNAAAE
+2026-08-12 01:07:10:710 debug: [Socket] User connected: FnRZt6hLk4a1ZBP5AAAF
+2026-08-12 01:07:10:710 debug: [Socket] User connected: jucu2dITywM2F10GAAAH
+2026-08-12 01:07:11:711 debug: [Socket] User connected: ITf9sPj6mkomdG3zAAAJ
+2026-08-12 01:07:11:711 debug: [Socket] User connected: 87F-sgsuJMqciRLaAAAL
+2026-08-12 01:07:15:715 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:07:17:717 debug: [Socket] User connected: RiObdWiw7pi9wRNeAAAC
+2026-08-12 01:07:17:717 debug: [Socket] User connected: 2l3D9TuhoY_UPhhmAAAD
+2026-08-12 01:07:17:717 debug: [Socket] User connected: Pcp62jBHsEyYb_v2AAAF
+2026-08-12 01:07:17:717 debug: [Socket] User connected: rvg1b0o92oSLwkHiAAAH
+2026-08-12 01:07:17:717 debug: [Socket] User connected: Mx4mbR2EEZE7MlO3AAAJ
+2026-08-12 01:07:17:717 debug: [Socket] User connected: QJZe0Xa0A7WScGwvAAAL
+2026-08-12 01:07:38:738 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:07:38:738 debug: [Socket] User connected: 2wp5KVDwaBEEe9JNAAAB
+2026-08-12 01:07:39:739 debug: [Socket] User connected: rkuZxsvDyD9bkj8JAAAD
+2026-08-12 01:07:40:740 debug: [Socket] User connected: tEgrMKbOQCu05N9zAAAF
+2026-08-12 01:07:40:740 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:07:40:740 debug: [Socket] User connected: j_LJnbMKB-6L5OTvAAAH
+2026-08-12 01:07:44:744 debug: [Socket] User connected: 7geGbaN5wthYzGEyAAAJ
+2026-08-12 01:07:44:744 debug: [Socket] User connected: _KG673UO5jshtaM3AAAL
+2026-08-12 01:07:53:753 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:07:54:754 debug: [Socket] User connected: u2uvhrkAhUz_SVylAAAB
+2026-08-12 01:07:55:755 debug: [Socket] User connected: _7yAIu-fPZb847SWAAAD
+2026-08-12 01:07:55:755 debug: [Socket] User connected: -U8mZtJA3wdIJSCMAAAF
+2026-08-12 01:07:55:755 debug: [Socket] User connected: MbLyMwUetPfHZAxBAAAH
+2026-08-12 01:07:55:755 debug: [Socket] User connected: RcFQ8GMz0AhgMuGmAAAJ
+2026-08-12 01:07:56:756 debug: [Socket] User connected: lk1mIRY77FCWoAnWAAAL
+2026-08-12 01:08:05:85 debug: [Socket] User disconnected: lk1mIRY77FCWoAnWAAAL, Reason: transport close
+2026-08-12 01:08:05:85 debug: [Socket] User connected: MWgNIqIGOfeiNv03AAAN
+2026-08-12 01:08:07:87 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:08:07:87 debug: [Socket] User connected: Uhqi92VMUikwFs1IAAAB
+2026-08-12 01:08:08:88 debug: [Socket] User connected: FsEOBMrcoVZM-M7nAAAD
+2026-08-12 01:08:08:88 debug: [Socket] User connected: 04ZWGREXwasZ_RGkAAAF
+2026-08-12 01:08:09:89 debug: [Socket] User connected: JuS3-BpPQAHBA0T2AAAI
+2026-08-12 01:08:09:89 debug: [Socket] User connected: VGOaJq2y-mpdqusLAAAJ
+2026-08-12 01:08:10:810 debug: [Socket] User connected: XNJnvj2TIuFyaZNEAAAL
+2026-08-12 01:08:16:816 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:08:21:821 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:08:21:821 debug: [Socket] User connected: AZ3dJcY5SJJVVJd2AAAB
+2026-08-12 01:08:23:823 debug: [Socket] User connected: -DfoWi_rJ2geIt5NAAAD
+2026-08-12 01:08:23:823 debug: [Socket] User connected: g9ylQopHpUpmEDC7AAAF
+2026-08-12 01:08:23:823 debug: [Socket] User connected: uQwGaKXO96VCvwHDAAAH
+2026-08-12 01:08:24:824 debug: [Socket] User connected: Nb6tf-Xfn52TN6MDAAAJ
+2026-08-12 01:08:25:825 debug: [Socket] User connected: jF0Vad_8nFO59p7bAAAL
+2026-08-12 01:08:34:834 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:08:34:834 debug: [Socket] User connected: d-jazqyitocNBpfyAAAC
+2026-08-12 01:08:34:834 debug: [Socket] User connected: 2PCWk4y5aXgrDQxuAAAD
+2026-08-12 01:08:34:834 debug: [Socket] User connected: Q8REDcJ0OkCTSYgsAAAF
+2026-08-12 01:08:35:835 debug: [Socket] User connected: NXfujHxbAZEcW9-uAAAH
+2026-08-12 01:08:36:836 debug: [Socket] User connected: fZnVC7Eicrk4SVc6AAAJ
+2026-08-12 01:08:36:836 debug: [Socket] User connected: ymG2GRQ2kOiRbISiAAAL
+2026-08-12 01:08:49:849 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:08:50:850 debug: [Socket] User connected: l3ye9AWeKMLP28gnAAAB
+2026-08-12 01:08:51:851 debug: [Socket] User connected: i1wqcw0bAXZX3R_uAAAD
+2026-08-12 01:08:51:851 debug: [Socket] User connected: og6-f1ZlCU2QgDCSAAAF
+2026-08-12 01:08:52:852 debug: [Socket] User connected: 1yFr-BYh4bWAcRJCAAAI
+2026-08-12 01:08:52:852 debug: [Socket] User connected: Md7mNEvR9JzY-e6JAAAK
+2026-08-12 01:08:52:852 debug: [Socket] User connected: ItVWkudKNarwOMZbAAAL
+2026-08-12 01:09:01:91 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:09:03:93 debug: [Socket] User connected: yoqDj9OZqlc0qACyAAAB
+2026-08-12 01:09:04:94 debug: [Socket] User connected: aM8VMBbc-a0nva00AAAD
+2026-08-12 01:09:04:94 debug: [Socket] User connected: RrDrOM43bNSPy5gLAAAF
+2026-08-12 01:09:04:94 debug: [Socket] User connected: mClcNqFlcW0h0akQAAAH
+2026-08-12 01:09:04:94 debug: [Socket] User connected: k2SedzkGayivNDDIAAAJ
+2026-08-12 01:09:06:96 debug: [Socket] User connected: BtqchVb6BafdklQgAAAL
+2026-08-12 01:09:08:98 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:09:15:915 debug: [Socket] User disconnected: BtqchVb6BafdklQgAAAL, Reason: transport close
+2026-08-12 01:09:15:915 debug: [Socket] User disconnected: yoqDj9OZqlc0qACyAAAB, Reason: transport close
+2026-08-12 01:09:15:915 debug: [Socket] User disconnected: RrDrOM43bNSPy5gLAAAF, Reason: transport close
+2026-08-12 01:09:15:915 debug: [Socket] User disconnected: mClcNqFlcW0h0akQAAAH, Reason: transport close
+2026-08-12 01:09:15:915 debug: [Socket] User disconnected: k2SedzkGayivNDDIAAAJ, Reason: transport close
+2026-08-12 01:09:15:915 debug: [Socket] User disconnected: aM8VMBbc-a0nva00AAAD, Reason: transport close
+2026-08-12 01:09:16:916 debug: [Socket] User connected: Sh5dy0WqRQwkhAPTAAAN
+2026-08-12 01:09:16:916 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:17:917 debug: [Socket] User connected: pCeDkyAANiRsYKvkAAAP
+2026-08-12 01:09:17:917 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:17:917 debug: [Socket] User connected: H2Se1Jm6kBO7OQjeAAAR
+2026-08-12 01:09:17:917 debug: [Socket] User connected: RpZh9fJvL8plauPVAAAT
+2026-08-12 01:09:17:917 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:09:17:917 debug: [Socket] User connected: quCBPygJ9Tm9VVZbAAAV
+2026-08-12 01:09:17:917 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:17:917 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:17:917 debug: [Socket] User connected: HREJ9HYfOcgAloB7AAAX
+2026-08-12 01:09:17:917 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:09:17:917 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:09:22:922 debug: [Socket] User disconnected: Sh5dy0WqRQwkhAPTAAAN, Reason: transport close
+2026-08-12 01:09:22:922 debug: [Socket] User disconnected: HREJ9HYfOcgAloB7AAAX, Reason: transport close
+2026-08-12 01:09:22:922 debug: [Socket] User disconnected: quCBPygJ9Tm9VVZbAAAV, Reason: transport close
+2026-08-12 01:09:22:922 debug: [Socket] User disconnected: RpZh9fJvL8plauPVAAAT, Reason: transport close
+2026-08-12 01:09:22:922 debug: [Socket] User disconnected: H2Se1Jm6kBO7OQjeAAAR, Reason: transport close
+2026-08-12 01:09:22:922 debug: [Socket] User disconnected: pCeDkyAANiRsYKvkAAAP, Reason: transport close
+2026-08-12 01:09:23:923 debug: [Socket] User connected: 4jrnbli913iPH2lLAAAZ
+2026-08-12 01:09:23:923 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:23:923 debug: [Socket] User connected: 8h7bYWbtpiwVRjrZAAAb
+2026-08-12 01:09:23:923 debug: [Socket] User connected: Wmy-MJGmzqN9yh5SAAAd
+2026-08-12 01:09:24:924 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:24:924 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:24:924 debug: [Socket] User connected: TEnWO7l4vkbMUPsrAAAf
+2026-08-12 01:09:24:924 debug: [Socket] User connected: MKqrkggTdr4TBIF4AAAh
+2026-08-12 01:09:24:924 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:09:24:924 debug: [Socket] User connected: Pu_eabc3_FAsXqbGAAAj
+2026-08-12 01:09:24:924 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:24:924 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:09:24:924 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:09:31:931 debug: [Socket] User disconnected: 4jrnbli913iPH2lLAAAZ, Reason: transport close
+2026-08-12 01:09:31:931 debug: [Socket] User connected: 8VTywjGmdrhlZbH8AAAl
+2026-08-12 01:09:31:931 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:31:931 debug: [Socket] User disconnected: Pu_eabc3_FAsXqbGAAAj, Reason: transport close
+2026-08-12 01:09:31:931 debug: [Socket] User disconnected: TEnWO7l4vkbMUPsrAAAf, Reason: transport close
+2026-08-12 01:09:31:931 debug: [Socket] User disconnected: MKqrkggTdr4TBIF4AAAh, Reason: transport close
+2026-08-12 01:09:31:931 debug: [Socket] User disconnected: 8h7bYWbtpiwVRjrZAAAb, Reason: transport close
+2026-08-12 01:09:31:931 debug: [Socket] User disconnected: Wmy-MJGmzqN9yh5SAAAd, Reason: transport close
+2026-08-12 01:09:32:932 debug: [Socket] User connected: OGLHJiiCIrVtEwDdAAAn
+2026-08-12 01:09:32:932 debug: [Socket] User connected: qxsvAy_5gv6OJa9zAAAp
+2026-08-12 01:09:32:932 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:32:932 debug: [Socket] User connected: vujfFOuESA4j13noAAAr
+2026-08-12 01:09:32:932 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:32:932 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:09:32:932 debug: [Socket] User connected: mkEbrVe5kG8bxyGLAAAt
+2026-08-12 01:09:32:932 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:09:32:932 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:09:32:932 debug: [Socket] User connected: B_GkJ_o_rUIe4b4gAAAv
+2026-08-12 01:09:32:932 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:14:12:1412 debug: [Socket] User disconnected: 8VTywjGmdrhlZbH8AAAl, Reason: transport close
+2026-08-12 01:14:12:1412 debug: [Socket] User connected: OtK4_Tv4oMXUWag3AAAx
+2026-08-12 01:14:12:1412 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:16:07:167 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:16:07:167 debug: [Socket] User connected: nTest0k3QNvXqhzxAAAB
+2026-08-12 01:16:07:167 debug: [Socket] User connected: GfV4I-e71v2dAOuxAAAD
+2026-08-12 01:16:08:168 debug: [Socket] User connected: P3fuE7rslXq344CsAAAF
+2026-08-12 01:16:08:168 debug: [Socket] User connected: l7abzSoE1A4hu3JLAAAH
+2026-08-12 01:16:08:168 debug: [Socket] User connected: ZhXfyktU-2NDXJWCAAAJ
+2026-08-12 01:16:09:169 debug: [Socket] User connected: ti3P-d4smQNL1AaaAAAL
+2026-08-12 01:17:35:1735 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 01:17:35:1735 debug: [Socket] User connected: N8py0Gx_pD6aFA8cAAAB
+2026-08-12 01:17:36:1736 debug: [Socket] User connected: EbrwSWaGMEP15o7pAAAD
+2026-08-12 01:17:37:1737 debug: [Socket] User connected: K17oJuLhXvgByZtOAAAF
+2026-08-12 01:17:37:1737 debug: [Socket] User connected: -BPH4V6dglHowmDUAAAH
+2026-08-12 01:17:39:1739 debug: [Socket] User connected: HBpzx27V9y_sFeoHAAAJ
+2026-08-12 01:17:40:1740 debug: [Socket] User connected: b_FR5-MgmQ8h-cYqAAAL
+2026-08-12 01:17:42:1742 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:42:1742 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:42:1742 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:52:1752 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:52:1752 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:17:52:1752 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:02:182 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:02:182 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:02:182 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:12:1812 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:18:12:1812 error: [DB] Query failed: Unknown column 'round2_turn_order' in 'field list'
+2026-08-12 01:20:54:2054 debug: [Socket] User disconnected: EbrwSWaGMEP15o7pAAAD, Reason: transport close
+2026-08-12 01:20:55:2055 debug: [Socket] User connected: CesOlJO0W5y-pOZ_AAAN
+2026-08-12 01:20:55:2055 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:20:56:2056 debug: [Socket] User disconnected: CesOlJO0W5y-pOZ_AAAN, Reason: transport close
+2026-08-12 01:20:56:2056 debug: [Socket] User connected: 4ZEYQa2D-_-wEFm0AAAP
+2026-08-12 01:20:56:2056 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:20:56:2056 debug: [Socket] User disconnected: 4ZEYQa2D-_-wEFm0AAAP, Reason: transport close
+2026-08-12 01:20:57:2057 debug: [Socket] User connected: dkZgqjDpxp7MNMTzAAAR
+2026-08-12 01:20:57:2057 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:21:05:215 debug: [Socket] User disconnected: b_FR5-MgmQ8h-cYqAAAL, Reason: transport close
+2026-08-12 01:21:05:215 debug: [Socket] User connected: gDAxU3DSIemumexcAAAT
+2026-08-12 01:21:05:215 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:21:08:218 debug: [Socket] User disconnected: N8py0Gx_pD6aFA8cAAAB, Reason: transport close
+2026-08-12 01:21:08:218 debug: [Socket] User disconnected: K17oJuLhXvgByZtOAAAF, Reason: transport close
+2026-08-12 01:21:08:218 debug: [Socket] User disconnected: -BPH4V6dglHowmDUAAAH, Reason: transport close
+2026-08-12 01:21:08:218 debug: [Socket] User disconnected: HBpzx27V9y_sFeoHAAAJ, Reason: transport close
+2026-08-12 01:21:08:218 debug: [Socket] User disconnected: dkZgqjDpxp7MNMTzAAAR, Reason: transport close
+2026-08-12 01:21:08:218 debug: [Socket] User disconnected: gDAxU3DSIemumexcAAAT, Reason: transport close
+2026-08-12 01:21:09:219 debug: [Socket] User connected: A373_QIIqUacONwMAAAV
+2026-08-12 01:21:09:219 info: [Socket] Client joined lobby room: group_34
+2026-08-12 01:21:10:2110 debug: [Socket] User connected: ZhgoJYE5nfy8cYAlAAAX
+2026-08-12 01:21:10:2110 debug: [Socket] User connected: fcoM11Y7_TuGr-XIAAAZ
+2026-08-12 01:21:10:2110 debug: [Socket] User connected: HNm1Su-sTYeIvJp3AAAb
+2026-08-12 01:21:10:2110 debug: [Socket] User disconnected: ZhgoJYE5nfy8cYAlAAAX, Reason: transport close
+2026-08-12 01:21:11:2111 debug: [Socket] User disconnected: fcoM11Y7_TuGr-XIAAAZ, Reason: transport close
+2026-08-12 01:21:11:2111 debug: [Socket] User connected: Ih6dZlL-HjRRNrBnAAAd
+2026-08-12 01:21:11:2111 debug: [Socket] User disconnected: Ih6dZlL-HjRRNrBnAAAd, Reason: transport close
+2026-08-12 01:21:11:2111 debug: [Socket] User disconnected: HNm1Su-sTYeIvJp3AAAb, Reason: transport close
+2026-08-12 01:21:11:2111 debug: [Socket] User connected: 5JJhjUJmYOfYvatHAAAf
+2026-08-12 01:21:11:2111 debug: [Socket] User connected: rV6GbfRx80TJL5QQAAAh
+2026-08-12 01:21:11:2111 debug: [Socket] User disconnected: 5JJhjUJmYOfYvatHAAAf, Reason: transport close
+2026-08-12 01:21:11:2111 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:38:27:3827 debug: [Socket] User connected: 5xASM9BiYtqL_y4lAAAk
+2026-08-12 01:38:27:3827 debug: [Socket] User connected: ibdBH9A_y8ERjXDJAAAl
+2026-08-12 01:38:27:3827 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:38:27:3827 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:38:27:3827 debug: [Socket] User connected: t-MZGzyEfPpc2XxCAAAn
+2026-08-12 01:38:28:3828 info: [Socket] Client joined lobby room: group_33
+2026-08-12 01:38:28:3828 debug: [Socket] User connected: 5DE3oAag_Njxw2AXAAAp
+2026-08-12 01:38:28:3828 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 01:38:28:3828 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 20:03:59:359 debug: [Socket] User disconnected: rV6GbfRx80TJL5QQAAAh, Reason: transport close
+2026-08-12 20:04:00:40 debug: [Socket] User connected: N1pydUX_Z18R43iAAAAr
+2026-08-12 20:04:00:40 info: [Socket] Client joined lobby room: group_33
+2026-08-12 20:10:46:1046 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 20:10:47:1047 debug: [Socket] User connected: wq5bQO-xVaJ-GHUXAAAB
+2026-08-12 20:10:47:1047 debug: [Socket] User connected: hfq55URGJmaTMByfAAAD
+2026-08-12 20:10:48:1048 debug: [Socket] User connected: kEIgKfbygoMPXXBXAAAF
+2026-08-12 20:10:48:1048 debug: [Socket] User connected: HOW4NJ-DgaTQJbboAAAH
+2026-08-12 20:10:48:1048 debug: [Socket] User connected: 4EjhZEPBKEpSyz-GAAAJ
+2026-08-12 20:10:48:1048 debug: [Socket] User connected: yXLYbUOaKJUnFRAcAAAL
+2026-08-12 20:11:06:116 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 20:11:07:117 debug: [Socket] User connected: _jLqr-T4u7HlTTcGAAAB
+2026-08-12 20:11:07:117 debug: [Socket] User connected: MY5fga8EDDAqw06ZAAAD
+2026-08-12 20:11:08:118 debug: [Socket] User connected: ZFdIXlzMaeEhilYbAAAF
+2026-08-12 20:11:09:119 debug: [Socket] User connected: Vb_4oryLLLkZeTrBAAAH
+2026-08-12 20:11:09:119 debug: [Socket] User connected: w_ITPOxBJvmW609cAAAJ
+2026-08-12 20:11:09:119 debug: [Socket] User connected: RYLY3aZ4I5rYYtMIAAAL
+2026-08-12 20:11:49:1149 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 20:11:49:1149 debug: [Socket] User connected: -D5M0QwyQQ03zMJ0AAAB
+2026-08-12 20:11:49:1149 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 20:11:49:1149 info: [Socket] Organizer joined dashboard room: organizer_36
+2026-08-12 20:12:27:1227 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 20:12:46:1246 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 20:13:02:132 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:13:27:1327 error: You already registered this email id. Please login.
+2026-08-12 20:13:36:1336 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:14:51:1451 debug: [Socket] User connected: 6cxqSc2mNxn_98_DAAAB
+2026-08-12 20:14:51:1451 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 20:14:51:1451 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 20:14:53:1453 debug: [Socket] User disconnected: 6cxqSc2mNxn_98_DAAAB, Reason: transport close
+2026-08-12 20:14:53:1453 debug: [Socket] User connected: YDbk_gkQ6wSYJpwMAAAD
+2026-08-12 20:14:53:1453 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 20:14:53:1453 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 20:16:08:168 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:16:12:1612 debug: [Socket] User connected: LEqXlk5VNPvusNWUAAAF
+2026-08-12 20:16:12:1612 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:16:12:1612 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:16:38:1638 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:16:40:1640 debug: [Socket] User connected: Xc-IeEaYHuI5Zo_yAAAH
+2026-08-12 20:16:40:1640 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:16:40:1640 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:16:49:1649 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:16:52:1652 debug: [Socket] User connected: Usk_I2M0U6JC_La5AAAJ
+2026-08-12 20:16:52:1652 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:16:52:1652 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:17:00:170 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:17:05:175 debug: [Socket] User connected: HPV-OphYGNp6amtvAAAL
+2026-08-12 20:17:05:175 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:17:05:175 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:17:14:1714 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-12 20:17:19:1719 debug: [Socket] User connected: 0mpN3ldOleTsFU48AAAN
+2026-08-12 20:17:19:1719 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:17:19:1719 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:17:54:1754 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:17:58:1758 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:18:01:181 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:18:02:182 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:18:03:183 info: [Socket] Client joined lobby room: group_35
+2026-08-12 20:30:01:301 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 20:30:02:302 debug: [Socket] User connected: v75b0V_1ZnRr032TAAAB
+2026-08-12 20:30:03:303 debug: [Socket] User connected: 70pmBdZZH7i8uPJzAAAD
+2026-08-12 20:30:04:304 debug: [Socket] User connected: E48Z03a3Q3dLtgf6AAAF
+2026-08-12 20:30:07:307 debug: [Socket] User connected: gZwFB7UwrOxYh0YEAAAH
+2026-08-12 20:30:07:307 debug: [Socket] User connected: MhGT2_NOLCyrYuP0AAAJ
+2026-08-12 20:30:07:307 debug: [Socket] User connected: bCV4VVAoStB-fKdoAAAL
+2026-08-12 20:40:13:4013 debug: [Socket] User disconnected: v75b0V_1ZnRr032TAAAB, Reason: client namespace disconnect
+2026-08-12 20:40:16:4016 debug: [Socket] User disconnected: 70pmBdZZH7i8uPJzAAAD, Reason: transport close
+2026-08-12 20:40:16:4016 debug: [Socket] User disconnected: bCV4VVAoStB-fKdoAAAL, Reason: transport close
+2026-08-12 20:40:16:4016 debug: [Socket] User disconnected: E48Z03a3Q3dLtgf6AAAF, Reason: transport close
+2026-08-12 20:40:19:4019 debug: [Socket] User disconnected: MhGT2_NOLCyrYuP0AAAJ, Reason: transport close
+2026-08-12 22:31:17:3117 debug: [Socket] User disconnected: gZwFB7UwrOxYh0YEAAAH, Reason: transport close
+2026-08-12 22:31:23:3123 debug: [Socket] User connected: OKpd7i2B0gwv-BshAAAN
+2026-08-12 22:31:39:3139 debug: [Socket] User disconnected: OKpd7i2B0gwv-BshAAAN, Reason: transport close
+2026-08-12 22:31:49:3149 debug: [Socket] User connected: SBkdrvLDQt1wsPswAAAP
+2026-08-12 22:31:49:3149 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 22:31:49:3149 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 22:33:59:3359 debug: [Socket] User disconnected: SBkdrvLDQt1wsPswAAAP, Reason: transport close
+2026-08-12 22:34:01:341 debug: [Socket] User connected: FYt5im9RNbrlFE7vAAAR
+2026-08-12 22:34:01:341 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 22:34:01:341 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 22:36:57:3657 debug: [Socket] User disconnected: FYt5im9RNbrlFE7vAAAR, Reason: transport close
+2026-08-12 22:36:58:3658 debug: [Socket] User connected: vsNVIXSHK7HaAhn_AAAT
+2026-08-12 22:36:58:3658 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 22:36:58:3658 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:03:07:37 debug: [Socket] User disconnected: vsNVIXSHK7HaAhn_AAAT, Reason: transport close
+2026-08-12 23:03:08:38 debug: [Socket] User connected: g_DNE0GqHTZAjlEuAAAV
+2026-08-12 23:03:08:38 debug: [Socket] User disconnected: g_DNE0GqHTZAjlEuAAAV, Reason: transport close
+2026-08-12 23:03:12:312 debug: [Socket] User connected: g4m2ydB345LC_69fAAAX
+2026-08-12 23:03:12:312 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:03:12:312 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:32:49:3249 debug: [Socket] User disconnected: g4m2ydB345LC_69fAAAX, Reason: transport close
+2026-08-12 23:32:51:3251 debug: [Socket] User connected: dVWSz5QpuaDq9PkZAAAZ
+2026-08-12 23:32:51:3251 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:32:51:3251 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:06:346 debug: [Socket] User disconnected: dVWSz5QpuaDq9PkZAAAZ, Reason: transport close
+2026-08-12 23:34:06:346 debug: [Socket] User connected: s7J1VsdcWgQxmw27AAAb
+2026-08-12 23:34:06:346 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:06:346 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:07:347 debug: [Socket] User disconnected: s7J1VsdcWgQxmw27AAAb, Reason: transport close
+2026-08-12 23:34:07:347 debug: [Socket] User connected: QnnGHvJ0aIFwCzjfAAAd
+2026-08-12 23:34:07:347 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:07:347 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:14:3414 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:14:3414 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:17:3417 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:17:3417 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:17:3417 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:17:3417 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:18:3418 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:18:3418 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:18:3418 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:18:3418 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:18:3418 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:18:3418 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:18:3418 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:18:3418 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:20:3420 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:20:3420 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:20:3420 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:20:3420 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:20:3420 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:20:3420 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:20:3420 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:20:3420 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:21:3421 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:21:3421 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:21:3421 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:21:3421 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:22:3422 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:22:3422 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:22:3422 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:22:3422 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:25:3425 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:25:3425 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:53:3453 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:53:3453 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:53:3453 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:34:53:3453 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:44:49:4449 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 23:44:51:4451 debug: [Socket] User connected: Q8GWZ6zvJNtmkuwMAAAB
+2026-08-12 23:45:08:458 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 23:45:10:4510 debug: [Socket] User connected: qVt-SxLcn0mV94CrAAAB
+2026-08-12 23:45:23:4523 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 23:45:26:4526 debug: [Socket] User connected: HRhHSlotApCf3MJkAAAB
+2026-08-12 23:46:13:4613 debug: [Socket] User disconnected: HRhHSlotApCf3MJkAAAB, Reason: transport close
+2026-08-12 23:46:14:4614 debug: [Socket] User connected: 0PNcCTwkGESQ7rAJAAAD
+2026-08-12 23:46:14:4614 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:46:14:4614 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:47:49:4749 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:47:49:4749 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:53:24:5324 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-12 23:53:25:5325 debug: [Socket] User connected: H11Rd08zhUDRG8EoAAAB
+2026-08-12 23:54:27:5427 error: Invoice not found for this booking
+2026-08-12 23:54:36:5436 debug: [Socket] User disconnected: H11Rd08zhUDRG8EoAAAB, Reason: transport close
+2026-08-12 23:54:37:5437 debug: [Socket] User connected: i0s7ZaQtyVLueGI8AAAD
+2026-08-12 23:54:37:5437 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:54:37:5437 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:01:551 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:01:551 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:01:551 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:01:551 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:02:552 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:02:552 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:02:552 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:02:552 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:03:553 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:03:553 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:03:553 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:03:553 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:04:554 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:04:554 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:04:554 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:04:554 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:06:556 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:06:556 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:06:556 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:06:556 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:07:557 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:07:557 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:07:557 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:07:557 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:08:558 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:08:558 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:08:558 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:08:558 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:09:559 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:09:559 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:09:559 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:09:559 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:10:5510 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:10:5510 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:10:5510 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:10:5510 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:12:5512 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:12:5512 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:12:5512 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:12:5512 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:18:5518 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:18:5518 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:18:5518 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:18:5518 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:24:5524 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:24:5524 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:24:5524 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:55:24:5524 info: [Socket] Organizer joined dashboard room: organizer_38
+2026-08-12 23:59:28:5928 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:00:04:04 error: Scheduled session must be in the future.
+2026-08-13 00:00:19:019 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:00:21:021 debug: [Socket] User connected: oub2VjbkmROlZLGAAAAF
+2026-08-13 00:00:21:021 info: [Socket] Organizer joined dashboard room: organizer_39
+2026-08-13 00:00:21:021 info: [Socket] Organizer joined dashboard room: organizer_39
+2026-08-13 00:01:25:125 info: [Socket] Organizer joined dashboard room: organizer_39
+2026-08-13 00:01:25:125 info: [Socket] Organizer joined dashboard room: organizer_39
+2026-08-13 00:01:25:125 info: [Socket] Organizer joined dashboard room: organizer_39
+2026-08-13 00:01:25:125 info: [Socket] Organizer joined dashboard room: organizer_39
+2026-08-13 00:01:29:129 debug: [Socket] User disconnected: oub2VjbkmROlZLGAAAAF, Reason: transport close
+2026-08-13 00:01:30:130 debug: [Socket] User connected: D3ILDIfOznRcmZ97AAAH
+2026-08-13 00:01:30:130 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:30:130 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:53:153 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:53:153 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:53:153 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:53:153 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:55:155 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:55:155 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:55:155 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:55:155 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:56:156 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:56:156 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:56:156 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:56:156 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:56:156 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:56:156 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:56:156 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:56:156 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:57:157 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:57:157 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:57:157 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:57:157 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:57:157 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:57:157 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:57:157 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:57:157 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:58:158 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:58:158 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:58:158 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:58:158 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:59:159 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:59:159 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:59:159 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:01:59:159 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:02:56:256 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:03:01:31 debug: [Socket] User connected: j1AtF57vEF9azOp4AAAJ
+2026-08-13 00:03:01:31 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:03:01:31 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:03:28:328 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:03:32:332 debug: [Socket] User connected: u2_5SBT8eqPn1cADAAAL
+2026-08-13 00:03:32:332 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:03:32:332 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:03:40:340 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:03:44:344 debug: [Socket] User connected: WOSs-2IOBXL3PIQ7AAAN
+2026-08-13 00:03:44:344 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:03:44:344 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:03:50:350 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:03:53:353 debug: [Socket] User connected: 5inJxW9g92BmAPgdAAAP
+2026-08-13 00:03:53:353 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:03:53:353 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:04:01:41 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:04:06:46 debug: [Socket] User connected: y5vzdYMSAsxFsNhAAAAR
+2026-08-13 00:04:06:46 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:04:06:46 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:04:18:418 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:04:23:423 debug: [Socket] User connected: DUlL4HYchGVMxrynAAAT
+2026-08-13 00:04:23:423 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:04:23:423 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:04:43:443 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:04:48:448 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:04:51:451 debug: [Socket] User connected: 7UP_prf-jOxL09idAAAV
+2026-08-13 00:04:51:451 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:04:51:451 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:04:53:453 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:04:53:453 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:04:54:454 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:04:56:456 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:05:12:512 debug: [Socket] User disconnected: 7UP_prf-jOxL09idAAAV, Reason: transport close
+2026-08-13 00:05:12:512 debug: [Socket] User connected: qT6e3ddErO5CAZI0AAAX
+2026-08-13 00:05:12:512 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:05:13:513 debug: [Socket] User disconnected: qT6e3ddErO5CAZI0AAAX, Reason: transport close
+2026-08-13 00:05:14:514 debug: [Socket] User connected: AENntZFd0n8EnOzyAAAZ
+2026-08-13 00:05:14:514 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:05:16:516 debug: [Socket] User disconnected: AENntZFd0n8EnOzyAAAZ, Reason: transport close
+2026-08-13 00:05:16:516 debug: [Socket] User connected: yukfE69HhzxaEwbLAAAb
+2026-08-13 00:05:16:516 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:05:18:518 debug: [Socket] User disconnected: yukfE69HhzxaEwbLAAAb, Reason: transport close
+2026-08-13 00:05:18:518 debug: [Socket] User connected: UCrlEfC16tu55MphAAAd
+2026-08-13 00:05:18:518 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:07:34:734 debug: [Socket] User disconnected: DUlL4HYchGVMxrynAAAT, Reason: transport close
+2026-08-13 00:07:34:734 debug: [Socket] User connected: KWo5_TlYSnPXLQTuAAAf
+2026-08-13 00:07:34:734 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:07:37:737 debug: [Socket] User disconnected: UCrlEfC16tu55MphAAAd, Reason: transport close
+2026-08-13 00:07:38:738 debug: [Socket] User connected: AFW81jft1QnqD2K2AAAh
+2026-08-13 00:07:38:738 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:07:58:758 debug: [Socket] User disconnected: y5vzdYMSAsxFsNhAAAAR, Reason: transport close
+2026-08-13 00:07:58:758 debug: [Socket] User connected: XAYnTxH7uW68uOY5AAAj
+2026-08-13 00:07:58:758 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:08:55:855 debug: [Socket] User disconnected: 5inJxW9g92BmAPgdAAAP, Reason: transport close
+2026-08-13 00:08:55:855 debug: [Socket] User connected: 4WQBUcpUsgQZwUqIAAAl
+2026-08-13 00:08:55:855 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:09:13:913 debug: [Socket] User disconnected: 4WQBUcpUsgQZwUqIAAAl, Reason: transport close
+2026-08-13 00:09:13:913 debug: [Socket] User connected: OeJFvQ7ak0QAtd_8AAAn
+2026-08-13 00:09:13:913 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:09:17:917 debug: [Socket] User disconnected: OeJFvQ7ak0QAtd_8AAAn, Reason: transport close
+2026-08-13 00:09:17:917 debug: [Socket] User connected: ig4SikjIPCMaeiPSAAAp
+2026-08-13 00:09:17:917 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:09:20:920 debug: [Socket] User disconnected: j1AtF57vEF9azOp4AAAJ, Reason: transport close
+2026-08-13 00:09:20:920 debug: [Socket] User connected: vJfEJzuzB9vWAc_bAAAr
+2026-08-13 00:09:20:920 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:09:21:921 debug: [Socket] User disconnected: vJfEJzuzB9vWAc_bAAAr, Reason: transport close
+2026-08-13 00:09:21:921 debug: [Socket] User connected: SzfJTq17z7djKilBAAAt
+2026-08-13 00:09:21:921 info: [Socket] Client joined lobby room: group_36
+2026-08-13 00:12:05:125 debug: [Socket] User disconnected: AFW81jft1QnqD2K2AAAh, Reason: transport close
+2026-08-13 00:12:05:125 debug: [Socket] User connected: hIaAx4G_2T8cPhjZAAAv
+2026-08-13 00:12:05:125 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:13:41:1341 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-13 00:13:41:1341 debug: [Socket] User connected: iUK9p45PL-N_GqgXAAAB
+2026-08-13 00:13:42:1342 debug: [Socket] User connected: wwhDnlTJdDKOY8RpAAAD
+2026-08-13 00:13:42:1342 debug: [Socket] User connected: 9z2lXbwFq7pfPMH5AAAF
+2026-08-13 00:13:42:1342 debug: [Socket] User connected: xTKQiYSJo4kbT2JxAAAH
+2026-08-13 00:13:42:1342 debug: [Socket] User connected: i1Zlg71nhevnS6R_AAAJ
+2026-08-13 00:13:43:1343 debug: [Socket] User connected: FepvHejNkjVSbZ6BAAAL
+2026-08-13 00:13:43:1343 debug: [Socket] User connected: v5NuCMQFAdiOMLyhAAAN
+2026-08-13 00:13:43:1343 debug: [Socket] User connected: erclM7NUCHkwp7yQAAAP
+2026-08-13 00:13:43:1343 debug: [Socket] User connected: KJlbevGSk4lJfLB2AAAR
+2026-08-13 00:14:10:1410 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-13 00:14:10:1410 debug: [Socket] User connected: IZVzwIwmFGjNNPX6AAAB
+2026-08-13 00:14:10:1410 debug: [Socket] User connected: V8s7H-_CTJ6R4mDCAAAD
+2026-08-13 00:14:10:1410 debug: [Socket] User connected: fxYZF8j--5xEg9NYAAAF
+2026-08-13 00:14:10:1410 debug: [Socket] User connected: 31XMBNp0TSjQ68RXAAAH
+2026-08-13 00:14:11:1411 debug: [Socket] User connected: tJdn7PYXN9NXPcKWAAAJ
+2026-08-13 00:14:11:1411 debug: [Socket] User connected: NDDHzY-P_XzZjordAAAL
+2026-08-13 00:14:11:1411 debug: [Socket] User connected: JatZvxFrxDExeAG3AAAN
+2026-08-13 00:14:11:1411 debug: [Socket] User connected: 2xtkGRF_wgR26nbeAAAP
+2026-08-13 00:14:11:1411 debug: [Socket] User connected: pifVxF-YHDA8JzBXAAAR
+2026-08-13 00:14:23:1423 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-13 00:14:24:1424 debug: [Socket] User connected: UR9PSbdWN5yUn6aMAAAB
+2026-08-13 00:14:24:1424 debug: [Socket] User connected: HytyvasuiN3xmCPWAAAD
+2026-08-13 00:14:24:1424 debug: [Socket] User connected: WS8q7n5y3Z5vT7KFAAAF
+2026-08-13 00:14:24:1424 debug: [Socket] User connected: M4AUGJDNbW1DS5OwAAAH
+2026-08-13 00:14:26:1426 debug: [Socket] User connected: 3BGNq0EcU2Jle-WdAAAJ
+2026-08-13 00:14:28:1428 debug: [Socket] User connected: Ie3w0mmT6CkS3vBSAAAL
+2026-08-13 00:14:29:1429 debug: [Socket] User connected: YgIGy4_HHkSIDBL1AAAO
+2026-08-13 00:14:29:1429 debug: [Socket] User connected: qPdfbPvT0deGP295AAAQ
+2026-08-13 00:14:29:1429 debug: [Socket] User connected: vIxBvFvZkq-TtVZuAAAR
+2026-08-13 00:14:38:1438 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-13 00:14:39:1439 debug: [Socket] User connected: 2h2yck84_pf5XsYgAAAB
+2026-08-13 00:14:39:1439 debug: [Socket] User connected: Yi2yWH4g7R3NSPFMAAAD
+2026-08-13 00:14:40:1440 debug: [Socket] User connected: gk2PBq0mCtvY52cnAAAF
+2026-08-13 00:14:40:1440 debug: [Socket] User connected: FQqJpwX0lk0NaN4PAAAH
+2026-08-13 00:14:40:1440 debug: [Socket] User connected: xpQITvR3kyqsxrsaAAAJ
+2026-08-13 00:14:40:1440 debug: [Socket] User connected: 9Z2hj6aROCuG1TEDAAAL
+2026-08-13 00:14:40:1440 debug: [Socket] User connected: IbdHoLSIUZ8TQwR_AAAN
+2026-08-13 00:14:40:1440 debug: [Socket] User connected: xyO4e3mjlpylwCQMAAAP
+2026-08-13 00:14:41:1441 debug: [Socket] User connected: dRI9qQaT4Id0KoaYAAAR
+2026-08-13 00:15:11:1511 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-13 00:15:11:1511 debug: [Socket] User connected: cTX5JnjZAQia4e4GAAAB
+2026-08-13 00:15:11:1511 debug: [Socket] User connected: QknKYEyJXAkOGcpeAAAD
+2026-08-13 00:15:14:1514 debug: [Socket] User connected: d10y5k-bTsUlEG69AAAF
+2026-08-13 00:15:15:1515 debug: [Socket] User connected: lNSuMJ6RsM20SsXmAAAH
+2026-08-13 00:15:15:1515 debug: [Socket] User connected: P2Yaj5fhsG7RZby0AAAJ
+2026-08-13 00:15:15:1515 debug: [Socket] User connected: p7nmsekzcLsmfyL1AAAL
+2026-08-13 00:15:15:1515 debug: [Socket] User connected: tHZTl4ST9eQ6qedIAAAN
+2026-08-13 00:15:16:1516 debug: [Socket] User connected: RXZBI7hL8roIK-3zAAAP
+2026-08-13 00:15:16:1516 debug: [Socket] User connected: COBKerH1oh3IY4hEAAAR
+2026-08-13 00:16:09:169 debug: [Socket] User disconnected: cTX5JnjZAQia4e4GAAAB, Reason: transport close
+2026-08-13 00:16:09:169 debug: [Socket] User disconnected: QknKYEyJXAkOGcpeAAAD, Reason: transport close
+2026-08-13 00:16:09:169 debug: [Socket] User disconnected: RXZBI7hL8roIK-3zAAAP, Reason: transport close
+2026-08-13 00:16:09:169 debug: [Socket] User disconnected: lNSuMJ6RsM20SsXmAAAH, Reason: transport close
+2026-08-13 00:16:09:169 debug: [Socket] User disconnected: tHZTl4ST9eQ6qedIAAAN, Reason: transport close
+2026-08-13 00:16:09:169 debug: [Socket] User disconnected: P2Yaj5fhsG7RZby0AAAJ, Reason: transport close
+2026-08-13 00:16:09:169 debug: [Socket] User disconnected: d10y5k-bTsUlEG69AAAF, Reason: transport close
+2026-08-13 00:16:09:169 debug: [Socket] User disconnected: p7nmsekzcLsmfyL1AAAL, Reason: transport close
+2026-08-13 00:16:09:169 debug: [Socket] User disconnected: COBKerH1oh3IY4hEAAAR, Reason: transport close
+2026-08-13 00:16:09:169 debug: [Socket] User connected: GJgShVXLarOVggO0AAAT
+2026-08-13 00:16:09:169 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:16:11:1611 debug: [Socket] User connected: DEPUa3K4438nt9jqAAAV
+2026-08-13 00:16:12:1612 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:16:12:1612 debug: [Socket] User connected: rbq0VDNVzcBTrJblAAAX
+2026-08-13 00:16:12:1612 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:12:1612 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:12:1612 debug: [Socket] User connected: G1Ix_nhhm8YMY84HAAAZ
+2026-08-13 00:16:12:1612 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:12:1612 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:16:1616 debug: [Socket] User disconnected: GJgShVXLarOVggO0AAAT, Reason: transport close
+2026-08-13 00:16:16:1616 debug: [Socket] User connected: 4D9eSkhp4vqRpnNqAAAb
+2026-08-13 00:16:16:1616 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:16:16:1616 debug: [Socket] User disconnected: DEPUa3K4438nt9jqAAAV, Reason: transport close
+2026-08-13 00:16:16:1616 debug: [Socket] User disconnected: rbq0VDNVzcBTrJblAAAX, Reason: transport close
+2026-08-13 00:16:16:1616 debug: [Socket] User disconnected: G1Ix_nhhm8YMY84HAAAZ, Reason: transport close
+2026-08-13 00:16:18:1618 debug: [Socket] User connected: vIFu51DAVC_J6C4XAAAd
+2026-08-13 00:16:18:1618 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:16:18:1618 debug: [Socket] User connected: 7xIOfJoiu4aCCdUBAAAf
+2026-08-13 00:16:18:1618 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:18:1618 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:18:1618 debug: [Socket] User connected: UPr7XJ2E8fhAuyxFAAAh
+2026-08-13 00:16:18:1618 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:18:1618 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:24:1624 debug: [Socket] User disconnected: 4D9eSkhp4vqRpnNqAAAb, Reason: transport close
+2026-08-13 00:16:24:1624 debug: [Socket] User connected: zezNJArgPqgbCt1gAAAj
+2026-08-13 00:16:24:1624 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:16:24:1624 debug: [Socket] User disconnected: vIFu51DAVC_J6C4XAAAd, Reason: transport close
+2026-08-13 00:16:24:1624 debug: [Socket] User disconnected: 7xIOfJoiu4aCCdUBAAAf, Reason: transport close
+2026-08-13 00:16:24:1624 debug: [Socket] User disconnected: UPr7XJ2E8fhAuyxFAAAh, Reason: transport close
+2026-08-13 00:16:26:1626 debug: [Socket] User connected: qZsdui_L9rmZiE1jAAAl
+2026-08-13 00:16:26:1626 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:16:26:1626 debug: [Socket] User connected: uUkFwaRn5bQ7rdYKAAAn
+2026-08-13 00:16:26:1626 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:26:1626 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:26:1626 debug: [Socket] User connected: kBxIFxZ7zkD-qcVXAAAp
+2026-08-13 00:16:26:1626 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:26:1626 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:16:47:1647 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:16:47:1647 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:16:56:1656 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:16:56:1656 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:17:03:173 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:17:03:173 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:17:10:1710 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:17:11:1711 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:19:11:1911 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-13 00:19:12:1912 debug: [Socket] User connected: lHSp9aVrIyo4evoLAAAB
+2026-08-13 00:19:12:1912 debug: [Socket] User connected: 5JqaHG3Z_D7NQVgWAAAD
+2026-08-13 00:19:12:1912 debug: [Socket] User connected: iLqLlrx32Q3yL2g2AAAF
+2026-08-13 00:19:15:1915 debug: [Socket] User connected: xyakz7lvq6GGaN8NAAAH
+2026-08-13 00:19:28:1928 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-13 00:19:28:1928 debug: [Socket] User connected: uNmHGA0C-HZUvWxoAAAB
+2026-08-13 00:19:28:1928 debug: [Socket] User connected: xgjQb8Fbpaji4pDhAAAD
+2026-08-13 00:19:29:1929 debug: [Socket] User connected: VZ7-k7Lc0Gmt_y0MAAAF
+2026-08-13 00:19:30:1930 debug: [Socket] User connected: y1GT_Dc479TFJpcfAAAH
+2026-08-13 00:21:48:2148 debug: [Socket] User disconnected: uNmHGA0C-HZUvWxoAAAB, Reason: transport close
+2026-08-13 00:21:48:2148 debug: [Socket] User disconnected: xgjQb8Fbpaji4pDhAAAD, Reason: transport close
+2026-08-13 00:21:48:2148 debug: [Socket] User disconnected: VZ7-k7Lc0Gmt_y0MAAAF, Reason: transport close
+2026-08-13 00:21:48:2148 debug: [Socket] User disconnected: y1GT_Dc479TFJpcfAAAH, Reason: transport close
+2026-08-13 00:21:50:2150 debug: [Socket] User connected: dVFqcJR7sb6_OdUFAAAJ
+2026-08-13 00:21:50:2150 debug: [Socket] User connected: GLNR_yz6mSz5dC_UAAAL
+2026-08-13 00:21:50:2150 debug: [Socket] User connected: xwDtzIjwMnNdP5MMAAAO
+2026-08-13 00:21:50:2150 debug: [Socket] User connected: NQECRe75y3DxNl_yAAAP
+2026-08-13 00:21:53:2153 debug: [Socket] User disconnected: NQECRe75y3DxNl_yAAAP, Reason: transport close
+2026-08-13 00:21:53:2153 debug: [Socket] User disconnected: GLNR_yz6mSz5dC_UAAAL, Reason: transport close
+2026-08-13 00:21:53:2153 debug: [Socket] User disconnected: xwDtzIjwMnNdP5MMAAAO, Reason: transport close
+2026-08-13 00:21:53:2153 debug: [Socket] User disconnected: dVFqcJR7sb6_OdUFAAAJ, Reason: transport close
+2026-08-13 00:22:10:2210 debug: [Socket] User connected: zVU_D0ojGbO-HEyCAAAR
+2026-08-13 00:22:10:2210 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:22:21:2221 debug: [Socket] User connected: IE6Bq3ryk8J3Pd0UAAAT
+2026-08-13 00:22:21:2221 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:22:21:2221 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:22:22:2222 debug: [Socket] User connected: qWQTyOiWSS-jS7GeAAAV
+2026-08-13 00:22:22:2222 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:22:23:2223 debug: [Socket] User connected: xkCURNPPOcnxwlBvAAAX
+2026-08-13 00:22:23:2223 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:22:23:2223 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:24:01:241 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-13 00:24:02:242 debug: [Socket] User connected: uwSBARh54YYf2M-qAAAB
+2026-08-13 00:24:02:242 debug: [Socket] User connected: n06JBP4X9uhjH5LrAAAD
+2026-08-13 00:24:03:243 debug: [Socket] User connected: 8xbVfHTePiypOh-DAAAF
+2026-08-13 00:24:03:243 debug: [Socket] User connected: ZvXyDZzZI5HQ_fBGAAAH
+2026-08-13 00:28:02:282 debug: [Socket] User disconnected: uwSBARh54YYf2M-qAAAB, Reason: transport close
+2026-08-13 00:28:02:282 debug: [Socket] User disconnected: n06JBP4X9uhjH5LrAAAD, Reason: transport close
+2026-08-13 00:28:02:282 debug: [Socket] User disconnected: 8xbVfHTePiypOh-DAAAF, Reason: transport close
+2026-08-13 00:28:02:282 debug: [Socket] User disconnected: ZvXyDZzZI5HQ_fBGAAAH, Reason: transport close
+2026-08-13 00:28:05:285 debug: [Socket] User connected: 1hQh0scsyXsnyMXCAAAJ
+2026-08-13 00:28:05:285 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:28:06:286 debug: [Socket] User connected: vmo_PqWnK-ujK5ifAAAL
+2026-08-13 00:28:06:286 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:28:06:286 debug: [Socket] User connected: vhWs7uTVptx1EOxQAAAN
+2026-08-13 00:28:06:286 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:28:06:286 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:28:06:286 debug: [Socket] User connected: Vn_fEhV8ZSzCIxWLAAAP
+2026-08-13 00:28:06:286 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:28:06:286 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:28:50:2850 error: Error sending OTP email: getaddrinfo ENOTFOUND smtp-relay.sendinblue.com
+2026-08-13 00:29:29:2929 error: Error sending OTP email: getaddrinfo ENOTFOUND smtp-relay.sendinblue.com
+2026-08-13 00:29:32:2932 debug: [Socket] User connected: SPnMEmZA4APbjTEfAAAR
+2026-08-13 00:29:32:2932 info: [Socket] Organizer joined dashboard room: organizer_41
+2026-08-13 00:29:32:2932 info: [Socket] Organizer joined dashboard room: organizer_41
+2026-08-13 00:32:54:3254 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:32:59:3259 debug: [Socket] User connected: 5Tvoa_X4VRzvJtO3AAAT
+2026-08-13 00:32:59:3259 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:32:59:3259 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:33:02:332 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:33:08:338 debug: [Socket] User connected: EOaLDzlPpubTDxRuAAAV
+2026-08-13 00:33:08:338 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:33:08:338 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:33:13:3313 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:33:18:3318 debug: [Socket] User connected: -QDnFz8v2JF_sZc5AAAX
+2026-08-13 00:33:18:3318 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:33:18:3318 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:33:26:3326 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:33:31:3331 debug: [Socket] User connected: UbEroWrgRJyEkCGFAAAZ
+2026-08-13 00:33:31:3331 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:33:31:3331 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:33:38:3338 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 00:33:43:3343 debug: [Socket] User connected: iitNZllfLxGpYRApAAAb
+2026-08-13 00:33:43:3343 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:33:43:3343 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:34:07:347 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:34:31:3431 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:34:31:3431 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:34:31:3431 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:34:33:3433 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:34:38:3438 debug: [Socket] User disconnected: 5Tvoa_X4VRzvJtO3AAAT, Reason: transport close
+2026-08-13 00:34:38:3438 debug: [Socket] User connected: ubIhyz1tPgX5mtNiAAAd
+2026-08-13 00:34:38:3438 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:35:15:3515 debug: [Socket] User disconnected: SPnMEmZA4APbjTEfAAAR, Reason: transport close
+2026-08-13 00:35:15:3515 debug: [Socket] User connected: UkI8MNMG20BpLnXXAAAf
+2026-08-13 00:35:15:3515 info: [Socket] Organizer joined dashboard room: organizer_41
+2026-08-13 00:35:15:3515 info: [Socket] Organizer joined dashboard room: organizer_41
+2026-08-13 00:35:35:3535 debug: [Socket] User disconnected: ubIhyz1tPgX5mtNiAAAd, Reason: transport close
+2026-08-13 00:35:36:3536 debug: [Socket] User connected: RGfa6JzKHsrlnH0yAAAh
+2026-08-13 00:35:36:3536 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:36:13:3613 debug: [Socket] User disconnected: UbEroWrgRJyEkCGFAAAZ, Reason: transport close
+2026-08-13 00:36:13:3613 debug: [Socket] User connected: U_Adw4ANk8tfxHGSAAAj
+2026-08-13 00:36:13:3613 info: [Socket] Client joined lobby room: group_38
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: EOaLDzlPpubTDxRuAAAV, Reason: transport close
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: iitNZllfLxGpYRApAAAb, Reason: transport close
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: UkI8MNMG20BpLnXXAAAf, Reason: transport close
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: RGfa6JzKHsrlnH0yAAAh, Reason: transport close
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: U_Adw4ANk8tfxHGSAAAj, Reason: transport close
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: -QDnFz8v2JF_sZc5AAAX, Reason: transport close
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: vhWs7uTVptx1EOxQAAAN, Reason: transport close
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: 1hQh0scsyXsnyMXCAAAJ, Reason: transport close
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: vmo_PqWnK-ujK5ifAAAL, Reason: transport close
+2026-08-13 00:40:04:404 debug: [Socket] User disconnected: Vn_fEhV8ZSzCIxWLAAAP, Reason: transport close
+2026-08-13 00:40:06:406 debug: [Socket] User connected: kP0Cg9EcfUE2cNrTAAAl
+2026-08-13 00:40:06:406 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:40:07:407 debug: [Socket] User connected: eawRVWPJ1sOJAR76AAAn
+2026-08-13 00:40:08:408 debug: [Socket] User connected: 1_zbZU09tkIrblbOAAAr
+2026-08-13 00:40:08:408 debug: [Socket] User connected: 1cvb_kFMUR8YF0SHAAAs
+2026-08-13 00:40:08:408 debug: [Socket] User connected: LouwW52J3s-kZcIBAAAt
+2026-08-13 00:40:08:408 debug: [Socket] User disconnected: 1_zbZU09tkIrblbOAAAr, Reason: transport close
+2026-08-13 00:40:08:408 debug: [Socket] User disconnected: eawRVWPJ1sOJAR76AAAn, Reason: transport close
+2026-08-13 00:40:08:408 debug: [Socket] User disconnected: 1cvb_kFMUR8YF0SHAAAs, Reason: transport close
+2026-08-13 00:40:08:408 debug: [Socket] User disconnected: LouwW52J3s-kZcIBAAAt, Reason: transport close
+2026-08-13 00:40:08:408 debug: [Socket] User connected: JrjDPYm2te3qPuWvAAAv
+2026-08-13 00:40:09:409 debug: [Socket] User disconnected: JrjDPYm2te3qPuWvAAAv, Reason: transport close
+2026-08-13 00:40:13:4013 debug: [Socket] User connected: iBdKNYQKvEXAny9ZAAAx
+2026-08-13 00:40:13:4013 info: [Socket] Organizer joined dashboard room: organizer_41
+2026-08-13 00:40:13:4013 info: [Socket] Organizer joined dashboard room: organizer_41
+2026-08-13 00:40:14:4014 debug: [Socket] User disconnected: iBdKNYQKvEXAny9ZAAAx, Reason: transport close
+2026-08-13 00:40:14:4014 debug: [Socket] User disconnected: kP0Cg9EcfUE2cNrTAAAl, Reason: transport close
+2026-08-13 00:40:14:4014 debug: [Socket] User connected: 88Y1xTeo8L82HKLEAAAz
+2026-08-13 00:40:14:4014 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:40:15:4015 debug: [Socket] User connected: FSrolgV0MdUaWYRVAAA1
+2026-08-13 00:40:15:4015 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:40:15:4015 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:40:15:4015 debug: [Socket] User disconnected: FSrolgV0MdUaWYRVAAA1, Reason: transport close
+2026-08-13 00:40:15:4015 debug: [Socket] User connected: l6L2mNNRTX4UDD0TAAA3
+2026-08-13 00:40:15:4015 debug: [Socket] User disconnected: l6L2mNNRTX4UDD0TAAA3, Reason: transport close
+2026-08-13 00:40:15:4015 debug: [Socket] User disconnected: 88Y1xTeo8L82HKLEAAAz, Reason: transport close
+2026-08-13 00:40:19:4019 debug: [Socket] User connected: _WCsALlxujT_sBvIAAA5
+2026-08-13 00:40:19:4019 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:40:19:4019 debug: [Socket] User connected: L58tuTyHGerer5Q9AAA7
+2026-08-13 00:40:19:4019 info: [Socket] Client joined lobby room: group_37
+2026-08-13 00:40:19:4019 debug: [Socket] User connected: fjsVe_M8P4NxKg_dAAA9
+2026-08-13 00:40:19:4019 info: [Socket] Organizer joined dashboard room: organizer_41
+2026-08-13 00:40:19:4019 info: [Socket] Organizer joined dashboard room: organizer_41
+2026-08-13 00:40:19:4019 debug: [Socket] User connected: mH_BXVP0Kb5OWJOBAAA_
+2026-08-13 00:40:19:4019 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:40:19:4019 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:40:20:4020 debug: [Socket] User connected: zHeysjQoCJ_mSvFFAABB
+2026-08-13 00:40:20:4020 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 00:40:20:4020 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 20:15:13:1513 debug: [Socket] User disconnected: fjsVe_M8P4NxKg_dAAA9, Reason: transport close
+2026-08-13 20:15:15:1515 debug: [Socket] User disconnected: L58tuTyHGerer5Q9AAA7, Reason: transport close
+2026-08-13 20:15:15:1515 debug: [Socket] User connected: i0vr3ZM5_rFDotlzAABD
+2026-08-13 20:15:15:1515 info: [Socket] Client joined lobby room: group_37
+2026-08-13 20:42:41:4241 debug: [Socket] User disconnected: _WCsALlxujT_sBvIAAA5, Reason: transport close
+2026-08-13 20:42:42:4242 debug: [Socket] User disconnected: i0vr3ZM5_rFDotlzAABD, Reason: transport close
+2026-08-13 20:42:46:4246 debug: [Socket] User disconnected: zHeysjQoCJ_mSvFFAABB, Reason: transport close
+2026-08-13 20:42:49:4249 debug: [Socket] User disconnected: mH_BXVP0Kb5OWJOBAAA_, Reason: transport close
+2026-08-13 20:42:50:4250 debug: [Socket] User connected: AbzaXPmnUHuaI3o9AABF
+2026-08-13 20:42:50:4250 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 20:42:50:4250 info: [Socket] Organizer joined dashboard room: organizer_40
+2026-08-13 20:48:22:4822 debug: [Socket] User disconnected: AbzaXPmnUHuaI3o9AABF, Reason: transport close
+2026-08-13 20:48:45:4845 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:50:05:505 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:50:09:509 debug: [Socket] User connected: Dy0-o8AHi3XQ7je9AABH
+2026-08-13 20:50:09:509 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:09:509 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:56:5056 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:56:5056 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:56:5056 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:56:5056 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:56:5056 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:56:5056 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:56:5056 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:56:5056 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:57:5057 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:57:5057 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:57:5057 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:57:5057 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:58:5058 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:58:5058 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:58:5058 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:58:5058 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:59:5059 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:59:5059 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:59:5059 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:50:59:5059 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 20:51:09:519 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:13:5113 debug: [Socket] User connected: TqEtsEdb4G26COuPAABJ
+2026-08-13 20:51:13:5113 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:51:13:5113 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:51:19:5119 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:24:5124 debug: [Socket] User connected: _88K04MPn91lntfYAABL
+2026-08-13 20:51:24:5124 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:51:24:5124 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:51:29:5129 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:33:5133 debug: [Socket] User connected: aRoJBGTWaBpM_mUtAABN
+2026-08-13 20:51:33:5133 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:51:33:5133 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:51:39:5139 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:43:5143 debug: [Socket] User connected: B14s3z92CYFdWrEUAABP
+2026-08-13 20:51:43:5143 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:51:43:5143 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:51:52:5152 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-13 20:51:55:5155 debug: [Socket] User connected: M-keTtnCRvMzf_y6AABR
+2026-08-13 20:51:55:5155 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:51:55:5155 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:52:24:5224 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:52:37:5237 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:52:39:5239 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:52:39:5239 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:52:40:5240 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:54:46:5446 debug: [Socket] User disconnected: aRoJBGTWaBpM_mUtAABN, Reason: transport close
+2026-08-13 20:54:46:5446 debug: [Socket] User connected: _n4mMIcQxB1SdD5WAABT
+2026-08-13 20:54:46:5446 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:54:50:5450 debug: [Socket] User disconnected: M-keTtnCRvMzf_y6AABR, Reason: transport close
+2026-08-13 20:54:50:5450 debug: [Socket] User connected: AAF17CkE-LNts8UPAABV
+2026-08-13 20:54:50:5450 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:54:54:5454 debug: [Socket] User disconnected: TqEtsEdb4G26COuPAABJ, Reason: transport close
+2026-08-13 20:54:55:5455 debug: [Socket] User connected: z3GzY-u3uEcl17GpAABX
+2026-08-13 20:54:55:5455 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:54:56:5456 debug: [Socket] User disconnected: z3GzY-u3uEcl17GpAABX, Reason: transport close
+2026-08-13 20:54:56:5456 debug: [Socket] User connected: t4IMe04R7SQjfhZMAABZ
+2026-08-13 20:54:56:5456 info: [Socket] Client joined lobby room: group_39
+2026-08-13 20:55:02:552 debug: [Socket] User disconnected: _88K04MPn91lntfYAABL, Reason: transport close
+2026-08-13 20:55:02:552 debug: [Socket] User connected: _XwcANnxgHr8E4cUAABb
+2026-08-13 20:55:02:552 info: [Socket] Client joined lobby room: group_39
+2026-08-13 21:12:25:1225 debug: [Socket] User disconnected: t4IMe04R7SQjfhZMAABZ, Reason: transport close
+2026-08-13 21:12:25:1225 debug: [Socket] User disconnected: _XwcANnxgHr8E4cUAABb, Reason: transport close
+2026-08-13 21:12:25:1225 debug: [Socket] User disconnected: Dy0-o8AHi3XQ7je9AABH, Reason: transport close
+2026-08-13 21:12:25:1225 debug: [Socket] User disconnected: B14s3z92CYFdWrEUAABP, Reason: transport close
+2026-08-13 21:12:25:1225 debug: [Socket] User disconnected: _n4mMIcQxB1SdD5WAABT, Reason: transport close
+2026-08-13 21:12:25:1225 debug: [Socket] User disconnected: AAF17CkE-LNts8UPAABV, Reason: transport close
+2026-08-13 21:12:27:1227 debug: [Socket] User connected: jMJjldUJl9npDMqSAABe
+2026-08-13 21:12:27:1227 debug: [Socket] User connected: Zy6xI382Rd80w_mkAABf
+2026-08-13 21:12:27:1227 debug: [Socket] User connected: wq3yRUxljexSC7HYAABh
+2026-08-13 21:12:28:1228 debug: [Socket] User disconnected: Zy6xI382Rd80w_mkAABf, Reason: transport close
+2026-08-13 21:12:28:1228 debug: [Socket] User disconnected: wq3yRUxljexSC7HYAABh, Reason: transport close
+2026-08-13 21:12:28:1228 debug: [Socket] User disconnected: jMJjldUJl9npDMqSAABe, Reason: transport close
+2026-08-13 21:14:48:1448 debug: [Socket] User connected: _nAmd8BDoaRGnQiSAABj
+2026-08-13 21:14:48:1448 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 21:14:48:1448 info: [Socket] Organizer joined dashboard room: organizer_42
+2026-08-13 21:18:55:1855 debug: [Socket] User disconnected: _nAmd8BDoaRGnQiSAABj, Reason: transport close
+2026-08-16 20:04:26:426 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-16 20:05:19:519 error: You already registered this email id. Please login.
+2026-08-16 20:05:27:527 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:06:09:69 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:06:12:612 debug: [Socket] User connected: fReI4dqAYO50LveVAAAB
+2026-08-16 20:06:12:612 info: [Socket] Organizer joined dashboard room: organizer_43
+2026-08-16 20:06:12:612 info: [Socket] Organizer joined dashboard room: organizer_43
+2026-08-16 20:09:57:957 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:10:02:102 debug: [Socket] User connected: qMSMAtIMEuzAz7x6AAAD
+2026-08-16 20:10:02:102 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:10:02:102 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:10:22:1022 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:10:27:1027 debug: [Socket] User connected: wJNpuB4Bugoyw3WYAAAF
+2026-08-16 20:10:27:1027 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:10:27:1027 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:10:34:1034 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:10:38:1038 debug: [Socket] User connected: 3EhbgpgyYhpmlIWbAAAH
+2026-08-16 20:10:38:1038 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:10:38:1038 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:10:46:1046 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:10:50:1050 debug: [Socket] User connected: wu7PHl2FAVJtUU79AAAJ
+2026-08-16 20:10:50:1050 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:10:50:1050 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:10:59:1059 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:11:04:114 debug: [Socket] User connected: FhujYnHIirnCD6nVAAAL
+2026-08-16 20:11:04:114 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:11:04:114 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:11:36:1136 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:11:44:1144 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:11:46:1146 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:11:47:1147 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:11:47:1147 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:27:40:2740 info: [Socket] Client joined lobby room: group_40
+2026-08-16 20:27:43:2743 debug: [Socket] User disconnected: 3EhbgpgyYhpmlIWbAAAH, Reason: transport close
+2026-08-16 20:27:44:2744 debug: [Socket] User disconnected: wJNpuB4Bugoyw3WYAAAF, Reason: transport close
+2026-08-16 20:27:44:2744 debug: [Socket] User disconnected: wu7PHl2FAVJtUU79AAAJ, Reason: transport close
+2026-08-16 20:27:45:2745 debug: [Socket] User disconnected: qMSMAtIMEuzAz7x6AAAD, Reason: client namespace disconnect
+2026-08-16 20:27:46:2746 debug: [Socket] User disconnected: FhujYnHIirnCD6nVAAAL, Reason: client namespace disconnect
+2026-08-16 20:27:53:2753 debug: [Socket] User disconnected: fReI4dqAYO50LveVAAAB, Reason: transport close
+2026-08-16 20:28:58:2858 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:30:13:3013 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:30:15:3015 debug: [Socket] User connected: MKz0N5SmGwLS-a-6AAAN
+2026-08-16 20:30:15:3015 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 20:30:15:3015 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 20:31:31:3131 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:31:35:3135 debug: [Socket] User connected: GesTh9GyuILVAe-NAAAP
+2026-08-16 20:31:35:3135 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:31:35:3135 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:31:41:3141 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:31:46:3146 debug: [Socket] User connected: b9OedcHRb5zIPoz2AAAR
+2026-08-16 20:31:46:3146 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:31:46:3146 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:31:51:3151 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:32:01:321 debug: [Socket] User connected: Tpgt3bkkDJBFQWinAAAT
+2026-08-16 20:32:01:321 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:32:01:321 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:32:09:329 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:32:15:3215 debug: [Socket] User connected: PKBaUkvCf_u_QH5sAAAV
+2026-08-16 20:32:15:3215 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:32:15:3215 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:32:23:3223 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 20:32:27:3227 debug: [Socket] User connected: Fo4VE3wJv-XcpaByAAAX
+2026-08-16 20:32:27:3227 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:32:27:3227 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:32:55:3255 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:32:58:3258 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:33:01:331 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:33:04:334 info: [Socket] Client joined lobby room: group_41
+2026-08-16 20:33:07:337 info: [Socket] Client joined lobby room: group_41
+2026-08-16 21:03:01:31 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-16 21:03:03:33 debug: [Socket] User connected: wz7BKQOp2YzABYlXAAAB
+2026-08-16 21:03:04:34 debug: [Socket] User connected: ENqzYWPZImEK9S3kAAAD
+2026-08-16 21:03:04:34 debug: [Socket] User connected: J9VrYzzU-c3VYrWNAAAF
+2026-08-16 21:03:06:36 debug: [Socket] User connected: 6CLLpTOI21dfgeBlAAAH
+2026-08-16 21:03:06:36 debug: [Socket] User connected: qTfATVmY1ixv21NVAAAJ
+2026-08-16 21:03:06:36 debug: [Socket] User connected: MPSZ_zlLEwXtsG9DAAAL
+2026-08-16 21:03:19:319 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-16 21:03:20:320 debug: [Socket] User connected: NWebuzNQJjXy41ewAAAB
+2026-08-16 21:03:21:321 debug: [Socket] User connected: rfPYJEBkA-mygjCXAAAD
+2026-08-16 21:03:21:321 debug: [Socket] User connected: b64VLKZfAmMvZwwzAAAF
+2026-08-16 21:03:22:322 debug: [Socket] User connected: wtXmzFki1_ybgTUGAAAH
+2026-08-16 21:03:23:323 debug: [Socket] User connected: MSG177nGbR1lIs-zAAAJ
+2026-08-16 21:03:24:324 debug: [Socket] User connected: 3wuXmdLhOFZzOMybAAAL
+2026-08-16 21:03:39:339 debug: [Socket] User disconnected: MSG177nGbR1lIs-zAAAJ, Reason: transport close
+2026-08-16 21:03:39:339 debug: [Socket] User disconnected: b64VLKZfAmMvZwwzAAAF, Reason: transport close
+2026-08-16 21:03:39:339 debug: [Socket] User disconnected: rfPYJEBkA-mygjCXAAAD, Reason: transport close
+2026-08-16 21:03:39:339 debug: [Socket] User disconnected: wtXmzFki1_ybgTUGAAAH, Reason: transport close
+2026-08-16 21:03:39:339 debug: [Socket] User disconnected: 3wuXmdLhOFZzOMybAAAL, Reason: transport close
+2026-08-16 21:03:39:339 debug: [Socket] User disconnected: NWebuzNQJjXy41ewAAAB, Reason: transport close
+2026-08-16 21:03:42:342 debug: [Socket] User connected: heUsP90b6kKkMgEPAAAN
+2026-08-16 21:03:42:342 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 21:03:42:342 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 21:03:45:345 debug: [Socket] User disconnected: heUsP90b6kKkMgEPAAAN, Reason: transport close
+2026-08-16 21:03:46:346 debug: [Socket] User connected: APzOlTUq-Wm-38j9AAAP
+2026-08-16 21:03:46:346 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 21:03:46:346 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 21:09:53:953 debug: [Socket] User disconnected: APzOlTUq-Wm-38j9AAAP, Reason: transport close
+2026-08-16 21:09:56:956 debug: [Socket] User connected: lWVtBn7fB3dClgl7AAAR
+2026-08-16 21:09:56:956 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 21:09:56:956 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 23:14:50:1450 debug: [Socket] User disconnected: lWVtBn7fB3dClgl7AAAR, Reason: transport close
+2026-08-16 23:14:53:1453 debug: [Socket] User connected: fRzy2uBxMZhLL_IqAAAT
+2026-08-16 23:14:53:1453 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 23:14:53:1453 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 23:18:00:180 debug: [Socket] User disconnected: fRzy2uBxMZhLL_IqAAAT, Reason: transport close
+2026-08-16 23:18:00:180 debug: [Socket] User connected: i6u7rNUI2N-WLI51AAAV
+2026-08-16 23:18:00:180 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 23:18:00:180 info: [Socket] Organizer joined dashboard room: organizer_44
+2026-08-16 23:19:10:1910 debug: [Socket] User disconnected: i6u7rNUI2N-WLI51AAAV, Reason: ping timeout
+2026-08-16 23:27:47:2747 info: [Server] Node.js API running on port 6001 in development mode
+2026-08-16 23:28:19:2819 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:28:51:2851 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:28:54:2854 debug: [Socket] User connected: 0RYvcWjkGtJZeNcsAAAB
+2026-08-16 23:28:54:2854 info: [Socket] Organizer joined dashboard room: organizer_1
+2026-08-16 23:28:54:2854 info: [Socket] Organizer joined dashboard room: organizer_1
+2026-08-16 23:30:16:3016 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:30:21:3021 debug: [Socket] User connected: mPCyLPOE6xHsyG9mAAAD
+2026-08-16 23:30:21:3021 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:30:21:3021 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:30:27:3027 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:30:30:3030 debug: [Socket] User connected: 5hiYnMxWJZcJYwqbAAAF
+2026-08-16 23:30:30:3030 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:30:30:3030 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:30:37:3037 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:30:40:3040 debug: [Socket] User connected: Q12OaCAPjSA5C6BpAAAH
+2026-08-16 23:30:40:3040 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:30:40:3040 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:30:48:3048 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:30:52:3052 debug: [Socket] User connected: 168ZHP9z0wq9W5tjAAAJ
+2026-08-16 23:30:52:3052 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:30:52:3052 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:31:01:311 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:04:314 debug: [Socket] User connected: TFdsPT2TRnbyY-Y6AAAL
+2026-08-16 23:31:04:314 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:31:04:314 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:31:10:3110 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:15:3115 debug: [Socket] User connected: Z22s4WNDpF0VJ-84AAAN
+2026-08-16 23:31:15:3115 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:15:3115 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:22:3122 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:27:3127 debug: [Socket] User connected: Qsz9Cy_ifiVkzSDYAAAP
+2026-08-16 23:31:27:3127 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:27:3127 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:32:3132 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:37:3137 debug: [Socket] User connected: q2lkuXqBpeVj-VkZAAAR
+2026-08-16 23:31:37:3137 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:37:3137 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:41:3141 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:45:3145 debug: [Socket] User connected: 9OcKJTZMA0dvttu-AAAT
+2026-08-16 23:31:45:3145 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:45:3145 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:50:3150 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-16 23:31:53:3153 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:31:53:3153 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:31:53:3153 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:31:53:3153 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:31:54:3154 debug: [Socket] User connected: edbd8lS3msXcNtUHAAAV
+2026-08-16 23:31:54:3154 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:54:3154 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:31:54:3154 info: [Socket] Client joined lobby room: group_1
+2026-08-16 23:32:24:3224 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:32:33:3233 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:32:39:3239 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:32:43:3243 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:32:44:3244 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:36:04:364 debug: [Socket] User disconnected: q2lkuXqBpeVj-VkZAAAR, Reason: transport close
+2026-08-16 23:36:04:364 debug: [Socket] User connected: Zhr6gPzaUFUcy5dTAAAX
+2026-08-16 23:36:04:364 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:36:09:369 debug: [Socket] User disconnected: 9OcKJTZMA0dvttu-AAAT, Reason: transport close
+2026-08-16 23:36:10:3610 debug: [Socket] User connected: j84IYXH1lt0fcqheAAAZ
+2026-08-16 23:36:10:3610 info: [Socket] Client joined lobby room: group_2
+2026-08-16 23:38:14:3814 debug: [Socket] User disconnected: 168ZHP9z0wq9W5tjAAAJ, Reason: transport close
+2026-08-16 23:39:38:3938 debug: [Socket] User disconnected: mPCyLPOE6xHsyG9mAAAD, Reason: transport close
+2026-08-16 23:41:01:411 debug: [Socket] User disconnected: Zhr6gPzaUFUcy5dTAAAX, Reason: transport close
+2026-08-16 23:43:33:4333 debug: [Socket] User disconnected: edbd8lS3msXcNtUHAAAV, Reason: transport close
+2026-08-16 23:49:16:4916 debug: [Socket] User disconnected: TFdsPT2TRnbyY-Y6AAAL, Reason: transport close
+2026-08-16 23:52:45:5245 debug: [Socket] User disconnected: Qsz9Cy_ifiVkzSDYAAAP, Reason: transport close
+2026-08-16 23:53:01:531 debug: [Socket] User disconnected: j84IYXH1lt0fcqheAAAZ, Reason: transport close
+2026-08-16 23:53:03:533 debug: [Socket] User disconnected: Z22s4WNDpF0VJ-84AAAN, Reason: transport close

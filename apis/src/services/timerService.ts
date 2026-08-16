@@ -6,6 +6,7 @@ import { runRetentionSweep } from './retentionService';
 import {
     finalizeRound1 as finalizeCCRound1,
     advanceRound2ToReview as advanceCCRound2ToReview,
+    advanceRound2Turn as advanceCCRound2Turn,
     finalizeRound2Review as finalizeCCRound2Review,
     advanceRound3ToVoting as advanceCCRound3ToVoting,
     finalizeRound3 as finalizeCCRound3,
@@ -70,6 +71,10 @@ async function getActivityConfigForGroup(groupId: number | string) {
 
 async function handleTimerExpiration(timer: any) {
     console.log(`[TimerService] Timer expired: ${timer.timer_type} for group ${timer.group_id}`);
+
+    // Cook & Create round advancement is queued in the switch below and invoked
+    // only once the transaction has committed — see the note on the cc_* cases.
+    let ccHandler: (() => Promise<void>) | null = null;
 
     await withTransaction(async (conn) => {
         // Mark timer as inactive
@@ -195,27 +200,51 @@ async function handleTimerExpiration(timer: any) {
             // inside cookandcreateService.ts), so firing after the round already
             // advanced via the fast path is a safe no-op. reference_id carries the
             // cc_game_instances id (see cookandcreateService.ensureCCTimer).
+            //
+            // These are only QUEUED here, and run after this transaction commits
+            // (see below) — they must not execute inside it. Each one ends by
+            // calling ensureCCTimer to start the next phase's timer, which
+            // updates the `timers` table on a different pool connection; with
+            // this transaction still holding the row lock taken by the UPDATE at
+            // the top, that write blocks until innodb_lock_wait_timeout and then
+            // fails. The failure is swallowed inside ensureCCTimer, so the round
+            // would advance with NO timer for the next phase and the group would
+            // sit there forever.
             case 'cc_round1':
-                if (timer.reference_id) await finalizeCCRound1(timer.reference_id, timer.group_id);
+                if (timer.reference_id) ccHandler = () => finalizeCCRound1(timer.reference_id, timer.group_id);
                 break;
 
             case 'cc_round2_submit':
-                if (timer.reference_id) await advanceCCRound2ToReview(timer.reference_id, timer.group_id);
+                if (timer.reference_id) ccHandler = () => advanceCCRound2ToReview(timer.reference_id, timer.group_id);
+                break;
+
+            // One player's Round-2 turn ran out — pass the turn on (or, if that
+            // was the last player, move the round to review).
+            case 'cc_round2_turn':
+                if (timer.reference_id) ccHandler = () => advanceCCRound2Turn(timer.reference_id, timer.group_id);
                 break;
 
             case 'cc_round2_review':
-                if (timer.reference_id) await finalizeCCRound2Review(timer.reference_id, timer.group_id);
+                if (timer.reference_id) ccHandler = () => finalizeCCRound2Review(timer.reference_id, timer.group_id);
                 break;
 
             case 'cc_round3_discussion':
-                if (timer.reference_id) await advanceCCRound3ToVoting(timer.reference_id, timer.group_id);
+                if (timer.reference_id) ccHandler = () => advanceCCRound3ToVoting(timer.reference_id, timer.group_id);
                 break;
 
             case 'cc_round3_voting':
-                if (timer.reference_id) await finalizeCCRound3(timer.reference_id, timer.group_id);
+                if (timer.reference_id) ccHandler = () => finalizeCCRound3(timer.reference_id, timer.group_id);
                 break;
         }
     });
+
+    // Committed now, so the `timers` row lock is released and the CC handler's
+    // ensureCCTimer call can start the next phase's timer. (Read through a local
+    // because TS can't see that the callback above already ran.)
+    const queuedCcHandler = ccHandler as (() => Promise<void>) | null;
+    if (queuedCcHandler) {
+        await queuedCcHandler();
+    }
 
     // A no-response auto-skip may have applied a penalty above; push the fresh
     // scores to the group so the Score Board updates live (read after commit).

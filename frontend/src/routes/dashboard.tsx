@@ -29,6 +29,7 @@ function DashboardPage() {
   const [newTime, setNewTime] = useState("");
   const [rescheduled, setRescheduled] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
+  const [invoiceDownloading, setInvoiceDownloading] = useState(false);
   const navigate = useNavigate();
   // Early auth check as fallback
   useEffect(() => {
@@ -399,10 +400,21 @@ function DashboardPage() {
                 <div className="font-semibold mt-0.5">
                   {booking?.booking_id ? (
                     <button
-                      onClick={() => navigate({ to: `/payments`, search: { booking: String(booking.booking_id) } })}
-                      className="text-primary hover:underline"
+                      onClick={async () => {
+                        setInvoiceDownloading(true);
+                        try {
+                          await organizerService.downloadInvoice(booking.booking_id);
+                          toastSuccess("GST invoice downloaded");
+                        } catch (err) {
+                          toastError(err instanceof Error ? err.message : "Could not download the invoice.");
+                        } finally {
+                          setInvoiceDownloading(false);
+                        }
+                      }}
+                      disabled={invoiceDownloading}
+                      className="text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      download
+                      {invoiceDownloading ? "preparing…" : "download"}
                     </button>
                   ) : (
                     <span className="text-muted">—</span>

@@ -311,6 +311,54 @@ class SettingController extends Controller {
         ]);
     }
 
+    /**
+     * Seller ("Billed From") details printed on every GST tax invoice.
+     *
+     * These are legally significant — a tax invoice must carry the supplier's
+     * real registered name, GSTIN and place of supply. Nothing here is
+     * defaulted or guessed: until an admin fills these in, the invoice
+     * generator marks the document as a provisional receipt rather than
+     * printing a fabricated GSTIN.
+     */
+    public function invoiceUpdate(Request $request)
+    {
+        $validated = $request->validate([
+            'invoice_seller_name' => 'nullable|string|max:150',
+            'invoice_seller_legal_name' => 'nullable|string|max:150',
+            'invoice_seller_gstin' => 'nullable|string|regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
+            'invoice_seller_address' => 'nullable|string|max:500',
+            'invoice_seller_city' => 'nullable|string|max:100',
+            'invoice_seller_state' => 'nullable|string|max:100',
+            'invoice_seller_state_code' => 'nullable|string|max:2',
+            'invoice_seller_pin' => 'nullable|string|max:10',
+            'invoice_seller_email' => 'nullable|email|max:120',
+            'invoice_number_prefix' => 'nullable|string|max:20',
+            'invoice_gst_rate' => 'nullable|numeric|min:0|max:100',
+        ], [
+            'invoice_seller_gstin.regex' => 'Enter a valid 15-character GSTIN (e.g. 06AABCZ1234A1Z5).',
+        ]);
+
+        foreach ($validated as $key => $value) {
+            $validated[$key] = $value === null ? '' : strip_tags($value);
+        }
+        if (!empty($validated['invoice_seller_gstin'])) {
+            $validated['invoice_seller_gstin'] = strtoupper($validated['invoice_seller_gstin']);
+            // The first two digits of a GSTIN are the state code by definition —
+            // keep them in sync so intra/inter-state tax split can't disagree
+            // with the GSTIN printed right above it.
+            $validated['invoice_seller_state_code'] = substr($validated['invoice_seller_gstin'], 0, 2);
+        }
+
+        Setting::set($validated);
+        Setting::save();
+
+        return json_encode([
+            "status" => "success",
+            "reload" => true,
+            "message" => "Invoice settings updated successfully.",
+        ]);
+    }
+
     private function storeLogoAsset($file, string $prefix): string
     {
         $directory = storage_path('app/public/uploads/logo');

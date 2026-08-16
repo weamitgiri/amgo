@@ -47,7 +47,8 @@ router.post(
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
         body('step_text').notEmpty().withMessage('step_text is required'),
-        body('step_letter').notEmpty().withMessage('step_letter is required (A, B, C...)'),
+        // step_letter is assigned server-side from the submitter's turn index —
+        // see submitRound2Step. Anything the client sent is ignored.
     ],
     validateRequest,
     cookandcreateController.submitRound2Step
@@ -109,6 +110,18 @@ router.post(
     ],
     validateRequest,
     cookandcreateController.submitRound3ImpostorVote
+);
+
+// Round 3: respond to the private Double Down offer
+router.post(
+    '/round3/double-down',
+    [
+        body('instance_id').isNumeric().withMessage('instance_id is required'),
+        body('participant_id').isNumeric().withMessage('participant_id is required'),
+        body('accept').isBoolean().withMessage('accept must be a boolean'),
+    ],
+    validateRequest,
+    cookandcreateController.respondToDoubleDownHandler
 );
 
 // Round 3: Finalize reveal

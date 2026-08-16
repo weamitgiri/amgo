@@ -29,7 +29,7 @@
         <option value="">— Select —</option>
         @foreach ($activityGames as $game)
             <option value="{{ $game->id }}" {{ (string) old('activity_game_id', $template->activity_game_id ?? '') === (string) $game->id ? 'selected' : '' }}>
-                {{ $game->title }}
+                {{ $game->title }} — {{ $game->activity->title ?? 'Unknown activity' }} (#{{ $game->id }})
             </option>
         @endforeach
     </select>
@@ -58,6 +58,28 @@
             <img src="{{ asset('storage/' . ltrim($template->background_image, '/')) }}" alt="" style="max-width:280px; max-height:120px; object-fit:cover; border-radius:8px;">
         </div>
     @endif
+</div>
+
+<div class="form-group">
+    <label>Character portraits <span class="text-muted">(shown on the pre-Round-1 and voting screens — any left blank fall back to the default art)</span></label>
+    <div class="form-row">
+        @foreach ([
+            'chef1_image' => 'Chef 1',
+            'chef2_image' => 'Chef 2',
+            'chef3_image' => 'Chef 3',
+            'chef4_image' => 'Chef 4',
+            'show_host_image' => 'Show Host',
+        ] as $field => $label)
+            <div class="form-group col-md-2 col-4">
+                <label class="small">{{ $label }}</label>
+                <input type="file" name="{{ $field }}" class="form-control-file @error($field) is-invalid @enderror" accept="image/*">
+                @error($field) <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                @if (!empty($template) && $template->{$field})
+                    <img src="{{ asset('storage/' . ltrim($template->{$field}, '/')) }}" alt="{{ $label }}" class="mt-2 d-block" style="width:100%; max-width:90px; aspect-ratio:3/4; object-fit:cover; border-radius:8px;">
+                @endif
+            </div>
+        @endforeach
+    </div>
 </div>
 
 <hr>
@@ -112,9 +134,10 @@
         @error('round2_step_max_chars') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
     <div class="form-group col-md-3">
-        <label>Submit timer (secs) <span class="text-danger">*</span></label>
+        <label>Per-player turn (secs) <span class="text-danger">*</span></label>
         <input type="number" name="round2_submit_timer_secs" min="15" class="form-control @error('round2_submit_timer_secs') is-invalid @enderror"
-               value="{{ old('round2_submit_timer_secs', $template->round2_submit_timer_secs ?? 120) }}" required>
+               value="{{ old('round2_submit_timer_secs', $template->round2_submit_timer_secs ?? 60) }}" required>
+        <small class="form-text text-muted">Round 2 is turn-based — each player gets this long to write their step (60 = 1 minute).</small>
         @error('round2_submit_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
     <div class="form-group col-md-3">

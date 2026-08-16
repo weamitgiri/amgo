@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import step2Img from '../../../assets/cookandcreate/game-flow-step-2.png';
-
+import { resolveMediaUrl } from "@/utils/media";
 export type CCNameDishIngredient = {
   id: number;
   name: string;
@@ -63,7 +63,7 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
                 className="flex flex-col items-center gap-1.5 bg-white rounded-xl px-3 py-2 border border-[#F5E6D3] shadow-xs"
               >
                 {item.image_url ? (
-                  <img src={item.image_url} alt={item.name} className="w-8 h-8 object-contain drop-shadow-xs" />
+                  <img src={resolveMediaUrl(item.image_url) ?? step2Img} alt={item.name} className="object-contain drop-shadow-xs" />
                 ) : (
                   <span className="text-xl">🥘</span>
                 )}

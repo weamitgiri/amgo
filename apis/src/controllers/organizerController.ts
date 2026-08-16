@@ -16,6 +16,15 @@ import { ensureOrganizerStatusColumns } from '../utils/schemaHelpers';
 // (27 + 4). Mirrors SCHEDULE_WINDOW_DAYS on the frontend.
 const SCHEDULE_WINDOW_DAYS = 5;
 
+// Mirrors frontend/src/utils/common.ts::isCookAndCreateSlug's fallback rule
+// (the two codebases can't share a module) — used only to scope the
+// template-completeness guard in createBooking below to Cook & Create
+// activities, never Mystery ones.
+function isCookAndCreateSlug(slug: string | null | undefined): boolean {
+    if (!slug) return false;
+    return slug.trim().toLowerCase().startsWith('cook');
+}
+
 export const registerOrganizer = asyncHandler(async (req: Request, res: Response) => {
     const { name, email, company_name, company_website } = req.body;
 
@@ -270,6 +279,44 @@ export const createBooking = asyncHandler(async (req: Request, res: Response) =>
     const [organizer] = await query('SELECT email_verified_at FROM organizers WHERE id = ?', [organizer_id]);
     if (!organizer.length || !organizer[0].email_verified_at) {
         throw new AppError('Organizer must verify email before creating a booking.', 403);
+    }
+
+    // Cook & Create-only guard: a group assigned to a game with no matching
+    // cc_game_templates row (or a template with too few ingredients to play
+    // Round 1) 404s/breaks the whole session at play time (getCCGameState).
+    // Catch that here instead — at booking time, before real participants can
+    // be affected. Every active game under the activity must have a properly
+    // configured template, since participantGroupService.resolveGameForGroup
+    // round-robins group assignment across ALL of them, not just the one
+    // named here. No-op for Mystery activities (which have no
+    // cc_game_templates rows at all).
+    const [activityRows] = await query<any>('SELECT slug FROM activities WHERE id = ?', [activity_id]);
+    if (isCookAndCreateSlug(activityRows?.[0]?.slug)) {
+        const gameIds: number[] = game_id
+            ? [Number(game_id)]
+            : (
+                  await query<any>("SELECT id FROM activity_games WHERE activity_id = ? AND status = 'active'", [activity_id])
+              )[0].map((r: any) => Number(r.id));
+
+        if (gameIds.length > 0) {
+            const [templateRows] = await query<any>(
+                `SELECT t.activity_game_id, COUNT(ti.id) AS ingredient_count
+                 FROM cc_game_templates t
+                 LEFT JOIN cc_game_template_ingredients ti ON ti.template_id = t.id
+                 WHERE t.activity_game_id IN (?) AND t.status = 'active'
+                 GROUP BY t.id, t.activity_game_id`,
+                [gameIds]
+            );
+            const readySet = new Set(
+                templateRows.filter((r: any) => Number(r.ingredient_count) >= 4).map((r: any) => Number(r.activity_game_id))
+            );
+            if (gameIds.some((id) => !readySet.has(id))) {
+                throw new AppError(
+                    "This Cook & Create game isn't fully configured yet. Please contact support.",
+                    422
+                );
+            }
+        }
     }
 
     const [result] = await query(

@@ -42,11 +42,11 @@ export const cookAndCreateService = {
       noAuth
     ),
 
+  // step_letter is assigned server-side from the submitter's Round-2 turn.
   submitRound2Step: (payload: {
     instance_id: number | string;
     participant_id: number | string;
     step_text: string;
-    step_letter: string;
   }) =>
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round2SubmitStep,
@@ -92,6 +92,17 @@ export const cookAndCreateService = {
   startRound3Voting: (payload: { instance_id: number | string }) =>
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round3StartVoting,
+      payload,
+      noAuth
+    ),
+
+  respondToDoubleDown: (payload: {
+    instance_id: number | string;
+    participant_id: number | string;
+    accept: boolean;
+  }) =>
+    apiClient.post<{ message: string }>(
+      API_ENDPOINTS.cookandcreate.round3DoubleDown,
       payload,
       noAuth
     ),

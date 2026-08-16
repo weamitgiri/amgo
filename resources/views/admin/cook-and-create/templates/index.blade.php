@@ -21,6 +21,25 @@
         <div class="container-fluid">
             @include('admin.cook-and-create.partials.subnav', ['ccActive' => 'admin.cook-and-create.templates'])
 
+            @if (isset($incompleteGames) && $incompleteGames->isNotEmpty())
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Incomplete Cook &amp; Create games</h5>
+                    <p class="mb-2">
+                        These games have no template, or their template has fewer than 4 ingredients selected —
+                        either way, Round 1 will fail to load for any group assigned to them. Organizers can't be
+                        safely booked against them until fixed.
+                    </p>
+                    <ul class="mb-0">
+                        @foreach ($incompleteGames as $game)
+                            <li>
+                                <strong>{{ $game->title }}</strong> — {{ $game->activity->title ?? 'Unknown activity' }} (activity_games #{{ $game->id }})
+                                <a href="{{ route('admin.cook-and-create.templates.create') }}" class="ml-2">Add / fix a template for this game →</a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="card">
                 <div class="card-header">
                     <a href="{{ route('admin.cook-and-create.templates.create') }}" class="btn btn-primary btn-sm">
@@ -40,6 +59,7 @@
                                     <th style="width:60px">ID</th>
                                     <th>Name</th>
                                     <th>Activity Game</th>
+                                    <th style="width:90px">Ingredients</th>
                                     <th>Round Timers (1 / 2-submit / 2-review / 3-discuss / 3-vote)</th>
                                     <th style="width:110px">Show Host</th>
                                     <th style="width:100px">Status</th>
@@ -51,8 +71,15 @@
                                     <tr>
                                         <td>{{ $template->id }}</td>
                                         <td>{{ $template->name }}</td>
-                                        <td>{{ $template->activityGame->title ?? '—' }}</td>
-                                        <td class="text-monospace small">
+                                        <td>
+                                            {{ $template->activityGame->title ?? '—' }}
+                                            <span class="text-muted small d-block">{{ $template->activityGame->activity->title ?? '' }}</span>
+                                        </td>
+                                        <td>
+                                            @php $ingCount = $template->templateIngredients->count(); @endphp
+                                            <span class="badge {{ $ingCount >= 4 ? 'badge-success' : 'badge-danger' }}">{{ $ingCount }}</span>
+                                        </td>
+                                        <td class="text-monospace small" title="R1 / R2 per-player turn / R2 review / R3 discussion / R3 voting">
                                             {{ $template->round1_timer_secs }}s /
                                             {{ $template->round2_submit_timer_secs }}s /
                                             {{ $template->round2_review_timer_secs }}s /
@@ -83,7 +110,7 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="7" class="text-center text-muted">No templates yet.</td></tr>
+                                    <tr><td colspan="8" class="text-center text-muted">No templates yet.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

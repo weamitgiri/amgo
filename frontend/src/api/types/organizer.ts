@@ -269,3 +269,37 @@ export type OrganizerNotificationsResponse = {
   unread_count: number;
   total: number;
 };
+
+/** One paid/pending booking in the organizer's payment history. */
+export type OrganizerInvoice = {
+  booking_id: number;
+  invoice_no: string;
+  invoice_date: string;
+  package_name: string;
+  activity_title: string | null;
+  buyer_name: string;
+  buyer_company: string | null;
+  buyer_email: string | null;
+  buyer_gstin: string | null;
+  buyer_address: string | null;
+  buyer_city: string | null;
+  buyer_state: string | null;
+  buyer_pin: string | null;
+  taxable_value: number;
+  additional_charges: number;
+  gst_amount: number;
+  total_payable: number;
+  payment_method: string | null;
+  payment_status: "pending" | "paid" | "failed";
+  is_intra_state: boolean;
+};
+
+export type OrganizerInvoicesResponse = {
+  invoices: OrganizerInvoice[];
+  summary: {
+    total_spent: number;
+    completed_count: number;
+    pending_count: number;
+    failed_count: number;
+  };
+};

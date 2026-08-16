@@ -1,18 +1,45 @@
-# Ignore PHP vendor directory
+# ===== Dependencies =====
 /vendor/
-
-# Ignore Node modules for frontend and apis
+/node_modules/
 /frontend/node_modules/
 /apis/node_modules/
+/apis/dist/
 
-# Ignore top-level node_modules if present
-/node_modules/
-
-# Environment files
+# ===== Environment / secrets =====
 .env
+.env.*
+!.env.example
+/apis/.env
+/frontend/.env
+/frontend/txt-env
 
-# Logs and storage (Laravel typical)
+# SSH / private keys
+amigo
+amigo.pub
+clear
+clear.pub
+*.pem
+id_rsa*
+id_ed25519*
+id_dsa*
+id_ecdsa*
+
+# Laravel Passport / OAuth signing keys
+/storage/oauth-private.key
+/storage/oauth-public.key
+*.key
+
+# Deployment notes (may contain credentials)
+production.txt
+
+# ===== Logs & caches =====
 /storage/
 /bootstrap/cache/
 apis/logs/*.log
+*.log
+
+# ===== OS / editor junk =====
+.DS_Store
+**/.DS_Store
+Thumbs.db
 *.zip

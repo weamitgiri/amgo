@@ -9,16 +9,12 @@ import type { CCGameStateResponse } from '@/api/types/cookandcreate';
 import { getParticipantSession } from '@/lib/participant-session';
 import { toastError } from '@/lib/toast';
 import { resolveMediaUrl } from '@/utils/media';
+import { portraitForRole } from './-components/portraits';
 import gameSummeryBg from '../../assets/cookandcreate/game-summery-bg.png';
 import secretBoxImg from '../../assets/cookandcreate/secret-box.png';
 import step1Img from '../../assets/cookandcreate/game-flow-step-1.png';
 import step2Img from '../../assets/cookandcreate/game-flow-step-2.png';
 import step4Img from '../../assets/cookandcreate/game-flow-step-4.png';
-import chef1Img from '../../assets/cookandcreate/chef-1 1.png';
-import chef2Img from '../../assets/cookandcreate/chef-2 1.png';
-import chef3Img from '../../assets/cookandcreate/chef-3 1.png';
-import chef4Img from '../../assets/cookandcreate/chef-4 1.png';
-import showHostImg from '../../assets/cookandcreate/show-hos 1.png';
 
 export const Route = createFileRoute('/cookandcreate/summary')({
   component: SummaryPage,
@@ -29,16 +25,6 @@ const ROUNDS = [
   { num: '02', img: step2Img, title: 'Cooking Steps', desc: 'Submit one step to help create the dish.' },
   { num: '03', img: step4Img, title: 'Elimination', desc: 'Discuss and vote.' },
 ];
-
-const CHEF_IMAGES = [chef1Img, chef2Img, chef3Img, chef4Img];
-
-/** "Chef 1" / "Chef 2" ... -> the matching portrait; "Show Host" -> its own. */
-function portraitForRole(roleLabel: string): string {
-  if (roleLabel === 'Show Host') return showHostImg;
-  const match = /Chef (\d+)/.exec(roleLabel);
-  const idx = match ? (Number(match[1]) - 1) % CHEF_IMAGES.length : 0;
-  return CHEF_IMAGES[idx] ?? chef1Img;
-}
 
 /** Give players time to read their role before nudging them into Round 1,
  * which has already started server-side by the time this screen shows. */
@@ -120,7 +106,10 @@ function SummaryPage() {
       `}</style>
 
       <div className="relative z-10 space-y-4">
-        <CookCreateHeader showGameTimer={false} />
+        <CookCreateHeader
+          participantName={session?.name}
+          gameEndsAt={gameState.schedule.game_ends_at}
+        />
 
         <div className="flex items-center justify-between px-1 pt-1">
           <div className="flex items-center gap-2">
@@ -191,7 +180,7 @@ function SummaryPage() {
                   <div key={p.id} className="flex flex-col items-center gap-2">
                     <div className="w-full aspect-[3/4] rounded-2xl bg-[#FFF0DB]/80 border border-[#F5DEC3] overflow-hidden">
                       <img
-                        src={portraitForRole(p.role_label)}
+                        src={portraitForRole(p.role_label, gameState.template)}
                         alt={p.role_label}
                         className="w-full h-full object-cover"
                         style={{ objectPosition: 'center 15%' }}

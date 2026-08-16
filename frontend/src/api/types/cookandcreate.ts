@@ -12,6 +12,11 @@ export type CCTemplate = {
   tagline: string | null;
   description: string | null;
   background_image: string | null;
+  chef1_image: string | null;
+  chef2_image: string | null;
+  chef3_image: string | null;
+  chef4_image: string | null;
+  show_host_image: string | null;
   round1_ingredients_count: number;
   round1_votes_per_player: number;
   round1_top_ingredients: number;
@@ -32,6 +37,9 @@ export type CCInstance = {
   template_id: number;
   status: "waiting" | "round1" | "round2" | "round3_discussion" | "round3_voting" | "completed";
   round2_phase: "submit" | "review";
+  round2_turn_index: number | null;
+  round2_turn_started_at: string | null;
+  round2_review_started_at: string | null;
   impostor_participant_id: number | null;
   show_host_participant_id: number | null;
   dish_name: string | null;
@@ -42,6 +50,8 @@ export type CCInstance = {
   round3_voting_started_at: string | null;
   finished_at: string | null;
   group_won: boolean | null;
+  double_down_participant_id: number | null;
+  double_down_status: "offered" | "accepted" | "declined" | null;
 };
 
 export type CCParticipant = {
@@ -68,6 +78,37 @@ export type CCCookingStep = {
   status: "submitted" | "kept" | "removed";
   keep_votes: number;
   remove_votes: number;
+};
+
+export type CCSchedule = {
+  scheduled_start_at: string | null;
+  /** When the lobby's entry window closes and play begins. */
+  game_starts_at: string | null;
+  game_ends_at: string | null;
+  lobby_wait_secs: number;
+  game_duration_secs: number;
+  /** Server's clock at response time — lets the client cancel out local clock skew. */
+  server_time: string;
+};
+
+export type CCRound2TurnStep = {
+  letter: string;
+  status: "submitted" | "current" | "awaiting" | "missed";
+};
+
+/**
+ * Anonymous by design — it says which step letter is being written and which
+ * are done, never who is writing them. Only your OWN position is revealed
+ * (is_my_turn / my_turn_index).
+ */
+export type CCRound2Turn = {
+  total: number;
+  current_index: number | null;
+  started_at: string | null;
+  turn_secs: number;
+  is_my_turn: boolean;
+  my_turn_index: number | null;
+  steps: CCRound2TurnStep[];
 };
 
 export type CCChatMessage = {
@@ -125,6 +166,8 @@ export type CCGameStateResponse = {
   cooking_steps: CCCookingStep[];
   my_cooking_step: string | null;
   my_step_votes: Record<number, "keep" | "remove">;
+  /** Turn-based step submission. Null outside the Round-2 submit phase. */
+  round2_turn: CCRound2Turn | null;
   released_clues: CCClue[];
   // Round 3
   chat_messages: CCChatMessage[];
@@ -136,6 +179,14 @@ export type CCGameStateResponse = {
   dish_name: string | null;
   // Admin-editable game rules (lobby screen)
   rules: CCRule[];
+  /**
+   * Absolute instants for the lobby / header countdowns. Sent as points in time
+   * rather than durations so a page refresh recomputes the same remainder
+   * instead of restarting the clock.
+   */
+  schedule: CCSchedule;
+  // Round 3 Double Down — only populated for the participant who was offered it
+  my_double_down: { offered: boolean; status: "offered" | "accepted" | "declined" | null } | null;
 };
 
 export type CCOtherDish = {
@@ -143,6 +194,8 @@ export type CCOtherDish = {
   group_name: string;
   dish_name: string;
   nomination_counts: Record<string, number>;
+  /** The dish's final recipe — its kept Round-2 steps, in order. */
+  steps: { letter: string; text: string }[];
 };
 
 export type CCAward = {
@@ -166,5 +219,10 @@ export type CCAwardsBoard = {
     most_voted_participant_id: number | null;
     group_won: boolean | null;
     dish_name: string | null;
+    double_down_participant_id: number | null;
+    double_down_used: boolean;
+    double_down_penalty_applied: boolean;
+    /** How many nominations this group's dish received, per category slug. */
+    reaction_counts: Record<string, number>;
   };
 };

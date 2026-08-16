@@ -1,5 +1,6 @@
 import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../config";
+import { ENV } from "@/config/environment";
 import type {
   RegisterOrganizerPayload,
   RegisterOrganizerResponse,
@@ -21,6 +22,7 @@ import type {
   OrganizerBillingProfile,
   OrganizerNotificationsResponse,
   OrganizerGameResult,
+  OrganizerInvoicesResponse,
 } from "../types/organizer";
 
 const noAuth = { auth: "none" as const };
@@ -118,6 +120,41 @@ export const organizerService = {
 
   /** Deactivate account (soft delete — billing/GST records retained) */
   deleteAccount: () => apiClient.post<null>(API_ENDPOINTS.organizer.deleteAccount, {}),
+
+  /** Payment history — every booking this organizer has been billed for */
+  getInvoices: () =>
+    apiClient.get<OrganizerInvoicesResponse>(API_ENDPOINTS.organizer.invoices),
+
+  /**
+   * Downloads a booking's GST invoice PDF. Goes through fetch rather than
+   * apiClient because the response is a binary stream, not JSON — but it still
+   * sends the same bearer token, since the endpoint is ownership-scoped.
+   */
+  downloadInvoice: async (bookingId: number | string, invoiceNo?: string) => {
+    const token = apiClient.getToken();
+    const res = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.organizer.invoicePdf(bookingId)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      let message = "Could not download the invoice.";
+      try {
+        const body = await res.json();
+        message = body?.message || message;
+      } catch {
+        /* non-JSON error body — keep the default message */
+      }
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoice-${(invoiceNo ?? String(bookingId)).replace(/\//g, "-")}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 
   /** Step 4: Complete booking and payment */
   completeBooking: (payload: CompleteBookingPayload) =>

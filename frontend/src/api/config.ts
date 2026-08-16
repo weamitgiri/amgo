@@ -49,6 +49,8 @@ export const API_ENDPOINTS = {
     updateSession: "/v1/organizer/update-session",
     results: "/v1/organizer/results",
     deleteAccount: "/v1/organizer/account/delete",
+    invoices: "/v1/organizer/invoices",
+    invoicePdf: (bookingId: number | string) => `/v1/organizer/invoices/${bookingId}/pdf`,
   },
   cookandcreate: {
     state: (groupId: number | string) => `/v1/cookandcreate/state/${groupId}`,
@@ -60,6 +62,7 @@ export const API_ENDPOINTS = {
     round3SendMessage: "/v1/cookandcreate/round3/send-message",
     round3StartVoting: "/v1/cookandcreate/round3/start-voting",
     round3VoteImpostor: "/v1/cookandcreate/round3/vote-impostor",
+    round3DoubleDown: "/v1/cookandcreate/round3/double-down",
     round3Finalize: "/v1/cookandcreate/round3/finalize",
     otherDishes: (groupId: number | string) => `/v1/cookandcreate/${groupId}/other-dishes`,
     rate: "/v1/cookandcreate/rate",
