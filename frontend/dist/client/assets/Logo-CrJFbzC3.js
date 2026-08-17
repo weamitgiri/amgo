@@ -1,0 +1,1 @@
+import{j as s}from"./index-VGBoFZ9Y.js";const e="/assets/h-logo-DlqTePzf.png";function a({light:t=!1}){return s.jsx("div",{className:"flex items-center gap-2.5",children:s.jsx("img",{src:e,className:""})})}export{a as L};

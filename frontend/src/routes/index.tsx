@@ -270,8 +270,7 @@ function Home() {
 
       {/* CTA */}
       <section className="px-4 mt-20">
-        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] min-h-[340px] grid place-items-center text-center px-6">
-          <img src={cta} alt="" width={1536} height={768} loading="lazy" className="absolute h-full w-full object-cover" />
+        <div className="relative mx-auto max-w-6xl overflow-hidden bg-[#0d0820] rounded-[2rem] min-h-[340px] grid place-items-center text-center px-6">
           <div className="absolute inset-0 bg-gradient-to-b from-purple-900/40 to-purple-900/70" />
           <div className="relative max-w-xl py-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white">Stop Planning. Start Engaging.</h2>

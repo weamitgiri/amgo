@@ -1,0 +1,1 @@
+function e(r){return!r||r.trim()===""?{isValid:!1,error:"This field is required"}:{isValid:!0}}function i(r){try{return new URL(r),{isValid:!0}}catch{return{isValid:!1,error:"Please enter a valid URL"}}}export{i as a,e as v};
