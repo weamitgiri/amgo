@@ -52,14 +52,61 @@ export const getCmsPageBySlug = asyncHandler(async (req: Request, res: Response)
 });
 
 /**
- * Get site settings
+ * Keys that may be served to an unauthenticated browser.
+ *
+ * This endpoint used to return `SELECT key, value FROM settings` with no filter
+ * at all, which published every secret an admin had ever saved — API key
+ * secrets, SMTP credentials — to anyone who could curl it.
+ *
+ * It is an allowlist rather than a denylist on purpose: a denylist silently
+ * leaks the next secret someone adds to the settings screen. Anything the
+ * public site genuinely needs has to be named here.
+ */
+const PUBLIC_SETTING_KEYS = [
+    // Identity and contact — rendered in the header, footer and contact blocks.
+    'website_name',
+    'website_url',
+    'tagline',
+    'logo',
+    'favicon',
+    'support_email',
+    'contact_number',
+    'whatsapp_number',
+    'company_address',
+    // Formatting.
+    'timezone',
+    'date_format',
+    'currency',
+    'currency_symbol',
+    // Social links (declared by the frontend's SiteSettings type; listed here so
+    // they work the moment an admin fills them in).
+    'facebook_url',
+    'instagram_url',
+    'linkedin_url',
+    'twitter_url',
+    'youtube_url',
+    // SEO and theming.
+    'meta_title',
+    'meta_description',
+    'meta_keywords',
+    'primary_color',
+    'secondary_color',
+    'button_color',
+];
+
+/**
+ * Get site settings (public subset only).
+ *
+ * Payment configuration is deliberately absent — checkout reads what it needs
+ * from /v1/public/payment-methods, which exposes the Razorpay key id (public by
+ * design) and nothing else.
  */
 export const getSettings = asyncHandler(async (req: Request, res: Response) => {
     const [rows] = await query(
-        'SELECT `key`, `value` FROM settings',
-        []
+        `SELECT \`key\`, \`value\` FROM settings WHERE \`key\` IN (${PUBLIC_SETTING_KEYS.map(() => '?').join(',')})`,
+        PUBLIC_SETTING_KEYS
     );
-    
+
     // Convert to a more usable object format: { key: value }
     const settings: { [key: string]: any } = {};
     rows.forEach((row: any) => {

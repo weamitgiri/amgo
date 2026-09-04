@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const publicController = __importStar(require("../controllers/publicController"));
+const paymentController = __importStar(require("../controllers/paymentController"));
 const router = (0, express_1.Router)();
 // Packages API
 router.get('/packages', publicController.getPackages);
@@ -43,6 +44,9 @@ router.get('/cms', publicController.getCmsPages);
 router.get('/cms/:slug', publicController.getCmsPageBySlug);
 // Settings API
 router.get('/settings', publicController.getSettings);
+// Which payment methods checkout may offer, and the public Razorpay key id.
+// Pass ?amount= to have COD limits applied to the result.
+router.get('/payment-methods', paymentController.getPaymentMethods);
 // Games/Activities API
 router.get('/games', publicController.getGames);
 router.get('/games/:id', publicController.getGameDetails);

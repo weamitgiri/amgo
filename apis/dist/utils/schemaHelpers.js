@@ -319,6 +319,13 @@ async function ensureCookAndCreateSchema() {
                 \`order\` INT UNSIGNED NOT NULL DEFAULT 0,
                 KEY template_id (template_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+            `CREATE TABLE IF NOT EXISTS cc_game_rules (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                template_id BIGINT UNSIGNED NOT NULL,
+                rule_text TEXT NOT NULL,
+                \`order\` INT UNSIGNED NOT NULL DEFAULT 0,
+                KEY template_id (template_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
             `CREATE TABLE IF NOT EXISTS cc_game_instances (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 group_id BIGINT UNSIGNED NOT NULL UNIQUE,
@@ -420,7 +427,9 @@ async function ensureCookAndCreateSchema() {
                 emoji VARCHAR(20) DEFAULT NULL,
                 description VARCHAR(255) DEFAULT NULL,
                 status ENUM('active','inactive') NOT NULL DEFAULT 'active',
-                \`order\` INT UNSIGNED NOT NULL DEFAULT 0
+                \`order\` INT UNSIGNED NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NULL DEFAULT NULL,
+                updated_at TIMESTAMP NULL DEFAULT NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
             `CREATE TABLE IF NOT EXISTS cc_ratings (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -445,6 +454,16 @@ async function ensureCookAndCreateSchema() {
                 // @ts-ignore
                 [values]);
             }
+        }
+        // 8a. cc_rating_categories originally shipped without created_at/
+        // updated_at even though the seed insert below always referenced them
+        // — on a fresh install that threw and silently aborted every step
+        // after it (caught by the outer try/catch, step 9 onward never ran).
+        // Fixed at the CREATE TABLE above for brand-new installs; this catches
+        // any database that already has the table from before this fix.
+        const [ccRatingCreatedCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_rating_categories LIKE 'created_at'`);
+        if (ccRatingCreatedCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_rating_categories ADD COLUMN created_at TIMESTAMP NULL DEFAULT NULL, ADD COLUMN updated_at TIMESTAMP NULL DEFAULT NULL`);
         }
         // 9. Seed rating categories if empty
         const [ratingCount] = await (0, db_1.query)(`SELECT COUNT(*) as c FROM cc_rating_categories`);
@@ -479,6 +498,97 @@ async function ensureCookAndCreateSchema() {
             await (0, db_1.query)(`INSERT INTO cc_clues (template_id, round_number, clue_text, \`order\`) VALUES ?`, 
             // @ts-ignore
             [values]);
+        }
+        // 10a. Seed default game rules if empty — admin-editable from here on
+        // (Laravel admin: Cook & Create > Templates); this is just the starting
+        // set so the lobby isn't empty before an admin customizes them.
+        const [ruleCount] = await (0, db_1.query)(`SELECT COUNT(*) as c FROM cc_game_rules WHERE template_id = ?`, [defaultTplId]);
+        if (Number(ruleCount[0].c) === 0) {
+            const rules = [
+                'Play 3 rounds: Ingredients → Steps → Elimination.',
+                'Select ingredients and submit one step, actions are time-bound.',
+                'All actions are anonymous, observe patterns carefully.',
+                'One player is the hidden Impostor trying to mislead the group.',
+                'Use clues to identify suspicious actions.',
+                'Vote wisely to eliminate the Impostor and win.',
+            ];
+            const values = rules.map((text, i) => [defaultTplId, text, i]);
+            await (0, db_1.query)(`INSERT INTO cc_game_rules (template_id, rule_text, \`order\`) VALUES ?`, 
+            // @ts-ignore
+            [values]);
+        }
+        // 11. Round 2's submit/review sub-phase tracker (added after the initial
+        // release — guarded the same way every other incremental column in this
+        // file is).
+        const [phaseCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_game_instances LIKE 'round2_phase'`);
+        if (phaseCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_game_instances ADD COLUMN round2_phase ENUM('submit','review') NOT NULL DEFAULT 'submit' AFTER status`);
+        }
+        // 12. One nomination per (voter, rated group, category) — lets rating
+        // submission use ON DUPLICATE KEY UPDATE to stay idempotent on re-taps.
+        const [ratingKeyRows] = await (0, db_1.query)(`SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cc_ratings' AND INDEX_NAME = 'unique_vote_per_category'`);
+        if (ratingKeyRows.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_ratings ADD UNIQUE KEY unique_vote_per_category (voting_participant_id, rated_group_id, category_id)`);
+        }
+        // 13. Admin-uploadable background image for the Challenge Brief (pre-
+        // Round-1) screen — falls back to the bundled default art on the
+        // frontend when NULL.
+        const [bgCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_game_templates LIKE 'background_image'`);
+        if (bgCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_game_templates ADD COLUMN background_image VARCHAR(255) NULL DEFAULT NULL AFTER description`);
+        }
+        // 14. Round 3's "Double Down Moment" — the system secretly offers one
+        // non-impostor voter double vote-weight, at the risk of a point
+        // penalty if their target is wrong (see advanceRound3ToVoting /
+        // finalizeRound3 in cookandcreateService.ts).
+        const [ddCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_game_instances LIKE 'double_down_participant_id'`);
+        if (ddCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_game_instances
+                    ADD COLUMN double_down_participant_id BIGINT UNSIGNED NULL DEFAULT NULL,
+                    ADD COLUMN double_down_status ENUM('offered','accepted','declined') NULL DEFAULT NULL`);
+        }
+        // 15. Per-template character portraits — same admin-uploadable/
+        // fallback-to-bundled-art pattern as background_image, so different
+        // Cook & Create games/templates can look visually distinct.
+        const [portraitCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_game_templates LIKE 'chef1_image'`);
+        if (portraitCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_game_templates
+                    ADD COLUMN chef1_image VARCHAR(255) NULL DEFAULT NULL,
+                    ADD COLUMN chef2_image VARCHAR(255) NULL DEFAULT NULL,
+                    ADD COLUMN chef3_image VARCHAR(255) NULL DEFAULT NULL,
+                    ADD COLUMN chef4_image VARCHAR(255) NULL DEFAULT NULL,
+                    ADD COLUMN show_host_image VARCHAR(255) NULL DEFAULT NULL`);
+        }
+        // 16. Round 2's turn-based submission. Players write their cooking step
+        // one at a time (Step A, then B, ...), each with their own countdown,
+        // instead of everyone typing simultaneously. round2_turn_index is the
+        // 0-based position in the group's join order whose turn it currently is;
+        // round2_turn_started_at anchors that turn's countdown. NULL on both
+        // means Round 2 hasn't started (or this is a pre-existing instance from
+        // before turn-based submission, which finalizeRound1 seeds on entry).
+        const [turnCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_game_instances LIKE 'round2_turn_index'`);
+        if (turnCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_game_instances
+                    ADD COLUMN round2_turn_index INT NULL DEFAULT NULL AFTER round2_phase,
+                    ADD COLUMN round2_turn_started_at DATETIME NULL DEFAULT NULL AFTER round2_turn_index`);
+        }
+        // 17. The Round-2 turn order itself, as a JSON array of participant ids,
+        // SHUFFLED once when Round 2 opens and never sent to any client.
+        // It must NOT be the participant display order: step letters come from
+        // turn position, so a derivable order would let everyone map "Step C" to
+        // the 3rd player in the sidebar and unmask the impostor during review —
+        // the exact opposite of the documented "steps appear with no names" rule.
+        const [turnOrderCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_game_instances LIKE 'round2_turn_order'`);
+        if (turnOrderCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_game_instances ADD COLUMN round2_turn_order TEXT NULL DEFAULT NULL AFTER round2_turn_started_at`);
+        }
+        // 18. When the review sub-phase actually opened. The review countdown
+        // used to be measured from round2_started_at, which is when the whole of
+        // Round 2 began — by the time every player has taken their turn that is
+        // minutes in the past, so the review timer rendered 00:00 immediately.
+        const [reviewStartCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_game_instances LIKE 'round2_review_started_at'`);
+        if (reviewStartCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_game_instances ADD COLUMN round2_review_started_at DATETIME NULL DEFAULT NULL AFTER round2_turn_order`);
         }
     }
     catch (err) {

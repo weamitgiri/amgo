@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type ComponentType, useState } from "react";
 import {
-  Users, HandHeart, Target, Zap, MonitorPlay, ShieldCheck,
-  Clock, Link2, Lock, Sparkles, Check, Crown,
+  Target,
+  Clock, Link2, Lock, Sparkles, Check,
   Gamepad2, Award, ArrowRight,
 } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -21,6 +21,13 @@ import step2 from "@/assets/step-2.png";
 import step3 from "@/assets/step-3.png";
 import step4 from "@/assets/step-4.png";
 
+import c1 from "@/assets/icon/1.png";
+import c2 from "@/assets/icon/2.png";
+import c3 from "@/assets/icon/3.png";
+import c4 from "@/assets/icon/4.png";
+import c5 from "@/assets/icon/5.png";
+import c6 from "@/assets/icon/6.png";
+
 const FALLBACK_IMAGES = [mystery, cook];
 
 export const Route = createFileRoute("/")({
@@ -36,8 +43,7 @@ export const Route = createFileRoute("/")({
 });
 
 type FeatureCard = {
-  icon: ComponentType<{ className?: string }>;
-  color: string;
+  icon: string;
   bg: string;
   title: string;
   desc: string;
@@ -45,12 +51,12 @@ type FeatureCard = {
 };
 
 const FEATURES: FeatureCard[] = [
-  { icon: Users, color: "text-[#0EA5E9]", bg: "bg-[#0EA5E9]/10", title: "Drive Real Participation, Not Just Attendance", desc: "Move beyond passive sessions where people just show up. Every participant actively contributes, interacts, and plays a role. Designed to keep energy high and involvement consistent throughout." },
-  { icon: HandHeart, color: "text-[#8B5CF6]", bg: "bg-[#8B5CF6]/10", title: "Turn Employees Into Active Contributors", desc: "Encourage real collaboration, not just observation. Participants think, respond, and engage with each other continuously. Every individual becomes part of the experience, not just a spectator." },
-  { icon: Target, color: "text-[#10B981]", bg: "bg-[#10B981]/10", title: "Structured Activities With Clear Outcomes", desc: "Each activity is built with defined roles, rules, and objectives. No confusion, no randomness, just guided, meaningful interaction. Outcomes are clear, measurable, and aligned with team goals." },
-  { icon: Zap, color: "text-[#F43F5E]", bg: "bg-[#F43F5E]/10", title: "Setup in Minutes, No Training Needed", desc: "Get started quickly without lengthy onboarding or instructions. The platform is intuitive and easy for both organizers and participants. Register, select your activity package, and distribute access credentials. The platform handles everything else automatically." },
-  { icon: MonitorPlay, color: "text-[#F59E0B]", bg: "bg-[#F59E0B]/10", title: "No IT Required, Just Open and Play", desc: "Zoventro runs entirely in the browser. No app installations, no infrastructure, no IT tickets — just open and participate." },
-  { icon: ShieldCheck, color: "text-white", bg: "bg-white/20", title: "Secure and Time-Bound Access", desc: "Each package generates unique access credentials per participant. All access expires automatically after 5 days. No data is retained beyond the activity window.", featured: false },
+  { icon: c6, bg: "bg-[#0EA5E9]/10", title: "Drive Real Participation, Not Just Attendance", desc: "Move beyond passive sessions where people just show up. Every participant actively contributes, interacts, and plays a role. Designed to keep energy high and involvement consistent throughout." },
+  { icon: c5, bg: "bg-[#8B5CF6]/10", title: "Turn Employees Into Active Contributors", desc: "Encourage real collaboration, not just observation. Participants think, respond, and engage with each other continuously. Every individual becomes part of the experience, not just a spectator." },
+  { icon: c2, bg: "bg-[#10B981]/10", title: "Structured Activities With Clear Outcomes", desc: "Each activity is built with defined roles, rules, and objectives. No confusion, no randomness, just guided, meaningful interaction. Outcomes are clear, measurable, and aligned with team goals." },
+  { icon: c1, bg: "bg-[#F43F5E]/10", title: "Setup in Minutes, No Training Needed", desc: "Get started quickly without lengthy onboarding or instructions. The platform is intuitive and easy for both organizers and participants. Register, select your activity package, and distribute access credentials. The platform handles everything else automatically." },
+  { icon: c3, bg: "bg-[#F59E0B]/10", title: "No IT Required, Just Open and Play", desc: "Zoventro runs entirely in the browser. No app installations, no infrastructure, no IT tickets — just open and participate." },
+  { icon: c4, bg: "bg-[#170B2F]", title: "Secure and Time-Bound Access", desc: "Each package generates unique access credentials per participant. All access expires automatically after 5 days. No data is retained beyond the activity window.", featured: false },
 ];
 
 type StepCard = {
@@ -137,11 +143,7 @@ function Home() {
                     ? "border border-white/20 bg-white/10" 
                     : `${f.bg} group-hover:border group-hover:border-white/20 group-hover:bg-white/10`
                 }`}>
-                  <f.icon className={`h-7 w-7 transition-colors duration-300 ${
-                    featured 
-                      ? "text-white" 
-                      : `${f.color} group-hover:text-white`
-                  }`} />
+                  <img src={f.icon} alt="" className="h-9 w-9 object-contain" />
                 </div>
                 
                 <h3 className={`mt-6 font-bold text-[20px] leading-tight transition-colors duration-300 ${
@@ -344,13 +346,20 @@ function ActivityCard({
         src={image}
         alt={game.title}
         loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-700"
+        onError={(e) => {
+          const img = e.currentTarget;
+          if (img.dataset.fallback) return;
+          img.dataset.fallback = "1";
+          img.src = fallbackImage;
+        }}
+        className="absolute inset-0 h-full w-full"
       />
+      {/*object-cover*/}
       <div
         className={`absolute inset-0 ${
           accent === "warm" 
-            ? "bg-gradient-to-b from-orange-950/95 via-orange-950/70 to-orange-900/30" 
-            : "bg-gradient-to-b from-[#0F0826]/95 via-[#0F0826]/70 to-[#0F0826]/30"
+            ? "" 
+            : ""
         }`}
       />
       

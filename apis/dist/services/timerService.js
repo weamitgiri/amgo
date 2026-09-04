@@ -10,6 +10,7 @@ const moment_1 = __importDefault(require("moment"));
 const server_1 = require("../server");
 const verdictScoringService_1 = require("./verdictScoringService");
 const retentionService_1 = require("./retentionService");
+const cookandcreateService_1 = require("./cookandcreateService");
 /**
  * Timer Service
  * Periodically checks for expired timers and triggers game state transitions.
@@ -61,6 +62,9 @@ async function getActivityConfigForGroup(groupId) {
 }
 async function handleTimerExpiration(timer) {
     console.log(`[TimerService] Timer expired: ${timer.timer_type} for group ${timer.group_id}`);
+    // Cook & Create round advancement is queued in the switch below and invoked
+    // only once the transaction has committed — see the note on the cc_* cases.
+    let ccHandler = null;
     await (0, db_1.withTransaction)(async (conn) => {
         // Mark timer as inactive
         await conn.query('UPDATE timers SET is_active = 0 WHERE id = ?', [timer.id]);
@@ -149,8 +153,58 @@ async function handleTimerExpiration(timer) {
                     message: 'Questioning time is up! Please submit your final accusation.',
                 });
                 break;
+            // ---- Cook & Create timer safety nets --------------------------------
+            // Each of these is the fallback path — the primary path is the
+            // "everyone finished early" checks in cookandcreateController.ts.
+            // Every handler here is idempotent (guarded by a status/phase claim
+            // inside cookandcreateService.ts), so firing after the round already
+            // advanced via the fast path is a safe no-op. reference_id carries the
+            // cc_game_instances id (see cookandcreateService.ensureCCTimer).
+            //
+            // These are only QUEUED here, and run after this transaction commits
+            // (see below) — they must not execute inside it. Each one ends by
+            // calling ensureCCTimer to start the next phase's timer, which
+            // updates the `timers` table on a different pool connection; with
+            // this transaction still holding the row lock taken by the UPDATE at
+            // the top, that write blocks until innodb_lock_wait_timeout and then
+            // fails. The failure is swallowed inside ensureCCTimer, so the round
+            // would advance with NO timer for the next phase and the group would
+            // sit there forever.
+            case 'cc_round1':
+                if (timer.reference_id)
+                    ccHandler = () => (0, cookandcreateService_1.finalizeRound1)(timer.reference_id, timer.group_id);
+                break;
+            case 'cc_round2_submit':
+                if (timer.reference_id)
+                    ccHandler = () => (0, cookandcreateService_1.advanceRound2ToReview)(timer.reference_id, timer.group_id);
+                break;
+            // One player's Round-2 turn ran out — pass the turn on (or, if that
+            // was the last player, move the round to review).
+            case 'cc_round2_turn':
+                if (timer.reference_id)
+                    ccHandler = () => (0, cookandcreateService_1.advanceRound2Turn)(timer.reference_id, timer.group_id);
+                break;
+            case 'cc_round2_review':
+                if (timer.reference_id)
+                    ccHandler = () => (0, cookandcreateService_1.finalizeRound2Review)(timer.reference_id, timer.group_id);
+                break;
+            case 'cc_round3_discussion':
+                if (timer.reference_id)
+                    ccHandler = () => (0, cookandcreateService_1.advanceRound3ToVoting)(timer.reference_id, timer.group_id);
+                break;
+            case 'cc_round3_voting':
+                if (timer.reference_id)
+                    ccHandler = () => (0, cookandcreateService_1.finalizeRound3)(timer.reference_id, timer.group_id);
+                break;
         }
     });
+    // Committed now, so the `timers` row lock is released and the CC handler's
+    // ensureCCTimer call can start the next phase's timer. (Read through a local
+    // because TS can't see that the callback above already ran.)
+    const queuedCcHandler = ccHandler;
+    if (queuedCcHandler) {
+        await queuedCcHandler();
+    }
     // A no-response auto-skip may have applied a penalty above; push the fresh
     // scores to the group so the Score Board updates live (read after commit).
     if (timer.timer_type === 'question_response') {

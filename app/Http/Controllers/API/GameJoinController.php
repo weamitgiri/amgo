@@ -94,7 +94,7 @@ class GameJoinController extends BaseController
             }
 
             // Generate 6-digit OTP
-            $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otp = '123456'; // TEMP: fixed OTP for testing — revert before production.
             
             // Create or update participant
             $participant = GameParticipant::updateOrCreate(

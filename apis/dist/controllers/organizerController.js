@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOrganizerResults = exports.deactivateAccount = exports.updateSession = exports.confirmPayment = exports.completeBooking = exports.getBookingDetails = exports.createBooking = exports.resendOtp = exports.verifyOtp = exports.getEventStats = exports.getOrganizerDashboard = exports.verifyLoginOtp = exports.organizerLogin = exports.registerOrganizer = void 0;
+exports.getOrganizerResults = exports.deactivateAccount = exports.updateSession = exports.completeBooking = exports.getBookingDetails = exports.createBooking = exports.resendOtp = exports.verifyOtp = exports.getEventStats = exports.getOrganizerDashboard = exports.verifyLoginOtp = exports.organizerLogin = exports.registerOrganizer = void 0;
 const db_1 = require("../config/db");
 const emailService_1 = require("../services/emailService");
 const apiResponse_1 = require("../utils/apiResponse");
@@ -11,17 +11,27 @@ const asyncHandler_1 = require("../utils/asyncHandler");
 const AppError_1 = require("../utils/AppError");
 const moment_1 = __importDefault(require("moment"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const crypto_1 = __importDefault(require("crypto"));
 const eventStatsService_1 = require("../services/eventStatsService");
 const schemaHelpers_1 = require("../utils/schemaHelpers");
+const otp_1 = require("../utils/otp");
+const jwtSecret_1 = require("../utils/jwtSecret");
+const paymentService_1 = require("../services/paymentService");
 // Total number of days a session may be scheduled/rescheduled within, counting
 // the payment day itself. So a payment on the 27th allows dates through the 31st
 // (27 + 4). Mirrors SCHEDULE_WINDOW_DAYS on the frontend.
 const SCHEDULE_WINDOW_DAYS = 5;
+// Mirrors frontend/src/utils/common.ts::isCookAndCreateSlug's fallback rule
+// (the two codebases can't share a module) — used only to scope the
+// template-completeness guard in createBooking below to Cook & Create
+// activities, never Mystery ones.
+function isCookAndCreateSlug(slug) {
+    if (!slug)
+        return false;
+    return slug.trim().toLowerCase().startsWith('cook');
+}
 exports.registerOrganizer = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { name, email, company_name, company_website } = req.body;
-    //const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otp = '123456';
+    const otp = (0, otp_1.generateNumericOtp)(6);
     const otp_expires_at = (0, moment_1.default)().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
     // Ensure schema has payment/account columns (avoid runtime SQL errors)
     await (0, schemaHelpers_1.ensureOrganizerStatusColumns)();
@@ -52,8 +62,7 @@ exports.organizerLogin = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     if (rows.length === 0) {
         throw new AppError_1.AppError('Organizer not found. Please register first.', 404);
     }
-    //const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otp = '123456';
+    const otp = (0, otp_1.generateNumericOtp)(6);
     const otp_expires_at = (0, moment_1.default)().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
     await (0, db_1.query)('UPDATE organizers SET otp = ?, otp_expires_at = ? WHERE email = ?', [otp, otp_expires_at, email]);
     // Send OTP via email (fire-and-forget to avoid blocking response)
@@ -94,7 +103,7 @@ exports.verifyLoginOtp = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         role: 'organizer',
         payment_status: organizer.payment_status,
         account_status: organizer.account_status,
-    }, process.env.JWT_SECRET || 'your_jwt_secret_key', { expiresIn: '24h' });
+    }, (0, jwtSecret_1.getJwtSecret)(), { expiresIn: '24h' });
     return (0, apiResponse_1.successResponse)(res, 'Logged in successfully.', {
         token,
         organizer: {
@@ -178,8 +187,7 @@ exports.resendOtp = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     if (rows.length === 0) {
         throw new AppError_1.AppError('Organizer not found', 404);
     }
-    //const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otp = '123456';
+    const otp = (0, otp_1.generateNumericOtp)(6);
     const otp_expires_at = (0, moment_1.default)().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
     await (0, db_1.query)('UPDATE organizers SET otp = ?, otp_expires_at = ? WHERE email = ?', [otp, otp_expires_at, email]);
     await (0, emailService_1.sendOtpEmail)(email, otp);
@@ -191,6 +199,32 @@ exports.createBooking = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const [organizer] = await (0, db_1.query)('SELECT email_verified_at FROM organizers WHERE id = ?', [organizer_id]);
     if (!organizer.length || !organizer[0].email_verified_at) {
         throw new AppError_1.AppError('Organizer must verify email before creating a booking.', 403);
+    }
+    // Cook & Create-only guard: a group assigned to a game with no matching
+    // cc_game_templates row (or a template with too few ingredients to play
+    // Round 1) 404s/breaks the whole session at play time (getCCGameState).
+    // Catch that here instead — at booking time, before real participants can
+    // be affected. Every active game under the activity must have a properly
+    // configured template, since participantGroupService.resolveGameForGroup
+    // round-robins group assignment across ALL of them, not just the one
+    // named here. No-op for Mystery activities (which have no
+    // cc_game_templates rows at all).
+    const [activityRows] = await (0, db_1.query)('SELECT slug FROM activities WHERE id = ?', [activity_id]);
+    if (isCookAndCreateSlug(activityRows?.[0]?.slug)) {
+        const gameIds = game_id
+            ? [Number(game_id)]
+            : (await (0, db_1.query)("SELECT id FROM activity_games WHERE activity_id = ? AND status = 'active'", [activity_id]))[0].map((r) => Number(r.id));
+        if (gameIds.length > 0) {
+            const [templateRows] = await (0, db_1.query)(`SELECT t.activity_game_id, COUNT(ti.id) AS ingredient_count
+                 FROM cc_game_templates t
+                 LEFT JOIN cc_game_template_ingredients ti ON ti.template_id = t.id
+                 WHERE t.activity_game_id IN (?) AND t.status = 'active'
+                 GROUP BY t.id, t.activity_game_id`, [gameIds]);
+            const readySet = new Set(templateRows.filter((r) => Number(r.ingredient_count) >= 4).map((r) => Number(r.activity_game_id)));
+            if (gameIds.some((id) => !readySet.has(id))) {
+                throw new AppError_1.AppError("This Cook & Create game isn't fully configured yet. Please contact support.", 422);
+            }
+        }
     }
     const [result] = await (0, db_1.query)('INSERT INTO organizer_bookings (organizer_id, activity_id, game_id, package_id, scheduled_date, scheduled_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())', [organizer_id, activity_id, game_id, package_id, scheduled_date, scheduled_time, 'pending_activation']);
     const bookingId = result.insertId;
@@ -230,89 +264,184 @@ exports.getBookingDetails = (0, asyncHandler_1.asyncHandler)(async (req, res) =>
     }
     return (0, apiResponse_1.successResponse)(res, 'Booking details retrieved.', rows[0]);
 });
+/**
+ * Checkout entry point: captures billing details and starts payment.
+ *
+ * The two supported methods diverge in what this returns, not in how much of
+ * the flow they share:
+ *
+ *   cod      -> booking is activated here and the invitation link is issued
+ *               immediately, with the payment left `pending` for an admin to
+ *               settle on collection.
+ *   razorpay -> a local payment row and a Razorpay Order are created and the
+ *               checkout parameters are returned. The booking stays
+ *               `pending_activation` and no link is issued until the payment is
+ *               verified server-side (or confirmed by webhook).
+ *
+ * Previously this wrote `payment_status = 'paid'` unconditionally with no
+ * gateway involved at all.
+ */
 exports.completeBooking = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { booking_id, gst_number, billing_address, city, state, pin_code, payment_method, consents } = req.body;
-    let invitation_link = '';
-    // Start transaction for booking completion and billing record
-    await (0, db_1.withTransaction)(async (conn) => {
-        // Sequential Step Validation: Check if booking is in pending_activation status
-        const [currentBooking] = await conn.query('SELECT status, organizer_id FROM organizer_bookings WHERE id = ?', [booking_id]);
-        if (currentBooking.length === 0) {
+    const method = String(payment_method || '').toLowerCase();
+    if (!paymentService_1.PAYMENT_METHODS.includes(method)) {
+        throw new AppError_1.AppError('Unsupported payment method.', 422);
+    }
+    // ---- Pre-flight validation (reads only) -------------------------------
+    // The gateway call further down must not happen inside a transaction — it
+    // would hold row locks open across a network round trip to Razorpay — so
+    // validation runs first and the write transaction re-checks under a lock.
+    const [bookingRows] = await (0, db_1.query)(`SELECT ob.status, ob.organizer_id, ob.package_id, ob.scheduled_date, ob.scheduled_time,
+                o.email_verified_at, p.price
+           FROM organizer_bookings ob
+           JOIN organizers o ON o.id = ob.organizer_id
+           JOIN packages p ON p.id = ob.package_id
+          WHERE ob.id = ?`, [booking_id]);
+    if (bookingRows.length === 0) {
+        throw new AppError_1.AppError('Booking not found', 404);
+    }
+    const booking = bookingRows[0];
+    if (booking.status !== 'pending_activation') {
+        throw new AppError_1.AppError('Booking is already completed or invalid for payment.', 400);
+    }
+    if (!booking.email_verified_at) {
+        throw new AppError_1.AppError('Organizer must verify email before completing payment.', 403);
+    }
+    const eventStart = (0, moment_1.default)(`${booking.scheduled_date} ${booking.scheduled_time}`, 'YYYY-MM-DD HH:mm:ss');
+    const now = (0, moment_1.default)();
+    const maxAllowedSchedule = (0, moment_1.default)(now).add(SCHEDULE_WINDOW_DAYS - 1, 'days').endOf('day');
+    if (eventStart.isBefore(now)) {
+        throw new AppError_1.AppError('Scheduled session must be in the future.', 400);
+    }
+    if (eventStart.isAfter(maxAllowedSchedule)) {
+        throw new AppError_1.AppError(`Session must be scheduled within ${SCHEDULE_WINDOW_DAYS} days of payment.`, 400);
+    }
+    // Amount is always recomputed from the package on record. Nothing about
+    // pricing is accepted from the request.
+    const amounts = (0, paymentService_1.calculateBookingAmount)(parseFloat(booking.price || 0));
+    // Server-side gate on the chosen method: COD may be switched off or capped,
+    // and Razorpay may be off or unconfigured. The UI hides those options, but
+    // hiding is not enforcing.
+    await (0, paymentService_1.assertMethodAllowed)(method, amounts.totalPayable);
+    // ---- Persist billing + payment attempt --------------------------------
+    const prepared = await (0, db_1.withTransaction)(async (conn) => {
+        // Re-read under a lock. Two tabs submitting checkout at once would
+        // otherwise both pass the status check above and create two payments.
+        const [lockedRows] = (await conn.query('SELECT status, organizer_id FROM organizer_bookings WHERE id = ? FOR UPDATE', [booking_id]));
+        if (lockedRows.length === 0) {
             throw new AppError_1.AppError('Booking not found', 404);
         }
-        if (currentBooking[0].status !== 'pending_activation') {
+        if (lockedRows[0].status !== 'pending_activation') {
             throw new AppError_1.AppError('Booking is already completed or invalid for payment.', 400);
         }
-        // Check if organizer has verified email
-        const [organizer] = await conn.query('SELECT email_verified_at FROM organizers WHERE id = ?', [currentBooking[0].organizer_id]);
-        if (!organizer.length || !organizer[0].email_verified_at) {
-            throw new AppError_1.AppError('Organizer must verify email before completing payment.', 403);
+        const organizerId = lockedRows[0].organizer_id;
+        // A booking that already has a settled payment must never be charged
+        // again, whatever the booking status says.
+        const [settledRows] = (await conn.query("SELECT id FROM payments WHERE booking_id = ? AND payment_status = 'captured' LIMIT 1", [booking_id]));
+        if (settledRows.length > 0) {
+            throw new AppError_1.AppError('This booking has already been paid for.', 409);
         }
-        // Get booking info for pricing
-        const [bookingRows] = await conn.query('SELECT package_id, scheduled_date, scheduled_time FROM organizer_bookings WHERE id = ?', [booking_id]);
-        if (bookingRows.length === 0) {
-            throw new AppError_1.AppError('Booking not found', 404);
-        }
-        const eventStart = (0, moment_1.default)(`${bookingRows[0].scheduled_date} ${bookingRows[0].scheduled_time}`, 'YYYY-MM-DD HH:mm:ss');
-        const now = (0, moment_1.default)();
-        const maxAllowedSchedule = (0, moment_1.default)(now).add(SCHEDULE_WINDOW_DAYS - 1, 'days').endOf('day');
-        if (eventStart.isBefore(now)) {
-            throw new AppError_1.AppError('Scheduled session must be in the future.', 400);
-        }
-        if (eventStart.isAfter(maxAllowedSchedule)) {
-            throw new AppError_1.AppError(`Session must be scheduled within ${SCHEDULE_WINDOW_DAYS} days of payment.`, 400);
-        }
-        const [packageRows] = await conn.query('SELECT price FROM packages WHERE id = ?', [bookingRows[0].package_id]);
-        const price = parseFloat(packageRows[0]?.price || 0);
-        const gstAmount = parseFloat((price * 0.18).toFixed(2)); // Assuming 18% GST
-        const totalPayable = parseFloat((price + gstAmount).toFixed(2));
-        // Generate Invitation Link
-        invitation_link = crypto_1.default.randomBytes(10).toString('hex');
-        // Insert billing record
-        await conn.query('INSERT INTO organizer_billings (booking_id, gst_number, billing_address, city, state, pin_code, package_price, taxes, additional_charges, gst_amount, total_payable, payment_method, payment_status, confirmation_details, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())', [
-            booking_id,
+        // Reuse the billing row on a retry (failed card, abandoned checkout)
+        // instead of stacking up a second GST snapshot per attempt.
+        const [existingBilling] = (await conn.query('SELECT id FROM organizer_billings WHERE booking_id = ? LIMIT 1', [booking_id]));
+        const billingValues = [
             gst_number || null,
             billing_address,
             city,
             state,
             pin_code,
-            price,
+            amounts.packagePrice,
             0, // taxes
             0, // additional_charges
-            gstAmount,
-            totalPayable,
-            payment_method,
-            'paid', // Assuming payment is confirmed
-            JSON.stringify(consents)
-        ]);
-        // Update booking status and save invitation link
-        await conn.query('UPDATE organizer_bookings SET status = ?, invitation_link = ? WHERE id = ?', ['completed', invitation_link, booking_id]);
-        await conn.query('UPDATE organizers SET payment_status = ?, account_status = ? WHERE id = ?', ['paid', 'active', currentBooking[0].organizer_id]);
+            amounts.gstAmount,
+            amounts.totalPayable,
+            method,
+            'pending',
+            JSON.stringify(consents),
+        ];
+        let billingId;
+        if (existingBilling.length > 0) {
+            billingId = existingBilling[0].id;
+            await conn.query(`UPDATE organizer_billings
+                    SET gst_number = ?, billing_address = ?, city = ?, state = ?, pin_code = ?,
+                        package_price = ?, taxes = ?, additional_charges = ?, gst_amount = ?,
+                        total_payable = ?, payment_method = ?, payment_status = ?,
+                        confirmation_details = ?, updated_at = NOW()
+                  WHERE id = ?`, [...billingValues, billingId]);
+        }
+        else {
+            const [insertResult] = (await conn.query(`INSERT INTO organizer_billings
+                    (booking_id, gst_number, billing_address, city, state, pin_code, package_price,
+                     taxes, additional_charges, gst_amount, total_payable, payment_method,
+                     payment_status, confirmation_details, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`, [booking_id, ...billingValues]));
+            billingId = insertResult.insertId;
+        }
+        const paymentId = await (0, paymentService_1.createPaymentRecord)(conn, {
+            bookingId: Number(booking_id),
+            billingId,
+            organizerId,
+            method,
+            amount: amounts.totalPayable,
+            metadata: { package_price: amounts.packagePrice, gst_amount: amounts.gstAmount },
+        });
+        // COD is settled on delivery, so the booking activates here and the
+        // payment stays pending for an admin to reconcile.
+        if (method === 'cod') {
+            const invitationLink = await (0, paymentService_1.activateBooking)(conn, {
+                bookingId: Number(booking_id),
+                organizerId,
+                billingId,
+                markBillingPaid: false,
+            });
+            return { billingId, paymentId, organizerId, invitationLink };
+        }
+        return { billingId, paymentId, organizerId, invitationLink: '' };
     });
-    return (0, apiResponse_1.successResponse)(res, 'Booking completed successfully.', {
+    if (method === 'cod') {
+        return (0, apiResponse_1.successResponse)(res, 'Order placed successfully. Payment will be collected as per COD terms.', {
+            booking_id,
+            invitation_link: prepared.invitationLink,
+            payment_method: 'cod',
+            payment_status: 'pending',
+            amount: amounts.totalPayable,
+            requires_payment: false,
+        });
+    }
+    // ---- Razorpay: create the gateway order, outside the transaction ------
+    const order = await (0, paymentService_1.attachRazorpayOrder)(prepared.paymentId, {
+        bookingId: Number(booking_id),
+        organizerId: prepared.organizerId,
+        amount: amounts.totalPayable,
+    });
+    return (0, apiResponse_1.successResponse)(res, 'Payment initiated.', {
         booking_id,
-        invitation_link,
+        payment_method: 'razorpay',
+        payment_status: 'pending',
+        requires_payment: true,
+        // Everything Razorpay Checkout needs. The key secret is not here and
+        // never reaches the browser.
+        razorpay: {
+            key_id: order.keyId,
+            order_id: order.orderId,
+            amount: order.amountSubunits,
+            currency: 'INR',
+        },
+        amount: amounts.totalPayable,
     });
 });
-exports.confirmPayment = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const { booking_id, billing_id } = req.body;
-    if (!booking_id && !billing_id) {
-        throw new AppError_1.AppError('Booking ID or billing ID is required.', 400);
-    }
-    const [rows] = await (0, db_1.query)(`SELECT ob.id as booking_id, ob.organizer_id, b.id as billing_id
-         FROM organizer_bookings ob
-         LEFT JOIN organizer_billings b ON b.booking_id = ob.id
-         WHERE ${billing_id ? 'b.id = ?' : 'ob.id = ?'}`, [billing_id || booking_id]);
-    if (rows.length === 0) {
-        throw new AppError_1.AppError('Booking or billing record not found.', 404);
-    }
-    const row = rows[0];
-    const paymentBillingId = row.billing_id || billing_id;
-    await (0, db_1.query)('UPDATE organizer_billings SET payment_status = ? WHERE id = ?', ['paid', paymentBillingId]);
-    await (0, db_1.query)('UPDATE organizer_bookings SET status = ? WHERE id = ?', ['completed', row.booking_id]);
-    await (0, db_1.query)('UPDATE organizers SET payment_status = ?, account_status = ? WHERE id = ?', ['paid', 'active', row.organizer_id]);
-    return (0, apiResponse_1.successResponse)(res, 'Payment confirmed and organizer account activated.');
-});
+/*
+ * `confirmPayment` (POST /v1/organizer/confirm-payment) was removed here.
+ *
+ * It was unauthenticated and took a bare booking id, so any caller could mark
+ * any booking paid and activate the organizer — which with a live gateway in
+ * front of it is a free-session bypass, not just a stale endpoint. Nothing in
+ * the frontend referenced it.
+ *
+ * Its two legitimate uses are now served properly:
+ *   - gateway confirmation -> POST /v1/webhooks/razorpay (signature-verified)
+ *   - manual COD settlement -> admin panel, Payments > mark as paid
+ */
 exports.updateSession = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { booking_id, scheduled_date, scheduled_time } = req.body;
     const organizerId = req.user?.id;

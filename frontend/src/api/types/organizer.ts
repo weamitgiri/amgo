@@ -226,6 +226,8 @@ export interface BookingConsents {
   validity_accepted: boolean;
 }
 
+export type PaymentMethodId = "razorpay" | "cod";
+
 export interface CompleteBookingPayload {
   booking_id: number;
   gst_number?: string;
@@ -233,13 +235,80 @@ export interface CompleteBookingPayload {
   city: string;
   state: string;
   pin_code: string;
-  payment_method: string;
+  payment_method: PaymentMethodId;
   consents: BookingConsents;
 }
 
+/**
+ * Response shape is method-dependent.
+ *
+ * COD returns `requires_payment: false` and the invitation link straight away.
+ * Razorpay returns `requires_payment: true` plus the checkout parameters, and
+ * withholds the link until the payment has been verified server-side.
+ */
 export interface CompleteBookingResponse {
   booking_id: number;
+  payment_method: PaymentMethodId;
+  payment_status: string;
+  requires_payment: boolean;
+  amount: number;
+  /** Present for COD only. */
+  invitation_link?: string;
+  /** Present for Razorpay only. Never contains the key secret. */
+  razorpay?: {
+    key_id: string;
+    order_id: string;
+    /** In paise — Razorpay Checkout expects the smallest currency unit. */
+    amount: number;
+    currency: string;
+  };
+}
+
+/** One selectable method as described by the server. */
+export interface PaymentMethodOption {
+  id: PaymentMethodId;
+  label: string;
+  description: string;
+  enabled: boolean;
+  cta: string;
+  unavailable_reason: string | null;
+  /** Razorpay only — the instrument list to show under the option. */
+  supported_methods?: string[];
+  key_id?: string | null;
+  mode?: "test" | "live" | null;
+  /** COD only. */
+  min_amount?: number | null;
+  max_amount?: number | null;
+}
+
+export interface PaymentMethodsResponse {
+  methods: PaymentMethodOption[];
+  currency: string;
+}
+
+export interface VerifyPaymentPayload {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+export interface VerifyPaymentResponse {
+  booking_id: number;
   invitation_link: string;
+  payment_status: string;
+  newly_settled: boolean;
+}
+
+export interface PaymentStatusResponse {
+  payment_status: string;
+  payment_method: PaymentMethodId;
+  gateway: string;
+  amount: string | number;
+  currency: string;
+  booking_id: number;
+  invitation_link: string | null;
+  paid_at: string | null;
+  failure_reason: string | null;
 }
 
 export interface SessionSetup {

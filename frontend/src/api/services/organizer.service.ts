@@ -23,6 +23,9 @@ import type {
   OrganizerNotificationsResponse,
   OrganizerGameResult,
   OrganizerInvoicesResponse,
+  PaymentStatusResponse,
+  VerifyPaymentPayload,
+  VerifyPaymentResponse,
 } from "../types/organizer";
 
 const noAuth = { auth: "none" as const };
@@ -156,11 +159,45 @@ export const organizerService = {
     window.URL.revokeObjectURL(url);
   },
 
-  /** Step 4: Complete booking and payment */
+  /**
+   * Step 4: Save billing details and start payment.
+   *
+   * For COD this completes the order. For Razorpay it creates the gateway
+   * order and returns the checkout parameters — nothing is paid yet.
+   */
   completeBooking: (payload: CompleteBookingPayload) =>
     apiClient.post<CompleteBookingResponse>(
       API_ENDPOINTS.organizer.completeBooking,
       payload,
       noAuth
     ),
+
+  /**
+   * Step 5 (Razorpay only): hand the checkout result to the server to verify.
+   *
+   * The booking is activated by the server after it re-derives the signature
+   * and re-fetches the payment from Razorpay — never by the browser deciding
+   * the payment succeeded.
+   *
+   * Left on the default auth mode rather than `noAuth`: the header is attached
+   * only when a token exists, which is exactly what these endpoints want — a
+   * returning organizer gets an ownership check, a first-time registrant (who
+   * has no session yet) is still able to verify.
+   */
+  verifyPayment: (payload: VerifyPaymentPayload) =>
+    apiClient.post<VerifyPaymentResponse>(API_ENDPOINTS.organizer.paymentVerify, payload),
+
+  /** Reports a dismissed or failed checkout so the attempt is not left pending. */
+  reportPaymentFailure: (payload: {
+    razorpay_order_id: string;
+    reason?: string;
+    cancelled?: boolean;
+  }) => apiClient.post<null>(API_ENDPOINTS.organizer.paymentFailed, payload),
+
+  /**
+   * Recovery for a browser closed mid-payment — the webhook may have settled
+   * the booking already.
+   */
+  getPaymentStatus: (orderId: string) =>
+    apiClient.get<PaymentStatusResponse>(API_ENDPOINTS.organizer.paymentStatus(orderId)),
 };

@@ -59,7 +59,8 @@ router.post('/round2/submit-step', [
     (0, express_validator_1.body)('instance_id').isNumeric().withMessage('instance_id is required'),
     (0, express_validator_1.body)('participant_id').isNumeric().withMessage('participant_id is required'),
     (0, express_validator_1.body)('step_text').notEmpty().withMessage('step_text is required'),
-    (0, express_validator_1.body)('step_letter').notEmpty().withMessage('step_letter is required (A, B, C...)'),
+    // step_letter is assigned server-side from the submitter's turn index —
+    // see submitRound2Step. Anything the client sent is ignored.
 ], validateRequest_1.validateRequest, cookandcreateController.submitRound2Step);
 // Round 2: Vote to keep/remove a step
 router.post('/round2/vote-step', [
@@ -89,10 +90,31 @@ router.post('/round3/vote-impostor', [
     (0, express_validator_1.body)('participant_id').isNumeric().withMessage('participant_id is required'),
     (0, express_validator_1.body)('voted_for_participant_id').isNumeric().withMessage('voted_for_participant_id is required'),
 ], validateRequest_1.validateRequest, cookandcreateController.submitRound3ImpostorVote);
+// Round 3: respond to the private Double Down offer
+router.post('/round3/double-down', [
+    (0, express_validator_1.body)('instance_id').isNumeric().withMessage('instance_id is required'),
+    (0, express_validator_1.body)('participant_id').isNumeric().withMessage('participant_id is required'),
+    (0, express_validator_1.body)('accept').isBoolean().withMessage('accept must be a boolean'),
+], validateRequest_1.validateRequest, cookandcreateController.respondToDoubleDownHandler);
 // Round 3: Finalize reveal
 router.post('/round3/finalize', [
     (0, express_validator_1.body)('instance_id').isNumeric().withMessage('instance_id is required'),
 ], validateRequest_1.validateRequest, cookandcreateController.finalizeRound3Results);
+// Rating: up to 3 other groups' finished dishes to nominate for awards
+router.get('/:group_id/other-dishes', [
+    (0, express_validator_1.param)('group_id').isNumeric().withMessage('group_id must be numeric'),
+], validateRequest_1.validateRequest, cookandcreateController.getOtherDishes);
+// Rating: nominate another group's dish for an award category
+router.post('/rate', [
+    (0, express_validator_1.body)('instance_id').isNumeric().withMessage('instance_id is required'),
+    (0, express_validator_1.body)('participant_id').isNumeric().withMessage('participant_id is required'),
+    (0, express_validator_1.body)('rated_group_id').isNumeric().withMessage('rated_group_id is required'),
+    (0, express_validator_1.body)('category_id').isNumeric().withMessage('category_id is required'),
+], validateRequest_1.validateRequest, cookandcreateController.submitRatingHandler);
+// Final Results / Leaderboard: award board + this group's impostor reveal
+router.get('/:group_id/awards', [
+    (0, express_validator_1.param)('group_id').isNumeric().withMessage('group_id must be numeric'),
+], validateRequest_1.validateRequest, cookandcreateController.getAwardsHandler);
 /* ---------------- Admin / Organizer Routes ---------------- */
 // Admin: List templates
 router.get('/admin/templates', authMiddleware_1.authMiddleware, cookandcreateController.listCCTemplates);

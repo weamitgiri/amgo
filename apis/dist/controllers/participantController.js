@@ -48,6 +48,7 @@ const lobbyService_1 = require("../services/lobbyService");
 const gameSummaryService_1 = require("../services/gameSummaryService");
 const participantGroupService_1 = require("../services/participantGroupService");
 const eventStatsService_1 = require("../services/eventStatsService");
+const otp_1 = require("../utils/otp");
 const notificationService_1 = require("../services/notificationService");
 /**
  * Verify Invitation Link and Get Booking Info
@@ -135,8 +136,7 @@ exports.participantJoin = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
             }
         }
     }
-    //const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otp = '123456';
+    const otp = (0, otp_1.generateNumericOtp)(6);
     const otp_expires_at = (0, moment_1.default)().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
     const join_token = crypto_1.default.randomBytes(32).toString('hex');
     // Get game_id from booking

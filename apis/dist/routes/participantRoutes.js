@@ -39,6 +39,7 @@ const participantController = __importStar(require("../controllers/participantCo
 const joinLinkController = __importStar(require("../controllers/joinLinkController"));
 const validateRequest_1 = require("../middlewares/validateRequest");
 const joinLinkRateLimit_1 = require("../middlewares/joinLinkRateLimit");
+const authRateLimit_1 = require("../middlewares/authRateLimit");
 const router = (0, express_1.Router)();
 // Verify invitation link
 router.get('/verify-link/:link_token', participantController.verifyInvitation);
@@ -46,13 +47,13 @@ router.get('/verify-link/:link_token', participantController.verifyInvitation);
 router.get('/join_links/:link_token', joinLinkRateLimit_1.joinLinkRateLimit, joinLinkController.getJoinLink);
 router.get('/join-links/:link_token', joinLinkRateLimit_1.joinLinkRateLimit, joinLinkController.getJoinLink);
 // Step 1: Join with Name & Email
-router.post('/join', [
+router.post('/join', authRateLimit_1.otpRequestRateLimit, [
     (0, express_validator_1.body)('booking_id').isNumeric().withMessage('Booking ID is required'),
     (0, express_validator_1.body)('name').notEmpty().withMessage('Name is required'),
     (0, express_validator_1.body)('email').isEmail().withMessage('Valid email is required'),
 ], validateRequest_1.validateRequest, participantController.participantJoin);
 // Step 2: Verify OTP & Assign Group
-router.post('/verify-otp', [
+router.post('/verify-otp', authRateLimit_1.otpVerifyRateLimit, [
     (0, express_validator_1.body)('booking_id').isNumeric().withMessage('Booking ID is required'),
     (0, express_validator_1.body)('email').isEmail().withMessage('Valid email is required'),
     (0, express_validator_1.body)('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),

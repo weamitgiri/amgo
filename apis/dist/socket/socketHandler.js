@@ -114,10 +114,23 @@ async function handlePlayerDeparture(io, groupId, participantId) {
  */
 async function broadcastPresence(io, groupId) {
     try {
-        const [rows] = await (0, db_1.query)('SELECT id, is_online, left_at FROM participant_sessions WHERE group_id = ?', [groupId]);
+        const [rows] = await (0, db_1.query)('SELECT id, participant_id, is_online, left_at FROM participant_sessions WHERE group_id = ?', [groupId]);
         const online = (rows || []).filter((r) => Number(r.is_online) === 1).map((r) => r.id);
         const left = (rows || []).filter((r) => r.left_at).map((r) => r.id);
-        io.to(`group_${groupId}`).emit('presence_updated', { online, left });
+        // Mystery Quest's players are keyed by participant_session_id (`online`/`left`
+        // above, untouched for it). Cook & Create has a simpler 1:1 session-per-participant
+        // model and keys its UI by participant_id directly, so it also gets a
+        // participant_id-keyed view of the same snapshot rather than duplicating this query.
+        const onlineParticipantIds = (rows || [])
+            .filter((r) => Number(r.is_online) === 1)
+            .map((r) => Number(r.participant_id));
+        const leftParticipantIds = (rows || []).filter((r) => r.left_at).map((r) => Number(r.participant_id));
+        io.to(`group_${groupId}`).emit('presence_updated', {
+            online,
+            left,
+            online_participant_ids: onlineParticipantIds,
+            left_participant_ids: leftParticipantIds,
+        });
     }
     catch (err) {
         logger_1.default.error(`[Socket] presence broadcast failed: ${err.message}`);
@@ -170,6 +183,18 @@ const setupSocketHandlers = (io, socket) => {
     };
     socket.on('join_lobby', handleJoinLobby);
     socket.on('join_game_group', handleJoinLobby);
+    /**
+     * Cook & Create gameplay room. A stateless join (no DB writes) separate
+     * from the group_${groupId} presence room above — every cc_* round event
+     * cookandcreateController/Service emits targets `cc-instance-${instanceId}`.
+     * Presence (online/offline/left) still rides the shared group_${groupId}
+     * room via join_lobby, same as Mystery.
+     */
+    socket.on('join_cc_instance', (data) => {
+        if (!data?.instanceId)
+            return;
+        socket.join(`cc-instance-${data.instanceId}`);
+    });
     /**
      * Explicit presence resync. The game page loads its initial online snapshot
      * over HTTP (getGameState), which can land AFTER the join broadcast and

@@ -150,6 +150,23 @@ Route::group(
             Route::get('/get-packages/{gameId}', [\App\Http\Controllers\Admin\OrganizerController::class, 'getPackages'])->name('organizers.getPackages');
         });
 
+        // Payment Management — ledger, reports and COD settlement.
+        //
+        // Read-only over the payments table apart from markAsPaid, which is
+        // restricted to COD. Razorpay payments are written only by the Node API
+        // (checkout verification) and the gateway webhook.
+        Route::prefix('payments')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PaymentController::class, 'dashboard'])->name('payments.dashboard');
+            Route::get('/reports', [\App\Http\Controllers\Admin\PaymentReportController::class, 'index'])->name('payments.reports');
+            Route::get('/reports/export', [\App\Http\Controllers\Admin\PaymentReportController::class, 'export'])->name('payments.reports.export');
+            // Static segments before /{payment} so "list" and "export" are not
+            // captured as payment ids.
+            Route::get('/list', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
+            Route::get('/export', [\App\Http\Controllers\Admin\PaymentController::class, 'export'])->name('payments.export');
+            Route::get('/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'show'])->name('payments.show');
+            Route::post('/{payment}/mark-paid', [\App\Http\Controllers\Admin\PaymentController::class, 'markAsPaid'])->name('payments.markAsPaid');
+        });
+
         // Cook & Create Management (content) + read-only session browser (reports)
         Route::prefix('cook-and-create')->group(function () {
             Route::resource('ingredients', \App\Http\Controllers\Admin\CookAndCreateIngredientController::class)

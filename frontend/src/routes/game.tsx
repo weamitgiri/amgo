@@ -902,11 +902,11 @@ function InstinctWarningModal({ onAcknowledge }: { onAcknowledge: () => void }) 
         </div>
         <h2 className="mt-4 text-xl font-black text-white">Trust Your Instincts</h2>
         <p className="mt-3 text-sm leading-relaxed text-white/80">
-          This is a game of human instinct, not internet searches. Put the phone down, look your
-          suspects in the eye, and trust yourself. No AI tool can feel when someone is lying. You can.
+          This is a game of human instinct, not internet searches. Put the phone down, study the clues, question your suspects, and trust yourself Do not use AI tools, Google, the internet, or any other external source to solve the case. All answers must come from the information provided in the game.
         </p>
         <p className="mt-2 text-sm text-white/70">
-          Using external tools will spoil the game for yourself and everyone at the table.
+          If you are suspected of cheating or using external tools, you may be removed from the game.
+Play fair. Trust yourself. Solve the mystery.
         </p>
         <button
           onClick={onAcknowledge}

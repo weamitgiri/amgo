@@ -284,24 +284,47 @@ class SettingController extends Controller {
         ]);
     }
 
+    /**
+     * Payment settings: which methods are offered and under what limits.
+     *
+     * Gateway *credentials* are deliberately not editable here and are no
+     * longer written to the settings table. They live in .env (read by both the
+     * Node checkout API and config/services.php) for two reasons: the settings
+     * table is queried by a public endpoint, so a secret in it is one bug away
+     * from being served to a browser — which is exactly what happened before
+     * this module existed — and keeping them in the environment is what lets
+     * test and live keys be swapped without a code or data change.
+     *
+     * What is configurable here is behaviour: whether each method is offered,
+     * the COD floor and ceiling, and which Razorpay instruments to advertise.
+     * The Node API reads these keys directly and enforces them server-side.
+     */
     public function paymentUpdate(Request $request)
     {
         $validated = $request->validate([
-            'razorpay_key_id' => 'nullable|string|max:255',
-            'razorpay_key_secret' => 'nullable|string|max:255',
-            'stripe_key' => 'nullable|string|max:255',
-            'stripe_secret' => 'nullable|string|max:255',
-            'payment_mode' => 'required|in:test,live',
-            'payment_option_upi' => 'nullable|in:0,1',
-            'payment_option_card' => 'nullable|in:0,1',
-            'payment_option_net_banking' => 'nullable|in:0,1',
+            'payment_cod_min_amount' => 'nullable|numeric|min:0|max:99999999',
+            // Must not sit below the floor, or COD becomes unselectable at every
+            // amount with no indication why.
+            'payment_cod_max_amount' => 'nullable|numeric|min:0|max:99999999|gte:payment_cod_min_amount',
+        ], [
+            'payment_cod_max_amount.gte' => 'The COD maximum amount must be greater than or equal to the minimum.',
         ]);
 
-        $validated['payment_option_upi'] = $request->boolean('payment_option_upi') ? '1' : '0';
-        $validated['payment_option_card'] = $request->boolean('payment_option_card') ? '1' : '0';
-        $validated['payment_option_net_banking'] = $request->boolean('payment_option_net_banking') ? '1' : '0';
+        // Unchecked boxes are absent from the request rather than false, so each
+        // toggle is resolved explicitly instead of relying on what was posted.
+        $settings = [
+            'payment_gateway_razorpay_enabled' => $request->boolean('payment_gateway_razorpay_enabled') ? '1' : '0',
+            'payment_gateway_cod_enabled' => $request->boolean('payment_gateway_cod_enabled') ? '1' : '0',
+            'payment_option_upi' => $request->boolean('payment_option_upi') ? '1' : '0',
+            'payment_option_card' => $request->boolean('payment_option_card') ? '1' : '0',
+            'payment_option_net_banking' => $request->boolean('payment_option_net_banking') ? '1' : '0',
+            'payment_option_wallet' => $request->boolean('payment_option_wallet') ? '1' : '0',
+            // 0 means "no limit" for both bounds.
+            'payment_cod_min_amount' => (string) ($validated['payment_cod_min_amount'] ?? 0),
+            'payment_cod_max_amount' => (string) ($validated['payment_cod_max_amount'] ?? 0),
+        ];
 
-        Setting::set($validated);
+        Setting::set($settings);
         Setting::save();
 
         return json_encode([
@@ -309,6 +332,26 @@ class SettingController extends Controller {
             "reload" => true,
             "message" => "Payment settings updated successfully.",
         ]);
+    }
+
+    /**
+     * Masks a credential for display: keeps enough to identify which key is in
+     * use without ever showing a usable value back to an administrator.
+     */
+    public static function maskSecret(?string $value): string
+    {
+        $value = (string) $value;
+
+        if ($value === '') {
+            return 'Not configured';
+        }
+
+        if (strlen($value) <= 8) {
+            return str_repeat('•', strlen($value));
+        }
+
+        // rzp_test_ABC…XY90 — the prefix identifies test vs live at a glance.
+        return substr($value, 0, 8) . str_repeat('•', 12) . substr($value, -4);
     }
 
     /**

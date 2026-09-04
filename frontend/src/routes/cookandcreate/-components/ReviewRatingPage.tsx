@@ -1,9 +1,9 @@
 import { useNavigate } from '@tanstack/react-router';
+import { Star } from 'lucide-react';
 import { CookCreateLayout } from './CookCreateLayout';
 import type { CCAwardEntry, CCRatingCategory, CCTemplate } from '@/api/types/cookandcreate';
 import { clearParticipantSession } from '@/lib/participant-session';
 import { disconnectSocket } from '@/lib/socket';
-import { dishImageFor } from './dishImages';
 import { portraitForRole } from './portraits';
 import imposterImg from '../../../assets/cookandcreate/imposter 1.png';
 
@@ -36,7 +36,6 @@ export function ReviewRatingPage({
   doubleDownOutcome,
 }: ReviewRatingPageProps) {
   const navigate = useNavigate();
-  const myEntry = awardEntries.find((g) => g.group_id === myGroupId);
 
   const exitToHome = () => {
     disconnectSocket();
@@ -44,12 +43,29 @@ export function ReviewRatingPage({
     navigate({ to: '/' });
   };
 
-  // Reactions this dish received (real nomination counts), highest first.
-  const reactions = ratingCategories
+  // Reactions this dish received. When there are none yet we still render the
+  // cards (greyed) so the section always looks like the design.
+  const withCounts = ratingCategories
     .map((c) => ({ ...c, count: reactionCounts[c.slug] ?? 0 }))
     .filter((c) => c.count > 0)
     .sort((a, b) => b.count - a.count);
-  const totalReactions = reactions.reduce((sum, r) => sum + r.count, 0);
+  const hasReactions = withCounts.length > 0;
+  const reactionCards = hasReactions
+    ? withCounts.slice(0, 5)
+    : ratingCategories.slice(0, 5).map((c) => ({ ...c, count: 0 }));
+
+  // Fun Awards: which group leads each category (real, from the board). Cards
+  // with no winner yet render greyed so the grid always fills.
+  const winnerBySlug: Record<string, string> = {};
+  for (const g of awardEntries) {
+    for (const a of g.awards) {
+      if (!winnerBySlug[a.slug]) winnerBySlug[a.slug] = g.group_id === myGroupId ? 'Your team' : g.group_name;
+    }
+  }
+  const funAwards = ratingCategories.slice(0, 6).map((c) => ({
+    ...c,
+    winner: winnerBySlug[c.slug] ?? null,
+  }));
 
   return (
     <CookCreateLayout breadcrumb="Cook & Create / Results">
@@ -67,15 +83,12 @@ export function ReviewRatingPage({
 
         {/* Recipe Reveal + Ratings & Reaction */}
         <div className="bg-[#FFFDF9] rounded-2xl border border-[#F0DECA] p-6 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Recipe Reveal */}
-            <div className="text-center">
-              <h3 className="text-[17px] font-black text-[#5C432E] mb-1">Recipe Reveal</h3>
-              <p className="text-[11px] font-medium text-[#8B7355] mb-2 mt-3">Your group cooked up...</p>
-              <p className="text-base font-black text-[#E8881E] mb-4">{dishName}</p>
-              <div className="rounded-xl overflow-hidden border border-[#F0E4D4] shadow-sm bg-[#FAF6F0]">
-                <img src={dishImageFor(myGroupId)} alt={dishName} className="w-full h-48 object-cover" />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            {/* Recipe Reveal — no photo, just the dish */}
+            <div className="text-center py-4">
+              <h3 className="text-[17px] font-black text-[#5C432E] mb-3">Recipe Reveal</h3>
+              <p className="text-[11px] font-medium text-[#8B7355] mb-2">Your group cooked up...</p>
+              <p className="text-2xl font-black text-[#E8881E]">{dishName}</p>
             </div>
 
             {/* Ratings & Reaction */}
@@ -85,27 +98,33 @@ export function ReviewRatingPage({
                 The verdict is in. Other teams have tasted your creation.
               </p>
 
-              {reactions.length === 0 ? (
-                <p className="text-xs text-[#B8A898] py-6">
-                  No reactions yet — other teams are still tasting your dish.
-                </p>
-              ) : (
-                <>
-                  <p className="text-[11px] font-bold text-[#8B7355] mb-1">Reactions received</p>
-                  <p className="text-3xl font-black text-[#E8881E] mb-4">{totalReactions}</p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {reactions.map((r) => (
-                      <div
-                        key={r.id}
-                        className="flex flex-col items-center bg-white rounded-xl border border-[#F0DECA] px-3 py-2 min-w-[72px]"
-                      >
-                        <span className="text-2xl">{r.emoji}</span>
-                        <span className="text-[9px] font-bold text-[#8B7355] leading-tight text-center mt-1">{r.name}</span>
-                        <span className="text-sm font-black text-[#E8881E]">{r.count}</span>
-                      </div>
-                    ))}
+              {/* Average rating (no star data yet → shown disabled) */}
+              <p className="text-[11px] font-bold text-[#8B7355] mb-1">Average Rating Received Dish</p>
+              <div className="flex items-center justify-center gap-1 mb-5">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Star key={i} size={22} className="text-[#E0D4C4]" fill="#EFE6DA" strokeWidth={1.5} />
+                ))}
+                <span className="ml-2 text-sm font-black text-[#B8A898]">—/5</span>
+              </div>
+
+              {/* Reactions */}
+              <p className="text-[11px] font-bold text-[#8B7355] mb-2">Reactions</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {reactionCards.map((r) => (
+                  <div
+                    key={r.id}
+                    className={`flex flex-col items-center bg-white rounded-xl border border-[#F0DECA] px-3 py-2 min-w-[72px] ${
+                      r.count === 0 ? 'opacity-45' : ''
+                    }`}
+                  >
+                    <span className="text-2xl">{r.emoji}</span>
+                    <span className="text-[9px] font-bold text-[#8B7355] leading-tight text-center mt-1">{r.name}</span>
+                    <span className="text-sm font-black text-[#E8881E]">{r.count}</span>
                   </div>
-                </>
+                ))}
+              </div>
+              {!hasReactions && (
+                <p className="text-[10px] text-[#B8A898] mt-2">No reactions yet — other teams are still tasting.</p>
               )}
 
               {doubleDownOutcome && (
@@ -169,21 +188,23 @@ export function ReviewRatingPage({
             </div>
           </div>
 
-          {/* Fun Awards — the real award categories this dish won */}
+          {/* Fun Awards — real category winners; empty slots render greyed */}
           <div className="bg-[#F8DEBC] rounded-2xl border border-[#F0D0A5] p-6 shadow-sm">
             <h3 className="text-[17px] font-black text-[#5C432E] text-center mb-4">🏆 Fun Awards</h3>
-            {!myEntry || myEntry.awards.length === 0 ? (
-              <p className="text-xs text-[#5C432E] text-center py-6">No awards yet — nominations are still coming in.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {myEntry.awards.map((a) => (
-                  <div key={a.category_id} className="bg-white rounded-xl px-3 py-3 text-center border border-[#F0DECA]">
-                    <p className="text-2xl leading-none mb-1">{a.emoji}</p>
-                    <p className="text-[11px] font-black text-[#3D2E1F] leading-tight">{a.category_name}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {funAwards.map((a) => (
+                <div
+                  key={a.id}
+                  className={`bg-white rounded-xl px-3 py-2.5 text-center border border-[#F0DECA] ${
+                    a.winner ? '' : 'opacity-50'
+                  }`}
+                >
+                  <p className="text-lg leading-none mb-1">{a.emoji}</p>
+                  <p className="text-[11px] font-black text-[#3D2E1F] leading-tight">{a.name}</p>
+                  <p className="text-[10px] text-[#8B7355] mt-0.5">{a.winner ?? '—'}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -8,6 +8,7 @@ import { query } from '../config/db';
 import { serializeData } from '../utils/serializer';
 import { shortName } from '../utils/pseudonym';
 import { resolvePdfPath } from '../services/resultsPdfService';
+import { getJwtSecret } from '../utils/jwtSecret';
 
 /**
  * Post-game results for a group — always rendered with pseudonyms (never raw
@@ -154,7 +155,7 @@ export const downloadResultsPdf = asyncHandler(async (req: Request, res: Respons
     if (!authorized && authHeader?.startsWith('Bearer ')) {
         try {
             const token = authHeader.split(' ')[1];
-            const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+            const decoded: any = jwt.verify(token, getJwtSecret());
             const [ownerRows] = await query<any>(
                 `SELECT ob.id FROM game_groups gg
                     JOIN organizer_bookings ob ON ob.id = gg.booking_id

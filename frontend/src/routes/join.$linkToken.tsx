@@ -6,7 +6,7 @@ import { participantService } from "@/api/services/participant.service";
 import type { JoinLinkResponse } from "@/api/types/participant";
 import { saveParticipantSession } from "@/lib/participant-session";
 import { toastError, toastInfo, toastSuccess } from "@/lib/toast";
-import mystery from "@/assets/mystery.jpg";
+import mystery from "@/assets/game-a-card-bg.jpg";
 import cooka from "@/assets/cook.jpg";
 import cook from "@/assets/cookandcreate/game-2-lobby-bg-expanded.jpg";
 import mqlogo from "@/assets/mqlogo.png";

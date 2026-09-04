@@ -20,8 +20,24 @@ export declare const verifyOtp: (req: Request, res: Response, next: import("expr
 export declare const resendOtp: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const createBooking: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const getBookingDetails: (req: Request, res: Response, next: import("express").NextFunction) => void;
+/**
+ * Checkout entry point: captures billing details and starts payment.
+ *
+ * The two supported methods diverge in what this returns, not in how much of
+ * the flow they share:
+ *
+ *   cod      -> booking is activated here and the invitation link is issued
+ *               immediately, with the payment left `pending` for an admin to
+ *               settle on collection.
+ *   razorpay -> a local payment row and a Razorpay Order are created and the
+ *               checkout parameters are returned. The booking stays
+ *               `pending_activation` and no link is issued until the payment is
+ *               verified server-side (or confirmed by webhook).
+ *
+ * Previously this wrote `payment_status = 'paid'` unconditionally with no
+ * gateway involved at all.
+ */
 export declare const completeBooking: (req: Request, res: Response, next: import("express").NextFunction) => void;
-export declare const confirmPayment: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const updateSession: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const deactivateAccount: (req: Request, res: Response, next: import("express").NextFunction) => void;
 /**

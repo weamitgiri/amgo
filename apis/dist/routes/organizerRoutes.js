@@ -38,8 +38,11 @@ const express_validator_1 = require("express-validator");
 const organizerController = __importStar(require("../controllers/organizerController"));
 const profileController = __importStar(require("../controllers/profileController"));
 const notificationController = __importStar(require("../controllers/notificationController"));
+const invoiceController = __importStar(require("../controllers/invoiceController"));
+const paymentController = __importStar(require("../controllers/paymentController"));
 const validateRequest_1 = require("../middlewares/validateRequest");
 const authMiddleware_1 = require("../middlewares/authMiddleware");
+const authRateLimit_1 = require("../middlewares/authRateLimit");
 const INDIAN_STATES_AND_UTS = [
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
     'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
@@ -51,18 +54,18 @@ const INDIAN_STATES_AND_UTS = [
 ];
 const router = (0, express_1.Router)();
 // Step 1: Basic Information & OTP Sending (Registration)
-router.post('/register', [
+router.post('/register', authRateLimit_1.otpRequestRateLimit, [
     (0, express_validator_1.body)('name').notEmpty().withMessage('Name is required'),
     (0, express_validator_1.body)('email').isEmail().withMessage('Valid email is required'),
     (0, express_validator_1.body)('company_name').notEmpty().withMessage('Company name is required'),
     (0, express_validator_1.body)('company_website').notEmpty().withMessage('Company website is required'),
 ], validateRequest_1.validateRequest, organizerController.registerOrganizer);
 // Organizer Login - Step 1: Send OTP
-router.post('/login', [
+router.post('/login', authRateLimit_1.otpRequestRateLimit, [
     (0, express_validator_1.body)('email').isEmail().withMessage('Valid email is required'),
 ], validateRequest_1.validateRequest, organizerController.organizerLogin);
 // Organizer Login - Step 2: Verify OTP
-router.post('/verify-login', [
+router.post('/verify-login', authRateLimit_1.otpVerifyRateLimit, [
     (0, express_validator_1.body)('email').isEmail().withMessage('Valid email is required'),
     (0, express_validator_1.body)('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
 ], validateRequest_1.validateRequest, organizerController.verifyLoginOtp);
@@ -90,12 +93,12 @@ router.get('/event-stats/:booking_id', authMiddleware_1.authMiddleware, organize
 router.get('/notifications/:booking_id', authMiddleware_1.authMiddleware, notificationController.listNotifications);
 router.post('/notifications/:booking_id/read-all', authMiddleware_1.authMiddleware, notificationController.markNotificationsRead);
 // Step 2: Email Verification (Registration)
-router.post('/verify-otp', [
+router.post('/verify-otp', authRateLimit_1.otpVerifyRateLimit, [
     (0, express_validator_1.body)('email').isEmail().withMessage('Valid email is required'),
     (0, express_validator_1.body)('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
 ], validateRequest_1.validateRequest, organizerController.verifyOtp);
 // Resend OTP
-router.post('/resend-otp', [
+router.post('/resend-otp', authRateLimit_1.otpRequestRateLimit, [
     (0, express_validator_1.body)('email').isEmail().withMessage('Valid email is required'),
 ], validateRequest_1.validateRequest, organizerController.resendOtp);
 // Step 3: Activity Selection & Booking Creation
@@ -120,7 +123,9 @@ router.post('/complete-booking', [
     (0, express_validator_1.body)('city').notEmpty().withMessage('City is required'),
     (0, express_validator_1.body)('state').isIn(INDIAN_STATES_AND_UTS).withMessage('Please select a valid Indian state or UT'),
     (0, express_validator_1.body)('pin_code').isLength({ min: 6, max: 6 }).isNumeric().withMessage('PIN code must be exactly 6 digits'),
-    (0, express_validator_1.body)('payment_method').notEmpty().withMessage('Payment method is required'),
+    (0, express_validator_1.body)('payment_method')
+        .isIn(['razorpay', 'cod'])
+        .withMessage('Payment method must be razorpay or cod'),
     (0, express_validator_1.body)('consents').isObject().withMessage('Consents must be an object'),
     (0, express_validator_1.body)('consents.authorization').isBoolean().equals('true').withMessage('Authorization is required'),
     (0, express_validator_1.body)('consents.participant_consent').isBoolean().equals('true').withMessage('Participant consent is required'),
@@ -128,11 +133,26 @@ router.post('/complete-booking', [
     (0, express_validator_1.body)('consents.non_refundable_accepted').isBoolean().equals('true').withMessage('Non-refundable policy acceptance is required'),
     (0, express_validator_1.body)('consents.validity_accepted').isBoolean().equals('true').withMessage('Booking validity acceptance is required'),
 ], validateRequest_1.validateRequest, organizerController.completeBooking);
-// Payment Confirmation (webhook or manual)
-router.post('/confirm-payment', [
-    (0, express_validator_1.body)('booking_id').optional().isNumeric().withMessage('Booking ID must be numeric'),
-    (0, express_validator_1.body)('billing_id').optional().isNumeric().withMessage('Billing ID must be numeric'),
-], validateRequest_1.validateRequest, organizerController.confirmPayment);
+// Razorpay checkout callback — server-side signature verification.
+//
+// Authenticated so a payment can only be claimed by the organizer it belongs
+// to. The handler re-derives the signature from the key secret and re-fetches
+// the payment from Razorpay; nothing the browser asserts about amount or status
+// is trusted.
+router.post('/payment/verify', authMiddleware_1.optionalAuthMiddleware, [
+    (0, express_validator_1.body)('razorpay_order_id').notEmpty().withMessage('Razorpay order ID is required'),
+    (0, express_validator_1.body)('razorpay_payment_id').notEmpty().withMessage('Razorpay payment ID is required'),
+    (0, express_validator_1.body)('razorpay_signature').notEmpty().withMessage('Razorpay signature is required'),
+], validateRequest_1.validateRequest, paymentController.verifyPayment);
+// Records a dismissed or failed checkout so the attempt is not left pending.
+router.post('/payment/failed', authMiddleware_1.optionalAuthMiddleware, [
+    (0, express_validator_1.body)('razorpay_order_id').notEmpty().withMessage('Razorpay order ID is required'),
+    (0, express_validator_1.body)('reason').optional().isString(),
+    (0, express_validator_1.body)('cancelled').optional().isBoolean(),
+], validateRequest_1.validateRequest, paymentController.recordPaymentFailure);
+// Recovery path for a browser closed mid-payment: the webhook may already have
+// settled the booking by the time the organizer comes back.
+router.get('/payment/status/:order_id', authMiddleware_1.optionalAuthMiddleware, paymentController.getPaymentStatus);
 // Update Session Date/Time (One-time only)
 router.post('/update-session', authMiddleware_1.authMiddleware, [
     (0, express_validator_1.body)('booking_id').isNumeric().withMessage('Booking ID must be numeric'),
@@ -141,6 +161,9 @@ router.post('/update-session', authMiddleware_1.authMiddleware, [
 ], validateRequest_1.validateRequest, organizerController.updateSession);
 // Results tab — completed/incomplete groups with results-PDF availability
 router.get('/results', authMiddleware_1.authMiddleware, organizerController.getOrganizerResults);
+// Payment history + GST invoice download (both scoped to the caller's own bookings)
+router.get('/invoices', authMiddleware_1.authMiddleware, invoiceController.getInvoices);
+router.get('/invoices/:booking_id/pdf', authMiddleware_1.authMiddleware, invoiceController.downloadInvoice);
 // Account deactivation (soft delete — billing/GST records retained)
 router.post('/account/delete', authMiddleware_1.authMiddleware, organizerController.deactivateAccount);
 exports.default = router;

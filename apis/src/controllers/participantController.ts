@@ -10,6 +10,7 @@ import { buildLobbyPayload, emitLobbyUpdate } from '../services/lobbyService';
 import { buildGameSummaryPayload } from '../services/gameSummaryService';
 import { assertCanStartJoin, assignParticipantToGroup } from '../services/participantGroupService';
 import { emitEventStatsUpdate } from '../services/eventStatsService';
+import { generateNumericOtp } from '../utils/otp';
 import { notifyParticipantJoined } from '../services/notificationService';
 
 /**
@@ -130,8 +131,7 @@ export const participantJoin = asyncHandler(async (req: Request, res: Response) 
         }
     }
 
-    //const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otp = '123456';
+    const otp = generateNumericOtp(6);
     const otp_expires_at = moment().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
     const join_token = crypto.randomBytes(32).toString('hex');
 

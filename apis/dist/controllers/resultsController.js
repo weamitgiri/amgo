@@ -13,6 +13,7 @@ const db_1 = require("../config/db");
 const serializer_1 = require("../utils/serializer");
 const pseudonym_1 = require("../utils/pseudonym");
 const resultsPdfService_1 = require("../services/resultsPdfService");
+const jwtSecret_1 = require("../utils/jwtSecret");
 /**
  * Post-game results for a group — always rendered with pseudonyms (never raw
  * participant names), matching how the live game already hides identities.
@@ -125,7 +126,7 @@ exports.downloadResultsPdf = (0, asyncHandler_1.asyncHandler)(async (req, res) =
     if (!authorized && authHeader?.startsWith('Bearer ')) {
         try {
             const token = authHeader.split(' ')[1];
-            const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'secret');
+            const decoded = jsonwebtoken_1.default.verify(token, (0, jwtSecret_1.getJwtSecret)());
             const [ownerRows] = await (0, db_1.query)(`SELECT ob.id FROM game_groups gg
                     JOIN organizer_bookings ob ON ob.id = gg.booking_id
                     WHERE gg.id = ? AND ob.organizer_id = ? LIMIT 1`, [group_id, decoded.id]);

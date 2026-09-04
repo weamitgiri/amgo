@@ -33,11 +33,14 @@ import {
 } from "@/utils/booking";
 import type {
   BookingConsents,
+  PaymentMethodId,
+  PaymentMethodOption,
   RegistrationFormData,
   SessionSetup,
 } from "@/api/types/organizer";
 import type { ApiActivity, ApiPackage } from "@/api/types/public";
-import { useGames, useGameDetails, usePackages } from "@/hooks/usePublicContent";
+import { useGames, useGameDetails, usePackages, usePaymentMethods } from "@/hooks/usePublicContent";
+import { loadRazorpayCheckout, openRazorpayCheckout } from "@/utils/razorpay";
 import { resolveMediaUrl } from "@/utils/media";
 import { isOrganizerAuthenticated } from "@/lib/auth";
 import { Check, Mail, User, Copy, MessageCircle, Share2, CheckCircle2, X, Loader2, Calendar as CalendarIcon, Link2, Clock, Package as PackageIcon, Gamepad2, LockKeyhole, ArrowRight } from "lucide-react";
@@ -1090,12 +1093,125 @@ function PackageModal({
   );
 }
 
-const PAYMENT_METHODS = [
-  { id: "upi", label: "UPI" },
-  { id: "paytm", label: "Paytm" },
-  { id: "card", label: "Debit/Credit Card" },
-  { id: "netbanking", label: "Net Banking" },
-] as const;
+/**
+ * Payment method chooser.
+ *
+ * The options are whatever the server says they are — which gateways are
+ * switched on, whether Razorpay actually has credentials, and whether this
+ * order total falls inside the COD limits. A disabled option still renders,
+ * with its reason, rather than vanishing: silently missing choices read as a
+ * broken page.
+ */
+function PaymentMethodSelector({
+  methods,
+  selected,
+  onSelect,
+  isLoading,
+  error,
+}: {
+  methods: PaymentMethodOption[];
+  selected: PaymentMethodId | null;
+  onSelect: (id: PaymentMethodId) => void;
+  isLoading: boolean;
+  error?: string;
+}) {
+  if (isLoading) {
+    return (
+      <div>
+        <p className="text-sm font-semibold mb-2">Payment Method</p>
+        <div className="flex items-center gap-2 rounded-xl border border-border p-4 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading payment options...
+        </div>
+      </div>
+    );
+  }
+
+  if (methods.length === 0) {
+    return (
+      <div>
+        <p className="text-sm font-semibold mb-2">Payment Method</p>
+        <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+          No payment method is currently available. Please contact support.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-semibold mb-2">Payment Method</p>
+
+      {/* Single column on mobile so the description text never gets squeezed. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {methods.map((method) => {
+          const isSelected = selected === method.id;
+
+          return (
+            <label
+              key={method.id}
+              className={`flex items-start gap-3 rounded-xl border p-4 text-sm transition-colors ${
+                method.enabled
+                  ? `cursor-pointer ${isSelected ? "border-primary bg-primary/5" : "border-input hover:border-primary/40"}`
+                  : "border-input bg-muted/40 opacity-60 cursor-not-allowed"
+              }`}
+            >
+              <input
+                type="radio"
+                name="payment_method"
+                value={method.id}
+                checked={isSelected}
+                disabled={!method.enabled}
+                onChange={() => onSelect(method.id)}
+                className="mt-0.5 accent-primary"
+              />
+              <span className="flex-1">
+                <span className="flex items-center gap-2 font-medium">
+                  {method.id === "razorpay" ? (
+                    <LockKeyhole className="h-3.5 w-3.5 text-primary" />
+                  ) : (
+                    <PackageIcon className="h-3.5 w-3.5 text-primary" />
+                  )}
+                  {method.label}
+                  {method.mode === "test" && (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-700">
+                      Test Mode
+                    </span>
+                  )}
+                </span>
+
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {method.description}
+                </span>
+
+                {method.id === "razorpay" && method.enabled && method.supported_methods?.length ? (
+                  <span className="mt-2 flex flex-wrap gap-1">
+                    {method.supported_methods.map((label) => (
+                      <span
+                        key={label}
+                        className="rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
+
+                {!method.enabled && method.unavailable_reason && (
+                  <span className="mt-2 block text-[11px] font-medium text-destructive">
+                    {method.unavailable_reason}
+                  </span>
+                )}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
 
 const CONSENT_ITEMS: { key: keyof BookingConsents; text: string }[] = [
   {
@@ -1135,7 +1251,7 @@ function PaymentStep({
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [pinCode, setPinCode] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<string>(PAYMENT_METHODS[0].id);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId | null>(null);
   const [consents, setConsents] = useState<BookingConsents>({
     authorization: false,
     participant_consent: false,
@@ -1147,6 +1263,23 @@ function PaymentStep({
   const price = session.package?.price ?? 0;
   const { priceNum, gst, total } = calculateBillingTotals(price);
   const fmt = formatPrice;
+
+  // Fetched with the total so the server can apply COD min/max to this order.
+  const { data: paymentMethodData, isLoading: isLoadingMethods } = usePaymentMethods(total);
+  const paymentMethods = paymentMethodData?.methods ?? [];
+  const selectedMethod = paymentMethods.find((m) => m.id === paymentMethod) ?? null;
+
+  // Preselect the first usable option once the list arrives, and drop a
+  // selection that has become unavailable (an admin toggling a gateway off, or
+  // the total moving outside the COD range after a package change).
+  useEffect(() => {
+    if (paymentMethods.length === 0) return;
+
+    const stillValid = paymentMethods.some((m) => m.id === paymentMethod && m.enabled);
+    if (stillValid) return;
+
+    setPaymentMethod(paymentMethods.find((m) => m.enabled)?.id ?? null);
+  }, [paymentMethods, paymentMethod]);
 
   const toggleConsent = (key: keyof BookingConsents) => {
     setConsents((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -1166,7 +1299,7 @@ function PaymentStep({
       city,
       state,
       pin_code: pinCode,
-      payment_method: paymentMethod,
+      payment_method: paymentMethod ?? "",
       gst_number: gstNumber,
       consents,
     });
@@ -1177,8 +1310,15 @@ function PaymentStep({
       return;
     }
 
+    if (!paymentMethod || !selectedMethod?.enabled) {
+      setErrors((prev) => ({ ...prev, payment_method: "Please select an available payment method" }));
+      return;
+    }
+
     setIsPaying(true);
     try {
+      // One call for both methods: it stores the billing snapshot and either
+      // completes a COD order or opens a Razorpay order for payment.
       const data = await organizerService.completeBooking({
         booking_id: bookingId,
         gst_number: gstNumber.trim(),
@@ -1189,15 +1329,106 @@ function PaymentStep({
         payment_method: paymentMethod,
         consents,
       });
-      toastSuccess("Payment completed successfully.");
-      onComplete(data.invitation_link);
+
+      // COD: nothing to pay now, the order is already placed.
+      if (!data.requires_payment) {
+        toastSuccess("Order placed successfully. Pay on delivery as per COD terms.");
+        onComplete(data.invitation_link ?? "");
+        return;
+      }
+
+      if (!data.razorpay?.order_id) {
+        throw new Error("Payment could not be initiated. Please try again.");
+      }
+
+      await startRazorpayCheckout(data.razorpay);
     } catch (err) {
       const { message, fieldErrors } = parseApiError(err);
       setErrors(mapApiFieldErrors(fieldErrors) as BillingFieldErrors);
       toastError(message);
-    } finally {
       setIsPaying(false);
     }
+    // Deliberately no `finally`: the Razorpay branch keeps the button busy
+    // while its modal is open and clears the flag from its own callbacks.
+  };
+
+  /**
+   * Opens Razorpay Checkout and hands the result back for server-side
+   * verification.
+   *
+   * The booking is not activated by anything that happens here — success is
+   * whatever `verifyPayment` returns after the server re-derives the signature
+   * and re-fetches the payment from Razorpay.
+   */
+  const startRazorpayCheckout = async (razorpay: {
+    key_id: string;
+    order_id: string;
+    amount: number;
+    currency: string;
+  }) => {
+    try {
+      await loadRazorpayCheckout();
+    } catch {
+      toastError("Could not load the payment gateway. Please check your connection and try again.");
+      setIsPaying(false);
+      return;
+    }
+
+    openRazorpayCheckout({
+      key: razorpay.key_id,
+      amount: razorpay.amount,
+      currency: razorpay.currency,
+      name: "Zoventro",
+      description: session.package?.name
+        ? `${session.activityTitle} — ${session.package.name}`
+        : "Session activation",
+      order_id: razorpay.order_id,
+      prefill: {
+        name: registration.name,
+        email: registration.email,
+      },
+      notes: { booking_id: String(bookingId ?? "") },
+      theme: { color: "#7c3aed" },
+      handler: async (response) => {
+        try {
+          const verified = await organizerService.verifyPayment({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          });
+
+          toastSuccess("Payment successful. Your session is now active.");
+          onComplete(verified.invitation_link);
+        } catch (err) {
+          // Money may well have been taken — the webhook is the backstop, so
+          // never tell the customer the payment failed outright.
+          const { message } = parseApiError(err);
+          toastError(
+            message ||
+              "We could not confirm your payment yet. If it was debited it will be confirmed shortly."
+          );
+        } finally {
+          setIsPaying(false);
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          setIsPaying(false);
+          toastWarning("Payment cancelled. You can try again when you're ready.");
+          // Best-effort: stops the attempt sitting as `pending` forever. The
+          // server ignores this for an already-captured payment.
+          organizerService
+            .reportPaymentFailure({
+              razorpay_order_id: razorpay.order_id,
+              cancelled: true,
+              reason: "Checkout dismissed by user",
+            })
+            .catch(() => {
+              /* advisory only — never block the UI on it */
+            });
+        },
+      },
+    });
   };
 
   return (
@@ -1300,34 +1531,16 @@ function PaymentStep({
         </div>
       </div>
 
-      <div>
-        <p className="text-sm font-semibold mb-2">Select payment Method</p>
-        <div className="grid grid-cols-2 gap-3">
-          {PAYMENT_METHODS.map((m) => (
-            <label
-              key={m.id}
-              className={`flex items-center gap-2 rounded-lg border p-3 text-sm cursor-pointer ${
-                paymentMethod === m.id ? "border-primary bg-primary/5" : "border-input"
-              }`}
-            >
-              <input
-                type="radio"
-                name="pay"
-                checked={paymentMethod === m.id}
-                onChange={() => {
-                  setPaymentMethod(m.id);
-                  setErrors((prev) => ({ ...prev, payment_method: undefined }));
-                }}
-                className="accent-primary"
-              />
-              {m.label}
-            </label>
-          ))}
-        </div>
-        {errors.payment_method && (
-          <p className="mt-1 text-xs text-destructive">{errors.payment_method}</p>
-        )}
-      </div>
+      <PaymentMethodSelector
+        methods={paymentMethods}
+        selected={paymentMethod}
+        isLoading={isLoadingMethods}
+        error={errors.payment_method}
+        onSelect={(id) => {
+          setPaymentMethod(id);
+          setErrors((prev) => ({ ...prev, payment_method: undefined }));
+        }}
+      />
 
       <div className="rounded-xl bg-purple-50 p-4 space-y-2 text-xs">
         {CONSENT_ITEMS.map(({ key, text }) => (
@@ -1344,9 +1557,24 @@ function PaymentStep({
         {errors.consents && <p className="text-destructive">{errors.consents}</p>}
       </div>
 
-      <PillButton type="submit" variant="primary" disabled={isPaying || !bookingId}>
-        {isPaying ? "Processing..." : "Pay & Activate Event"}
+      {/* Label follows the method: Razorpay hands off to a gateway, COD does not. */}
+      <PillButton
+        type="submit"
+        variant="primary"
+        disabled={isPaying || !bookingId || !selectedMethod?.enabled}
+      >
+        {isPaying
+          ? paymentMethod === "cod"
+            ? "Placing Order..."
+            : "Processing..."
+          : (selectedMethod?.cta ?? "Continue to Payment")}
       </PillButton>
+
+      {paymentMethod === "cod" && (
+        <p className="text-center text-xs text-muted-foreground">
+          Your session link is issued immediately. Payment is collected as per Cash on Delivery terms.
+        </p>
+      )}
     </form>
   );
 }

@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "nodemon src/server.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test:security": "ts-node tests/security/otp.test.ts"
   },
   "dependencies": {
     "@types/nodemailer": "^8.0.0",

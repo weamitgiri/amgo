@@ -4,8 +4,10 @@ import * as organizerController from '../controllers/organizerController';
 import * as profileController from '../controllers/profileController';
 import * as notificationController from '../controllers/notificationController';
 import * as invoiceController from '../controllers/invoiceController';
+import * as paymentController from '../controllers/paymentController';
 import { validateRequest } from '../middlewares/validateRequest';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import { authMiddleware, optionalAuthMiddleware } from '../middlewares/authMiddleware';
+import { otpRequestRateLimit, otpVerifyRateLimit } from '../middlewares/authRateLimit';
 
 const INDIAN_STATES_AND_UTS = [
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
@@ -22,6 +24,7 @@ const router = Router();
 // Step 1: Basic Information & OTP Sending (Registration)
 router.post(
     '/register',
+    otpRequestRateLimit,
     [
         body('name').notEmpty().withMessage('Name is required'),
         body('email').isEmail().withMessage('Valid email is required'),
@@ -35,6 +38,7 @@ router.post(
 // Organizer Login - Step 1: Send OTP
 router.post(
     '/login',
+    otpRequestRateLimit,
     [
         body('email').isEmail().withMessage('Valid email is required'),
     ],
@@ -45,6 +49,7 @@ router.post(
 // Organizer Login - Step 2: Verify OTP
 router.post(
     '/verify-login',
+    otpVerifyRateLimit,
     [
         body('email').isEmail().withMessage('Valid email is required'),
         body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
@@ -111,6 +116,7 @@ router.post(
 // Step 2: Email Verification (Registration)
 router.post(
     '/verify-otp',
+    otpVerifyRateLimit,
     [
         body('email').isEmail().withMessage('Valid email is required'),
         body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
@@ -122,6 +128,7 @@ router.post(
 // Resend OTP
 router.post(
     '/resend-otp',
+    otpRequestRateLimit,
     [
         body('email').isEmail().withMessage('Valid email is required'),
     ],
@@ -163,7 +170,9 @@ router.post(
         body('city').notEmpty().withMessage('City is required'),
         body('state').isIn(INDIAN_STATES_AND_UTS).withMessage('Please select a valid Indian state or UT'),
         body('pin_code').isLength({ min: 6, max: 6 }).isNumeric().withMessage('PIN code must be exactly 6 digits'),
-        body('payment_method').notEmpty().withMessage('Payment method is required'),
+        body('payment_method')
+            .isIn(['razorpay', 'cod'])
+            .withMessage('Payment method must be razorpay or cod'),
         body('consents').isObject().withMessage('Consents must be an object'),
         body('consents.authorization').isBoolean().equals('true').withMessage('Authorization is required'),
         body('consents.participant_consent').isBoolean().equals('true').withMessage('Participant consent is required'),
@@ -175,16 +184,40 @@ router.post(
     organizerController.completeBooking
 );
 
-// Payment Confirmation (webhook or manual)
+// Razorpay checkout callback — server-side signature verification.
+//
+// Authenticated so a payment can only be claimed by the organizer it belongs
+// to. The handler re-derives the signature from the key secret and re-fetches
+// the payment from Razorpay; nothing the browser asserts about amount or status
+// is trusted.
 router.post(
-    '/confirm-payment',
+    '/payment/verify',
+    optionalAuthMiddleware,
     [
-        body('booking_id').optional().isNumeric().withMessage('Booking ID must be numeric'),
-        body('billing_id').optional().isNumeric().withMessage('Billing ID must be numeric'),
+        body('razorpay_order_id').notEmpty().withMessage('Razorpay order ID is required'),
+        body('razorpay_payment_id').notEmpty().withMessage('Razorpay payment ID is required'),
+        body('razorpay_signature').notEmpty().withMessage('Razorpay signature is required'),
     ],
     validateRequest,
-    organizerController.confirmPayment
+    paymentController.verifyPayment
 );
+
+// Records a dismissed or failed checkout so the attempt is not left pending.
+router.post(
+    '/payment/failed',
+    optionalAuthMiddleware,
+    [
+        body('razorpay_order_id').notEmpty().withMessage('Razorpay order ID is required'),
+        body('reason').optional().isString(),
+        body('cancelled').optional().isBoolean(),
+    ],
+    validateRequest,
+    paymentController.recordPaymentFailure
+);
+
+// Recovery path for a browser closed mid-payment: the webhook may already have
+// settled the booking by the time the organizer comes back.
+router.get('/payment/status/:order_id', optionalAuthMiddleware, paymentController.getPaymentStatus);
 
 // Update Session Date/Time (One-time only)
 router.post(

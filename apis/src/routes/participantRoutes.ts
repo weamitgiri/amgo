@@ -4,6 +4,7 @@ import * as participantController from '../controllers/participantController';
 import * as joinLinkController from '../controllers/joinLinkController';
 import { validateRequest } from '../middlewares/validateRequest';
 import { joinLinkRateLimit } from '../middlewares/joinLinkRateLimit';
+import { otpRequestRateLimit, otpVerifyRateLimit } from '../middlewares/authRateLimit';
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.get('/join-links/:link_token', joinLinkRateLimit, joinLinkController.getJ
 // Step 1: Join with Name & Email
 router.post(
     '/join',
+    otpRequestRateLimit,
     [
         body('booking_id').isNumeric().withMessage('Booking ID is required'),
         body('name').notEmpty().withMessage('Name is required'),
@@ -28,6 +30,7 @@ router.post(
 // Step 2: Verify OTP & Assign Group
 router.post(
     '/verify-otp',
+    otpVerifyRateLimit,
     [
         body('booking_id').isNumeric().withMessage('Booking ID is required'),
         body('email').isEmail().withMessage('Valid email is required'),

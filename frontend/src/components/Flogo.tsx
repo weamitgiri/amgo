@@ -1,4 +1,4 @@
-import homeLogoLight from "@/assets/F-logo.png";
+import homeLogoLight from "@/assets/w-logo.png";
 import homeLogoDark from "@/assets/home-logo.png";
 
 interface FlogoProps {

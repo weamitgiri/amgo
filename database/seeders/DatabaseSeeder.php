@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminUserSeeder::class,
             ActivityMenuSeeder::class,
+            PaymentMenuSeeder::class,
             SettingsSeeder::class,
             CmsPageSeeder::class,
             EmailTemplateSeeder::class,

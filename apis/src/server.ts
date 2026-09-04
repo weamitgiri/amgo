@@ -67,7 +67,19 @@ app.use(
     })
 );
 app.use(morgan('dev'));
-app.use(express.json());
+app.use(
+    express.json({
+        // Gateway webhooks are signed over the exact bytes sent. Re-serialising
+        // the parsed body changes key order and unicode escaping, so the HMAC
+        // would never match — keep the original buffer for those routes only,
+        // rather than paying the memory cost on every request.
+        verify: (req, _res, buf) => {
+            if (req.url?.startsWith('/v1/webhooks/')) {
+                (req as any).rawBody = buf;
+            }
+        },
+    })
+);
 app.use(express.urlencoded({ extended: true }));
 
 // Import Routes
@@ -77,6 +89,7 @@ import publicRoutes from './routes/publicRoutes';
 import participantRoutes from './routes/participantRoutes';
 import resultsRoutes from './routes/resultsRoutes';
 import cookandcreateRoutes from './routes/cookandcreate';
+import webhookRoutes from './routes/webhookRoutes';
 
 // Use Routes
 app.use('/v1/game', gameRoutes);
@@ -85,6 +98,7 @@ app.use('/v1/public', publicRoutes);
 app.use('/v1/participant', participantRoutes);
 app.use('/v1/results', resultsRoutes);
 app.use('/v1/cookandcreate', cookandcreateRoutes);
+app.use('/v1/webhooks', webhookRoutes);
 
 // Socket.IO connection
 import { setupSocketHandlers } from './socket/socketHandler';

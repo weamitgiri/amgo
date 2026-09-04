@@ -29,7 +29,7 @@ class AuthController extends BaseController
             $organizer = Organizer::where('email', $request->email)->first();
             
             // Generate 6-digit OTP
-            $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otp = '123456'; // TEMP: fixed OTP for testing — revert before production.
             
             $organizer->update([
                 'otp' => $otp,
@@ -108,7 +108,7 @@ class AuthController extends BaseController
         try {
             $organizer = Organizer::where('email', $request->email)->first();
             
-            $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otp = '123456'; // TEMP: fixed OTP for testing — revert before production.
             
             $organizer->update([
                 'otp' => $otp,

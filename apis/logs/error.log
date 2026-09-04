@@ -786,3 +786,75 @@
 2026-08-16 23:31:32:3132 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-08-16 23:31:41:3141 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-08-16 23:31:50:3150 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-17 20:47:03:473 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-17 20:47:45:4745 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-17 20:49:33:4933 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-17 20:49:44:4944 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-17 20:49:55:4955 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-17 20:50:09:509 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-17 20:50:20:5020 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-19 20:13:16:1316 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-19 22:06:19:619 error: [Webhook] Amount mismatch on payment 76: local 11800.00, gateway 100
+2026-08-19 22:06:35:635 error: [Webhook] Amount mismatch on payment 77: local 11800.00, gateway 100
+2026-08-19 22:06:55:655 error: Cash on Delivery is currently unavailable.
+2026-08-19 22:08:15:815 error: Cash on Delivery requires a minimum order of ₹50000
+2026-08-19 22:10:03:103 error: Booking is already completed or invalid for payment.
+2026-08-19 22:10:25:1025 error: Payment verification failed. If money was debited it will be refunded automatically.
+2026-08-19 22:10:25:1025 error: Payment record not found for this order.
+2026-08-19 22:10:50:1050 error: Payment verification failed. If money was debited it will be refunded automatically.
+2026-08-19 22:15:41:1541 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-19 22:29:10:2910 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-19 23:34:46:3446 error: You already registered this email id. Please login.
+2026-08-19 23:36:57:3657 error: Error sending OTP email: Connection timeout
+2026-08-20 20:32:25:3225 error: You already registered this email id. Please login.
+2026-08-20 20:32:26:3226 error: You already registered this email id. Please login.
+2026-08-20 20:32:32:3232 error: You already registered this email id. Please login.
+2026-08-20 20:32:59:3259 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-20 20:33:14:3314 error: Access Denied: You have joined after the allowed time. The session started at 11:30 PM and entry was closed at 11:45 PM. Please contact the Organiser for assistance.
+2026-08-20 20:33:30:3330 error: Organizer not found. Please register first.
+2026-08-20 20:33:34:3334 error: Organizer not found. Please register first.
+2026-08-20 20:33:37:3337 error: Organizer not found. Please register first.
+2026-08-20 21:30:13:3013 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-20 21:31:28:3128 error: You already registered this email id. Please login.
+2026-08-20 21:37:40:3740 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-20 22:05:50:550 error: [Razorpay] GET /payments/pay_FAKEBUTSIGNED01 failed (BAD_REQUEST_ERROR): The id provided does not exist
+2026-08-20 22:05:50:550 error: Payment gateway error: The id provided does not exist
+2026-08-20 22:07:12:712 error: Booking is already completed or invalid for payment.
+2026-08-20 23:15:05:155 error: You already registered this email id. Please login.
+2026-08-20 23:15:10:1510 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-25 22:04:58:458 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-25 22:10:38:1038 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-25 22:10:52:1052 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-25 22:11:17:1117 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-25 22:11:27:1127 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-25 22:11:39:1139 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-25 22:11:49:1149 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-08-31 20:14:21:1421 error: Error sending OTP email: Greeting never received
+2026-09-01 20:59:28:5928 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-01 20:59:31:5931 error: Invalid OTP
+2026-09-01 20:59:44:5944 error: Invalid OTP
+2026-09-01 20:59:48:5948 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-01 21:00:08:08 error: Invalid OTP
+2026-09-01 21:00:24:024 error: Invalid OTP
+2026-09-01 21:00:36:036 error: Invalid OTP
+2026-09-04 21:15:35:1535 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-04 21:15:39:1539 error: Invalid OTP
+2026-09-04 21:15:40:1540 error: Invalid OTP
+2026-09-04 21:15:41:1541 error: Invalid OTP
+2026-09-04 21:15:41:1541 error: Invalid OTP
+2026-09-04 21:15:42:1542 error: Invalid OTP
+2026-09-04 21:15:42:1542 error: Invalid OTP
+2026-09-04 21:18:15:1815 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-04 21:26:08:268 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-04 21:26:11:2611 error: Invalid OTP
+2026-09-04 21:44:12:4412 error: Invalid OTP
+2026-09-04 21:44:13:4413 error: Invalid OTP
+2026-09-04 21:44:17:4417 error: Access Denied: You have joined after the allowed time. The session started at 9:26 PM and entry was closed at 9:41 PM. Please contact the Organiser for assistance.
+2026-09-04 21:45:30:4530 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-04 21:48:14:4814 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-04 21:48:27:4827 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-04 21:48:37:4837 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-04 21:48:49:4849 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-04 21:49:00:490 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-04 22:02:59:259 error: You are not part of this group
+2026-09-04 22:02:59:259 error: You are not part of this group

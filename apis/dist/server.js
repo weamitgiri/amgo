@@ -63,7 +63,17 @@ app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use((0, morgan_1.default)('dev'));
-app.use(express_1.default.json());
+app.use(express_1.default.json({
+    // Gateway webhooks are signed over the exact bytes sent. Re-serialising
+    // the parsed body changes key order and unicode escaping, so the HMAC
+    // would never match — keep the original buffer for those routes only,
+    // rather than paying the memory cost on every request.
+    verify: (req, _res, buf) => {
+        if (req.url?.startsWith('/v1/webhooks/')) {
+            req.rawBody = buf;
+        }
+    },
+}));
 app.use(express_1.default.urlencoded({ extended: true }));
 // Import Routes
 const gameRoutes_1 = __importDefault(require("./routes/gameRoutes"));
@@ -72,6 +82,7 @@ const publicRoutes_1 = __importDefault(require("./routes/publicRoutes"));
 const participantRoutes_1 = __importDefault(require("./routes/participantRoutes"));
 const resultsRoutes_1 = __importDefault(require("./routes/resultsRoutes"));
 const cookandcreate_1 = __importDefault(require("./routes/cookandcreate"));
+const webhookRoutes_1 = __importDefault(require("./routes/webhookRoutes"));
 // Use Routes
 app.use('/v1/game', gameRoutes_1.default);
 app.use('/v1/organizer', organizerRoutes_1.default);
@@ -79,6 +90,7 @@ app.use('/v1/public', publicRoutes_1.default);
 app.use('/v1/participant', participantRoutes_1.default);
 app.use('/v1/results', resultsRoutes_1.default);
 app.use('/v1/cookandcreate', cookandcreate_1.default);
+app.use('/v1/webhooks', webhookRoutes_1.default);
 // Socket.IO connection
 const socketHandler_1 = require("./socket/socketHandler");
 io.on('connection', (socket) => {
