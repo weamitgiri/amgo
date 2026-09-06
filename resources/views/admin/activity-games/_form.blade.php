@@ -105,6 +105,20 @@
                                     @error('tagline')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
                                 </div>
                             </div>
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="bg_image">Case Background Image</label>
+                                    @if(!empty($game?->bg_image))
+                                        <input type="hidden" name="existing_bg_image" value="{{ $game->bg_image }}">
+                                        <div class="mb-2">
+                                            <img src="{{ asset('storage/' . $game->bg_image) }}" alt="Current background" class="img-thumbnail" style="height:90px;">
+                                        </div>
+                                    @endif
+                                    <input type="file" name="bg_image" id="bg_image" accept="image/*" class="form-control-file @error('bg_image') is-invalid @enderror">
+                                    <small class="form-text text-muted">Shown behind the case card in the lobby. Leave empty to keep the current image. Max 4MB.</small>
+                                    @error('bg_image')<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

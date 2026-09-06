@@ -169,42 +169,109 @@
             <h3 class="card-title"><i class="fas fa-trophy mr-2"></i>Scoring</h3>
         </div>
         <div class="card-body">
+            <p class="text-muted mb-3"><i class="fas fa-info-circle mr-1"></i> These map to the Mystery Quest Scoreboard Logic. Bonuses are positive, penalties negative. The game uses these values automatically for every scoring event.</p>
+
+            <h6 class="font-weight-bold text-uppercase text-secondary mb-2"><i class="fas fa-user-secret mr-1"></i> Investigator</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="investigator_question_bonus">Per Question Asked</label>
+                        <input type="number" name="investigator_question_bonus" id="investigator_question_bonus" class="form-control @error('investigator_question_bonus') is-invalid @enderror" value="{{ old('investigator_question_bonus', $activity->investigator_question_bonus ?? 10) }}">
+                        @error('investigator_question_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="investigator_correct_bonus">Correct Accusation</label>
+                        <input type="number" name="investigator_correct_bonus" id="investigator_correct_bonus" class="form-control @error('investigator_correct_bonus') is-invalid @enderror" value="{{ old('investigator_correct_bonus', $activity->investigator_correct_bonus ?? 80) }}">
+                        @error('investigator_correct_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="investigator_wrong_penalty">Wrong Accusation</label>
+                        <input type="number" name="investigator_wrong_penalty" id="investigator_wrong_penalty" class="form-control @error('investigator_wrong_penalty') is-invalid @enderror" value="{{ old('investigator_wrong_penalty', $activity->investigator_wrong_penalty ?? -30) }}">
+                        @error('investigator_wrong_penalty')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                        <small class="form-text text-muted">negative</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="investigator_no_accusation_penalty">No Accusation</label>
+                        <input type="number" name="investigator_no_accusation_penalty" id="investigator_no_accusation_penalty" class="form-control @error('investigator_no_accusation_penalty') is-invalid @enderror" value="{{ old('investigator_no_accusation_penalty', $activity->investigator_no_accusation_penalty ?? -20) }}">
+                        @error('investigator_no_accusation_penalty')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                        <small class="form-text text-muted">negative</small>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="font-weight-bold text-uppercase text-secondary mb-2 mt-2"><i class="fas fa-mask mr-1"></i> Hidden Culprit</h6>
             <div class="row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label for="win_bonus">Win Bonus</label>
-                        <input type="number" name="win_bonus" id="win_bonus" class="form-control @error('win_bonus') is-invalid @enderror" value="{{ old('win_bonus', $activity->win_bonus ?? 100) }}">
-                        @error('win_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                        <label for="culprit_win_bonus">Escapes (Culprit Wins)</label>
+                        <input type="number" name="culprit_win_bonus" id="culprit_win_bonus" class="form-control @error('culprit_win_bonus') is-invalid @enderror" value="{{ old('culprit_win_bonus', $activity->culprit_win_bonus ?? 100) }}">
+                        @error('culprit_win_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label for="participation_bonus">Participation Bonus</label>
-                        <input type="number" name="participation_bonus" id="participation_bonus" class="form-control @error('participation_bonus') is-invalid @enderror" value="{{ old('participation_bonus', $activity->participation_bonus ?? 50) }}">
-                        @error('participation_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                        <label for="culprit_caught_penalty">Caught</label>
+                        <input type="number" name="culprit_caught_penalty" id="culprit_caught_penalty" class="form-control @error('culprit_caught_penalty') is-invalid @enderror" value="{{ old('culprit_caught_penalty', $activity->culprit_caught_penalty ?? -20) }}">
+                        @error('culprit_caught_penalty')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                        <small class="form-text text-muted">negative</small>
                     </div>
                 </div>
+            </div>
+
+            <h6 class="font-weight-bold text-uppercase text-secondary mb-2 mt-2"><i class="fas fa-users mr-1"></i> Suspect / Witness / Participant</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="role_correct_bonus">Correct Final Guess</label>
+                        <input type="number" name="role_correct_bonus" id="role_correct_bonus" class="form-control @error('role_correct_bonus') is-invalid @enderror" value="{{ old('role_correct_bonus', $activity->role_correct_bonus ?? 50) }}">
+                        @error('role_correct_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="role_wrong_penalty">Wrong Guess</label>
+                        <input type="number" name="role_wrong_penalty" id="role_wrong_penalty" class="form-control @error('role_wrong_penalty') is-invalid @enderror" value="{{ old('role_wrong_penalty', $activity->role_wrong_penalty ?? -10) }}">
+                        @error('role_wrong_penalty')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                        <small class="form-text text-muted">negative</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="witness_passcard_bonus">Witness Passcard</label>
+                        <input type="number" name="witness_passcard_bonus" id="witness_passcard_bonus" class="form-control @error('witness_passcard_bonus') is-invalid @enderror" value="{{ old('witness_passcard_bonus', $activity->witness_passcard_bonus ?? 10) }}">
+                        @error('witness_passcard_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="role_lie_detector_participation">Lie Detector Vote / Answer</label>
+                        <input type="number" name="lie_detector_participation_bonus" id="role_lie_detector_participation" class="form-control @error('lie_detector_participation_bonus') is-invalid @enderror" value="{{ old('lie_detector_participation_bonus', $activity->lie_detector_participation_bonus ?? 5) }}">
+                        @error('lie_detector_participation_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="font-weight-bold text-uppercase text-secondary mb-2 mt-2"><i class="fas fa-cogs mr-1"></i> Shared</h6>
+            <div class="row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label for="timely_response_bonus">Timely Response Bonus</label>
-                        <input type="number" name="timely_response_bonus" id="timely_response_bonus" class="form-control @error('timely_response_bonus') is-invalid @enderror" value="{{ old('timely_response_bonus', $activity->timely_response_bonus ?? 20) }}">
-                        @error('timely_response_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="no_response_penalty">No Response Penalty</label>
+                        <label for="no_response_penalty">No Response Penalty (all roles)</label>
                         <input type="number" name="no_response_penalty" id="no_response_penalty" class="form-control @error('no_response_penalty') is-invalid @enderror" value="{{ old('no_response_penalty', $activity->no_response_penalty ?? -10) }}">
                         @error('no_response_penalty')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                        <small class="form-text text-muted">use negative value e.g. -10</small>
+                        <small class="form-text text-muted">2-min timeout, negative e.g. -10</small>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="form-group">
-                        <label for="wrong_vote_penalty">Wrong Vote Penalty</label>
-                        <input type="number" name="wrong_vote_penalty" id="wrong_vote_penalty" class="form-control @error('wrong_vote_penalty') is-invalid @enderror" value="{{ old('wrong_vote_penalty', $activity->wrong_vote_penalty ?? -15) }}">
-                        @error('wrong_vote_penalty')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                        <small class="form-text text-muted">use negative value</small>
+                        <label for="lie_detector_init_bonus">Lie Detector Initiate (Investigator)</label>
+                        <input type="number" name="lie_detector_init_bonus" id="lie_detector_init_bonus" class="form-control @error('lie_detector_init_bonus') is-invalid @enderror" value="{{ old('lie_detector_init_bonus', $activity->lie_detector_init_bonus ?? 5) }}">
+                        @error('lie_detector_init_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
                     </div>
                 </div>
             </div>

@@ -190,6 +190,9 @@ function LobbyPage() {
 
   const ActivityIcon = ACTIVITY_ICONS[lobby.activity.slug] ?? Gamepad2;
   const cover = resolveMediaUrl(lobby.activity.cover_image) ?? mystery;
+  // The case card prefers the game-level background image (set per game in the
+  // admin) and falls back to the activity cover.
+  const caseImage = resolveMediaUrl(lobby.game.bg_image) ?? cover;
   const iconUrl = lobby.activity.icon ? resolveMediaUrl(lobby.activity.icon) : null;
   const titleParts = lobby.activity.title.split(/\s+/);
   const titleLine1 = titleParts[0]?.toUpperCase() ?? "MYSTERY";
@@ -282,7 +285,7 @@ function LobbyPage() {
           </div>
 
           <div className="relative min-h-[380px] overflow-hidden rounded-3xl border border-white/10">
-            <img src={cover || investigation} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={caseImage || investigation} alt="" className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/40" />
             <div className="relative p-6">
               <div className="inline-block max-w-[80%] rounded-2xl bg-black/45 px-5 py-3.5 backdrop-blur-sm">

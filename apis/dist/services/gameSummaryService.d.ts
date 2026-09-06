@@ -25,6 +25,7 @@ export type GameSummaryPayload = {
         title: string;
         tagline: string | null;
         case_summary_html: string | null;
+        bg_image: string | null;
         timeline: {
             time: string;
             event: string;
@@ -39,6 +40,7 @@ export type GameSummaryPayload = {
     players: {
         session_id: number;
         pseudonym: string;
+        character_name: string | null;
         is_you: boolean;
     }[];
     roles: {

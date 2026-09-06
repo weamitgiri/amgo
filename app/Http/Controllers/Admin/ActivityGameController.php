@@ -44,6 +44,12 @@ class ActivityGameController extends Controller
                 ]));
                 $gameId = $game->id;
 
+                // Case background image (shown behind the lobby case card)
+                if ($request->hasFile('bg_image')) {
+                    $game->bg_image = $this->storePublicImageOrFail($request->file('bg_image'), 'games');
+                    $game->save();
+                }
+
                 // Save Roles and Strategy Cards
                 if ($request->has('roles')) {
                     foreach ($request->roles as $roleIndex => $roleData) {
@@ -144,6 +150,15 @@ class ActivityGameController extends Controller
                 $game->update($request->only([
                     'title', 'case_summary', 'tagline', 'status', 'timeline', 'quick_facts'
                 ]));
+
+                // Case background image — replace only when a new file is uploaded,
+                // otherwise keep the existing one. Old file is cleaned up on replace.
+                if ($request->hasFile('bg_image')) {
+                    $old = $game->bg_image;
+                    $game->bg_image = $this->storePublicImageOrFail($request->file('bg_image'), 'games');
+                    $game->save();
+                    $this->deletePublicPathQuietly($old);
+                }
 
                 // 1. Synchronize Roles and Strategy Cards
                 $existingRoleIds = [];

@@ -70,6 +70,7 @@ router.post('/vote-lie-detector', [
     (0, express_validator_1.body)('group_id').notEmpty().withMessage('Group ID is required'),
     (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
     (0, express_validator_1.body)('round_id').notEmpty().withMessage('Round ID is required'),
+    (0, express_validator_1.body)('question_id').notEmpty().withMessage('Question ID is required'),
     (0, express_validator_1.body)('vote_value').isIn(['believable', 'suspicious']).withMessage('Invalid vote value'),
 ], validateRequest_1.validateRequest, gameEngineController.voteLieDetector);
 router.get('/lie-detector/:round_id/tally', gameEngineController.getLieDetectorTally);

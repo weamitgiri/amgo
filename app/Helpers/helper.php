@@ -23,7 +23,7 @@ class helper {
         return true;
     }
 
-    public static function getGameBetData($transactionId = '', $userid){
+    public static function getGameBetData($transactionId, $userid){
         return GameBets::where(['transactionId' => $transactionId, 'userid' => $userid])->first();
     }
 

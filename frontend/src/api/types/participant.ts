@@ -63,6 +63,7 @@ export type LobbySessionResponse = {
     title: string | null;
     tagline: string | null;
     case_summary: string | null;
+    bg_image: string | null;
   };
   rules: { id: number; rule_text: string; order: number }[];
   settings: {
@@ -95,7 +96,10 @@ export type LobbyInfoResponse = LobbySessionResponse;
 
 export type GamePlayer = {
   session_id: number;
+  /** The real name the player entered at join (no anonymizing suffix). */
   pseudonym: string;
+  /** Public in-story character identity, already includes the story role — e.g. "Raju (Servant)". */
+  character_name?: string | null;
   is_you: boolean;
 };
 
@@ -136,6 +140,7 @@ export type GameSummaryResponse = {
     title: string;
     tagline: string | null;
     case_summary_html: string | null;
+    bg_image: string | null;
     timeline: { time: string; event: string }[];
     quick_facts: { label: string; value: string; icon: string }[];
     victim_name: string | null;

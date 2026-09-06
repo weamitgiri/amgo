@@ -1,6 +1,5 @@
 import moment, { Moment } from 'moment';
 import { query } from '../config/db';
-import { shortName } from '../utils/pseudonym';
 import { ensureCaseSummaryTimer } from './timerService';
 
 export type LobbyMember = {
@@ -31,6 +30,7 @@ export type LobbyPayload = {
         title: string | null;
         tagline: string | null;
         case_summary: string | null;
+        bg_image: string | null;
     };
     rules: { id: number; rule_text: string; order: number }[];
     settings: {
@@ -90,7 +90,7 @@ export async function buildLobbyPayload(
             a.lobby_wait_secs, a.game_duration_secs, a.case_summary_view_secs, a.group_size, a.max_questions,
             a.question_response_secs, a.clue_room_unlock_secs,
             a.lie_detector_enabled, a.lie_detector_timer_secs,
-            ag.id AS game_row_id, ag.title AS case_title, ag.tagline, ag.case_summary
+            ag.id AS game_row_id, ag.title AS case_title, ag.tagline, ag.case_summary, ag.bg_image
          FROM game_groups gg
          JOIN organizer_bookings ob ON gg.booking_id = ob.id
          JOIN activities a ON ob.activity_id = a.id
@@ -117,7 +117,10 @@ export async function buildLobbyPayload(
         const realName = m.name || 'Participant';
         return {
             id: m.id,
-            name: isYou ? realName : shortName(realName, Number(m.id)),
+            // Lobby shows the real name each participant entered at join time. The
+            // pseudonym (name + number) is only for the game itself, where player
+            // identities are anonymized during questioning/accusation.
+            name: realName,
             status: m.status || 'joined',
             is_you: isYou,
         };
@@ -195,6 +198,7 @@ export async function buildLobbyPayload(
             title: row.case_title,
             tagline: row.tagline,
             case_summary: row.case_summary,
+            bg_image: row.bg_image ?? null,
         },
         rules: rules.map((r: any) => ({
             id: r.id,

@@ -13,6 +13,12 @@ import {
 } from './cookandcreateService';
 
 /**
+ * When the main questioning clock runs out, players get a fixed window to submit
+ * their final accusation before the verdict is computed. Spec: 2 minutes.
+ */
+const FINAL_VERDICT_SECS = 120;
+
+/**
  * Timer Service
  * Periodically checks for expired timers and triggers game state transitions.
  */
@@ -186,11 +192,27 @@ async function handleTimerExpiration(timer: any) {
                 break;
             }
 
-            case 'questioning':
+            case 'questioning': {
+                // Don't finalize yet — open a fixed final-accusation window and
+                // force everyone into the accusation screen. The verdict is
+                // computed when the final_verdict timer below expires (or earlier,
+                // once every eligible player has submitted — see submitAccusation).
+                const finalDeadline = moment().add(FINAL_VERDICT_SECS, 'seconds').toDate();
+                await conn.query(
+                    'INSERT INTO timers (group_id, timer_type, expires_at, is_active) VALUES (?, ?, ?, 1)',
+                    [timer.group_id, 'final_verdict', finalDeadline]
+                );
                 io.to(`group_${timer.group_id}`).emit('phase_changed', {
                     new_phase: 'final_verdict',
-                    message: 'Questioning time is up! Please submit your final accusation.',
+                    ends_at: moment(finalDeadline).format('YYYY-MM-DD HH:mm:ss'),
+                    message: 'Questioning time is up! Submit your final accusation.',
                 });
+                break;
+            }
+
+            // The final-accusation window closed — compute the verdict (queued
+            // after commit below, since finalizeVerdict runs its own transaction).
+            case 'final_verdict':
                 break;
 
             // ---- Cook & Create timer safety nets --------------------------------
@@ -268,7 +290,8 @@ async function handleTimerExpiration(timer: any) {
     // finalizeVerdict runs its own transaction (and may already have been triggered
     // by the last participant's accusation) — run it after the timer transaction
     // above commits. It's idempotent, so a race with a manual submission is safe.
-    if (timer.timer_type === 'questioning') {
+    // This fires when the final-accusation window closes, not when questioning ends.
+    if (timer.timer_type === 'final_verdict') {
         try {
             await finalizeVerdict(timer.group_id);
         } catch (err) {

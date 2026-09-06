@@ -25,6 +25,7 @@ export type LobbyPayload = {
         title: string | null;
         tagline: string | null;
         case_summary: string | null;
+        bg_image: string | null;
     };
     rules: {
         id: number;

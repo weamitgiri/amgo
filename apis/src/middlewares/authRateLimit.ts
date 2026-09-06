@@ -19,11 +19,20 @@ const standard = {
     legacyHeaders: false,
 } as const;
 
+/**
+ * Skip the OTP limiters outside production. In local dev / testing the OTP is a
+ * fixed code and every participant joins from the same IP (localhost), so the
+ * IP-keyed counters trip almost immediately (HTTP 429) even in normal use. The
+ * brute-force protection still applies in production, where NODE_ENV=production.
+ */
+const skipOutsideProduction = () => process.env.NODE_ENV !== 'production';
+
 /** Verification attempts — the actual guessing surface. Kept tight. */
 export const otpVerifyRateLimit = rateLimit({
     ...standard,
     windowMs: 15 * 60 * 1000,
     max: 10,
+    skip: skipOutsideProduction,
     message: {
         success: false,
         message: 'Too many verification attempts. Please wait a few minutes and try again.',
@@ -36,6 +45,7 @@ export const otpRequestRateLimit = rateLimit({
     ...standard,
     windowMs: 15 * 60 * 1000,
     max: 15,
+    skip: skipOutsideProduction,
     message: {
         success: false,
         message: 'Too many requests. Please wait a few minutes before trying again.',

@@ -65,6 +65,7 @@ router.post(
         body('group_id').notEmpty().withMessage('Group ID is required'),
         body('participant_id').notEmpty().withMessage('participant_id is required'),
         body('round_id').notEmpty().withMessage('Round ID is required'),
+        body('question_id').notEmpty().withMessage('Question ID is required'),
         body('vote_value').isIn(['believable', 'suspicious']).withMessage('Invalid vote value'),
     ],
     validateRequest,

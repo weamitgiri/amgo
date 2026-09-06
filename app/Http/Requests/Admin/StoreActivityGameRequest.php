@@ -29,6 +29,7 @@ class StoreActivityGameRequest extends FormRequest
             'title' => 'required|string|max:150',
             'case_summary' => 'required|string',
             'tagline' => 'nullable|string|max:255',
+            'bg_image' => 'nullable|image|max:4096',
             'status' => 'required|in:draft,active',
 
             'wizard_step' => 'nullable|integer|min:1|max:4',

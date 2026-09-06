@@ -16,6 +16,8 @@ import { isCookAndCreateSlug } from "@/utils/common";
 import { toastError } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
 import secretBoxImg from "@/assets/secret_box.png";
+import caseCollage from "@/assets/game-summery/case-summary-collage.png";
+import suspectBanner from "@/assets/game-summery/Group 1000004660.png";
 
 type GameSearch = { game?: string };
 
@@ -213,6 +215,10 @@ function GamePage() {
   const [lieEndsAt, setLieEndsAt] = useState<number | null>(null);
   const [lieQuestionsUsed, setLieQuestionsUsed] = useState(0);
   const [myAccusationSubmitted, setMyAccusationSubmitted] = useState(false);
+  // When the main game clock runs out the server opens a fixed final-accusation
+  // window (2 minutes). Until then the Final Accusation button stays locked; once
+  // this deadline is set, every player is forced into the accusation screen.
+  const [finalVerdictEndsAt, setFinalVerdictEndsAt] = useState<number | null>(null);
   const [onlineSessionIds, setOnlineSessionIds] = useState<Set<number>>(new Set());
   const [frozenSessionIds, setFrozenSessionIds] = useState<Set<number>>(new Set());
   const [scoresBySessionId, setScoresBySessionId] = useState<Map<number, number>>(new Map());
@@ -253,6 +259,7 @@ function GamePage() {
 
   // investigation state
   const lieMode = lieDetectorRoundId !== null;
+  const finalVerdictActive = finalVerdictEndsAt !== null;
   const [selectedAskee, setSelectedAskee] = useState(0);
   const [question, setQuestion] = useState("");
   const [modal, setModal] = useState<ModalKey>(null);
@@ -269,6 +276,9 @@ function GamePage() {
   }, []);
   const [voteContext, setVoteContext] = useState<{ questionId: number; answerText: string; answererSessionId: number } | null>(null);
   const [lieTally, setLieTally] = useState<LieDetectorTally | null>(null);
+  // Vote tallies are per-answer (per lie-detector question), keyed by question id —
+  // a single round can have several questioned answers, each with its own count.
+  const [tallyByQuestionId, setTallyByQuestionId] = useState<Map<number, LieDetectorTally>>(new Map());
   const [invElapsed, setInvElapsed] = useState(0);
   const autoCardRef = useRef<number | null>(null);
   // Lie Detector round length (secs) kept in a ref so socket handlers can start
@@ -282,6 +292,27 @@ function GamePage() {
     console.log("[GamePage] applyGameState called", { myPlayerSessionId: myPlayer?.session_id });
     setGameState(state);
     setMyAccusationSubmitted(Boolean(state.group.my_accusation_submitted));
+
+    // Game already finalized (verdict computed) — e.g. the page was reloaded after
+    // the final-accusation window closed. Go straight to results.
+    if (state.group.status === "completed" || state.group.status === "incomplete") {
+      if (session?.groupId && session.participantId) {
+        sessionStorage.setItem(participantGameKey("ended", session.groupId, session.participantId), "1");
+      }
+      navigate({ to: "/results" });
+      return;
+    }
+
+    // Server-authoritative game clock — identical for every player regardless of
+    // when they loaded/reloaded (the local per-second interval just ticks these
+    // down until the next state sync).
+    if (typeof state.group.game_seconds_remaining === "number") {
+      setSecsHdr(state.group.game_seconds_remaining);
+    }
+    if (typeof state.group.case_summary_seconds_remaining === "number") {
+      setSecsCase(state.group.case_summary_seconds_remaining);
+      setPhase(state.group.case_summary_seconds_remaining > 0 ? "summary" : "investigation");
+    }
 
     const online = new Set<number>();
     const frozen = new Set<number>();
@@ -325,8 +356,22 @@ function GamePage() {
       });
     };
 
-    const clueTimerUnlocked = state.group.timers.some((t) => t.timer_type === "clue_room_unlock" && !t.is_active);
-    if (clueTimerUnlocked) setCluesUnlocked(true);
+    // Authoritative unlock flag from the server (the active-only timers list can't
+    // report an already-fired unlock timer, so a reload would otherwise re-lock it).
+    if (state.group.clues_unlocked) setCluesUnlocked(true);
+
+    // If the final-accusation window is already open (page reloaded during it),
+    // reopen the forced screen with the server's remaining time.
+    const finalTimer = state.group.timers.find((t) => t.timer_type === "final_verdict" && t.is_active);
+    setFinalVerdictEndsAt(finalTimer ? new Date(finalTimer.expires_at.replace(" ", "T")).getTime() : null);
+
+    // Per-answer vote tallies (keyed by question id) hydrated from the server so a
+    // reloaded page shows each answer's own believable/suspicious count.
+    const voteTallies = new Map<number, LieDetectorTally>();
+    for (const [qid, t] of Object.entries(state.group.lie_vote_tallies ?? {})) {
+      voteTallies.set(Number(qid), t as LieDetectorTally);
+    }
+    setTallyByQuestionId(voteTallies);
 
     // Build activity items
     const activityItems = state.group.questions.map((q) => {
@@ -340,13 +385,12 @@ function GamePage() {
         q: q.question_text,
         a: ans?.answer_text,
         autoSkipped: ans?.auto_skipped,
-        tally: isLie ? activeRound?.tally : undefined,
+        tally: isLie ? voteTallies.get(q.id) : undefined,
         isLie,
       };
     });
     setQuestionsUsed(activityItems.filter((item) => !item.isLie).length);
     setLieQuestionsUsed(activityItems.filter((item) => item.isLie).length);
-    if (activeRound?.tally) setLieTally(activeRound.tally);
     console.log("[GamePage] Built activity items", { activityItems, myPlayerSessionId: myPlayer?.session_id });
     setActivity(activityItems);
 
@@ -359,7 +403,7 @@ function GamePage() {
     } else {
       setPendingAnswerForMe(null);
     }
-  }, [myPlayer?.session_id]);
+  }, [myPlayer?.session_id, navigate, session?.groupId, session?.participantId]);
 
   useEffect(() => {
     if (!session?.groupId) {
@@ -367,9 +411,7 @@ function GamePage() {
       return;
     }
 
-    const timerKey = participantGameKey("timers", session.groupId, session.participantId);
     const uiKey = participantGameKey("ui", session.groupId, session.participantId);
-    const savedTimer = sessionStorage.getItem(timerKey);
 
     Promise.all([
       participantService.getGameSummary(session.groupId, session.participantId),
@@ -379,11 +421,16 @@ function GamePage() {
         setGameData(data);
         applyGameState(state);
 
-        // The HTTP snapshot above can land after the socket's join presence
-        // broadcast and clobber it with stale offline data. Ask the server for a
-        // fresh presence event now that our snapshot is applied, so the live
-        // online set always wins.
-        getSocket().emit("request_presence", { groupId: session.groupId });
+        // Re-join the group room now that the game data has loaded. The very first
+        // join_game_group (fired on socket connect) can race AHEAD of getGameSummary,
+        // which is what lazily creates the participant_sessions rows — so that early
+        // join's "SET is_online = 1" matches no row and the player (even "You") shows
+        // Offline. Re-joining here, after the rows exist, reliably marks the player
+        // online and re-broadcasts presence so the live online set always wins.
+        getSocket().emit("join_game_group", {
+          groupId: session.groupId,
+          participantId: session.participantId,
+        });
 
         const savedState = sessionStorage.getItem(uiKey);
         if (savedState) {
@@ -406,28 +453,9 @@ function GamePage() {
           setShowInstinctWarning(true);
           sessionStorage.setItem(instinctWarningKey, "1");
         }
-
-        if (savedTimer) {
-          try {
-            const { hdrStartTime, caseStartTime } = JSON.parse(savedTimer);
-            const hdrElapsed = Math.floor((Date.now() - hdrStartTime) / 1000);
-            const caseElapsed = Math.floor((Date.now() - caseStartTime) / 1000);
-
-            setSecsHdr(Math.max(0, data.settings.game_duration_secs - hdrElapsed));
-            setSecsCase(Math.max(0, data.settings.case_summary_view_secs - caseElapsed));
-            setPhase(caseElapsed >= data.settings.case_summary_view_secs ? "investigation" : "summary");
-          } catch {
-            const now = Date.now();
-            sessionStorage.setItem(timerKey, JSON.stringify({ hdrStartTime: now, caseStartTime: now }));
-            setSecsHdr(data.settings.game_duration_secs);
-            setSecsCase(data.settings.case_summary_view_secs);
-          }
-        } else {
-          const now = Date.now();
-          sessionStorage.setItem(timerKey, JSON.stringify({ hdrStartTime: now, caseStartTime: now }));
-          setSecsHdr(data.settings.game_duration_secs);
-          setSecsCase(data.settings.case_summary_view_secs);
-        }
+        // The game clock (secsHdr) and case-summary clock (secsCase) are set by
+        // applyGameState() above from the server's shared timers, so every player
+        // is synchronized — no local per-device start time.
       })
       .catch((err) => {
         toastError(err instanceof Error ? err.message : "Could not load game.");
@@ -470,12 +498,26 @@ function GamePage() {
       );
       setPendingAnswerForMe((prev) => (prev && prev.questionId === a.question_id ? null : prev));
       // During a Lie Detector round, everyone except the answerer votes on the answer.
-      if (lieDetectorRoundId && !a.auto_skipped && myPlayer?.session_id !== a.participant_session_id) {
+      // Compare as numbers — session_id can arrive as a string, and a strict !==
+      // against a numeric participant_session_id would (wrongly) let the questioned
+      // player vote on their own answer.
+      if (
+        lieDetectorRoundId &&
+        !a.auto_skipped &&
+        Number(myPlayer?.session_id) !== Number(a.participant_session_id)
+      ) {
         setVoteContext({ questionId: a.question_id, answerText: a.answer_text, answererSessionId: a.participant_session_id });
       }
     };
-    const onNewVote = ({ tally }: { round_id: number; tally: LieDetectorTally }) => {
+    const onNewVote = ({ question_id, tally }: { round_id: number; question_id?: number; tally: LieDetectorTally }) => {
       setLieTally(tally);
+      if (question_id != null) {
+        setTallyByQuestionId((prev) => {
+          const next = new Map(prev);
+          next.set(Number(question_id), tally);
+          return next;
+        });
+      }
     };
     const onLieDetectorStarted = (round: { id: number }) => {
       setLieDetectorRoundId(round.id);
@@ -487,10 +529,28 @@ function GamePage() {
       setLieDetectorRoundId(null);
       setLieEndsAt(null);
     };
-    const onPhaseChanged = (payload: { new_phase: string }) => {
+    const onPhaseChanged = (payload: { new_phase: string; ends_at?: string }) => {
       if (payload.new_phase === "questioning") {
         setLieDetectorRoundId(null);
         setLieEndsAt(null);
+        // Case Summary just closed server-side — move everyone to the investigation
+        // view together (don't wait on each device's local case-summary countdown),
+        // and zero the case clock so it can't linger.
+        setSecsCase(0);
+        setPhase("investigation");
+      }
+      // Main game clock ran out — the server opened the 2-minute final-accusation
+      // window. Force everyone into the accusation screen; a stray lie-detector
+      // round is torn down so the forced modal isn't fighting a vote prompt.
+      if (payload.new_phase === "final_verdict") {
+        setLieDetectorRoundId(null);
+        setLieEndsAt(null);
+        setVoteContext(null);
+        setPendingAnswerForMe(null);
+        const endsAt = payload.ends_at
+          ? new Date(payload.ends_at.replace(" ", "T")).getTime()
+          : Date.now() + 120_000;
+        setFinalVerdictEndsAt(endsAt);
       }
     };
     const onCluesUnlocked = () => setCluesUnlocked(true);
@@ -614,17 +674,13 @@ function GamePage() {
     }
   }, [invElapsed, isInvestigator, phase, gameData]);
 
-  // Redirect to results page when the game time is over (only once per session)
-  useEffect(() => {
-    if (loading) return;
-    if (!session?.groupId) return;
-    if (gameData && secsHdr === 0) {
-      const endedKey = participantGameKey("ended", session.groupId, session.participantId);
-      if (sessionStorage.getItem(endedKey)) return;
-      sessionStorage.setItem(endedKey, "1");
-      navigate({ to: "/results" });
-    }
-  }, [secsHdr, loading, session?.groupId, session?.participantId, gameData, navigate]);
+  // NOTE: We deliberately do NOT navigate to /results just because the local
+  // game clock (secsHdr) hit 0. When questioning time ends the server opens the
+  // 2-minute final-accusation window (phase_changed "final_verdict") and only
+  // then ends the game — navigation is driven by the server's `game_ended` event
+  // (see onGameEnded), and a reload lands on results via the finalized-status
+  // check in applyGameState. Auto-navigating on secsHdr===0 here would skip the
+  // final-accusation window entirely.
 
   // Persist local UI-only state (game data itself is server-authoritative now).
   useEffect(() => {
@@ -698,6 +754,7 @@ function GamePage() {
         group_id: session.groupId,
         participant_id: session.participantId,
         round_id: lieDetectorRoundId,
+        question_id: voteContext.questionId,
         vote_value: vote,
       });
       setVoteContext(null);
@@ -822,6 +879,8 @@ function GamePage() {
           onlineSessionIds={onlineSessionIds}
           scoresBySessionId={scoresBySessionId}
           lieTally={lieTally}
+          tallyByQuestionId={tallyByQuestionId}
+          finalVerdictActive={finalVerdictActive}
         />
       )}
 
@@ -870,14 +929,25 @@ function GamePage() {
           onClose={() => setModal(null)}
         />
       )}
-      {modal === "accuse" && !isCulprit && (
-        <AccuseModal
+      {finalVerdictActive ? (
+        <FinalAccusationModal
           players={players}
           victimName={gameData.game.victim_name}
+          isCulprit={isCulprit}
           submitted={myAccusationSubmitted}
+          endsAtMs={finalVerdictEndsAt}
           onSubmit={handleAccuse}
-          onClose={() => setModal(null)}
         />
+      ) : (
+        modal === "accuse" && !isCulprit && (
+          <AccuseModal
+            players={players}
+            victimName={gameData.game.victim_name}
+            submitted={myAccusationSubmitted}
+            onSubmit={handleAccuse}
+            onClose={() => setModal(null)}
+          />
+        )
       )}
       {modal === "summary" && (
         <CaseSummaryModal
@@ -1031,43 +1101,20 @@ function SummaryView(props: {
                   </>
                 ) : null}
                 
-                <div className="inline-block mt-4 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] bg-[#c9a773] text-[#331100] text-sm px-5 py-3 shadow-lg rotate-[-1deg] border border-[#a68653]" style={{ boxShadow: '2px 3px 6px rgba(0,0,0,0.4)', borderRadius: '2px 6px 3px 5px' }}>
-                  Now, <span className="text-[#c11c1c] font-bold">everyone</span> present in the house is a{" "}
-                  <span className="text-[#c11c1c] font-bold">suspect.</span>
+                <div className="relative mt-4 inline-block w-full max-w-[440px] rotate-[-1deg]">
+                  <img src={suspectBanner} alt="" className="w-full h-auto select-none pointer-events-none drop-shadow-[2px_3px_6px_rgba(0,0,0,0.4)]" />
+                  <span className="absolute inset-0 flex items-center justify-center px-8 text-center text-[13px] md:text-sm text-[#2b1608] font-medium">
+                    Now,&nbsp;<span className="text-[#c11c1c] font-bold">&nbsp;everyone&nbsp;</span>&nbsp;present in the house is a&nbsp;<span className="text-[#c11c1c] font-bold">&nbsp;suspect.</span>
+                  </span>
                 </div>
               </div>
-              <div className="relative min-h-[400px]">
-                <div className="absolute top-2 left-0 rotate-[-5deg] bg-[#eae6e1] p-1.5 shadow-[2px_4px_12px_rgba(0,0,0,0.5)] w-[180px] z-10 border border-[#b4aea4]">
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl drop-shadow-md z-20">📌</div>
-                  <img src={photoUrls[0] ?? mystery} alt="" className="h-[120px] w-full object-cover border border-[#c9c5be]" />
-                </div>
-                <div className="absolute top-[80px] left-[70px] rotate-[6deg] bg-[#1a1a1a] p-1.5 shadow-[2px_4px_12px_rgba(0,0,0,0.5)] w-[190px] z-20 border border-[#333]">
-                  <img src={photoUrls[1] ?? mystery} alt="" className="h-[130px] w-full object-cover opacity-90 sepia-[0.3]" />
-                </div>
-                <div className="absolute top-[170px] left-[10px] w-14 h-14 z-30">
-                  <div className="w-full h-full rounded-full border-4 border-[#b59a60] bg-[#e1c583] flex items-center justify-center shadow-[2px_3px_8px_rgba(0,0,0,0.6)] rotate-[-15deg]">
-                    <div className="w-1 h-8 bg-[#333] rotate-45 relative">
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[3px] border-r-[3px] border-b-[8px] border-l-transparent border-r-transparent border-b-red-600"></div>
-                    </div>
-                  </div>
-                </div>
-                {gameData.game.quick_facts.length > 0 ? (
-                  <div className="absolute bottom-[20px] right-[10px] rotate-[-3deg] bg-[#c3a478] text-[#331800] p-4 shadow-[3px_5px_15px_rgba(0,0,0,0.5)] w-[190px] z-40 border border-[#a68653]" style={{ background: 'linear-gradient(135deg, #ccae81 0%, #ba9866 100%)' }}>
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-xl drop-shadow-md z-50 text-red-600">📌</div>
-                    <div className="text-[11px] font-bold tracking-wider mb-2 text-[#4a2600]">QUICK FACTS</div>
-                    <ul className="space-y-2 text-[10px] font-medium">
-                      {gameData.game.quick_facts.map((fact) => {
-                        const Icon = FACT_ICONS[fact.icon] ?? MapPin;
-                        return (
-                          <li key={`${fact.label}-${fact.value}`} className="flex gap-1.5 items-start">
-                            <Icon className="h-3 w-3 shrink-0 mt-0.5 opacity-80" />
-                            <span className="leading-tight">{fact.label}: {fact.value}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ) : null}
+              <div className="relative flex items-start justify-center">
+                {/* Pre-composed evidence collage (pinned photos + compass + quick-facts note) */}
+                <img
+                  src={caseCollage}
+                  alt="Investigation evidence — crime scene photos and quick facts"
+                  className="w-full max-w-[440px] h-auto object-contain drop-shadow-2xl"
+                />
               </div>
             </div>
           </div>
@@ -1223,6 +1270,8 @@ function InvestigationView(props: {
   onlineSessionIds: Set<number>;
   scoresBySessionId: Map<number, number>;
   lieTally: LieDetectorTally | null;
+  tallyByQuestionId: Map<number, LieDetectorTally>;
+  finalVerdictActive: boolean;
 }) {
   const {
     players,
@@ -1255,6 +1304,8 @@ function InvestigationView(props: {
     onlineSessionIds,
     scoresBySessionId,
     lieTally,
+    tallyByQuestionId,
+    finalVerdictActive,
   } = props;
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "00")}:${String(s % 60).padStart(2, "00")}`;
   const shortBySessionId = useMemo(() => {
@@ -1357,13 +1408,19 @@ function InvestigationView(props: {
           </div>
 
           {!isCulprit && (
-            <button
-              onClick={() => openModal("accuse")}
-              disabled={myAccusationSubmitted}
-              className="inline-flex items-center gap-2 rounded-full bg-[#f43f5e] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <UserX className="h-4 w-4" /> {myAccusationSubmitted ? "Accusation Submitted" : "Final Accusation"}
-            </button>
+            <div className="relative flex flex-col items-center justify-center">
+              <button
+                onClick={() => finalVerdictActive && openModal("accuse")}
+                disabled={myAccusationSubmitted || !finalVerdictActive}
+                title={!finalVerdictActive ? "Unlocks automatically when the game time ends" : undefined}
+                className="inline-flex items-center gap-2 rounded-full bg-[#f43f5e] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <UserX className="h-4 w-4" /> {myAccusationSubmitted ? "Accusation Submitted" : "Final Accusation"}
+              </button>
+              {!finalVerdictActive && !myAccusationSubmitted && (
+                <div className="absolute -bottom-5 text-[10px] text-white/40 whitespace-nowrap">Unlocks when time ends</div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -1429,6 +1486,11 @@ function InvestigationView(props: {
                     <div className="text-[17px] text-white break-words">
                       {p.pseudonym} {p.is_you && <span className="font-normal">(You)</span>}
                     </div>
+                    {p.character_name && (
+                      <div className="text-[12px] text-purple-300/90 break-words leading-tight mt-0.5">
+                        {p.character_name}
+                      </div>
+                    )}
                     <div className={`text-[15px] flex items-center gap-2 mt-1 ${statusColor}`}>
                       <div className={`h-2 w-2 rounded-full shrink-0 ${statusDot}`} /> {statusText}
                     </div>
@@ -1565,6 +1627,7 @@ function InvestigationView(props: {
                           <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
                             {p.pseudonym}
                             {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
+                            {p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
                           </div>
                         </div>
                       </div>
@@ -1619,10 +1682,10 @@ function InvestigationView(props: {
                           <div className={`text-[13px] text-white mt-1 ${a.autoSkipped ? "text-white/50 italic" : ""}`}>{a.a}</div>
                           <div className="text-[10px] text-white/30 mt-1">03:37</div>
                         </div>
-                        {a.isLie && (a.tally ?? lieTally) && (
+                        {a.isLie && (tallyByQuestionId.get(a.questionId) ?? a.tally) && (
                           <div className="absolute right-0 top-3 text-right space-y-2">
-                            <div className="text-sm text-emerald-400">Believable ({(a.tally ?? lieTally)!.believable})</div>
-                            <div className="text-sm text-rose-400">Suspicious ({(a.tally ?? lieTally)!.suspicious})</div>
+                            <div className="text-sm text-emerald-400">Believable ({(tallyByQuestionId.get(a.questionId) ?? a.tally)!.believable})</div>
+                            <div className="text-sm text-rose-400">Suspicious ({(tallyByQuestionId.get(a.questionId) ?? a.tally)!.suspicious})</div>
                           </div>
                         )}
                       </div>
@@ -1878,70 +1941,28 @@ function AnswerModal({
     setAns("");
   }, [question]);
 
-  const shortBySessionId = new Map(players.map(p => [p.session_id, p.is_you ? `${p.pseudonym} (You)` : p.pseudonym]));
-
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-3 overflow-y-auto py-4">
-      <div className="relative w-full max-w-lg rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] shadow-elevated">
-        <button onClick={() => {}} className="absolute top-4 right-4 z-10 h-8 w-8 grid place-items-center rounded-xl bg-white/5 hover:bg-white/10 text-white opacity-80 cursor-not-allowed">
-          <X className="h-3 w-3" />
+      <div className="relative w-full max-w-lg rounded-2xl border border-[#4a2f78] bg-gradient-to-br from-[#33215c] to-[#1d1236] shadow-elevated">
+        {/* Answering is mandatory — the modal can't be dismissed, so this is a
+            styled, non-interactive close affordance to match the design. */}
+        <button aria-hidden tabIndex={-1} className="absolute top-5 right-5 z-10 h-10 w-10 grid place-items-center rounded-xl bg-[#7c3aed]/25 border border-purple-400/40 text-white/80 cursor-not-allowed">
+          <X className="h-4 w-4" />
         </button>
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-full border border-white/10 bg-black/40 grid place-items-center"><ShieldCheck className="h-6 w-6 text-purple-300" /></div>
+            <div className="h-12 w-12 rounded-full border border-white/10 bg-black/50 grid place-items-center"><ShieldCheck className="h-6 w-6 text-purple-300" /></div>
             <div>
               <h3 className="text-2xl font-bold tracking-tight text-white">You have been asked<br/>a Question</h3>
               <p className="text-sm text-white/70 mt-1">By SC ({investigatorRole})</p>
             </div>
           </div>
 
-          {/* Activity History */}
-          {activity.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-xs font-bold text-white/80 mb-2">Activity History</h4>
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3 max-h-[180px] overflow-y-auto space-y-2">
-                {activity.map((a) => {
-                  const targetShort = shortBySessionId.get(a.toSessionId) ?? "Player";
-                  return (
-                    <div key={a.questionId} className="rounded-lg bg-[#2a174c] p-2">
-                      <div className="flex items-start gap-2">
-                        <div className="h-4 w-4 rounded-full bg-black/40 border border-white/10 grid place-items-center text-[6px] text-white font-bold shrink-0">
-                          {isInvestigator ? "YOU" : "INV"}
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-[9px] text-white/50">
-                            {isInvestigator ? "You asked" : "Investigator asked"}{" "}
-                            <span className="text-pink-400">{targetShort}</span>
-                          </div>
-                          <div className="text-[11px] text-white mt-0.5">{a.q}</div>
-                        </div>
-                      </div>
-                      {a.a && (
-                        <div className="mt-2 flex items-start gap-2">
-                          <div className="h-4 w-4 rounded-full bg-black/40 border border-white/10 grid place-items-center text-[6px] text-white font-bold shrink-0">
-                            {targetShort.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-[9px] text-pink-400">
-                              {targetShort}{" "}
-                              <span className="text-white/50">{a.autoSkipped ? "did not answer" : "Answered"}</span>
-                            </div>
-                            <div className={`text-[11px] text-white mt-0.5 ${a.autoSkipped ? "text-white/50 italic" : ""}`}>{a.a}</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="mt-4 rounded-xl border border-purple-500/30 bg-[#2b1754] p-4 text-center">
-            <div className="text-xs text-white/70 mb-1">Current Question</div>
-            <div className="text-base text-white leading-relaxed">{question}</div>
+          <div className="mt-6 rounded-2xl border border-purple-400/30 bg-[#3a2260]/40 p-6 text-center">
+            <div className="text-sm text-white/70 mb-2">Question</div>
+            <div className="text-lg md:text-xl text-white leading-relaxed font-medium">{question}</div>
           </div>
           <div className={`mt-4 text-center`}>
             <Clock className={`h-5 w-5 mx-auto ${
@@ -2077,6 +2098,19 @@ function ClueRoomModal({
 }) {
   const firstClue = clues[0] ?? null;
   const unlockLabel = `${Math.floor(unlockSecs / 60)}:${String(unlockSecs % 60).padStart(2, '0')}`;
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const clueImageUrl = firstClue?.clue_image ? resolveMediaUrl(firstClue.clue_image) ?? mystery : null;
+
+  if (zoomedImage) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur p-4" onClick={() => setZoomedImage(null)}>
+        <button className="absolute top-6 right-6 h-10 w-10 grid place-items-center rounded-full bg-white/10 hover:bg-white/20 text-white">
+          <X className="h-5 w-5" />
+        </button>
+        <img src={zoomedImage} alt="Zoomed Clue" className="max-h-[90vh] max-w-[90vw] object-contain rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+      </div>
+    );
+  }
 
   if (!unlocked) {
     return (
@@ -2121,9 +2155,13 @@ function ClueRoomModal({
             ) : (
               <p className="text-xs text-white/80 mt-1">No additional clue details are available.</p>
             )}
-            {firstClue?.clue_image ? (
-              <div className="mt-3 overflow-hidden rounded-xl bg-zinc-900">
-                <img src={resolveMediaUrl(firstClue.clue_image) ?? mystery} alt={firstClue.clue_title} className="h-36 w-full object-cover" />
+            {clueImageUrl ? (
+              <div
+                onClick={() => setZoomedImage(clueImageUrl)}
+                className="relative group mt-3 overflow-hidden rounded-xl bg-zinc-900 cursor-zoom-in"
+              >
+                <img src={clueImageUrl} alt={firstClue?.clue_title ?? "Clue"} className="h-36 w-full object-cover" />
+                <div className="absolute bottom-1.5 right-1.5 h-7 w-7 rounded-full bg-white/90 text-zinc-800 grid place-items-center"><ZoomIn className="h-3.5 w-3.5" /></div>
               </div>
             ) : null}
           </div>
@@ -2195,6 +2233,93 @@ function AccuseModal({
         )}
       </div>
     </ModalShell>
+  );
+}
+
+/**
+ * Forced end-of-game accusation screen. Shown to everyone once the main game
+ * clock runs out and the server opens the fixed final-accusation window. It
+ * cannot be dismissed — the only way out is to submit (non-culprits) or for the
+ * window to close (the server then ends the game and routes to results).
+ */
+function FinalAccusationModal({
+  players,
+  victimName,
+  isCulprit,
+  submitted,
+  endsAtMs,
+  onSubmit,
+}: {
+  players: GamePlayer[];
+  victimName: string | null;
+  isCulprit: boolean;
+  submitted: boolean;
+  endsAtMs: number | null;
+  onSubmit: (accusedSessionId: number, reasoning: string) => void;
+}) {
+  const [pickSessionId, setPickSessionId] = useState<number | null>(null);
+  const [reason, setReason] = useState("");
+  const candidates = players.filter((p) => !p.is_you);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 backdrop-blur p-4">
+      <div className="w-full max-w-2xl rounded-2xl border border-rose-500/30 bg-[#160b28] shadow-2xl">
+        <div className="p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-12 w-12 rounded-full border border-rose-400/50 bg-rose-500/10 grid place-items-center"><UserX className="h-5 w-5 text-rose-300" /></div>
+              <div>
+                <h3 className="text-lg font-bold">{victimName ? `Who Killed ${victimName}?` : "Make Your Final Accusation"}</h3>
+                <p className="text-xs text-white/65">Time's up. The investigation is over — name the killer before the window closes.</p>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-[10px] uppercase tracking-widest text-white/50">Time left</div>
+              <DeadlineCountdown endsAtMs={endsAtMs} className="text-rose-400 text-2xl font-black tabular-nums leading-none" />
+            </div>
+          </div>
+
+          {isCulprit ? (
+            <div className="mt-8 text-center">
+              <p className="text-sm text-white/80">You are the culprit — sit tight while the group decides your fate.</p>
+              <p className="mt-2 text-xs text-white/50">The results are revealed as soon as everyone has accused, or when the timer runs out.</p>
+            </div>
+          ) : submitted ? (
+            <p className="mt-8 text-center text-sm text-emerald-300">Your accusation is locked in. Waiting for the other players and the final verdict…</p>
+          ) : (
+            <>
+              <div className="mt-5 grid grid-cols-5 gap-2">
+                {candidates.map((p, i) => (
+                  <button key={p.session_id} type="button" onClick={() => setPickSessionId(p.session_id)} className={`relative rounded-xl border p-2 text-center ${pickSessionId === p.session_id ? "border-purple-400 ring-2 ring-purple-400/40 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
+                    <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold`}>
+                      {p.pseudonym.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="mt-1.5 text-[11px] font-semibold">{p.pseudonym}</div>
+                    {pickSessionId === p.session_id && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-purple-500 ring-2 ring-purple-300" />}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-5">
+                <label className="text-xs text-white/80">Why do you think this player is the culprit?</label>
+                <div className="mt-1 relative">
+                  <textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 120))} placeholder="Type your reason here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
+                  <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{reason.length}/120</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => pickSessionId != null && onSubmit(pickSessionId, reason.trim())}
+                disabled={pickSessionId == null || !reason.trim()}
+                className="mt-5 block text-center w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Submit Final Accusation
+              </button>
+              <p className="mt-2 text-center text-[11px] text-white/60">Choose carefully. Once submitted, you cannot change your answer.</p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

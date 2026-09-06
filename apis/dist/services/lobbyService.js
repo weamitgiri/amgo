@@ -8,7 +8,6 @@ exports.buildLobbyPayload = buildLobbyPayload;
 exports.emitLobbyUpdate = emitLobbyUpdate;
 const moment_1 = __importDefault(require("moment"));
 const db_1 = require("../config/db");
-const pseudonym_1 = require("../utils/pseudonym");
 const timerService_1 = require("./timerService");
 function parseBookingSchedule(scheduled_date, scheduled_time) {
     if (!scheduled_date || !scheduled_time)
@@ -34,7 +33,7 @@ async function buildLobbyPayload(groupId, currentParticipantId) {
             a.lobby_wait_secs, a.game_duration_secs, a.case_summary_view_secs, a.group_size, a.max_questions,
             a.question_response_secs, a.clue_room_unlock_secs,
             a.lie_detector_enabled, a.lie_detector_timer_secs,
-            ag.id AS game_row_id, ag.title AS case_title, ag.tagline, ag.case_summary
+            ag.id AS game_row_id, ag.title AS case_title, ag.tagline, ag.case_summary, ag.bg_image
          FROM game_groups gg
          JOIN organizer_bookings ob ON gg.booking_id = ob.id
          JOIN activities a ON ob.activity_id = a.id
@@ -53,7 +52,10 @@ async function buildLobbyPayload(groupId, currentParticipantId) {
         const realName = m.name || 'Participant';
         return {
             id: m.id,
-            name: isYou ? realName : (0, pseudonym_1.shortName)(realName, Number(m.id)),
+            // Lobby shows the real name each participant entered at join time. The
+            // pseudonym (name + number) is only for the game itself, where player
+            // identities are anonymized during questioning/accusation.
+            name: realName,
             status: m.status || 'joined',
             is_you: isYou,
         };
@@ -123,6 +125,7 @@ async function buildLobbyPayload(groupId, currentParticipantId) {
             title: row.case_title,
             tagline: row.tagline,
             case_summary: row.case_summary,
+            bg_image: row.bg_image ?? null,
         },
         rules: rules.map((r) => ({
             id: r.id,

@@ -108,6 +108,52 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
 
     const [timers] = await query<any>('SELECT * FROM timers WHERE group_id = ? AND is_active = 1', [group_id]);
 
+    // Authoritative clue-room unlock state for hydration. The `timers` list above
+    // only holds ACTIVE timers, so a reloaded page can't tell a fired unlock timer
+    // from one that never existed. Look at the clue_room_unlock timer directly: it
+    // has unlocked once it is inactive (fired) or its deadline has passed.
+    const [clueUnlockTimerRows] = await query<any>(
+        `SELECT is_active, expires_at FROM timers WHERE group_id = ? AND timer_type = 'clue_room_unlock' ORDER BY id DESC LIMIT 1`,
+        [group_id]
+    );
+    const clueUnlockTimer = (clueUnlockTimerRows as any[])[0];
+    const cluesUnlocked = clueUnlockTimer
+        ? Number(clueUnlockTimer.is_active) === 0 || new Date(clueUnlockTimer.expires_at) <= new Date()
+        : false;
+
+    // Server-authoritative game clock. Both the total game timer and the case-summary
+    // timer are computed from the shared server timers, so EVERY player (whenever they
+    // load or reload) sees the same countdown — not a per-device local start time.
+    const [gameCfgRows] = await query<any>(
+        `SELECT a.game_duration_secs, a.case_summary_view_secs
+         FROM game_groups gg
+         JOIN organizer_bookings ob ON ob.id = gg.booking_id
+         JOIN activities a ON a.id = ob.activity_id
+         WHERE gg.id = ? LIMIT 1`,
+        [group_id]
+    );
+    const gameDurationSecs = Number(gameCfgRows?.[0]?.game_duration_secs ?? 1500);
+    const caseSummarySecs = Number(gameCfgRows?.[0]?.case_summary_view_secs ?? 300);
+    const questioningSecs = Math.max(gameDurationSecs - caseSummarySecs, 60);
+    const nowMs = Date.now();
+    const caseTimer = (timers as any[]).find(
+        (t: any) => t.timer_type === 'case_summary' && Number(t.is_active) === 1
+    );
+    const questioningTimer = (timers as any[]).find(
+        (t: any) => t.timer_type === 'questioning' && Number(t.is_active) === 1
+    );
+    let caseSummarySecondsRemaining = 0;
+    let gameSecondsRemaining = 0;
+    if (caseTimer) {
+        caseSummarySecondsRemaining = Math.max(0, Math.round((new Date(caseTimer.expires_at).getTime() - nowMs) / 1000));
+        // During the case-summary phase the questioning timer doesn't exist yet, so
+        // the full game clock = time left in case summary + the questioning duration.
+        gameSecondsRemaining = caseSummarySecondsRemaining + questioningSecs;
+    } else if (questioningTimer) {
+        // Questioning is the last phase, so its deadline IS the game end.
+        gameSecondsRemaining = Math.max(0, Math.round((new Date(questioningTimer.expires_at).getTime() - nowMs) / 1000));
+    }
+
     const [questions] = await query<any>('SELECT * FROM questions WHERE group_id = ? ORDER BY id ASC', [group_id]);
     const [answers] = await query<any>(
         `SELECT a.* FROM answers a JOIN questions q ON q.id = a.question_id WHERE q.group_id = ?`,
@@ -131,6 +177,22 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
     const lieDetectorRoundsWithTally = await Promise.all(
         lieDetectorRounds.map(async (r: any) => ({ ...r, tally: await getLieDetectorTallyData(r.id) }))
     );
+
+    // Per-answer lie-detector tallies (keyed by question id) so a reloaded page
+    // rebuilds each answer's own believable/suspicious count.
+    const [lieVoteRows] = await query<any>(
+        `SELECT reference_id AS question_id, vote_value, COUNT(*) AS cnt
+            FROM votes WHERE group_id = ? AND reference_type = 'lie_detector'
+            GROUP BY reference_id, vote_value`,
+        [group_id]
+    );
+    const lieVoteTallies: Record<string, { believable: number; suspicious: number }> = {};
+    for (const r of lieVoteRows as any[]) {
+        const key = String(r.question_id);
+        if (!lieVoteTallies[key]) lieVoteTallies[key] = { believable: 0, suspicious: 0 };
+        if (r.vote_value === 'believable') lieVoteTallies[key].believable = Number(r.cnt);
+        if (r.vote_value === 'suspicious') lieVoteTallies[key].suspicious = Number(r.cnt);
+    }
 
     const [clueRooms] = await query<any>(
         `SELECT cr.*, gc.clue_title, gc.clue_short_description, gc.clue_detail, gc.clue_image
@@ -166,8 +228,12 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
                 : null,
         })),
         timers,
+        clues_unlocked: cluesUnlocked,
+        game_seconds_remaining: gameSecondsRemaining,
+        case_summary_seconds_remaining: caseSummarySecondsRemaining,
         questions: hydratedQuestions,
         lie_detector_rounds: lieDetectorRoundsWithTally,
+        lie_vote_tallies: lieVoteTallies,
         clue_rooms: clueRooms.map((c: any) => ({
             ...c,
             game_clues: {
@@ -246,14 +312,17 @@ export const askQuestion = asyncHandler(async (req: Request, res: Response) => {
     }
 
     const question = await withTransaction(async (conn) => {
+        // +N per question asked (Investigator only) — admin-configurable (spec §1).
+        const questionBonus = Number(config?.investigator_question_bonus ?? 10);
         const [insertResult] = await conn.query<any>(
             `INSERT INTO questions (group_id, asked_by, asked_to, question_text, points_awarded, created_at, updated_at)
-                VALUES (?, ?, ?, ?, 10, NOW(), NOW())`,
-            [group_id, investigatorSession.id, asked_to_session_id, question_text]
+                VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+            [group_id, investigatorSession.id, asked_to_session_id, question_text, questionBonus]
         );
         const questionId = insertResult.insertId;
 
-        await conn.query(`UPDATE participant_sessions SET total_score = total_score + 10 WHERE id = ?`, [
+        await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
+            questionBonus,
             investigatorSession.id,
         ]);
 
@@ -311,7 +380,8 @@ export const answerQuestion = asyncHandler(async (req: Request, res: Response) =
             ORDER BY id DESC LIMIT 1`,
         [question.group_id, participantSession.id, question.created_at]
     );
-    const lieDetectorBonus = lieRoundRows?.[0] && penalty === 0 ? 5 : 0;
+    const lieParticipationBonus = Number(config?.lie_detector_participation_bonus ?? 5);
+    const lieDetectorBonus = lieRoundRows?.[0] && penalty === 0 ? lieParticipationBonus : 0;
 
     const answer = await withTransaction(async (conn) => {
         await conn.query(
@@ -395,6 +465,7 @@ export const startLieDetector = asyncHandler(async (req: Request, res: Response)
 
     const config = await getActivityConfigForGroup(group_id);
     const timerSecs = Number(config?.lie_detector_timer_secs ?? 420);
+    const initBonus = Number(config?.lie_detector_init_bonus ?? 5);
 
     const round = await withTransaction(async (conn) => {
         const [insertResult] = await conn.query<any>(
@@ -410,14 +481,17 @@ export const startLieDetector = asyncHandler(async (req: Request, res: Response)
             [group_id, roundId, moment().add(timerSecs, 'seconds').toDate()]
         );
 
-        // Flat one-time +5 bonus for initiating the Lie Detector (spec §1).
-        await conn.query(`UPDATE participant_sessions SET total_score = total_score + 5 WHERE id = ?`, [
-            investigatorSession.id,
-        ]);
+        // Flat one-time bonus for initiating the Lie Detector — admin-configurable (spec §1).
+        if (initBonus !== 0) {
+            await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
+                initBonus,
+                investigatorSession.id,
+            ]);
+        }
         await conn.query(
             `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
-                VALUES (?, 5, 'lie_detector_used', NOW(), NOW())`,
-            [investigatorSession.id]
+                VALUES (?, ?, 'lie_detector_used', NOW(), NOW())`,
+            [investigatorSession.id, initBonus]
         );
 
         const [rows] = await conn.query<any[]>(`SELECT * FROM lie_detector_rounds WHERE id = ? LIMIT 1`, [roundId]);
@@ -434,16 +508,20 @@ export const startLieDetector = asyncHandler(async (req: Request, res: Response)
  * Vote in Lie Detector — one vote per participant per answer, tallied in real time.
  */
 export const voteLieDetector = asyncHandler(async (req: Request, res: Response) => {
-    const { group_id, participant_id, round_id, vote_value } = req.body;
+    const { group_id, participant_id, round_id, question_id, vote_value } = req.body;
 
     const session = await getSessionForParticipant(group_id, participant_id);
     if (!session) throw new AppError('Session not found', 404);
 
+    // Votes are keyed to the specific answer (question_id), not the round, so each
+    // answered question carries its own believable/suspicious tally. The unique
+    // (reference_id, reference_type, voter_id) key then means one vote per player
+    // per answer — a voter can weigh in on every answer in the round.
     try {
         await query(
             `INSERT INTO votes (group_id, voter_id, reference_id, reference_type, vote_value, created_at, updated_at)
                 VALUES (?, ?, ?, 'lie_detector', ?, NOW(), NOW())`,
-            [group_id, session.id, round_id, vote_value]
+            [group_id, session.id, question_id, vote_value]
         );
     } catch (err: any) {
         if (err?.code === 'ER_DUP_ENTRY') {
@@ -452,22 +530,39 @@ export const voteLieDetector = asyncHandler(async (req: Request, res: Response) 
         throw err;
     }
 
-    // Casting a Lie Detector vote earns +5 (spec §3 — Key Suspect, Witness,
-    // Participant; either vote value counts). The Investigator's Lie Detector
-    // bonus is for initiating the round, not voting. The unique vote constraint
-    // above guarantees this can only be awarded once per round per player.
+    // Casting a Lie Detector vote earns the participation bonus (spec §3 — Key
+    // Suspect, Witness, Participant; either vote value counts) — admin-configurable.
+    // The Investigator's Lie Detector bonus is for initiating the round, not voting.
+    // Now that votes are per-answer the bonus is gated on a per-round score_log so
+    // it's still awarded only once per round, no matter how many answers voted on.
     if (session.role_type && session.role_type !== 'investigator') {
-        await query(`UPDATE participant_sessions SET total_score = total_score + 5 WHERE id = ?`, [session.id]);
-        await query(
-            `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
-                VALUES (?, 5, 'lie_detector_vote', NOW(), NOW())`,
-            [session.id]
+        const voteConfig = await getActivityConfigForGroup(group_id);
+        const voteBonus = Number(voteConfig?.lie_detector_participation_bonus ?? 5);
+        const [roundRows] = await query<any>(
+            `SELECT created_at FROM lie_detector_rounds WHERE id = ? LIMIT 1`,
+            [round_id]
         );
-        await emitScoresUpdate(group_id);
+        const roundStart = roundRows?.[0]?.created_at ?? null;
+        const [alreadyScored] = await query<any>(
+            `SELECT id FROM score_logs
+                WHERE participant_session_id = ? AND reason = 'lie_detector_vote' AND created_at >= ? LIMIT 1`,
+            [session.id, roundStart]
+        );
+        if ((alreadyScored as any[]).length === 0) {
+            if (voteBonus !== 0) {
+                await query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [voteBonus, session.id]);
+            }
+            await query(
+                `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                    VALUES (?, ?, 'lie_detector_vote', NOW(), NOW())`,
+                [session.id, voteBonus]
+            );
+            await emitScoresUpdate(group_id);
+        }
     }
 
-    const tally = await getLieDetectorTallyData(round_id);
-    io.to(`group_${group_id}`).emit('new_vote', { round_id, tally });
+    const tally = await getLieDetectorTallyData(question_id);
+    io.to(`group_${group_id}`).emit('new_vote', { round_id, question_id, tally });
 
     return successResponse(res, 'Vote cast successfully', tally);
 });
@@ -523,6 +618,9 @@ export const useWitnessPasscard = asyncHandler(async (req: Request, res: Respons
         throw new AppError('Passcard already used', 400);
     }
 
+    const passcardConfig = await getActivityConfigForGroup(group_id);
+    const passcardBonus = Number(passcardConfig?.witness_passcard_bonus ?? 10);
+
     const passcard = await withTransaction(async (conn) => {
         if (existingPasscard?.id) {
             await conn.query('UPDATE witness_passcards SET is_used = 1, used_at = ? WHERE id = ?', [
@@ -537,16 +635,19 @@ export const useWitnessPasscard = asyncHandler(async (req: Request, res: Respons
             );
         }
 
-        // Using the Secret Passcard earns the Witness a one-time +10 (spec §3),
-        // regardless of whether the hint helps the Investigator. The "already
-        // used" guard above makes this unrepeatable.
-        await conn.query(`UPDATE participant_sessions SET total_score = total_score + 10 WHERE id = ?`, [
-            witnessSession.id,
-        ]);
+        // Using the Secret Passcard earns the Witness a one-time bonus (spec §3),
+        // admin-configurable, regardless of whether the hint helps the Investigator.
+        // The "already used" guard above makes this unrepeatable.
+        if (passcardBonus !== 0) {
+            await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
+                passcardBonus,
+                witnessSession.id,
+            ]);
+        }
         await conn.query(
             `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
-                VALUES (?, 10, 'witness_passcard_used', NOW(), NOW())`,
-            [witnessSession.id]
+                VALUES (?, ?, 'witness_passcard_used', NOW(), NOW())`,
+            [witnessSession.id, passcardBonus]
         );
 
         const [rows] = await conn.query<any[]>(

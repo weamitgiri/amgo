@@ -24,6 +24,13 @@ const VERDICT_POINTS = {
     culpritCaught: -20,
 } as const;
 
+/** Use the admin-configured value when present/valid, else the spec default. */
+function numOr(value: unknown, fallback: number): number {
+    if (value === null || value === undefined || value === '') return fallback;
+    const n = Number(value);
+    return Number.isNaN(n) ? fallback : n;
+}
+
 export type PlayerStatus = 'winner' | 'correct' | 'loser' | 'killer_wins';
 
 type PerRoleResult = {
@@ -135,7 +142,7 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
         if (!claim || Number(claim.affectedRows || 0) === 0) return null;
 
         const [sessions] = await conn.query<any[]>(
-            `SELECT ps.id, ps.total_score, gr.role_type FROM participant_sessions ps
+            `SELECT ps.id, ps.total_score, ps.left_at, gr.role_type FROM participant_sessions ps
              LEFT JOIN game_roles gr ON gr.id = ps.role_id
              WHERE ps.group_id = ?`,
             [groupId]
@@ -148,21 +155,49 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
             (accusations as any[]).map((a: any) => [String(a.participant_session_id), a])
         );
 
+        // Admin-configurable end-game points for this activity (fall back to the
+        // spec defaults in VERDICT_POINTS when a column is null/unset).
+        const [cfgRows] = await conn.query<any[]>(
+            `SELECT a.investigator_correct_bonus, a.investigator_wrong_penalty, a.investigator_no_accusation_penalty,
+                    a.role_correct_bonus, a.role_wrong_penalty, a.culprit_win_bonus, a.culprit_caught_penalty
+             FROM game_groups gg
+             JOIN organizer_bookings ob ON ob.id = gg.booking_id
+             JOIN activities a ON a.id = ob.activity_id
+             WHERE gg.id = ? LIMIT 1`,
+            [groupId]
+        );
+        const cfg = (cfgRows as any[])[0] || {};
+        const points = {
+            investigatorCorrect: numOr(cfg.investigator_correct_bonus, VERDICT_POINTS.investigatorCorrect),
+            investigatorWrong: numOr(cfg.investigator_wrong_penalty, VERDICT_POINTS.investigatorWrong),
+            investigatorNoAccusation: numOr(cfg.investigator_no_accusation_penalty, VERDICT_POINTS.investigatorNoAccusation),
+            othersCorrect: numOr(cfg.role_correct_bonus, VERDICT_POINTS.othersCorrect),
+            othersWrong: numOr(cfg.role_wrong_penalty, VERDICT_POINTS.othersWrong),
+            culpritEscaped: numOr(cfg.culprit_win_bonus, VERDICT_POINTS.culpritEscaped),
+            culpritCaught: numOr(cfg.culprit_caught_penalty, VERDICT_POINTS.culpritCaught),
+        };
+
         const perRoleResults: PerRoleResult[] = nonCulpritSessions.map((s: any) => {
+            // Spec §7: a non-Investigator who leaves mid-game has their final score
+            // recorded as 0 and cannot win — no accusation counts, no verdict points.
+            const hasLeft = Boolean(s.left_at);
             const acc = accusationBySession.get(String(s.id));
-            const isCorrect = !!acc && !!culpritSession && String(acc.accused_session_id) === String(culpritSession.id);
+            const isCorrect =
+                !hasLeft && !!acc && !!culpritSession && String(acc.accused_session_id) === String(culpritSession.id);
             const isInvestigator = s.role_type === 'investigator';
-            const verdictPoints = acc
-                ? isCorrect
-                    ? isInvestigator
-                        ? VERDICT_POINTS.investigatorCorrect
-                        : VERDICT_POINTS.othersCorrect
-                    : isInvestigator
-                      ? VERDICT_POINTS.investigatorWrong
-                      : VERDICT_POINTS.othersWrong
-                : isInvestigator
-                  ? VERDICT_POINTS.investigatorNoAccusation
-                  : 0;
+            const verdictPoints = hasLeft
+                ? 0
+                : acc
+                  ? isCorrect
+                      ? isInvestigator
+                          ? points.investigatorCorrect
+                          : points.othersCorrect
+                      : isInvestigator
+                        ? points.investigatorWrong
+                        : points.othersWrong
+                  : isInvestigator
+                    ? points.investigatorNoAccusation
+                    : 0;
             return {
                 session_id: Number(s.id),
                 role_type: s.role_type,
@@ -170,7 +205,7 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
                 is_correct: isCorrect,
                 guess_submitted_at: acc?.created_at ? moment(acc.created_at).toISOString() : null,
                 verdict_points: verdictPoints,
-                final_score: Number(s.total_score || 0) + verdictPoints,
+                final_score: hasLeft ? 0 : Number(s.total_score || 0) + verdictPoints,
                 status: 'loser', // provisional; resolved below
             };
         });
@@ -179,14 +214,21 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
         const correctGuessCount = correctResults.length;
         const culpritWins = correctGuessCount === 0;
 
-        const culpritVerdictPoints = culpritSession
+        // A culprit who leaves mid-game is also recorded as 0 (spec §7).
+        const culpritLeft = Boolean(culpritSession?.left_at);
+        const culpritVerdictPoints = culpritSession && !culpritLeft
             ? culpritWins
-                ? VERDICT_POINTS.culpritEscaped
-                : VERDICT_POINTS.culpritCaught
+                ? points.culpritEscaped
+                : points.culpritCaught
             : 0;
 
-        // Winner declaration: highest final score among correct guessers; earlier
-        // accusation submission wins ties; identical score AND timestamp → co-winners.
+        // Winner declaration per the Scoreboard Logic spec (§4 & §6): among all
+        // players who identified the culprit correctly, ONLY the highest scorer is
+        // the WINNER; the other correct guessers are marked CORRECT (right answer,
+        // not top score). Ties are broken by the earliest guess timestamp, and an
+        // exact tie on both score AND timestamp declares co-winners. Wrong guessers
+        // and the caught culprit are LOSERS; if nobody guesses correctly the culprit
+        // escapes (KILLER WINS) and all guessers lose.
         let winners: number[] = [];
         if (culpritWins) {
             if (culpritSession) winners = [Number(culpritSession.id)];
@@ -219,7 +261,7 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
                 is_correct: false,
                 guess_submitted_at: null,
                 verdict_points: culpritVerdictPoints,
-                final_score: Number(culpritSession.total_score || 0) + culpritVerdictPoints,
+                final_score: culpritLeft ? 0 : Number(culpritSession.total_score || 0) + culpritVerdictPoints,
                 status: culpritWins ? 'killer_wins' : 'loser',
             });
         }

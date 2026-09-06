@@ -146,7 +146,7 @@ async function buildGameSummaryPayload(groupId, participantId) {
             a.lie_detector_enabled, a.lie_detector_max_questions, a.lie_detector_timer_secs,
             a.no_response_penalty,
             ag.id AS game_row_id, ag.title AS case_title, ag.tagline, ag.case_summary,
-            ag.timeline, ag.quick_facts, ag.victim_name
+            ag.bg_image, ag.timeline, ag.quick_facts, ag.victim_name
          FROM game_groups gg
          JOIN organizer_bookings ob ON gg.booking_id = ob.id
          JOIN activities a ON ob.activity_id = a.id
@@ -187,13 +187,22 @@ async function buildGameSummaryPayload(groupId, participantId) {
          WHERE ps.group_id = ? AND ps.role_id IS NOT NULL`, [row.id]);
     const myRoleSessionId = sessionRows.find((s) => String(s.participant_id) === String(participant.id))?.id;
     // Players list for gameplay UI (questions, votes, accusations, scoreboard).
-    // Pseudonyms only — the player↔role mapping is the game's core secret and is
-    // never sent for anyone except the requesting player.
-    const players = sessionRows.map((s) => ({
-        session_id: Number(s.id),
-        pseudonym: (0, pseudonym_1.shortName)(s.participant_name || 'Player', Number(s.id)),
-        is_you: String(s.participant_id) === String(participant.id),
-    }));
+    // Shows the real name each player entered plus their PUBLIC character identity
+    // (character_name already carries the story role, e.g. "Raju (Servant)").
+    // The role `subtitle`/`objective` are the player's SECRET instructions — for
+    // the culprit that literally reads "You are the one who did it" — so they are
+    // NEVER sent for anyone here, and neither is the mechanic role_type. Players
+    // still have to deduce which character is the killer.
+    const roleById = new Map(roleRows.map((r) => [String(r.id), r]));
+    const players = sessionRows.map((s) => {
+        const role = roleById.get(String(s.role_id));
+        return {
+            session_id: Number(s.id),
+            pseudonym: s.participant_name || 'Player',
+            character_name: role?.character_name ?? null,
+            is_you: String(s.participant_id) === String(participant.id),
+        };
+    });
     // Role-specific strategy cards (strategy_cards table) — shown to every role
     // EXCEPT the investigator, who instead gets the timed suspect-profile cards
     // (investigator_cards) mapped into strategy_slides below.
@@ -272,6 +281,7 @@ async function buildGameSummaryPayload(groupId, participantId) {
             title: row.case_title,
             tagline: row.tagline,
             case_summary_html: row.case_summary,
+            bg_image: row.bg_image ?? null,
             timeline: parseTimeline(row.timeline),
             quick_facts: parseQuickFacts(row.quick_facts),
             victim_name: row.victim_name || null,

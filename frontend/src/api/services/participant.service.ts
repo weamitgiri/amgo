@@ -37,8 +37,15 @@ export type GameStateResponse = {
     status: string;
     participant_sessions: GameStateSession[];
     timers: { id: number; timer_type: string; reference_id: number | null; expires_at: string; is_active: number }[];
+    /** Authoritative clue-room unlock state (survives reload, unlike the active-only timers list). */
+    clues_unlocked?: boolean;
+    /** Server-computed game clock — same for every player regardless of when they loaded. */
+    game_seconds_remaining?: number;
+    case_summary_seconds_remaining?: number;
     questions: GameQuestion[];
     lie_detector_rounds: LieDetectorRound[];
+    /** Per-answer lie-detector vote tallies, keyed by question id. */
+    lie_vote_tallies?: Record<string, { believable: number; suspicious: number }>;
     my_accusation_submitted: boolean;
   };
   my_role: { id: number; role_type: string; character_name: string } | null;
@@ -116,6 +123,8 @@ export const participantService = {
     group_id: number | string;
     participant_id: number | string;
     round_id: number;
+    /** The specific lie-detector question/answer being voted on — tallies are per-answer, not per-round. */
+    question_id: number;
     vote_value: "believable" | "suspicious";
   }) => apiClient.post<LieDetectorTally>(API_ENDPOINTS.game.voteLieDetector, payload, noAuth),
 

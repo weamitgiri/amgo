@@ -16,6 +16,7 @@ class ActivityGame extends Model
         'timeline',
         'quick_facts',
         'tagline',
+        'bg_image',
         'status',
     ];
 
