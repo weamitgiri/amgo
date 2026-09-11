@@ -1,1 +1,0 @@
-import{c as o}from"./config-DfamWpg8.js";const n=[["path",{d:"m6 9 6 6 6-6",key:"qrunsl"}]],t=o("chevron-down",n);const e=[["path",{d:"m15 18-6-6 6-6",key:"1wnfg3"}]],r=o("chevron-left",e);export{r as C,t as a};
