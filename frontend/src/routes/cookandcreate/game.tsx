@@ -95,14 +95,32 @@ function GamePage() {
   useEffect(() => {
     if (!gameState?.instance.id || !groupId || !participantId) return;
     const socket = getSocket();
-    socket.emit('join_lobby', { groupId, participantId });
-    socket.emit('join_cc_instance', { instanceId: gameState.instance.id });
-    // The HTTP snapshot above can land after the join's presence broadcast
-    // and clobber it with a stale "everyone offline" set — ask for a fresh
-    // one now that we've definitely joined (same fix Mystery Quest's
-    // game.tsx uses for the same race).
-    socket.emit('request_presence', { groupId });
-  }, [gameState?.instance.id, groupId, participantId]);
+    const instanceId = gameState.instance.id;
+    const joinRooms = () => {
+      socket.emit('join_lobby', { groupId, participantId });
+      socket.emit('join_cc_instance', { instanceId });
+      // The HTTP snapshot above can land after the join's presence broadcast
+      // and clobber it with a stale "everyone offline" set — ask for a fresh
+      // one now that we've definitely joined (same fix Mystery Quest's
+      // game.tsx uses for the same race).
+      socket.emit('request_presence', { groupId });
+    };
+    joinRooms();
+
+    // Socket.IO reuses the same client Socket across reconnects, so this effect
+    // never re-runs on its own and the reconnected socket sits in NEITHER
+    // group_${groupId} nor cc-instance-${instanceId}. Re-join both rooms and
+    // refetch full state on every (re)connect so cc_* round events keep flowing
+    // after a network blip. `connect` fires on each successful (re)connect.
+    const rejoinAndResync = () => {
+      joinRooms();
+      fetchState();
+    };
+    socket.on('connect', rejoinAndResync);
+    return () => {
+      socket.off('connect', rejoinAndResync);
+    };
+  }, [gameState?.instance.id, groupId, participantId, fetchState]);
 
   // Live presence — keeps the sidebar's online/offline dots accurate between
   // full refetches (someone closing their tab shouldn't take up to 10s to

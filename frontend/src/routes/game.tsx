@@ -478,6 +478,25 @@ function GamePage() {
 
     socket.emit("join_game_group", { groupId: session.groupId, participantId: session.participantId });
 
+    // Re-join the room and resync on every (re)connect. Socket.IO reuses the same
+    // client Socket across reconnects, so this effect never re-runs on its own — and
+    // the server puts the reconnected socket in a brand-new id that is NOT in
+    // group_${groupId}. Without this, a reconnected player is silently dropped from
+    // the room and misses every later broadcast (new_question, phase_changed,
+    // scores_updated, …), freezing the game until a manual refresh. `connect` fires
+    // on each successful (re)connect; the state refetch recovers any phase change
+    // that was broadcast while this client was offline.
+    const rejoinAndResync = () => {
+      socket.emit("join_game_group", { groupId: session.groupId, participantId: session.participantId });
+      participantService
+        .getGameState(session.groupId, session.participantId)
+        .then(applyGameState)
+        .catch(() => {
+          /* transient reconnect fetch failure — the next broadcast or a manual reload recovers */
+        });
+    };
+    socket.on("connect", rejoinAndResync);
+
     const onNewQuestion = (q: { id: number; asked_to: number; question_text: string; asked_by?: number; created_at?: string }) => {
       console.log("[GamePage] onNewQuestion received", { q, myPlayerSessionId: myPlayer?.session_id });
       const item: ActivityItem = { questionId: q.id, toSessionId: q.asked_to, q: q.question_text, fromSessionId: q.asked_by, askedAt: q.created_at ?? new Date().toISOString(), isLie: lieDetectorRoundId !== null };
@@ -614,6 +633,7 @@ function GamePage() {
       // re-subscription (role load, lie-detector state changes), not just when
       // the player actually leaves. Real departures are detected server-side
       // via socket disconnect + a reconnect grace window.
+      socket.off("connect", rejoinAndResync);
       socket.off("new_question", onNewQuestion);
       socket.off("new_answer", onNewAnswer);
       socket.off("new_vote", onNewVote);
@@ -628,7 +648,7 @@ function GamePage() {
       socket.off("game_ended", onGameEnded);
       socket.off("game_incomplete", onGameIncomplete);
     };
-  }, [session?.groupId, session?.participantId, navigate, myPlayer?.session_id, lieDetectorRoundId]);
+  }, [session?.groupId, session?.participantId, navigate, myPlayer?.session_id, lieDetectorRoundId, applyGameState]);
 
   useEffect(() => {
     if (loading) return;

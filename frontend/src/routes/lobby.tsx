@@ -120,10 +120,26 @@ function LobbyPage() {
     if (!session?.groupId || !session.participantId) return;
 
     const socket = getSocket();
-    socket.emit("join_lobby", {
-      groupId: session.groupId,
-      participantId: session.participantId,
-    });
+    const joinLobby = () => {
+      socket.emit("join_lobby", {
+        groupId: session.groupId,
+        participantId: session.participantId,
+      });
+    };
+    joinLobby();
+
+    // Socket.IO reuses the same client Socket across reconnects, so this effect
+    // never re-runs on its own and the reconnected socket is NOT in group_${groupId}.
+    // Re-join (and refetch the lobby snapshot) on every (re)connect so presence and
+    // ready/countdown updates keep flowing after a network blip. `connect` fires on
+    // each successful (re)connect.
+    const rejoinLobby = () => {
+      joinLobby();
+      if (session.groupId && session.participantId) {
+        fetchLobby(session.groupId, session.participantId).catch(() => undefined);
+      }
+    };
+    socket.on("connect", rejoinLobby);
 
     const onLobbyUpdated = (payload: LobbySessionResponse) => {
       setLobby(payload);
@@ -133,9 +149,10 @@ function LobbyPage() {
     socket.on("lobby_updated", onLobbyUpdated);
 
     return () => {
+      socket.off("connect", rejoinLobby);
       socket.off("lobby_updated", onLobbyUpdated);
     };
-  }, [session?.groupId, session?.participantId]);
+  }, [session?.groupId, session?.participantId, fetchLobby]);
 
   useEffect(() => {
     if (countdown === null || countdown <= 0) return;

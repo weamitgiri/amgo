@@ -52,7 +52,11 @@ function NotificationsPage() {
       });
     };
     socket.on("organizer_notification", onLive);
-    return () => socket.off("organizer_notification", onLive);
+    // Wrap in a block so the cleanup returns void — socket.off() returns the
+    // Socket (chaining), which is not a valid React effect destructor.
+    return () => {
+      socket.off("organizer_notification", onLive);
+    };
   }, [bookingId, query.data?.notifications]);
 
   const items = [

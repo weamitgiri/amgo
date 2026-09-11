@@ -28,7 +28,20 @@ export function useOrganizerEventLive() {
     if (!bookingId) return;
 
     const socket = getSocket();
-    socket.emit("join_organizer_dashboard", { bookingId });
+    const joinDashboard = () => socket.emit("join_organizer_dashboard", { bookingId });
+    joinDashboard();
+
+    // Socket.IO reuses the same client Socket across reconnects, so this effect
+    // never re-runs on its own and the reconnected socket leaves the
+    // organizer_${bookingId} room — silently dropping live event stats AND
+    // organizer_notification events (both are broadcast to that room). Re-join on
+    // every (re)connect and refetch the stats snapshot to catch anything missed
+    // while offline. `connect` fires on each successful (re)connect.
+    const rejoin = () => {
+      joinDashboard();
+      queryClient.invalidateQueries({ queryKey: ["organizerEventStats", bookingId] });
+    };
+    socket.on("connect", rejoin);
 
     const onStatsUpdated = (stats: OrganizerEventStats) => {
       queryClient.setQueryData(["organizerEventStats", bookingId], stats);
@@ -37,6 +50,7 @@ export function useOrganizerEventLive() {
     socket.on("event_stats_updated", onStatsUpdated);
 
     return () => {
+      socket.off("connect", rejoin);
       socket.off("event_stats_updated", onStatsUpdated);
     };
   }, [bookingId, queryClient]);

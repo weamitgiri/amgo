@@ -131,6 +131,9 @@ function CreatePage() {
   const { activity: activitySlug } = Route.useSearch();
   const authenticated = isOrganizerAuthenticated();
   const [step, setStep] = useState(() => (authenticated ? 2 : 0));
+  // Highest step reached — keeps Setup/Payment navigable both ways after going
+  // back, while Details/Verify (one-time steps) stay locked.
+  const [maxStep, setMaxStep] = useState(() => (authenticated ? 2 : 0));
   const [done, setDone] = useState(false);
   const [bookingId, setBookingId] = useState<number | null>(null);
   const [invitationLink, setInvitationLink] = useState<string | null>(null);
@@ -179,6 +182,10 @@ function CreatePage() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    setMaxStep((m) => Math.max(m, step));
+  }, [step]);
+
   return (
     <div className="min-h-screen pb-10">
       <div className="pt-6"><Header /></div>
@@ -187,11 +194,6 @@ function CreatePage() {
       </div> */}
 
       <section className="px-4 mt-12">
-        <div className="mx-auto max-w-6xl text-center">
-          <h1 className="text-4xl md:text-5xl font-bold">Create Your Session &amp;<br />Activate Your Activity</h1>
-          <p className="mt-4 text-muted-foreground max-w-xl mx-auto">Set up your account, choose a package, and start your team experience in minutes.</p>
-        </div>
-
         {done ? (
           <SuccessCard
             invitationLink={invitationLink}
@@ -200,6 +202,7 @@ function CreatePage() {
             onReset={() => {
               setDone(false);
               setStep(authenticated ? 2 : 0);
+              setMaxStep(authenticated ? 2 : 0);
               setBookingId(null);
               setInvitationLink(null);
               setSession(emptySessionSetup());
@@ -240,7 +243,7 @@ function CreatePage() {
             </div>
 
             <div className="rounded-3xl bg-card shadow-elevated p-8 md:p-10">
-              <Stepper step={step} />
+              <Stepper step={step} onStepClick={setStep} maxStep={maxStep} />
               {authenticated && isAuthLoading && (
                 <div className="rounded-2xl border border-border bg-muted/50 p-4 mt-6 text-sm text-muted-foreground">
                   Loading your organizer profile so you can continue with another game selection...
@@ -307,32 +310,53 @@ function CreatePage() {
   );
 }
 
-function Stepper({ step }: { step: number }) {
+function Stepper({
+  step,
+  onStepClick,
+  maxStep,
+}: {
+  step: number;
+  onStepClick?: (i: number) => void;
+  maxStep?: number;
+}) {
+  const reached = maxStep ?? step;
   return (
     <div className="relative mb-10 mt-2 px-2 md:px-6">
       {/* Connecting lines track */}
       <div className="absolute top-5 left-[12%] right-[12%] h-[2px] bg-border" />
       {/* Active progress line */}
-      <div 
-        className="absolute top-5 left-[12%] h-[2px] bg-[#8B5CF6] transition-all duration-500" 
-        style={{ width: `${(step / (STEPS.length - 1)) * 76}%` }} 
+      <div
+        className="absolute top-5 left-[12%] h-[2px] bg-[#8B5CF6] transition-all duration-500"
+        style={{ width: `${(step / (STEPS.length - 1)) * 76}%` }}
       />
-      
+
       <div className="relative z-10 flex items-start justify-between">
         {STEPS.map((label, i) => {
           const active = i === step;
           const complete = i < step;
+          // Only Setup & Payment (index >= 2) are navigable — Details (0) and
+          // Verify (1) are one-time steps and stay locked. A step is clickable
+          // once it's been reached and isn't the current one (so you can move
+          // back and forth between Setup and Payment).
+          const clickable = i >= 2 && i <= reached && i !== step && !!onStepClick;
           return (
-            <div key={label} className="flex flex-col items-center gap-2.5 bg-card px-2">
+            <button
+              key={label}
+              type="button"
+              disabled={!clickable}
+              onClick={clickable ? () => onStepClick?.(i) : undefined}
+              aria-label={clickable ? `Go back to ${label}` : label}
+              className={`group flex flex-col items-center gap-2.5 bg-card px-2 ${clickable ? "cursor-pointer" : "cursor-default"}`}
+            >
               <div className={`grid h-10 w-10 place-items-center rounded-full text-sm font-medium transition-colors border ${
-                complete || active 
-                  ? "border-[#8B5CF6] bg-purple-100 text-[#8B5CF6]" 
+                complete || active
+                  ? "border-[#8B5CF6] bg-purple-100 text-[#8B5CF6]"
                   : "border-gray-300 bg-white text-muted-foreground"
-              }`}>
+              } ${clickable ? "group-hover:bg-purple-200" : ""}`}>
                 {complete ? <Check className="h-5 w-5 text-[#8B5CF6]" strokeWidth={2.5} /> : String(i + 1).padStart(2, "0")}
               </div>
-              <span className={`text-[12px] font-medium ${complete || active ? "text-[#8B5CF6]" : "text-muted-foreground"}`}>{label}</span>
-            </div>
+              <span className={`text-[12px] font-medium ${complete || active ? "text-[#8B5CF6]" : "text-muted-foreground"} ${clickable ? "group-hover:underline" : ""}`}>{label}</span>
+            </button>
           );
         })}
       </div>
@@ -946,9 +970,6 @@ function SetupStep({
           {errors.scheduledDate && (
             <p className="mt-1 text-xs text-destructive">{errors.scheduledDate}</p>
           )}
-          <p className="mt-1 text-xs text-muted-foreground">
-            Available dates: today through the next 5 days. Disabled dates are greyed out in the calendar.
-          </p>
         </div>
         <div>
           <label className="text-sm font-medium" htmlFor="session-time">
@@ -971,6 +992,10 @@ function SetupStep({
           )}
         </div>
       </div>
+
+      <p className="rounded-2xl border border-sky-500 bg-sky-100 px-5 py-4 text-sm leading-relaxed text-foreground">
+        After activation, you will receive a unique session access link. Share it with your participants, they simply enter their email ID, verify via OTP, and join the activity instantly. No app download, no passwords, no pre-registration needed.
+      </p>
 
       <PillButton
         type="submit"
@@ -1542,20 +1567,25 @@ function PaymentStep({
         }}
       />
 
-      <div className="rounded-xl bg-purple-50 p-4 space-y-2 text-xs">
+      <div className="rounded-xl border border-sky-500 bg-sky-100 p-4 sm:p-5 space-y-4 text-sm text-foreground">
         {CONSENT_ITEMS.map(({ key, text }) => (
-          <label key={key} className="flex items-start gap-2">
+          <label key={key} className="flex items-start gap-3 leading-relaxed">
             <input
               type="checkbox"
               checked={consents[key]}
               onChange={() => toggleConsent(key)}
-              className="mt-0.5 accent-primary"
+              className="mt-0.5 h-6 w-6 shrink-0 rounded-md accent-primary"
             />
-            <span>{text}</span>
+            <span className="pt-0.5 text-xs">{text}</span>
+
           </label>
         ))}
         {errors.consents && <p className="text-destructive">{errors.consents}</p>}
       </div>
+
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        By completing payment, you agree to all terms above. This is a B2B transaction between Zoventro and your organization.
+      </p>
 
       {/* Label follows the method: Razorpay hands off to a gateway, COD does not. */}
       <PillButton

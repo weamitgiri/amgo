@@ -28,9 +28,9 @@ export function Header({ floating = false }: { floating?: boolean }) {
                 <a
                   key={item.label}
                   href={item.to as string}
-                  className={`text-sm transition-colors ${
+                  className={`relative text-sm transition-colors after:pointer-events-none after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-full after:origin-center after:rounded-full after:bg-current after:transition-transform after:duration-200 after:content-[''] after:scale-x-0 hover:after:scale-x-100 ${
                     floating ? "text-[#B7B7B7] hover:text-white" : "text-foreground/70 hover:text-foreground"
-                  } ${active ? (floating ? "text-white font-medium" : "text-foreground font-medium") : ""}`}
+                  } ${active ? `after:scale-x-100 ${floating ? "text-white font-medium" : "text-foreground font-medium"}` : ""}`}
                 >
                   {item.label}
                 </a>

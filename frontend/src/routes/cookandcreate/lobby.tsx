@@ -118,8 +118,21 @@ function LobbyPage() {
   useEffect(() => {
     if (!session?.groupId || !session.participantId) return;
     const socket = getSocket();
-    socket.emit('join_lobby', { groupId: session.groupId, participantId: session.participantId });
-    socket.emit('request_presence', { groupId: session.groupId });
+    const joinPresence = () => {
+      socket.emit('join_lobby', { groupId: session.groupId, participantId: session.participantId });
+      socket.emit('request_presence', { groupId: session.groupId });
+    };
+    joinPresence();
+
+    // Re-join the presence room and refetch on every (re)connect — Socket.IO
+    // reuses the same client Socket across reconnects, so this effect never
+    // re-runs on its own, leaving the reconnected socket out of group_${groupId}.
+    // `connect` fires on each successful (re)connect.
+    const rejoin = () => {
+      joinPresence();
+      fetchState();
+    };
+    socket.on('connect', rejoin);
 
     const onPresenceUpdated = (payload: { online_participant_ids?: number[] }) => {
       setOnlineParticipantIds(new Set(payload.online_participant_ids ?? []));
@@ -132,6 +145,7 @@ function LobbyPage() {
     const interval = setInterval(fetchState, 10000);
 
     return () => {
+      socket.off('connect', rejoin);
       socket.off('presence_updated', onPresenceUpdated);
       socket.off('lobby_updated', refetch);
       clearInterval(interval);

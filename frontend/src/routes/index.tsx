@@ -132,33 +132,29 @@ function Home() {
             return (
               <div
                 key={f.title}
-                className={`rounded-[2rem] p-8 text-center shadow-card border transition-all duration-300 group ${
-                  featured 
-                    ? "bg-gradient-primary text-white border-transparent shadow-elevated hover:-translate-y-1 hover:shadow-glow" 
+                className={`rounded-[2rem] p-8 text-center shadow-card border transition-all duration-300 group ${featured
+                    ? "bg-gradient-primary text-white border-transparent shadow-elevated hover:-translate-y-1 hover:shadow-glow"
                     : "bg-card text-foreground border-border hover:bg-gradient-primary hover:text-white hover:border-transparent hover:-translate-y-1 hover:shadow-glow"
-                }`}
+                  }`}
               >
-                <div className={`mx-auto h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  featured 
-                    ? "border border-white/20 bg-white/10" 
+                <div className={`mx-auto h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300 ${featured
+                    ? "border border-white/20 bg-white/10"
                     : `${f.bg} group-hover:border group-hover:border-white/20 group-hover:bg-white/10`
-                }`}>
+                  }`}>
                   <img src={f.icon} alt="" className="h-9 w-9 object-contain" />
                 </div>
-                
-                <h3 className={`mt-6 font-bold text-[20px] leading-tight transition-colors duration-300 ${
-                  featured 
-                    ? "text-white" 
+
+                <h3 className={`mt-6 font-bold text-[20px] leading-tight transition-colors duration-300 ${featured
+                    ? "text-white"
                     : "text-foreground group-hover:text-white"
-                }`}>
+                  }`}>
                   {f.title}
                 </h3>
-                
-                <p className={`mt-3.5 text-[13px] leading-relaxed transition-colors duration-300 ${
-                  featured 
-                    ? "text-white/90" 
+
+                <p className={`mt-3.5 text-[13px] leading-relaxed transition-colors duration-300 ${featured
+                    ? "text-white/90"
                     : "text-muted-foreground group-hover:text-white/90"
-                }`}>
+                  }`}>
                   {f.desc}
                 </p>
               </div>
@@ -356,13 +352,12 @@ function ActivityCard({
       />
       {/*object-cover*/}
       <div
-        className={`absolute inset-0 ${
-          accent === "warm" 
-            ? "" 
+        className={`absolute inset-0 ${accent === "warm"
+            ? ""
             : ""
-        }`}
+          }`}
       />
-      
+
       <div className="relative flex flex-col p-8 md:p-10 text-white h-full z-10">
         <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
           {/* Badge */}
@@ -377,11 +372,11 @@ function ActivityCard({
               <Icon className="h-10 w-10 text-white" />
             </div>
           )}
-          
+
           {/* Content */}
           <div className="flex-1">
             <h3 className="text-3xl md:text-[36px] font-bold tracking-tight leading-tight">{game.title}</h3>
-            
+
             <div className="mt-4 flex-1">
               {hasHtml ? (
                 <div
@@ -431,9 +426,8 @@ function PriceCard({ plan }: { plan: ApiPackage }) {
 
   return (
     <div
-      className={`relative rounded-[2.5rem] p-8 lg:p-10 shadow-card bg-card border transition-all duration-300 ${
-        popular ? "border-transparent shadow-elevated ring-1 ring-primary/20" : "border-border hover:border-primary/20 hover:shadow-elevated"
-      }`}
+      className={`relative rounded-[2.5rem] p-8 lg:p-10 shadow-card bg-card border transition-all duration-300 ${popular ? "border-transparent shadow-elevated ring-1 ring-primary/20" : "border-border hover:border-primary/20 hover:shadow-elevated"
+        }`}
     >
       {popular && (
         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 inline-flex items-center rounded-full bg-gradient-blue text-white text-[11px] font-medium tracking-wide px-4 py-1.5 shadow-sm">
@@ -452,7 +446,7 @@ function PriceCard({ plan }: { plan: ApiPackage }) {
             <p className="text-[13px] text-muted-foreground font-medium mt-1.5">{perUser}</p>
           )}
         </div>
-        <span className="text-[11px] text-muted-foreground mt-3 font-medium">One Time<br/>Payment</span>
+        <span className="text-[11px] text-muted-foreground mt-3 font-medium">One Time<br />Payment</span>
       </div>
 
       <div className="mt-8 pt-7 border-t border-border/80">
@@ -466,22 +460,14 @@ function PriceCard({ plan }: { plan: ApiPackage }) {
           ))}
         </ul>
       </div>
-
       <Link
         to="/create"
         search={{ activity: undefined }}
-        className={`mt-10 w-full inline-flex items-center justify-between rounded-full pl-6 pr-1.5 py-1.5 text-[15px] font-medium border transition-all duration-300 group cursor-pointer ${
-          popular 
-            ? "border-transparent bg-gradient-blue text-white hover:opacity-90 hover:shadow-md" 
-            : "border-border bg-white text-foreground hover:bg-gradient-blue hover:text-white hover:border-transparent hover:shadow-md"
-        }`}
+        className="mt-10 w-full inline-flex items-center justify-between rounded-full pl-6 pr-1.5 py-1.5 text-[15px] font-medium border border-border bg-white text-foreground hover:bg-gradient-blue hover:text-white hover:border-transparent hover:shadow-md transition-all duration-300 group cursor-pointer"
       >
-        Pay &amp; Activate
-        <span className={`grid h-9 w-9 place-items-center rounded-full transition-all duration-300 group-hover:translate-x-0.5 ${
-          popular
-            ? "bg-white text-[#8B5CF6]"
-            : "bg-purple-100 text-[#8B5CF6] group-hover:bg-white"
-        }`}>
+        Pay & Activate
+
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-purple-100 text-[#8B5CF6] group-hover:bg-white transition-all duration-300 group-hover:translate-x-0.5">
           <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
         </span>
       </Link>
@@ -490,24 +476,46 @@ function PriceCard({ plan }: { plan: ApiPackage }) {
 }
 
 function CostCalculator() {
-  const [count, setCount] = useState(100);
-
-  // Helper to resolve pricing dynamics
-  const getCalculatorData = (count: number) => {
-    if (count <= 5) {
-      return { name: "Trial Pack", totalCost: 499, costPerEmployee: Math.round(499 / count), groups: 1 };
-    } else if (count <= 50) {
-      return { name: "Starter Pack", totalCost: 2999, costPerEmployee: Math.round(2999 / count), groups: 10 };
-    } else if (count <= 100) {
-      return { name: "Growth Pack", totalCost: 4999, costPerEmployee: Math.round(4999 / count), groups: 20 };
-    } else if (count <= 300) {
-      return { name: "Business Pack", totalCost: 8999, costPerEmployee: Math.round(8999 / count), groups: 60 };
-    } else {
-      return { name: "Enterprise Pack", totalCost: 19999, costPerEmployee: Math.round(19999 / count), groups: 100 };
-    }
+  // The slider snaps to the four valid team sizes. Each maps to a fixed package
+  // price (from the pricing tiers / FSD), so cost-per-employee is always a clean,
+  // meaningful number. An in-between value like 78 — for which no package price
+  // exists — is therefore impossible, rather than producing a misleading figure.
+  const STOPS = [50, 100, 300, 500] as const;
+  const PACKAGES: Record<number, { name: string; totalCost: number }> = {
+    50: { name: "Starter Pack", totalCost: 2999 },
+    100: { name: "Growth Pack", totalCost: 4999 },
+    300: { name: "Business Pack", totalCost: 8999 },
+    500: { name: "Enterprise Pack", totalCost: 19999 },
   };
 
-  const data = getCalculatorData(count);
+  const [stepIndex, setStepIndex] = useState(1); // default: 100 employees (Growth Pack)
+  const count = STOPS[stepIndex];
+  const pkg = PACKAGES[count];
+  const data = {
+    name: pkg.name,
+    totalCost: pkg.totalCost,
+    costPerEmployee: Math.round(pkg.totalCost / count),
+    groups: count / 5, // groups auto-form at 5 participants each
+  };
+
+  // Donut proportions reflect the real cost comparison (Zoventro vs the fixed
+  // alternatives) so the chart stays honest as the selected package changes.
+  const comparison = [
+    { label: "Zoventro", value: data.totalCost, color: "#8B5CF6" },
+    { label: "Facilitator-led", value: 23000, color: "#10B981" },
+    { label: "Team Lunch", value: 35000, color: "#EC4899" },
+    { label: "DIY Activities", value: 17000, color: "#F59E0B" },
+  ];
+  const comparisonTotal = comparison.reduce((sum, c) => sum + c.value, 0);
+  let donutAcc = 0;
+  const donutGradient = `conic-gradient(${comparison
+    .map((c) => {
+      const start = (donutAcc / comparisonTotal) * 100;
+      donutAcc += c.value;
+      const end = (donutAcc / comparisonTotal) * 100;
+      return `${c.color} ${start}% ${end}%`;
+    })
+    .join(", ")})`;
 
   return (
     <div className="mx-auto max-w-6xl grid lg:grid-cols-12 gap-8 items-stretch">
@@ -542,79 +550,103 @@ function CostCalculator() {
               {count}
             </span>
           </div>
-          <div className="mt-5 relative flex items-center">
+          <div className="mt-5">
             <input
               type="range"
-              min="1"
-              max="500"
-              value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
+              min={0}
+              max={STOPS.length - 1}
+              step={1}
+              value={stepIndex}
+              onChange={(e) => setStepIndex(Number(e.target.value))}
+              aria-label="Number of employees"
               className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-purple-200/50 accent-primary"
               style={{
-                background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${
-                  (count / 500) * 100
-                }%, oklch(0.9 0.04 295) ${(count / 500) * 100}%, oklch(0.9 0.04 295) 100%)`,
+                background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${(stepIndex / (STOPS.length - 1)) * 100
+                  }%, oklch(0.9 0.04 295) ${(stepIndex / (STOPS.length - 1)) * 100}%, oklch(0.9 0.04 295) 100%)`,
               }}
             />
+            {/* Discrete stops — also clickable so a value can be picked directly */}
+            <div className="mt-2 flex justify-between px-0.5">
+              {STOPS.map((s, i) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStepIndex(i)}
+                  className={`text-[11px] font-semibold tabular-nums transition-colors ${i === stepIndex ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Bottom part: Metrics and Donut chart side-by-side */}
-        <div className="grid lg:grid-cols-2 gap-6 items-stretch mt-2">
-          {/* Metrics + Recommended */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-border/40 flex flex-col justify-between gap-5">
-            <div>
-              <h4 className="font-bold text-sm text-foreground mb-4">See your cost per employee</h4>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-purple-50/50 rounded-xl p-3 text-center border border-purple-100 flex flex-col justify-center">
-                  <span className="text-lg md:text-xl font-bold text-primary">₹{data.costPerEmployee}</span>
-                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 leading-tight">
-                    Cost per<br />employee
-                  </span>
-                </div>
-                <div className="bg-purple-50/50 rounded-xl p-3 text-center border border-purple-100 flex flex-col justify-center">
-                  <span className="text-lg md:text-xl font-bold text-primary">₹{data.totalCost.toLocaleString("en-IN")}</span>
-                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 leading-tight">
-                    Total package<br />cost
-                  </span>
-                </div>
-                <div className="bg-purple-50/50 rounded-xl p-3 text-center border border-purple-100 flex flex-col justify-center">
-                  <span className="text-lg md:text-xl font-bold text-primary">{data.groups}</span>
-                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 leading-tight">
-                    Groups<br />auto-formed
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-purple-50/50 rounded-xl p-4 border border-purple-100 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                  Recommended:
-                </span>
-                <span className="inline-flex bg-gradient-primary text-white font-semibold px-3 py-1 rounded-full text-xs shadow-sm mt-1.5">
-                  {data.name}
+        {/* Row 1: cost stats + Simple Cost Breakdown */}
+        <div className="grid lg:grid-cols-[1.35fr_1fr] gap-4 mt-2 items-stretch">
+          {/* Cost stats */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-border/40">
+            <h4 className="font-bold text-sm text-foreground mb-4">See your cost per employee</h4>
+            <div className="grid grid-cols-3 gap-1.5">
+              <div className="bg-purple-50/50 rounded-xl px-1 py-3 text-center border border-purple-100 flex flex-col items-center justify-center min-w-0">
+                <span className="text-sm font-bold text-primary tabular-nums tracking-tight leading-none whitespace-nowrap">₹{data.costPerEmployee}</span>
+                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1.5 leading-tight">
+                  Cost per<br />employee
                 </span>
               </div>
-              <p className="text-[10px] text-muted-foreground max-w-[120px] leading-relaxed text-right">
-                Zoventro is up to 5x more cost-effective
-              </p>
+              <div className="bg-purple-50/50 rounded-xl px-1 py-3 text-center border border-purple-100 flex flex-col items-center justify-center min-w-0">
+                <span className="text-sm font-bold text-primary tabular-nums tracking-tight leading-none whitespace-nowrap">₹{data.totalCost.toLocaleString("en-IN")}</span>
+                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1.5 leading-tight">
+                  Total package<br />cost
+                </span>
+              </div>
+              <div className="bg-purple-50/50 rounded-xl px-1 py-3 text-center border border-purple-100 flex flex-col items-center justify-center min-w-0">
+                <span className="text-sm font-bold text-primary tabular-nums tracking-tight leading-none whitespace-nowrap">{data.groups}</span>
+                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-1.5 leading-tight">
+                  Groups<br />auto-formed
+                </span>
+              </div>
             </div>
           </div>
 
+          {/* Simple Cost Breakdown */}
+          <div className="bg-white/70 rounded-2xl p-5 shadow-sm border border-border/40">
+            <h4 className="font-bold text-sm text-foreground mb-3">Simple Cost Breakdown:</h4>
+            <ul className="space-y-2.5 text-[11px] leading-relaxed text-muted-foreground">
+              <li>
+                <span className="font-semibold text-primary">Zoventro Standard</span> ({count} people) = ₹{data.totalCost.toLocaleString("en-IN")} | ₹{data.costPerEmployee}/person
+              </li>
+              <li>
+                <span className="font-semibold text-[#8B5CF6]">Hired facilitator</span> = ₹35,000 - ₹40,500 | no reporting
+              </li>
+              <li>
+                <span className="font-semibold text-[#EC4899]">Team Lunch</span> = ₹50,000 - | forgotten by next week
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Row 2: Recommended + Donut chart */}
+        <div className="grid lg:grid-cols-[1fr_1.4fr] gap-4 items-stretch">
+          {/* Recommended */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-border/40 flex flex-col justify-center">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+              Recommended:
+            </span>
+            <span className="inline-flex w-fit bg-gradient-primary text-white font-semibold px-4 py-1.5 rounded-full text-sm shadow-sm mt-2">
+              {data.name}
+            </span>
+            <p className="text-[11px] text-muted-foreground leading-relaxed mt-3">
+              Zoventro is up to 5x more cost-effective than traditional team activities
+            </p>
+          </div>
+
           {/* Donut chart card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-border/40 flex flex-col sm:flex-row items-center justify-center gap-6">
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-border/40 flex flex-col sm:flex-row items-center justify-center gap-6">
             {/* Donut chart */}
             <div
               className="w-28 h-28 rounded-full relative flex items-center justify-center shrink-0 shadow-sm"
-              style={{
-                background: `conic-gradient(
-                  #8B5CF6 0% 15%, 
-                  #10B981 15% 45%, 
-                  #EC4899 45% 80%, 
-                  #F59E0B 80% 100%
-                )`,
-              }}
+              style={{ background: donutGradient }}
             >
               <div className="w-16 h-16 rounded-full bg-white absolute flex items-center justify-center">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center leading-tight">
@@ -624,7 +656,7 @@ function CostCalculator() {
             </div>
 
             {/* Legend */}
-            <div className="grid grid-cols-2 sm:grid-cols-1 gap-y-3 gap-x-4">
+            <div className="grid grid-cols-2 gap-y-3 gap-x-4">
               <div className="flex items-start gap-2.5">
                 <span className="w-3 h-3 rounded-full bg-[#8B5CF6] shrink-0 mt-0.5" />
                 <div>
