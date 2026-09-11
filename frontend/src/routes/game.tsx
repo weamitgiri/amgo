@@ -5,7 +5,6 @@ import {
   ZoomIn, ShieldCheck, Eye, Send, Clock, UserX, ScanSearch,
   ThumbsUp, ThumbsDown
 } from "lucide-react";
-import { Logo } from "@/components/Logo";
 import { participantService } from "@/api/services/participant.service";
 import type { GameStateResponse } from "@/api/services/participant.service";
 import type { GameSummaryResponse, GameSummaryRole, GamePlayer, LieDetectorTally } from "@/api/types/participant";
@@ -15,6 +14,7 @@ import { resolveMediaUrl } from "@/utils/media";
 import { isCookAndCreateSlug } from "@/utils/common";
 import { toastError } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
+import mqlogo from "@/assets/mqlogo.png";
 import secretBoxImg from "@/assets/secret_box.png";
 import caseCollage from "@/assets/game-summery/case-summary-collage.png";
 import suspectBanner from "@/assets/game-summery/Group 1000004660.png";
@@ -323,6 +323,7 @@ function GamePage() {
       if (s.left_at) frozen.add(sid);
       scores.set(sid, Number(s.total_score));
     }
+    console.log("[PRESENCE] applyGameState online set", { online: [...online], raw: state.group.participant_sessions.map((s: { id: number; is_online: unknown }) => ({ id: s.id, is_online: s.is_online })) });
     setOnlineSessionIds(online);
     setFrozenSessionIds(frozen);
     setScoresBySessionId(scores);
@@ -431,6 +432,13 @@ function GamePage() {
           groupId: session.groupId,
           participantId: session.participantId,
         });
+        // The HTTP snapshot just applied by applyGameState() can land AFTER the
+        // socket-effect's join broadcast and clobber the live online set with a
+        // stale one (e.g. before this player's is_online flag was committed). Ask
+        // the server for a fresh, authoritative presence broadcast now that both
+        // the session rows exist and our snapshot is applied, so presence always
+        // gets the last word and the sidebar dots are correct.
+        getSocket().emit("request_presence", { groupId: session.groupId });
 
         const savedState = sessionStorage.getItem(uiKey);
         if (savedState) {
@@ -488,6 +496,10 @@ function GamePage() {
     // that was broadcast while this client was offline.
     const rejoinAndResync = () => {
       socket.emit("join_game_group", { groupId: session.groupId, participantId: session.participantId });
+      // After re-joining on (re)connect, ask for an authoritative presence
+      // broadcast so the reconnected player (and everyone else) shows the correct
+      // online/offline dots without waiting on the next state refetch.
+      socket.emit("request_presence", { groupId: session.groupId });
       participantService
         .getGameState(session.groupId, session.participantId)
         .then(applyGameState)
@@ -582,6 +594,7 @@ function GamePage() {
     // Live presence: server broadcasts the whole group's online/left sets whenever
     // anyone joins, leaves, or disconnects — keeps the sidebar dots in sync.
     const onPresenceUpdated = (payload: { online: number[]; left?: number[] }) => {
+      console.log("[PRESENCE] presence_updated received", { online: payload.online, left: payload.left });
       setOnlineSessionIds(new Set(payload.online ?? []));
       if (payload.left && payload.left.length) {
         setFrozenSessionIds((prev) => new Set([...prev, ...payload.left!]));
@@ -831,9 +844,9 @@ function GamePage() {
     <div className="min-h-screen bg-[#0e0817] text-white p-4 md:p-6 font-sans">
       {/* Header */}
       <header className="rounded-2xl border border-[#2c1b44] bg-[#140b22] px-6 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Logo />
-          <span className="font-bold text-lg tracking-wide">{gameData.activity.title}</span>
+        <div className="flex items-center gap-2.5">
+          <img src={mqlogo} alt="Mystery Quest" className="h-9 w-9 shrink-0 object-contain" />
+          <span className="font-bold text-lg tracking-wide">Mystery Quest</span>
         </div>
         <div className="flex items-center gap-5">
           <div className="rounded-lg border border-[#2c1b44] px-4 py-2 text-sm text-[#b8b8b8]">
@@ -972,7 +985,6 @@ function GamePage() {
       {modal === "summary" && (
         <CaseSummaryModal
           gameData={gameData}
-          photoUrls={photoUrls}
           onClose={() => setModal(null)}
         />
       )}
@@ -1739,7 +1751,9 @@ function InvestigationView(props: {
 function Step({ time, text }: { time: string; text: string }) {
   return (
     <li className="relative pl-7">
-      <div className="absolute left-[-9px] top-0.5 h-[18px] w-[18px] rounded-full border-[3px] border-[#9352e8] bg-[#1a0c27]" />
+      <div className="absolute left-[-9px] top-0.5 grid h-[18px] w-[18px] place-items-center rounded-full border-[3px] border-[#9352e8] bg-[#1a0c27]">
+        <div className="h-2 w-2 rounded-full bg-[#9352e8]" />
+      </div>
       <div className="flex gap-3">
         <span className="text-white text-[13px] w-[70px] shrink-0 font-medium">{time}</span>
         <span className="text-white/80 text-[13px] leading-[1.6]">{text}</span>
@@ -2343,66 +2357,69 @@ function FinalAccusationModal({
   );
 }
 
-function CaseSummaryModal({ gameData, photoUrls, onClose }: { gameData: GameSummaryResponse; photoUrls: string[]; onClose: () => void }) {
+function CaseSummaryModal({ gameData, onClose }: { gameData: GameSummaryResponse; onClose: () => void }) {
   return (
     <ModalShell onClose={onClose} max="max-w-4xl">
-      <div className="p-7 overflow-y-auto max-h-[80vh]">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-12 w-12 rounded-full border border-purple-400/40 grid place-items-center"><FileText className="h-5 w-5 text-purple-300" /></div>
-          <div>
-            <h3 className="text-2xl font-bold">Case Summary</h3>
-            <p className="text-xs text-white/65">Review the details of the case.</p>
+      <div className="max-h-[86vh] overflow-y-auto">
+        {/* Header — matches the main Case Summary screen */}
+        <div className="flex items-center gap-4 px-6 pt-6 md:px-8 md:pt-8">
+          <div className="h-12 w-12 rounded-[14px] bg-[#2a1348] border border-[#442371] grid place-items-center">
+            <FileText className="h-6 w-6 text-[#c788fa]" />
           </div>
+          <h3 className="text-2xl font-bold tracking-wide">CASE SUMMARY</h3>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4 text-sm leading-relaxed">
-            {gameData.game.case_summary_html ? (
-              <div className="prose prose-invert prose-sm max-w-none [&_p]:mb-3" dangerouslySetInnerHTML={{ __html: gameData.game.case_summary_html }} />
-            ) : (
-              <p className="text-white/70">No case summary content is available yet. Use the timeline and quick facts below to guide your investigation.</p>
-            )}
-            {gameData.game.timeline.length > 0 && (
-              <>
-                <p className="font-bold uppercase tracking-wider text-white/90">On the night of the murder</p>
-                <ol className="space-y-3 border-l-2 border-purple-500/40 pl-4">
-                  {gameData.game.timeline.map((step) => (
-                    <Step key={`${step.time}-${step.event}`} time={step.time} text={step.event} />
-                  ))}
-                </ol>
-              </>
-            )}
-            <div className="inline-block bg-amber-100/95 text-zinc-900 text-xs px-3 py-1.5 rounded-sm">
-              Now, <span className="text-rose-700 font-bold">everyone</span> present in the house is a <span className="text-rose-700 font-bold">suspect.</span>
-            </div>
-          </div>
-          <div className="relative min-h-[320px]">
-            <div className="absolute top-2 left-4 rotate-[-6deg] rounded-md bg-white p-2 shadow-elevated">
-              <img src={photoUrls[0] ?? mystery} alt="Case photo" className="h-32 w-44 object-cover" />
-            </div>
-            <div className="absolute top-12 right-2 rotate-[5deg] rounded-md bg-white p-2 shadow-elevated">
-              <img src={photoUrls[1] ?? mystery} alt="Case photo" className="h-28 w-40 object-cover" />
-            </div>
-            {gameData.game.quick_facts.length > 0 ? (
-              <div className="absolute bottom-0 left-2 right-6 rotate-[-2deg] rounded-md bg-amber-100/95 text-zinc-900 p-4 shadow-elevated">
-                <div className="text-xs font-bold tracking-wider">QUICK FACTS</div>
-                <ul className="mt-2 space-y-1 text-[12px]">
-                  {gameData.game.quick_facts.map((fact) => {
-                    const Icon = FACT_ICONS[fact.icon] ?? MapPin;
-                    return (
-                      <li key={`${fact.label}-${fact.value}`} className="flex gap-2 items-center">
-                        <Icon className="h-3.5 w-3.5" />
-                        {fact.label}: {fact.value}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
+        <div className="p-6 md:p-8">
+          <div className="rounded-3xl border border-[#3b235d] bg-[#1a0c27] p-6 md:p-8 relative overflow-hidden">
+            <h2 className="text-[26px] md:text-[34px] font-bold text-[#ddc1ff]">{gameData.game.title}</h2>
+            {gameData.game.tagline ? (
+              <p className="mt-2 text-[15px] text-white/70">{gameData.game.tagline}</p>
             ) : null}
-          </div>
-        </div>
 
-        <button onClick={onClose} className="mt-8 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow">Close Summary</button>
+            <div className="mt-7 grid gap-8 md:grid-cols-[1.3fr_1fr]">
+              <div className="space-y-6 text-[15px] leading-[1.6]">
+                {gameData.game.case_summary_html ? (
+                  <div
+                    className="prose prose-invert max-w-none text-white/80 [&_p]:mb-4 [&_.text-red-500]:text-[#fb5f5f]"
+                    dangerouslySetInnerHTML={{ __html: gameData.game.case_summary_html }}
+                  />
+                ) : (
+                  <p className="text-white/70">
+                    No case summary content is available yet. Use the timeline and quick facts to guide your investigation.
+                  </p>
+                )}
+                {gameData.game.timeline.length > 0 ? (
+                  <>
+                    <p className="font-bold text-[13px] uppercase tracking-wider text-white">ON THE NIGHT OF THE MURDER</p>
+                    <ol className="relative border-l-2 border-[#69429e] ml-2 space-y-7">
+                      {gameData.game.timeline.map((step) => (
+                        <Step key={`${step.time}-${step.event}`} time={step.time} text={step.event} />
+                      ))}
+                    </ol>
+                  </>
+                ) : null}
+
+                <div className="relative mt-4 inline-block w-full max-w-[440px] rotate-[-1deg]">
+                  <img src={suspectBanner} alt="" className="w-full h-auto select-none pointer-events-none drop-shadow-[2px_3px_6px_rgba(0,0,0,0.4)]" />
+                  <span className="absolute inset-0 flex items-center justify-center px-8 text-center text-[13px] md:text-sm text-[#2b1608] font-medium">
+                    Now,&nbsp;<span className="text-[#c11c1c] font-bold">&nbsp;everyone&nbsp;</span>&nbsp;present in the house is a&nbsp;<span className="text-[#c11c1c] font-bold">&nbsp;suspect.</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="relative flex items-start justify-center">
+                {/* Pre-composed evidence collage (pinned photos + compass + quick-facts note) */}
+                <img
+                  src={caseCollage}
+                  alt="Investigation evidence — crime scene photos and quick facts"
+                  className="w-full max-w-[440px] h-auto object-contain drop-shadow-2xl"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button onClick={onClose} className="mt-6 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow">Close Summary</button>
+        </div>
       </div>
     </ModalShell>
   );

@@ -1,11 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
-  HelpCircle, Clock, Star, Lightbulb, Hand, Search, Timer,
-  Users, Gamepad2, Info, LogOut, User as UserIcon, Target, Award,
+  Users, Gamepad2, Info, LogOut, User as UserIcon,
 } from "lucide-react";
-import { Logo } from "@/components/Logo";
+import ruleIcon1 from "@/assets/rule-icon/1.png";
+import ruleIcon2 from "@/assets/rule-icon/2.png";
+import ruleIcon3 from "@/assets/rule-icon/3.png";
+import ruleIcon4 from "@/assets/rule-icon/4.png";
+import ruleIcon5 from "@/assets/rule-icon/5.png";
+import ruleIcon6 from "@/assets/rule-icon/6.png";
 import { participantService } from "@/api/services/participant.service";
 import type { LobbySessionResponse } from "@/api/types/participant";
 import { getSocket, disconnectSocket } from "@/lib/socket";
@@ -19,6 +22,7 @@ import { isCookAndCreateSlug, resolveGameRoute } from "@/utils/common";
 import { toastError } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
 import investigation from "@/assets/investigation-photos.png";
+import mqlogo from "@/assets/mqlogo.png";
 
 const AVATAR_GRADS = [
   "from-pink-500 to-orange-400",
@@ -27,12 +31,6 @@ const AVATAR_GRADS = [
   "from-violet-500 to-purple-600",
   "from-emerald-500 to-teal-600",
 ];
-
-const ACTIVITY_ICONS: Record<string, LucideIcon> = {
-  "detective-mystery": Target,
-  "mystery-quest": Target,
-  "cook-create": Award,
-};
 
 type LobbySearch = {
   invite_url?: string;
@@ -205,15 +203,10 @@ function LobbyPage() {
     );
   }
 
-  const ActivityIcon = ACTIVITY_ICONS[lobby.activity.slug] ?? Gamepad2;
   const cover = resolveMediaUrl(lobby.activity.cover_image) ?? mystery;
   // The case card prefers the game-level background image (set per game in the
   // admin) and falls back to the activity cover.
   const caseImage = resolveMediaUrl(lobby.game.bg_image) ?? cover;
-  const iconUrl = lobby.activity.icon ? resolveMediaUrl(lobby.activity.icon) : null;
-  const titleParts = lobby.activity.title.split(/\s+/);
-  const titleLine1 = titleParts[0]?.toUpperCase() ?? "MYSTERY";
-  const titleLine2 = titleParts.slice(1).join(" ").toUpperCase() || "QUEST";
   const caseTitle = lobby.game.title ?? lobby.activity.title;
   const caseTagline =
     lobby.game.tagline?.trim() ||
@@ -272,9 +265,9 @@ function LobbyPage() {
       <div className="mx-auto max-w-[1400px] px-4 py-5 md:px-8 md:py-7">
         {/* Header */}
         <header className="flex items-center justify-between rounded-2xl border border-white/5 bg-[#100b20]/80 px-5 py-3.5 backdrop-blur">
-          <div className="flex items-center gap-3">
-            <Logo />
-            <span className="text-lg font-bold tracking-wide">{lobby.activity.title}</span>
+          <div className="flex items-center gap-2.5">
+            <img src={mqlogo} alt="Mystery Quest" className="h-9 w-9 shrink-0 object-contain" />
+            <span className="text-lg font-bold tracking-wide">Mystery Quest</span>
           </div>
           <div className="flex items-center gap-2.5">
             <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-xs font-bold">
@@ -288,16 +281,12 @@ function LobbyPage() {
         <main className="mt-6 grid gap-5 lg:grid-cols-[1fr_2fr_1.15fr]">
           <div className="grid place-items-center rounded-3xl p-6 min-h-[380px]">
             <div className="text-center">
-              <div className="mx-auto grid h-48 w-48 place-items-center overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-purple-900 shadow-[0_0_50px_-10px_rgba(168,85,247,0.6)] ring-2 ring-white/20">
-                {iconUrl ? (
-                  <img src={iconUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <ActivityIcon className="h-24 w-24 text-white" />
-                )}
-              </div>
-              <div className="mt-5 text-3xl font-black tracking-wide">{titleLine1}</div>
-              <div className="-mt-1 text-xl font-semibold tracking-[0.2em] text-purple-300">{titleLine2}</div>
-              <p className="mt-3 text-xs text-white/50">{lobby.group_name}</p>
+              <img
+                src={mqlogo}
+                alt="Mystery Quest"
+                className="mx-auto w-56 max-w-full object-contain drop-shadow-[0_0_45px_rgba(168,85,247,0.45)]"
+              />
+              <p className="mt-6 text-xs text-white/50">{lobby.group_name}</p>
             </div>
           </div>
 
@@ -312,9 +301,9 @@ function LobbyPage() {
             </div>
           </div>
 
-          <div className="max-h-[380px] overflow-y-auto rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1d1440] to-[#140e2b] p-6">
+          <div className="flex flex-col rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1d1440] to-[#140e2b] p-5 lg:p-6">
             <h3 className="mb-4 text-xl font-bold">Rules</h3>
-            <ul className="space-y-3.5 text-sm">
+            <ul className="flex flex-1 flex-col justify-between gap-3">
               {derivedRules.map((rule, i) => (
                 <Rule key={i} icon={RULE_ICONS[i % RULE_ICONS.length]}>
                   {rule}
@@ -396,13 +385,19 @@ function LobbyPage() {
                       entry closes. Please contact your organiser to complete your group.
                     </>
                   )}
-                  {lobby.lobby_phase === "lobby_timer" && (
-                    <>
-                      Your group requires exactly {lobby.group_capacity} participants. The session will start
-                      automatically once all participants have joined. The timer shows the time remaining until the entry
-                      window closes.
-                    </>
-                  )}
+                  {lobby.lobby_phase === "lobby_timer" &&
+                    (lobby.remaining_slots === 0 ? (
+                      <>
+                        Your group is complete! Get ready — the session will begin shortly. Review the case summary
+                        carefully once it appears.
+                      </>
+                    ) : (
+                      <>
+                        Your group requires exactly {lobby.group_capacity} participants. The session will start
+                        automatically once all participants have joined. The timer shows the time remaining until the
+                        entry window closes.
+                      </>
+                    ))}
                   {lobby.lobby_phase === "ready" && <>All participants have joined. Launching the game now…</>}
                 </p>
               </div>
@@ -430,15 +425,16 @@ function LobbyPage() {
   );
 }
 
-const RULE_ICONS: LucideIcon[] = [HelpCircle, Clock, Star, Lightbulb, Hand, Search, Timer];
+// Custom rule icons (purple line art) mapped to each rule by position:
+// question · clock · star · lightbulb · hand · magnifier · (clock reused for the
+// derived "Game Duration" 7th row).
+const RULE_ICONS: string[] = [ruleIcon1, ruleIcon2, ruleIcon6, ruleIcon3, ruleIcon4, ruleIcon5, ruleIcon2];
 
-function Rule({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+function Rule({ icon, children }: { icon: string; children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-3">
-      <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-purple-500/15">
-        <Icon className="h-4 w-4 text-purple-300" />
-      </span>
-      <span className="text-white/85">{children}</span>
+      <img src={icon} alt="" className="mt-px h-5 w-5 shrink-0 object-contain" />
+      <span className="text-[13px] leading-snug text-white/85">{children}</span>
     </li>
   );
 }

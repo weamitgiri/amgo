@@ -23,6 +23,7 @@ import { AppError } from '../utils/AppError';
 import { io } from '../server';
 import moment from 'moment';
 import { submitAccusation as submitAccusationService } from '../services/verdictScoringService';
+import { ensureCaseSummaryTimer } from '../services/timerService';
 
 async function getSessionForParticipant(groupId: number | string, participantId: number | string) {
     const [rows] = await query<any>(
@@ -92,6 +93,20 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
     const [groups] = await query<any>('SELECT * FROM game_groups WHERE id = ? LIMIT 1', [group_id]);
     const group = groups?.[0];
     if (!group) throw new AppError('Group not found', 404);
+
+    // Make getGameState self-sufficient about the game clock. The frontend loads
+    // getGameSummary and getGameState in PARALLEL (Promise.all), so getGameState
+    // can read the `timers` table below before getGameSummary's ensureCaseSummaryTimer
+    // INSERT has committed — leaving game_seconds_remaining / case_summary_seconds_remaining
+    // at 0, i.e. a 00:00 clock that never recovers (the game page has no periodic
+    // state poll). Creating the case-summary timer here too guarantees the clock is
+    // present on the first paint. It's idempotent (only the first call per group
+    // inserts) and gated on `active`, so it neither duplicates a running game's timer
+    // nor resurrects an already-finished group whose timers have expired.
+    if (group.status === 'active') {
+        const activeCfg = await getActivityConfigForGroup(group_id);
+        await ensureCaseSummaryTimer(group_id, Number(activeCfg?.case_summary_view_secs) || 300);
+    }
 
     const [sessions] = await query<any>(
         `SELECT ps.*, p.name as participant_name, p.email as participant_email,

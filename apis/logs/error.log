@@ -968,3 +968,67 @@
 2026-09-11 12:49:42:4942 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-09-11 12:51:24:5124 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-09-11 12:53:50:5350 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:15:41:1541 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:18:42:1842 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:19:32:1932 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:19:43:1943 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:19:53:1953 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:20:05:205 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:21:22:2122 error: You are not part of this group
+2026-09-11 18:32:50:3250 error: Access Denied: You have joined after the allowed time. The session started at 6:18 PM and entry was closed at 6:21 PM. Please contact the Organiser for assistance.
+2026-09-11 18:39:46:3946 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:45:14:4514 error: You already registered this email id. Please login.
+2026-09-11 18:45:20:4520 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:50:43:5043 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 18:53:21:5321 error: You are not part of this group
+2026-09-11 18:53:21:5321 error: You are not part of this group
+2026-09-11 18:57:46:5746 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 19:00:44:044 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 19:01:02:12 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 19:01:13:113 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 19:01:24:124 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 19:01:44:144 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 19:15:00:150 error: You are not part of this group
+2026-09-11 19:15:00:150 error: You are not part of this group
+2026-09-11 21:18:18:1818 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 21:21:23:2123 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 21:23:07:237 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 22:04:44:444 error: You are not part of this group
+2026-09-11 22:04:44:444 error: You are not part of this group
+2026-09-11 22:21:52:2152 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 22:23:11:2311 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 22:26:30:2630 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 22:26:58:2658 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 22:27:17:2717 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 22:27:43:2743 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 22:28:07:287 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 22:39:59:3959 error: You are not part of this group
+2026-09-11 22:39:59:3959 error: You are not part of this group
+2026-09-11 22:39:59:3959 error: You are not part of this group
+2026-09-11 23:08:31:831 error: Error sending OTP email: Greeting never received
+2026-09-11 23:10:30:1030 error: Error sending OTP email: Greeting never received
+2026-09-11 23:12:01:121 error: Error sending OTP email: Greeting never received
+2026-09-11 23:16:46:1646 error: Error sending OTP email: Greeting never received
+2026-09-11 23:24:31:2431 error: Error sending OTP email: Greeting never received
+2026-09-11 23:33:26:3326 error: Error sending OTP email: Greeting never received
+2026-09-11 23:33:43:3343 error: Error sending OTP email: Greeting never received
+2026-09-11 23:33:57:3357 error: Error sending OTP email: Greeting never received
+2026-09-11 23:34:12:3412 error: Error sending OTP email: Greeting never received
+2026-09-11 23:34:24:3424 error: Error sending OTP email: Greeting never received
+2026-09-11 23:41:59:4159 error: You are not part of this group
+2026-09-11 23:41:59:4159 error: You are not part of this group
+2026-09-11 23:41:59:4159 error: You are not part of this group

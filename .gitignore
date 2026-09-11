@@ -43,3 +43,4 @@ apis/logs/*.log
 **/.DS_Store
 Thumbs.db
 *.zip
+/frontend/dist/
