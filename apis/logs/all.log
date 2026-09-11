@@ -12577,3 +12577,33 @@
 2026-09-06 01:40:04:404 debug: [Socket] User disconnected: BB4mHjB9Z1-XQDxBAAA-, Reason: transport close
 2026-09-06 01:40:04:404 debug: [Socket] User disconnected: ShJ2xkWFgxylnz4XAAA8, Reason: transport close
 2026-09-06 01:40:05:405 debug: [Socket] User disconnected: _7i6TQ_Fs4Bn2JMIAAA6, Reason: transport close
+2026-09-07 20:35:28:3528 info: [Server] Node.js API running on port 6001 in development mode
+2026-09-09 20:59:46:5946 info: [Server] Node.js API running on port 6001 in development mode
+2026-09-09 23:18:59:1859 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-09 23:31:48:3148 error: You already registered this email id. Please login.
+2026-09-09 23:31:52:3152 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-09 23:50:21:5021 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-09 23:53:00:530 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-10 21:22:56:2256 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-10 21:32:33:3233 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:09:35:935 debug: [Socket] User connected: Xzf_QoRVfow15OSPAAAB
+2026-09-11 12:09:35:935 info: [Socket] Client joined lobby room: group_11
+2026-09-11 12:11:53:1153 info: [Server] Node.js API running on port 6001 in development mode
+2026-09-11 12:11:55:1155 debug: [Socket] User connected: KnhiC_rp0ECaa8e8AAAB
+2026-09-11 12:11:55:1155 info: [Socket] Client joined lobby room: group_11
+2026-09-11 12:15:01:151 debug: [Socket] User disconnected: KnhiC_rp0ECaa8e8AAAB, Reason: transport close
+2026-09-11 12:30:23:3023 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:32:44:3244 info: [Payment] Payment 141 settled as captured for booking 24 (source=checkout)
+2026-09-11 12:38:40:3840 error: Access Denied: You have joined after the allowed time. The session started at 12:35 PM and entry was closed at 12:38 PM. Please contact the Organiser for assistance.
+2026-09-11 12:39:56:3956 error: You already registered this email id. Please login.
+2026-09-11 12:40:01:401 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:45:15:4515 error: You already registered this email id. Please login.
+2026-09-11 12:45:24:4524 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:46:19:4619 error: You already registered this email id. Please login.
+2026-09-11 12:46:23:4623 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:49:34:4934 error: Invalid OTP
+2026-09-11 12:49:37:4937 error: Invalid OTP
+2026-09-11 12:49:42:4942 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:50:52:5052 info: [Payment] Payment 142 settled as captured for booking 27 (source=checkout)
+2026-09-11 12:51:24:5124 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:53:50:5350 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed

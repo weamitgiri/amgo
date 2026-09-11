@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zoventro — Server Setup Guide</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#171a23; --panel2:#1e222d; --border:#2a2f3d;
+    --text:#e6e8ee; --muted:#9aa3b2; --accent:#8b5cf6; --accent2:#22d3ee;
+    --ok:#22c55e; --warn:#f59e0b; --danger:#f43f5e; --code:#0b0d13;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent2)}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+  header.hero{background:linear-gradient(135deg,#1b1440,#0f1117);border:1px solid var(--border);border-radius:18px;padding:28px 28px 24px;margin-bottom:28px}
+  header.hero h1{margin:0 0 6px;font-size:28px;letter-spacing:-.5px}
+  header.hero p{margin:0;color:var(--muted)}
+  .badges{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+  .badge{font-size:12px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:4px 11px}
+  h2{margin:38px 0 10px;font-size:20px;border-left:3px solid var(--accent);padding-left:12px}
+  h3{margin:22px 0 8px;font-size:16px;color:#c7cbd6}
+  p{margin:10px 0}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:5px 0}
+  code{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:#e9d5ff}
+  pre{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto;margin:12px 0}
+  pre code{background:none;border:none;padding:0;color:#d4d9e4;font-size:12.5px;line-height:1.6;display:block;white-space:pre}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:6px 22px 18px;margin:16px 0}
+  .step > h2{border:0;padding:0;margin:18px 0 6px;display:flex;align-items:center;gap:12px}
+  .num{display:inline-grid;place-items:center;min-width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;font-weight:700;font-size:14px}
+  .callout{border-radius:10px;padding:12px 16px;margin:14px 0;border:1px solid}
+  .callout.warn{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.4)}
+  .callout.danger{background:rgba(244,63,94,.08);border-color:rgba(244,63,94,.45)}
+  .callout.ok{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.4)}
+  .callout.info{background:rgba(34,211,238,.07);border-color:rgba(34,211,238,.35)}
+  .callout b{color:#fff}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#c7cbd6}
+  .toc{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 22px;margin-bottom:8px}
+  .toc ol{columns:2;column-gap:28px}
+  .muted{color:var(--muted)}
+  .tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.4px}
+  .tag.node{background:#134e2a;color:#86efac} .tag.php{background:#3b2a5e;color:#d8b4fe}
+  .tag.nginx{background:#0e3a4a;color:#7dd3fc} .tag.db{background:#4a3410;color:#fcd34d}
+  hr{border:0;border-top:1px solid var(--border);margin:30px 0}
+  .path{color:#fca5a5}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>🚀 Zoventro — Production Server Setup</h1>
+  <p>Step-by-step deployment of the Mystery Quest / Cook &amp; Create platform to a Hostinger <b>VPS</b>, on a single subdomain.</p>
+  <div class="badges">
+    <span class="badge">Laravel 11 (PHP 8.3)</span>
+    <span class="badge">Node 22 + Socket.IO API</span>
+    <span class="badge">React (Vite) frontend</span>
+    <span class="badge">MySQL — database <code>ppp</code></span>
+    <span class="badge">Nginx + pm2 + Certbot</span>
+  </div>
+</header>
+
+<div class="callout danger">
+  <b>⚠️ Shared hosting will NOT work.</b> This app runs a persistent Node.js Socket.IO server (real-time game) — you need a <b>VPS / KVM</b> plan with root SSH. Hostinger shared hosting cannot run long-lived Node processes or websockets.
+</div>
+
+<h2>Architecture (what runs where)</h2>
+<p>Everything lives on one subdomain, e.g. <code>game.example.com</code>. Nginx routes each path to the right service:</p>
+<table>
+  <tr><th>Path</th><th>Served by</th><th>What it is</th></tr>
+  <tr><td><code>/</code></td><td><span class="tag nginx">Nginx</span> static</td><td>React frontend (lobby, game, results) — <span class="path">frontend/dist</span></td></tr>
+  <tr><td><code>/v1/*</code></td><td><span class="tag node">Node :6001</span></td><td>Game API (questions, votes, scoring)</td></tr>
+  <tr><td><code>/socket.io/*</code></td><td><span class="tag node">Node :6001</span></td><td>Real-time websockets (timers, presence)</td></tr>
+  <tr><td><code>/admin</code>, <code>/login</code>, <code>/api</code></td><td><span class="tag php">PHP-FPM</span></td><td>Laravel admin panel — <span class="path">public/</span></td></tr>
+  <tr><td><code>/storage/*</code></td><td><span class="tag nginx">Nginx</span></td><td>Admin-uploaded images (roles, clues, bg)</td></tr>
+  <tr><td>—</td><td><span class="tag db">MySQL</span></td><td>Database <code>ppp</code>, shared by Laravel + Node</td></tr>
+</table>
+<div class="callout info">The app path prefix is <code>/p</code> only in local dev (because the docroot is the parent folder). In production the docroot points straight at Laravel's <code>public/</code>, so the admin lives at <code>/admin</code> — no <code>/p</code>.</div>
+
+<div class="toc">
+  <b>Steps</b>
+  <ol>
+    <li><a href="#s1">Point the subdomain (DNS)</a></li>
+    <li><a href="#s2">Create &amp; connect to the VPS</a></li>
+    <li><a href="#s3">Install the stack</a></li>
+    <li><a href="#s4">MySQL database</a></li>
+    <li><a href="#s5">Get the code onto the server</a></li>
+    <li><a href="#s6">Laravel (admin) setup</a></li>
+    <li><a href="#s7">Node API setup + pm2</a></li>
+    <li><a href="#s8">Build the frontend</a></li>
+    <li><a href="#s9">Nginx config</a></li>
+    <li><a href="#s10">HTTPS (SSL)</a></li>
+    <li><a href="#s11">🔒 Production hardening</a></li>
+    <li><a href="#s12">Verify &amp; troubleshoot</a></li>
+  </ol>
+</div>
+
+<!-- STEP 1 -->
+<div class="step" id="s1">
+  <h2><span class="num">1</span> Point the subdomain (DNS)</h2>
+  <p>In your DNS provider (or Hostinger hPanel → Domains → DNS), add an <b>A record</b> for the subdomain pointing at your VPS's public IP:</p>
+  <table>
+    <tr><th>Type</th><th>Name</th><th>Value</th><th>TTL</th></tr>
+    <tr><td>A</td><td><code>game</code></td><td><code>YOUR_VPS_IP</code></td><td>3600</td></tr>
+  </table>
+  <p class="muted">DNS can take a few minutes to a few hours. Check with <code>ping game.example.com</code> — it should resolve to your VPS IP.</p>
+  <div class="callout info">You can also do this through the <b>Hostinger MCP</b> once it's connected (ask Claude to create the subdomain / DNS record for you).</div>
+</div>
+
+<!-- STEP 2 -->
+<div class="step" id="s2">
+  <h2><span class="num">2</span> Create &amp; connect to the VPS</h2>
+  <ol>
+    <li>Hostinger hPanel → <b>VPS</b> → deploy an <b>Ubuntu 24.04</b> template.</li>
+    <li>Note the VPS IP and set your root password / SSH key.</li>
+    <li>SSH in from your computer:</li>
+  </ol>
+  <pre><code>ssh root@YOUR_VPS_IP</code></pre>
+  <p>Update the system first:</p>
+  <pre><code>apt update &amp;&amp; apt upgrade -y</code></pre>
+</div>
+
+<!-- STEP 3 -->
+<div class="step" id="s3">
+  <h2><span class="num">3</span> Install the stack</h2>
+  <h3>Nginx, MySQL, Git, unzip</h3>
+  <pre><code>apt install -y nginx mysql-server git unzip curl</code></pre>
+
+  <h3>PHP 8.3 + extensions (Laravel)</h3>
+  <pre><code>apt install -y software-properties-common
+add-apt-repository -y ppa:ondrej/php
+apt update
+apt install -y php8.3-fpm php8.3-cli php8.3-mysql php8.3-mbstring \
+  php8.3-xml php8.3-curl php8.3-zip php8.3-gd php8.3-bcmath php8.3-intl</code></pre>
+
+  <h3>Composer</h3>
+  <pre><code>curl -sS https://getcomposer.org/installer | php
+mv composer.phar /usr/local/bin/composer</code></pre>
+
+  <h3>Node.js 22 + pm2</h3>
+  <pre><code>curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt install -y nodejs
+npm install -g pm2</code></pre>
+  <div class="callout warn">The Node API requires <b>Node 20.19+ or 22.12+</b>. Confirm with <code>node -v</code>. Older versions break the Vite/TanStack build.</div>
+</div>
+
+<!-- STEP 4 -->
+<div class="step" id="s4">
+  <h2><span class="num">4</span> MySQL database</h2>
+  <p>Secure MySQL, then create the database and a user (both Laravel and the Node API use this one database):</p>
+  <pre><code>mysql_secure_installation   # set a root password, answer Y to the prompts
+
+mysql -u root -p</code></pre>
+  <pre><code>CREATE DATABASE ppp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'zoventro'@'localhost' IDENTIFIED BY 'STRONG_DB_PASSWORD';
+GRANT ALL PRIVILEGES ON ppp.* TO 'zoventro'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;</code></pre>
+  <div class="callout info">Laravel migrations create the schema (Step 6). If you have a data dump, import it with:<br><code>mysql -u zoventro -p ppp &lt; /var/www/p/database/ppp.sql</code></div>
+</div>
+
+<!-- STEP 5 -->
+<div class="step" id="s5">
+  <h2><span class="num">5</span> Get the code onto the server</h2>
+  <pre><code>mkdir -p /var/www
+cd /var/www
+git clone YOUR_REPO_URL p     # clones into /var/www/p
+cd /var/www/p</code></pre>
+  <p class="muted">No git remote? Upload the project folder via SFTP to <span class="path">/var/www/p</span> instead (exclude <code>node_modules</code>, <code>vendor</code>, and <code>*/dist</code> — you'll rebuild them on the server).</p>
+</div>
+
+<!-- STEP 6 -->
+<div class="step" id="s6">
+  <h2><span class="num">6</span> Laravel (admin) setup</h2>
+  <pre><code>cd /var/www/p
+composer install --no-dev --optimize-autoloader
+cp .env.example .env    # if you don't already have a production .env</code></pre>
+
+  <h3>Edit <span class="path">/var/www/p/.env</span></h3>
+  <pre><code>APP_NAME=Zoventro
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://game.example.com
+
+# Debugbar OFF (it exhausts PHP memory on the admin)
+DEBUGBAR_ENABLED=false
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=ppp
+DB_USERNAME=zoventro
+DB_PASSWORD=STRONG_DB_PASSWORD
+
+FILESYSTEM_DISK=public
+
+# Mail + Razorpay: fill with your real production credentials</code></pre>
+
+  <h3>Key, migrations, storage, caches</h3>
+  <pre><code>php artisan key:generate
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# permissions so PHP-FPM can write
+chown -R www-data:www-data /var/www/p/storage /var/www/p/bootstrap/cache
+chmod -R 775 /var/www/p/storage /var/www/p/bootstrap/cache</code></pre>
+  <div class="callout warn">If you ever change <code>routes/</code> or <code>.env</code> later, re-run <code>php artisan config:clear &amp;&amp; php artisan route:clear</code> (or re-cache) — a stale route cache serves old routes.</div>
+</div>
+
+<!-- STEP 7 -->
+<div class="step" id="s7">
+  <h2><span class="num">7</span> Node API setup + pm2</h2>
+  <pre><code>cd /var/www/p/apis
+npm install
+npm run build      # compiles TypeScript → dist/</code></pre>
+
+  <h3>Edit <span class="path">/var/www/p/apis/.env</span></h3>
+  <pre><code>NODE_ENV=production
+PORT=6001
+
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=zoventro
+DB_PASSWORD=STRONG_DB_PASSWORD
+DB_NAME=ppp
+
+# Only the live site origin
+CORS_ORIGINS=https://game.example.com
+
+JWT_SECRET=GENERATE_A_LONG_RANDOM_STRING
+
+# Mail + Razorpay: real production credentials</code></pre>
+  <div class="callout danger"><b>Set <code>NODE_ENV=production</code>.</b> The OTP brute-force rate limiter is deliberately skipped when NODE_ENV is not <code>production</code> — production must have it ON.</div>
+
+  <h3>Start it with pm2</h3>
+  <pre><code>cd /var/www/p/apis
+pm2 start dist/server.js --name zoventro-api
+pm2 save
+pm2 startup     # run the command it prints, to auto-start on reboot</code></pre>
+  <p class="muted">Check it's alive: <code>pm2 logs zoventro-api</code> and <code>curl http://127.0.0.1:6001/socket.io/?EIO=4&amp;transport=polling</code> (should return a JSON handshake).</p>
+</div>
+
+<!-- STEP 8 -->
+<div class="step" id="s8">
+  <h2><span class="num">8</span> Build the frontend</h2>
+  <h3>Edit <span class="path">/var/www/p/frontend/.env</span> (build-time)</h3>
+  <pre><code># Empty → API calls go to /v1 (same origin), proxied by Nginx to Node
+VITE_API_BASE_URL=
+
+# Socket.IO — same origin; Nginx proxies /socket.io to Node
+VITE_SOCKET_URL=https://game.example.com
+
+# Where admin-uploaded images are served (Laravel public/storage)
+VITE_STORAGE_BASE_URL=https://game.example.com/storage
+
+VITE_API_TIMEOUT=30000</code></pre>
+  <pre><code>cd /var/www/p/frontend
+npm install
+npm run build      # outputs static files to frontend/dist</code></pre>
+  <div class="callout info">Vite bakes these values in at build time. If you change a <code>VITE_*</code> value later, you must <b>rebuild</b> (<code>npm run build</code>).</div>
+</div>
+
+<!-- STEP 9 -->
+<div class="step" id="s9">
+  <h2><span class="num">9</span> Nginx config</h2>
+  <p>Create <span class="path">/etc/nginx/sites-available/zoventro</span>:</p>
+  <pre><code>server {
+    listen 80;
+    server_name game.example.com;
+
+    # React SPA is the site root
+    root /var/www/p/frontend/dist;
+    index index.html;
+    client_max_body_size 20M;
+
+    # --- Game API (Node) ---
+    location /v1/ {
+        proxy_pass http://127.0.0.1:6001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # --- Socket.IO (websockets) ---
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:6001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600s;
+    }
+
+    # --- Laravel admin panel + API ---
+    location ~ ^/(admin|login|logout|api|reload-captcha)(/|$) {
+        root /var/www/p/public;
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # --- Uploaded media (Laravel storage) ---
+    location /storage/ {
+        alias /var/www/p/public/storage/;
+        access_log off;
+        expires 7d;
+    }
+
+    # --- PHP-FPM for Laravel's front controller ---
+    location ~ \.php$ {
+        root /var/www/p/public;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    # --- React SPA fallback (everything else) ---
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}</code></pre>
+  <p>Enable it and reload:</p>
+  <pre><code>ln -s /etc/nginx/sites-available/zoventro /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t        # test config
+systemctl reload nginx</code></pre>
+</div>
+
+<!-- STEP 10 -->
+<div class="step" id="s10">
+  <h2><span class="num">10</span> HTTPS (SSL)</h2>
+  <pre><code>apt install -y certbot python3-certbot-nginx
+certbot --nginx -d game.example.com</code></pre>
+  <p>Certbot rewrites the Nginx config to serve HTTPS and auto-renews. After this, <code>https://game.example.com</code> is live.</p>
+  <div class="callout warn">Your <code>APP_URL</code>, <code>VITE_SOCKET_URL</code> and <code>VITE_STORAGE_BASE_URL</code> must all use <code>https://</code> to avoid mixed-content and websocket failures. If you set them to http earlier, fix and rebuild the frontend + <code>php artisan config:cache</code>.</div>
+</div>
+
+<!-- STEP 11 -->
+<div class="step" id="s11">
+  <h2><span class="num">11</span> 🔒 Production hardening (required)</h2>
+  <div class="callout danger"><b>Do NOT skip this.</b> During development a few things were loosened for testing. They must be reverted before real users play.</div>
+
+  <h3>a) Restore real OTPs (currently hard-coded to <code>123456</code>)</h3>
+  <p>Three places force the OTP to <code>123456</code> for testing:</p>
+  <ul>
+    <li><span class="path">apis/src/utils/otp.ts</span> — remove the temporary <code>return '123456';</code> line so the CSPRNG line runs; then <code>npm run build</code> in <code>apis/</code>.</li>
+    <li><span class="path">app/Http/Controllers/API/AuthController.php</span> (2 spots) &amp; <span class="path">app/Http/Controllers/API/GameJoinController.php</span> — change <code>$otp = '123456';</code> back to<br><code>$otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);</code></li>
+  </ul>
+
+  <h3>b) Confirm the safety flags</h3>
+  <ul>
+    <li><code>NODE_ENV=production</code> in <span class="path">apis/.env</span> → OTP rate limiting is ON.</li>
+    <li><code>APP_DEBUG=false</code> and <code>DEBUGBAR_ENABLED=false</code> in the Laravel <span class="path">.env</span>.</li>
+    <li>Fresh <code>APP_KEY</code> and a strong <code>JWT_SECRET</code> are set.</li>
+    <li>Razorpay / Mail keys are the real production credentials, not test keys.</li>
+  </ul>
+
+  <h3>c) Firewall</h3>
+  <pre><code>ufw allow OpenSSH
+ufw allow 'Nginx Full'
+ufw enable
+# Port 6001 stays internal — do NOT open it; Nginx proxies to it.</code></pre>
+</div>
+
+<!-- STEP 12 -->
+<div class="step" id="s12">
+  <h2><span class="num">12</span> Verify &amp; troubleshoot</h2>
+  <table>
+    <tr><th>Check</th><th>Expected</th></tr>
+    <tr><td><code>https://game.example.com</code></td><td>React game site loads</td></tr>
+    <tr><td><code>https://game.example.com/admin/login</code></td><td>Laravel admin login</td></tr>
+    <tr><td><code>https://game.example.com/v1/public/games</code></td><td>JSON from the Node API</td></tr>
+    <tr><td>Browser console during a game</td><td>Socket.IO connects (no websocket errors)</td></tr>
+    <tr><td>Admin-uploaded image</td><td>Loads from <code>/storage/...</code></td></tr>
+  </table>
+  <h3>Common issues</h3>
+  <ul>
+    <li><b>502 on <code>/v1</code> or socket:</b> Node not running → <code>pm2 status</code>, <code>pm2 logs zoventro-api</code>.</li>
+    <li><b>Websocket won't connect:</b> the <code>/socket.io/</code> Nginx block (Upgrade/Connection headers) is missing, or <code>VITE_SOCKET_URL</code> is wrong → fix and rebuild frontend.</li>
+    <li><b>Admin 500 / memory error:</b> ensure <code>DEBUGBAR_ENABLED=false</code>; run <code>php artisan config:clear</code>.</li>
+    <li><b>Redirect loop at root:</b> already fixed in <code>routes/web.php</code> — make sure you deployed the latest code and cleared route cache.</li>
+    <li><b>Images 404:</b> run <code>php artisan storage:link</code> and check the <code>/storage/</code> Nginx alias path.</li>
+    <li><b>DB connection refused:</b> the DB user/password must match in BOTH <code>.env</code> (Laravel) and <code>apis/.env</code> (Node).</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>Redeploying after code changes</h2>
+<pre><code>cd /var/www/p
+git pull
+
+# Laravel
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache &amp;&amp; php artisan route:cache &amp;&amp; php artisan view:cache
+
+# Node API
+cd apis &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; pm2 restart zoventro-api
+
+# Frontend
+cd ../frontend &amp;&amp; npm install &amp;&amp; npm run build</code></pre>
+
+<div class="callout ok" style="margin-top:26px">
+  <b>✅ That's the whole flow.</b> DNS → VPS → stack → DB → code → Laravel → Node → frontend → Nginx → SSL → hardening. Once green, the game is live on your subdomain over HTTPS with real-time sockets.
+</div>
+
+<p class="muted" style="margin-top:26px;font-size:12.5px">Zoventro deployment guide · single-subdomain VPS setup · replace <code>game.example.com</code>, <code>YOUR_VPS_IP</code>, <code>YOUR_REPO_URL</code> and all passwords/secrets with your real values.</p>
+
+</div>
+</body>
+</html>

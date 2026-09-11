@@ -1,0 +1,32 @@
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD="Am1t@2025!"
+DB_NAME=ppp
+PORT=6001
+CORS_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:6001,http://127.0.0.1:6001,http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173,http://127.0.0.1:5173,http://13.238.154.163,http://13.238.154.163:3000,http://3.25.202.185:5173
+JWT_SECRET=qED7xHo4IcZ0sqi6AEeWN3WKKhBGLFVxKmM5JH6m9Zp6KPwgNoCQKFLClOhEWjmx
+NODE_ENV=development
+
+MAIL_HOST=smtp-relay.sendinblue.com
+MAIL_PORT=587
+MAIL_USERNAME=info@jinjoodock.com
+MAIL_PASSWORD=5VpWKxg1ATNU0qjt
+MAIL_FROM_ADDRESS=support@brsoftech.com
+MAIL_FROM_NAME=Zoventro
+
+# ===== Razorpay =====
+# Test keys start rzp_test_, live keys rzp_live_. Leaving KEY_ID/KEY_SECRET
+# blank disables Razorpay at checkout and leaves COD as the only method.
+RAZORPAY_KEY_ID=rzp_test_TS5GLJHDaG5H9R
+RAZORPAY_KEY_SECRET=Nk0KVcx3XPngKF43cxiJ50BY
+# From Razorpay Dashboard > Settings > Webhooks. A DIFFERENT secret from
+# RAZORPAY_KEY_SECRET; webhook signature checks fail if you reuse the key secret.
+RAZORPAY_WEBHOOK_SECRET=http://localhost/p/v1/webhooks/razorpay
+
+# Mode switch mirrored from the Laravel .env
+RAZORPAY_TEST_KEY=rzp_test_TS5GLJHDaG5H9R
+RAZORPAY_TEST_SECRET=Nk0KVcx3XPngKF43cxiJ50BY
+RAZORPAY_LIVE_KEY=rzp_live_lKtNHnUQMyUYXj
+RAZORPAY_LIVE_SECRET=MglQEoHS9mmUuipKasLhJBvq
+RAZORPAY_MODE=TEST

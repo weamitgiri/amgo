@@ -948,3 +948,23 @@
 2026-09-06 01:36:27:3627 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-09-06 01:36:39:3639 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
 2026-09-06 01:38:10:3810 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-09 23:18:59:1859 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-09 23:31:48:3148 error: You already registered this email id. Please login.
+2026-09-09 23:31:52:3152 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-09 23:50:21:5021 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-09 23:53:00:530 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-10 21:22:56:2256 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-10 21:32:33:3233 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:30:23:3023 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:38:40:3840 error: Access Denied: You have joined after the allowed time. The session started at 12:35 PM and entry was closed at 12:38 PM. Please contact the Organiser for assistance.
+2026-09-11 12:39:56:3956 error: You already registered this email id. Please login.
+2026-09-11 12:40:01:401 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:45:15:4515 error: You already registered this email id. Please login.
+2026-09-11 12:45:24:4524 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:46:19:4619 error: You already registered this email id. Please login.
+2026-09-11 12:46:23:4623 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:49:34:4934 error: Invalid OTP
+2026-09-11 12:49:37:4937 error: Invalid OTP
+2026-09-11 12:49:42:4942 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:51:24:5124 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-11 12:53:50:5350 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
