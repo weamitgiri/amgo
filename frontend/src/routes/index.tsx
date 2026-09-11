@@ -34,9 +34,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Zoventro — Interactive Team Engagement Platform" },
-      { name: "description", content: "Turn team activities into interactive experiences. Built for HR, designed for real engagement. Setup in minutes, no IT required." },
+      { name: "description", content: "Turn team activities into interactive experiences. Built for HR, designed for real engagement. Setup in minutes, no IT required..." },
       { property: "og:title", content: "Zoventro — Interactive Team Engagement" },
-      { property: "og:description", content: "Boost engagement, collaboration and energy without complicated setups." },
+      { property: "og:description", content: "Boost engagement, collaboration and energy without complicated setups..." },
     ],
   }),
   component: Home,

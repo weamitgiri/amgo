@@ -13624,3 +13624,31 @@
 2026-09-11 23:57:01:571 info: [Socket] Client joined lobby room: group_18
 2026-09-11 23:57:01:571 info: [Socket] Client joined lobby room: group_18
 2026-09-11 23:57:01:571 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:57:5857 debug: [Socket] User disconnected: A_48j2DOOg7aA4v3AAB_, Reason: transport close
+2026-09-11 23:58:57:5857 debug: [Socket] User connected: As4w-YWqEZJrZxE1AACB
+2026-09-11 23:58:57:5857 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:57:5857 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:57:5857 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:57:5857 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:57:5857 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:59:5859 debug: [Socket] User disconnected: As4w-YWqEZJrZxE1AACB, Reason: transport close
+2026-09-11 23:58:59:5859 debug: [Socket] User connected: 394kQXdx8Ae1kqF3AACD
+2026-09-11 23:58:59:5859 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:59:5859 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:59:5859 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:59:5859 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:58:59:5859 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:59:52:5952 debug: [Socket] User disconnected: HiDzJhMoAc1sXLNzAAB3, Reason: transport close
+2026-09-11 23:59:52:5952 debug: [Socket] User connected: J9xi5yF8bB6z-4cJAACF
+2026-09-11 23:59:52:5952 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:59:52:5952 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:59:52:5952 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:59:52:5952 info: [Socket] Client joined lobby room: group_18
+2026-09-11 23:59:52:5952 info: [Socket] Client joined lobby room: group_18
+2026-09-12 00:00:01:01 debug: [Socket] User disconnected: VlEjYnB8YCqJjEtHAABx, Reason: transport close
+2026-09-12 00:00:01:01 debug: [Socket] User connected: ie-7vksAkkSEgA6HAACH
+2026-09-12 00:00:01:01 info: [Socket] Client joined lobby room: group_18
+2026-09-12 00:00:01:01 info: [Socket] Client joined lobby room: group_18
+2026-09-12 00:00:01:01 info: [Socket] Client joined lobby room: group_18
+2026-09-12 00:00:01:01 info: [Socket] Client joined lobby room: group_18
+2026-09-12 00:00:01:01 info: [Socket] Client joined lobby room: group_18
