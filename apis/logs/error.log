@@ -1032,3 +1032,32 @@
 2026-09-11 23:41:59:4159 error: You are not part of this group
 2026-09-11 23:41:59:4159 error: You are not part of this group
 2026-09-11 23:41:59:4159 error: You are not part of this group
+2026-09-12 21:56:23:5623 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-12 21:59:33:5933 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-12 22:04:23:423 error: Scheduled session must be in the future.
+2026-09-12 22:07:30:730 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-12 22:09:05:95 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-12 22:24:54:2454 error: You are not part of this group
+2026-09-12 22:24:54:2454 error: You are not part of this group
+2026-09-12 22:24:54:2454 error: You are not part of this group
+2026-09-12 22:24:54:2454 error: You are not part of this group
+2026-09-12 22:24:54:2454 error: You are not part of this group
+2026-09-13 00:31:40:3140 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 00:33:32:3332 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 00:33:43:3343 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 00:33:56:3356 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 00:34:10:3410 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 00:34:26:3426 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 00:47:59:4759 error: You are not part of this group
+2026-09-13 00:47:59:4759 error: You are not part of this group
+2026-09-13 00:49:37:4937 error: The Lie Detector can only be used once per game
+2026-09-13 00:58:35:5835 error: The Lie Detector can only be used once per game
+2026-09-13 00:58:51:5851 error: The Lie Detector can only be used once per game
+2026-09-13 01:35:12:3512 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 01:46:35:4635 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 01:53:48:5348 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 01:55:10:5510 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 01:55:19:5519 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 01:55:28:5528 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 01:55:45:5545 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed
+2026-09-13 01:55:55:5555 error: Error sending OTP email: Invalid login: 535 5.7.8 Authentication failed

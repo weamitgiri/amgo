@@ -114,7 +114,15 @@ function Home() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/create" search={{ activity: undefined }}><PillButton variant="light">Get Started Now</PillButton></Link>
-              <PillButton variant="outline-light" withArrow={false}>Explore Activities</PillButton>
+              <PillButton
+                variant="outline-light"
+                withArrow={false}
+                onClick={() =>
+                  document.getElementById("activities")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              >
+                Explore Activities
+              </PillButton>
             </div>
           </div>
         </div>

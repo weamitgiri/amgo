@@ -321,6 +321,11 @@ export async function buildGameSummaryPayload(
             session_id: Number(s.id),
             pseudonym: s.participant_name || 'Player',
             character_name: role?.character_name ?? null,
+            // The player's OWN character portrait, so the UI can key avatars by
+            // session_id rather than assuming the roles list and the players list
+            // share an index order (they do not — roles are ordered by role id,
+            // players by session), which mismatched every avatar.
+            role_image: role?.role_image ?? null,
             is_you: String(s.participant_id) === String(participant.id),
         };
     });

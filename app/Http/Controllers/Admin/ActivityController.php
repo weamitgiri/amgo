@@ -15,6 +15,23 @@ class ActivityController extends Controller
         return view('admin.activities.index', compact('activities'));
     }
 
+    /**
+     * Human-friendly validation messages, shared by store() and update().
+     * Image messages spell out the exact size limit (2 MB / 512 KB) and the
+     * accepted formats instead of Laravel's default "… 2048 kilobytes".
+     */
+    private function validationMessages(): array
+    {
+        return [
+            'cover_image.image' => 'The cover image must be a valid image file.',
+            'cover_image.mimes' => 'The cover image must be a JPG, PNG, WEBP or SVG file.',
+            'cover_image.max'   => 'The cover image may not be larger than 2 MB.',
+            'icon.image'        => 'The icon must be a valid image file.',
+            'icon.mimes'        => 'The icon must be a JPG, PNG, WEBP or SVG file.',
+            'icon.max'          => 'The icon may not be larger than 512 KB.',
+        ];
+    }
+
     public function create()
     {
         return view('admin.activities.create');
@@ -27,8 +44,8 @@ class ActivityController extends Controller
                 'title' => 'required|max:100',
                 'slug' => 'required|unique:activities,slug',
                 'description' => 'nullable',
-                'cover_image' => 'nullable|image|max:2048',
-                'icon' => 'nullable|image|max:512',
+                'cover_image' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg|max:2048',
+                'icon' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg|max:512',
                 'status' => 'required|in:draft,active',
                 'lobby_wait_secs' => 'required|integer|min:60|max:3600',
                 'entry_cutoff_mins' => 'required|integer',
@@ -54,7 +71,7 @@ class ActivityController extends Controller
                 'witness_passcard_bonus' => 'nullable|integer|min:0',
                 'lie_detector_enabled' => 'boolean',
                 'lie_detector_voting_timer_secs' => 'required_if:lie_detector_enabled,1|nullable|integer',
-            ]);
+            ], $this->validationMessages());
 
             if ($request->hasFile('cover_image')) {
                 $validated['cover_image'] = $request->file('cover_image')->store('activities', 'public');
@@ -88,8 +105,8 @@ class ActivityController extends Controller
                 'title' => 'required|max:100',
                 'slug' => 'required|unique:activities,slug,' . $activity->id,
                 'description' => 'nullable',
-                'cover_image' => 'nullable|image|max:2048',
-                'icon' => 'nullable|image|max:512',
+                'cover_image' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg|max:2048',
+                'icon' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg|max:512',
                 'status' => 'required|in:draft,active',
                 'lobby_wait_secs' => 'required|integer|min:60|max:3600',
                 'entry_cutoff_mins' => 'required|integer',
@@ -115,7 +132,7 @@ class ActivityController extends Controller
                 'witness_passcard_bonus' => 'nullable|integer|min:0',
                 'lie_detector_enabled' => 'boolean',
                 'lie_detector_voting_timer_secs' => 'required_if:lie_detector_enabled,1|nullable|integer',
-            ]);
+            ], $this->validationMessages());
 
             if ($request->hasFile('cover_image')) {
                 $validated['cover_image'] = $request->file('cover_image')->store('activities', 'public');

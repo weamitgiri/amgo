@@ -3,7 +3,7 @@ import { ArrowRight, LogIn } from "lucide-react";
 import { Flogo } from "./Flogo";
 
 const NAV = [
-  { label: "Overview", to: "/" as const },
+  { label: "Overview...", to: "/" as const },
   { label: "Activities", to: "/#activities" },
   { label: "How It Works", to: "/#how" },
   { label: "Pricing", to: "/#pricing" },

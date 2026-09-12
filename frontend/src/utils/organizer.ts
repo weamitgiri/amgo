@@ -1,11 +1,25 @@
 import { isValidEmail } from "./common";
-import { validateRequired, validateUrl } from "./validation";
+import { validateRequired } from "./validation";
 
 export function normalizeWebsite(url: string): string {
   const trimmed = url.trim();
   if (!trimmed) return trimmed;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
+}
+
+/**
+ * Basic website-format check. `new URL()` alone accepts junk like "https://www.xyz"
+ * (no real TLD), so we require an actual domain — optional http(s):// then either a
+ * bare "domain.tld" or a "www.domain.tld" (a "www." prefix must be followed by a full
+ * domain + 2+ letter TLD). Accepts "example.com", "https://www.a-b.co.uk";
+ * rejects "www.xyz", "xyz", "www.com", "http://localhost".
+ */
+const WEBSITE_RE =
+  /^(https?:\/\/)?(www\.[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}|(?!www\.)[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,})(:\d+)?(\/\S*)?$/i;
+
+export function isValidWebsite(url: string): boolean {
+  return WEBSITE_RE.test(url.trim());
 }
 
 export type RegistrationFieldErrors = Partial<
@@ -35,9 +49,8 @@ export function validateRegistrationForm(data: {
   const websiteCheck = validateRequired(data.company_website);
   if (!websiteCheck.isValid) {
     errors.company_website = websiteCheck.error;
-  } else {
-    const urlCheck = validateUrl(normalizeWebsite(data.company_website));
-    if (!urlCheck.isValid) errors.company_website = urlCheck.error;
+  } else if (!isValidWebsite(data.company_website)) {
+    errors.company_website = "Please enter a valid website (e.g. https://example.com)";
   }
 
   return errors;

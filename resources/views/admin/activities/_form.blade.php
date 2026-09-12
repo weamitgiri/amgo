@@ -1,4 +1,16 @@
 <div class="card-body">
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible">
+            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+            <h5><i class="icon fas fa-ban mr-1"></i> Please fix the {{ $errors->count() }} error{{ $errors->count() > 1 ? 's' : '' }} below:</h5>
+            <ul class="mb-0 pl-3">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="card card-outline card-primary">
         <div class="card-header">
             <h3 class="card-title"><i class="fas fa-info-circle mr-2"></i>Basic Information</h3>
@@ -31,9 +43,10 @@
                     <div class="form-group">
                         <label for="cover_image">Cover Image</label>
                         <div class="custom-file">
-                            <input type="file" name="cover_image" id="cover_image" class="custom-file-input @error('cover_image') is-invalid @enderror">
+                            <input type="file" name="cover_image" id="cover_image" accept="image/*" class="custom-file-input @error('cover_image') is-invalid @enderror">
                             <label class="custom-file-label" for="cover_image">Choose file</label>
                         </div>
+                        <small class="form-text text-muted">Max size 2 MB · JPG, PNG, WEBP or SVG.</small>
                         @error('cover_image')<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                         @if(isset($activity) && $activity->cover_image)
                             <div class="mt-2">
@@ -46,9 +59,10 @@
                     <div class="form-group">
                         <label for="icon">Icon Image</label>
                         <div class="custom-file">
-                            <input type="file" name="icon" id="icon" class="custom-file-input @error('icon') is-invalid @enderror">
+                            <input type="file" name="icon" id="icon" accept="image/*" class="custom-file-input @error('icon') is-invalid @enderror">
                             <label class="custom-file-label" for="icon">Choose file</label>
                         </div>
+                        <small class="form-text text-muted">Max size 512 KB · JPG, PNG, WEBP or SVG.</small>
                         @error('icon')<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                         @if(isset($activity) && $activity->icon)
                             <div class="mt-2">
@@ -67,6 +81,9 @@
                         @error('status')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
 
     <div class="card card-outline card-secondary mt-4">
         <div class="card-header">

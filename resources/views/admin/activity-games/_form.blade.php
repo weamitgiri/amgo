@@ -249,8 +249,8 @@
                                 <select id="role-type-selector" class="form-control">
                                     <option value="">Select Role Type to Add</option>
                                     <option value="investigator">Investigator</option>
-                                    <option value="culprit">Culprit</option>
-                                    <option value="suspect">Suspect</option>
+                                    <option value="hidden culprit">Hidden Culprit</option>
+                                    <option value="key suspect">Key Suspect</option>
                                     <option value="witness">Witness</option>
                                     <option value="participant">Participant</option>
                                 </select>

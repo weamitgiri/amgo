@@ -238,12 +238,12 @@ function GamePage() {
   const isInvestigator = yourPerson?.role_type === "investigator";
   const isCulprit = yourPerson?.role_type === "culprit";
 
-  // Strategy Guide cards are Investigator-only: the Investigator gets the timed
-  // suspect-profile cards, and every other role gets no strategy slides at all
-  // (they see the game screen only). Game Rules stay available to everyone.
+  // Strategy Guide is for EVERY role except the Investigator: all non-investigator
+  // players get the full set of strategy slides (guidance covering all roles), and
+  // the Investigator gets none. Game Rules stay available to everyone.
   const guideSlides = useMemo(
     () => ({
-      strategy: isInvestigator ? gameData?.strategy_slides ?? [] : [],
+      strategy: !isInvestigator ? gameData?.strategy_slides ?? [] : [],
       rules: gameData?.rules ?? [],
     }),
     [gameData, isInvestigator]
@@ -279,8 +279,6 @@ function GamePage() {
   // Vote tallies are per-answer (per lie-detector question), keyed by question id —
   // a single round can have several questioned answers, each with its own count.
   const [tallyByQuestionId, setTallyByQuestionId] = useState<Map<number, LieDetectorTally>>(new Map());
-  const [invElapsed, setInvElapsed] = useState(0);
-  const autoCardRef = useRef<number | null>(null);
   // Lie Detector round length (secs) kept in a ref so socket handlers can start
   // the local countdown without re-subscribing when gameData loads.
   const lieTimerSecsRef = useRef(420);
@@ -377,15 +375,19 @@ function GamePage() {
     const activityItems = state.group.questions.map((q) => {
       const isLie = isLieQuestion(q.created_at);
       const ans = q.answers?.[0];
+      // Question ids arrive from the server as strings; coerce so the numeric
+      // tally maps (keyed by Number) actually match — otherwise every lie
+      // question's Believable/Suspicious tally silently reads as 0.
+      const qid = Number(q.id);
       return {
-        questionId: q.id,
+        questionId: qid,
         toSessionId: q.asked_to,
         fromSessionId: q.asked_by,
         askedAt: q.created_at,
         q: q.question_text,
         a: ans?.answer_text,
         autoSkipped: ans?.auto_skipped,
-        tally: isLie ? voteTallies.get(q.id) : undefined,
+        tally: isLie ? voteTallies.get(qid) : undefined,
         isLie,
       };
     });
@@ -510,7 +512,7 @@ function GamePage() {
 
     const onNewQuestion = (q: { id: number; asked_to: number; question_text: string; asked_by?: number; created_at?: string }) => {
       console.log("[GamePage] onNewQuestion received", { q, myPlayerSessionId: myPlayer?.session_id });
-      const item: ActivityItem = { questionId: q.id, toSessionId: q.asked_to, q: q.question_text, fromSessionId: q.asked_by, askedAt: q.created_at ?? new Date().toISOString(), isLie: lieDetectorRoundId !== null };
+      const item: ActivityItem = { questionId: Number(q.id), toSessionId: q.asked_to, q: q.question_text, fromSessionId: q.asked_by, askedAt: q.created_at ?? new Date().toISOString(), isLie: lieDetectorRoundId !== null };
       if (lieDetectorRoundId !== null) setLieQuestionsUsed((n) => n + 1);
       console.log("[GamePage] Created activity item", item);
       setActivity((prev) => [item, ...prev]);
@@ -524,9 +526,9 @@ function GamePage() {
     };
     const onNewAnswer = (a: { question_id: number; participant_session_id: number; answer_text: string; auto_skipped?: boolean }) => {
       setActivity((prev) =>
-        prev.map((item) => (item.questionId === a.question_id ? { ...item, a: a.answer_text, autoSkipped: a.auto_skipped } : item))
+        prev.map((item) => (item.questionId === Number(a.question_id) ? { ...item, a: a.answer_text, autoSkipped: a.auto_skipped } : item))
       );
-      setPendingAnswerForMe((prev) => (prev && prev.questionId === a.question_id ? null : prev));
+      setPendingAnswerForMe((prev) => (prev && prev.questionId === Number(a.question_id) ? null : prev));
       // During a Lie Detector round, everyone except the answerer votes on the answer.
       // Compare as numbers — session_id can arrive as a string, and a strict !==
       // against a numeric participant_session_id would (wrongly) let the questioned
@@ -536,7 +538,7 @@ function GamePage() {
         !a.auto_skipped &&
         Number(myPlayer?.session_id) !== Number(a.participant_session_id)
       ) {
-        setVoteContext({ questionId: a.question_id, answerText: a.answer_text, answererSessionId: a.participant_session_id });
+        setVoteContext({ questionId: Number(a.question_id), answerText: a.answer_text, answererSessionId: Number(a.participant_session_id) });
       }
     };
     const onNewVote = ({ question_id, tally }: { round_id: number; question_id?: number; tally: LieDetectorTally }) => {
@@ -682,32 +684,23 @@ function GamePage() {
     }
   }, [secsCase, phase, gameData]);
 
-  // Only the Investigator sees the Strategy Guide cards; every other role just
-  // sees the game screen, so there is no non-investigator auto-open here.
-
-  // Investigation-phase elapsed clock, used to drive the investigator's timed
-  // suspect-profile cards (appears_at_secs / closes_at_secs windows).
+  // Strategy Guide is for every role EXCEPT the Investigator, and can be opened
+  // from its button at any time with no limit. On top of that, force it open once,
+  // two minutes into the Case Summary, so non-investigators are nudged to read it.
   useEffect(() => {
-    if (loading || phase !== "investigation") return;
-    const t = setInterval(() => setInvElapsed((s) => s + 1), 1000);
-    return () => clearInterval(t);
-  }, [loading, phase]);
-
-  useEffect(() => {
-    if (!isInvestigator || phase !== "investigation" || !gameData) return;
-    const slides = gameData.strategy_slides;
-    const idx = slides.findIndex(
-      (s) => s.closes_at_secs > s.appears_at_secs && invElapsed >= s.appears_at_secs && invElapsed < s.closes_at_secs
-    );
-    if (idx >= 0 && autoCardRef.current !== idx) {
-      autoCardRef.current = idx;
-      setGuideModal("strategy");
-      setGuideSlide(idx);
-    } else if (idx === -1 && autoCardRef.current !== null) {
-      autoCardRef.current = null;
-      setGuideModal((m) => (m === "strategy" ? null : m));
-    }
-  }, [invElapsed, isInvestigator, phase, gameData]);
+    if (isInvestigator || phase !== "summary" || !gameData) return;
+    if ((gameData.strategy_slides?.length ?? 0) === 0) return;
+    if (!session?.groupId || !session.participantId) return;
+    const total = gameData.settings.case_summary_view_secs || 300;
+    // secsCase counts DOWN from `total`; two minutes have passed once it reaches
+    // total-120 (or the player loaded/reloaded past that point).
+    if (secsCase > Math.max(0, total - 120)) return;
+    const key = participantGameKey("strategy_forced", session.groupId, session.participantId);
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    setGuideModal("strategy");
+    setGuideSlide(0);
+  }, [secsCase, isInvestigator, phase, gameData, session?.groupId, session?.participantId]);
 
   // NOTE: We deliberately do NOT navigate to /results just because the local
   // game clock (secsHdr) hit 0. When questioning time ends the server opens the
@@ -1097,8 +1090,9 @@ function SummaryView(props: {
           <h1 className="text-2xl font-bold tracking-wide">CASE SUMMARY</h1>
         </div>
         <div className="flex items-center gap-4">
-          {/* Strategy Guide is Investigator-only; other roles see Game Rules only. */}
-          {isInvestigator && (
+          {/* Strategy Guide is for every role EXCEPT the Investigator; it can be
+              opened at any time, with no limit. The Investigator sees Game Rules only. */}
+          {!isInvestigator && (
             <button onClick={() => onOpenInfoModal("strategy")} className="inline-flex items-center gap-2 rounded-full bg-[#3ca9f9] px-6 py-2.5 text-[15px] font-bold text-white hover:opacity-90 transition-opacity">
               <Lightbulb className="h-5 w-5" /> Strategy Guide
             </button>
@@ -1349,21 +1343,18 @@ function InvestigationView(props: {
   }, [players]);
   const initials = (pseudonym: string) => pseudonym.slice(0, 2).toUpperCase();
 
-  // Build role image lookup by index position (session_id is null for other players by design)
-  // people[i] corresponds to players[i] in order from the server
-  const roleImageByIndex = useMemo(() => {
-    return people.map((person) =>
-      person.role_image ? resolveMediaUrl(person.role_image) : null
-    );
-  }, [people]);
-
-  // Same role images keyed by the player's session_id, so Recent Activity can
-  // show the real character portrait for whoever asked / is answering.
+  // Each player's own character portrait, keyed by their session_id. The server now
+  // sends role_image per player, so avatars key off the player themselves. The old
+  // index-based lookup assumed the roles list and the players list shared an order —
+  // they do NOT (roles are ordered by role id, players by session), so every avatar
+  // in the sidebar, question grid and Lie Detector Q/A showed the wrong person.
   const roleImageBySessionId = useMemo(() => {
     const map = new Map<number, string | null>();
-    players.forEach((p, i) => map.set(Number(p.session_id), roleImageByIndex[i] ?? null));
+    for (const p of players) {
+      map.set(Number(p.session_id), p.role_image ? resolveMediaUrl(p.role_image) : null);
+    }
     return map;
-  }, [players, roleImageByIndex]);
+  }, [players]);
 
   // Score Board panel — rendered in the right column normally, and under the
   // question panel while the Lie Detector round is active (per design).
@@ -1469,7 +1460,7 @@ function InvestigationView(props: {
               const isOnline = onlineSessionIds.has(sid);
               const answeringItem = activity.find(a => Number(a.toSessionId) === sid && !a.a);
               const isAnswering = !!answeringItem;
-              const roleImage = roleImageByIndex[i] ?? null;
+              const roleImage = roleImageBySessionId.get(sid) ?? null;
 
               // Determine status text and color. A player who has been asked a
               // question reads "Answering" while the response timer runs, even
@@ -1580,7 +1571,7 @@ function InvestigationView(props: {
               <fieldset disabled={locked} aria-busy={locked} className={locked ? "opacity-60 pointer-events-none select-none" : ""}>
                 <div className="mt-6 flex flex-wrap gap-6 justify-start">
                   {players.map((p, i) => {
-                    const roleImage = roleImageByIndex[i] ?? null;
+                    const roleImage = roleImageBySessionId.get(Number(p.session_id)) ?? null;
                     const isSelected = i === selectedAskee;
                     return (
                       <button
@@ -1606,10 +1597,11 @@ function InvestigationView(props: {
                               </div>
                             )}
                           </div>
-                          {/* Name */}
-                          <div className="text-[14px] text-white leading-tight flex flex-col items-center gap-0.5">
+                          {/* Name + public character / role (same as the observer grid) */}
+                          <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
                             {p.pseudonym}
                             {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
+                            {p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
                           </div>
                         </div>
                         {/* Selected indicator dot */}
@@ -1644,7 +1636,7 @@ function InvestigationView(props: {
                 <div className="flex flex-wrap gap-6 justify-start">
                   {players.map((p, i) => {
                     const frozen = frozenSessionIds.has(p.session_id);
-                    const roleImage = roleImageByIndex[i] ?? null;
+                    const roleImage = roleImageBySessionId.get(Number(p.session_id)) ?? null;
                     return (
                       <div key={p.session_id} className={`flex flex-col items-center gap-0 ${frozen ? "opacity-40" : ""}`}>
                         {/* Card with circular portrait inside */}
@@ -1716,10 +1708,13 @@ function InvestigationView(props: {
                           <div className={`text-[13px] text-white mt-1 ${a.autoSkipped ? "text-white/50 italic" : ""}`}>{a.a}</div>
                           <div className="text-[10px] text-white/30 mt-1">03:37</div>
                         </div>
-                        {a.isLie && (tallyByQuestionId.get(a.questionId) ?? a.tally) && (
+                        {/* Believable / Suspicious tally shows on every answered lie
+                            question — the counts default to 0 before anyone votes so
+                            the labels are always visible (not only once a vote lands). */}
+                        {a.isLie && !a.autoSkipped && (
                           <div className="absolute right-0 top-3 text-right space-y-2">
-                            <div className="text-sm text-emerald-400">Believable ({(tallyByQuestionId.get(a.questionId) ?? a.tally)!.believable})</div>
-                            <div className="text-sm text-rose-400">Suspicious ({(tallyByQuestionId.get(a.questionId) ?? a.tally)!.suspicious})</div>
+                            <div className="text-sm text-emerald-400">Believable ({(tallyByQuestionId.get(a.questionId) ?? a.tally)?.believable ?? 0})</div>
+                            <div className="text-sm text-rose-400">Suspicious ({(tallyByQuestionId.get(a.questionId) ?? a.tally)?.suspicious ?? 0})</div>
                           </div>
                         )}
                       </div>

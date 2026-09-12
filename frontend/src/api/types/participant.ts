@@ -100,6 +100,8 @@ export type GamePlayer = {
   pseudonym: string;
   /** Public in-story character identity, already includes the story role — e.g. "Raju (Servant)". */
   character_name?: string | null;
+  /** This player's own character portrait, keyed to their session so avatars never mismatch. */
+  role_image?: string | null;
   is_you: boolean;
 };
 

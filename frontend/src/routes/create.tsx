@@ -758,7 +758,16 @@ function SetupStep({
 
     if (Object.keys(clientErrors).length > 0) {
       setErrors(clientErrors);
-      toastWarning("Please fix the errors below.");
+      // Surface the specific missing field so the user knows exactly what to fix
+      // (the package is the one most people skip).
+      toastError(
+        clientErrors.package ??
+          clientErrors.activity ??
+          clientErrors.scheduledDate ??
+          clientErrors.scheduledTime ??
+          clientErrors.game ??
+          "Please complete all required fields."
+      );
       return;
     }
 
@@ -1000,13 +1009,7 @@ function SetupStep({
       <PillButton
         type="submit"
         variant="primary"
-        disabled={
-          isSaving ||
-          !session.package ||
-          !session.scheduledDate ||
-          !session.scheduledTime ||
-          !session.gameId
-        }
+        disabled={isSaving}
       >
         {isSaving ? "Saving..." : "Continue to Payment"}
       </PillButton>

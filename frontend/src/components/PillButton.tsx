@@ -10,7 +10,7 @@ export function PillButton({
   className = "",
   ...props
 }: ComponentProps<"button"> & { variant?: Variant; withArrow?: boolean }) {
-  const base = "group inline-flex items-center gap-2 rounded-full text-sm font-medium transition-all";
+  const base = "group inline-flex items-center gap-2 rounded-full text-sm font-medium transition-all cursor-pointer";
   const styles: Record<Variant, string> = {
     light: "bg-white text-foreground pl-5 pr-1.5 py-1.5 shadow-card hover:shadow-elevated",
     outline: "border border-foreground/30 text-foreground px-5 py-2.5 hover:bg-foreground hover:text-background",
