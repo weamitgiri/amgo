@@ -13652,3 +13652,49 @@
 2026-09-12 00:00:01:01 info: [Socket] Client joined lobby room: group_18
 2026-09-12 00:00:01:01 info: [Socket] Client joined lobby room: group_18
 2026-09-12 00:00:01:01 info: [Socket] Client joined lobby room: group_18
+2026-09-12 00:02:55:255 debug: [Socket] User disconnected: 0P-X_uONiEI-r_BPAAB7, Reason: transport close
+2026-09-12 00:02:56:256 debug: [Socket] User connected: GlFfnueUh31MOUpaAACJ
+2026-09-12 00:02:56:256 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:02:56:256 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:02:56:256 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:02:56:256 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:02:56:256 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:12:52:1252 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:12:52:1252 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:28:1428 debug: [Socket] User disconnected: GlFfnueUh31MOUpaAACJ, Reason: transport close
+2026-09-12 00:14:29:1429 debug: [Socket] User connected: o6De5VN4F67sqftbAACL
+2026-09-12 00:14:29:1429 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:29:1429 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:29:1429 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:29:1429 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:29:1429 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:39:1439 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:39:1439 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:41:1441 debug: [Socket] User disconnected: o6De5VN4F67sqftbAACL, Reason: transport close
+2026-09-12 00:14:41:1441 debug: [Socket] User connected: Zh-uJfvSOffMpp6XAACN
+2026-09-12 00:14:41:1441 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:41:1441 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:41:1441 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:41:1441 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:14:41:1441 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:15:30:1530 debug: [Socket] User disconnected: WsTKrXab6LPcHfabAABz, Reason: transport close
+2026-09-12 00:16:20:1620 debug: [Socket] User disconnected: QjHKN28RElBUtOjzAAB9, Reason: ping timeout
+2026-09-12 00:16:37:1637 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:16:37:1637 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:17:46:1746 debug: [Socket] User disconnected: J9xi5yF8bB6z-4cJAACF, Reason: transport close
+2026-09-12 00:17:46:1746 debug: [Socket] User disconnected: 394kQXdx8Ae1kqF3AACD, Reason: transport close
+2026-09-12 00:17:46:1746 debug: [Socket] User disconnected: ie-7vksAkkSEgA6HAACH, Reason: transport close
+2026-09-12 00:17:48:1748 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:17:48:1748 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:19:25:1925 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:19:25:1925 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:19:33:1933 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:19:33:1933 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:19:36:1936 debug: [Socket] User disconnected: Zh-uJfvSOffMpp6XAACN, Reason: transport close
+2026-09-12 00:19:36:1936 debug: [Socket] User connected: 8Le7p9I-Zn0Euv6GAACP
+2026-09-12 00:19:36:1936 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:19:36:1936 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:19:36:1936 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:19:37:1937 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:19:37:1937 info: [Socket] Client joined lobby room: group_17
+2026-09-12 00:48:02:482 debug: [Socket] User disconnected: 8Le7p9I-Zn0Euv6GAACP, Reason: transport close

@@ -323,7 +323,6 @@ function GamePage() {
       if (s.left_at) frozen.add(sid);
       scores.set(sid, Number(s.total_score));
     }
-    console.log("[PRESENCE] applyGameState online set", { online: [...online], raw: state.group.participant_sessions.map((s: { id: number; is_online: unknown }) => ({ id: s.id, is_online: s.is_online })) });
     setOnlineSessionIds(online);
     setFrozenSessionIds(frozen);
     setScoresBySessionId(scores);
@@ -585,19 +584,22 @@ function GamePage() {
       }
     };
     const onCluesUnlocked = () => setCluesUnlocked(true);
-    const onAccusationSubmitted = (payload: { participant_session_id: number }) => {
-      if (myPlayer?.session_id === payload.participant_session_id) setMyAccusationSubmitted(true);
+    const onAccusationSubmitted = (payload: { participant_session_id: number | string }) => {
+      if (Number(myPlayer?.session_id) === Number(payload.participant_session_id)) setMyAccusationSubmitted(true);
     };
-    const onParticipantLeft = (payload: { participant_session_id: number }) => {
-      setFrozenSessionIds((prev) => new Set(prev).add(payload.participant_session_id));
+    const onParticipantLeft = (payload: { participant_session_id: number | string }) => {
+      setFrozenSessionIds((prev) => new Set(prev).add(Number(payload.participant_session_id)));
     };
     // Live presence: server broadcasts the whole group's online/left sets whenever
     // anyone joins, leaves, or disconnects — keeps the sidebar dots in sync.
-    const onPresenceUpdated = (payload: { online: number[]; left?: number[] }) => {
-      console.log("[PRESENCE] presence_updated received", { online: payload.online, left: payload.left });
-      setOnlineSessionIds(new Set(payload.online ?? []));
+    const onPresenceUpdated = (payload: { online: (number | string)[]; left?: (number | string)[] }) => {
+      // Normalize to numbers: the server sends participant_session ids as strings
+      // (mysql returns the id column as a string), but the sidebar compares them
+      // against numeric player.session_id via Set.has(). Without this coercion
+      // Set(["69"]).has(69) is false and every player (even "You") shows Offline.
+      setOnlineSessionIds(new Set((payload.online ?? []).map(Number)));
       if (payload.left && payload.left.length) {
-        setFrozenSessionIds((prev) => new Set([...prev, ...payload.left!]));
+        setFrozenSessionIds((prev) => new Set([...prev, ...payload.left!.map(Number)]));
       }
     };
     // Live scores: server broadcasts every player's total after each question,
