@@ -200,7 +200,7 @@ function Home() {
       <section id="pricing" className="px-4 mt-24">
         <div className="mx-auto max-w-[1320px] text-center">
           <h2 className="text-3xl md:text-4xl font-bold">Choose Your Package</h2>
-          <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">Packages are non-refundable once activated, as access is delivered digitally and instantly upon payment.</p>
+          <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">Packages are non-refundable once activated, as access is delivered digitally and instantly upon payment. Please review the Refund Policy before purchase.</p>
         </div>
         <div className="mx-auto max-w-[1320px] mt-12 grid gap-8 md:grid-cols-3">
           {packagesLoading ? (

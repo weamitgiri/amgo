@@ -914,9 +914,9 @@ function SetupStep({
 
       <div className="rounded-xl bg-white-50 p-4 text-xs text-foreground/80 space-y-1.5">
         <p className="font-semibold text-foreground">Schedule Your Session</p>
-        <p>• Session access is valid for 5 days from the moment of payment activation.</p>
-        <p>• Share the session link with participants 10 minutes before scheduled start time.</p>
-        <p>• You can update your session date and time once from your HR Dashboard.</p>
+        <p>• Session access is valid for 5 days from the moment of payment activation, not from your scheduled date.</p>
+        <p>• Share the session link with participants 10 minutes before your scheduled time, they can join as soon as the session is live.</p>
+        <p>• You can update your session date and time once from your HR Dashboard. The 5-day access window will not reset on rescheduling.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -1255,6 +1255,10 @@ const CONSENT_ITEMS: { key: keyof BookingConsents; text: string }[] = [
   {
     key: "validity_accepted",
     text: "I understand the session must be used within 5 days of activation, after which all access will expire automatically.",
+  },
+  {
+    key: "participant_max",
+    text: "I understand that participants must join in multiples of 5. If my organization has participants who are not divisible by 5, the remaining users will not be assigned to a group and will be unable to participate in the activity. Zoventro is not responsible for unassigned participants due to incomplete group formation.",
   },
 ];
 

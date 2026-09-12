@@ -154,8 +154,7 @@ export function Footer() {
             © {new Date().getFullYear()} {siteName}. All Rights Reserved
           </span>
           <span className="max-w-md text-center">
-            {siteName} is a digital team engagement platform. All activities are organized and
-            managed by the designated HR contact or event organizer of the respective organization.
+            Zoventro is a digital team activity platform for organizations. All sessions are independently organized by the designated HR or event representative of the respective organization. Zoventro does not manage internal employment relationships or company decisions
           </span>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
