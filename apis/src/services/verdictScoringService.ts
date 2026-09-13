@@ -5,7 +5,15 @@ import { serializeData } from '../utils/serializer';
 import { io } from '../server';
 import { generateResultsPdf } from './resultsPdfService';
 
-const NON_CULPRIT_ROLES = ['investigator', 'suspect', 'witness', 'participant'];
+/**
+ * The culprit's role_type is stored as "hidden culprit" (the admin dropdown value),
+ * so detect it by substring. Anyone whose role is NOT the culprit may accuse and is
+ * scored as a guesser — an exact "culprit" comparison both let the culprit accuse
+ * and wrongly blocked the "key suspect" from accusing.
+ */
+function isCulpritRole(roleType?: string | null): boolean {
+    return typeof roleType === 'string' && roleType.toLowerCase().includes('culprit');
+}
 
 /**
  * End-game points, per the "Mystery Quest — Scoreboard Logic" spec:
@@ -65,7 +73,7 @@ export async function submitAccusation(
     if (!session || String(session.group_id) !== String(groupId)) {
         throw new AppError('Session not found in this group', 404);
     }
-    if (!session.role_type || !NON_CULPRIT_ROLES.includes(session.role_type)) {
+    if (!session.role_type || isCulpritRole(session.role_type)) {
         throw new AppError('The culprit cannot submit an accusation', 403);
     }
 
@@ -147,8 +155,8 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
              WHERE ps.group_id = ?`,
             [groupId]
         );
-        const culpritSession = (sessions as any[]).find((s: any) => s.role_type === 'culprit');
-        const nonCulpritSessions = (sessions as any[]).filter((s: any) => s.role_type && s.role_type !== 'culprit');
+        const culpritSession = (sessions as any[]).find((s: any) => isCulpritRole(s.role_type));
+        const nonCulpritSessions = (sessions as any[]).filter((s: any) => s.role_type && !isCulpritRole(s.role_type));
 
         const [accusations] = await conn.query<any[]>('SELECT * FROM group_accusations WHERE group_id = ?', [groupId]);
         const accusationBySession = new Map<string, any>(
@@ -345,7 +353,7 @@ export async function markGroupIncomplete(groupId: number | string, reason: stri
          WHERE ps.group_id = ?`,
         [groupId]
     );
-    const culpritSession = sessions.find((s: any) => s.role_type === 'culprit');
+    const culpritSession = sessions.find((s: any) => isCulpritRole(s.role_type));
 
     const completedAt = new Date();
     const retentionPurgeAt = moment(completedAt).add(1, 'hour').toDate();

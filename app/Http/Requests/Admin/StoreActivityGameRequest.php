@@ -29,7 +29,7 @@ class StoreActivityGameRequest extends FormRequest
             'title' => 'required|string|max:150',
             'case_summary' => 'required|string',
             'tagline' => 'nullable|string|max:255',
-            'bg_image' => 'nullable|image|max:4096',
+            'bg_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:4096',
             'status' => 'required|in:draft,active',
 
             'wizard_step' => 'nullable|integer|min:1|max:4',
@@ -47,7 +47,7 @@ class StoreActivityGameRequest extends FormRequest
             'photos' => 'nullable|array|max:5',
             'photos.*.photo_number' => 'required|integer|min:1|max:5',
             'photos.*.label' => 'required|string|max:150',
-            'photos.*.image' => 'nullable|image|max:2048',
+            'photos.*.image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
 
             'roles' => 'required|array|size:5',
             'roles.*.role_type' => 'required|string|distinct',
@@ -55,7 +55,7 @@ class StoreActivityGameRequest extends FormRequest
             'roles.*.subtitle' => 'nullable|string|max:255',
             'roles.*.objective' => 'nullable|string',
             'roles.*.footer_text' => 'nullable|string|max:255',
-            'roles.*.role_image' => 'nullable|image|max:2048',
+            'roles.*.role_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
             'roles.*.what_you_know' => 'nullable|array',
             'roles.*.what_you_know.*' => 'nullable|string|max:255',
             'roles.*.keep_in_mind' => 'nullable|array',
@@ -78,7 +78,7 @@ class StoreActivityGameRequest extends FormRequest
             'clues.*.clue_title' => 'required|string|max:150',
             'clues.*.clue_short_description' => 'nullable|string|max:255',
             'clues.*.clue_detail' => 'nullable|string',
-            'clues.*.clue_image' => 'nullable|image|max:2048',
+            'clues.*.clue_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
 
             'rules' => 'nullable|array',
             'rules.*.rule_text' => 'required|string|max:255',
@@ -88,6 +88,32 @@ class StoreActivityGameRequest extends FormRequest
             'full_story.*.part_number' => 'required|integer|min:1|max:3',
             'full_story.*.part_title' => 'required|string|max:150',
             'full_story.*.part_body' => 'required|string',
+        ];
+    }
+
+    /**
+     * Clear, human-friendly image messages (size spelled out as MB, plus the
+     * accepted formats) so the wizard never fails silently on an oversized or
+     * wrong-type upload.
+     */
+    public function messages(): array
+    {
+        return [
+            'bg_image.image' => 'The case background must be a valid image file.',
+            'bg_image.mimes' => 'The case background must be a JPG, PNG, WEBP or JPEG file.',
+            'bg_image.max'   => 'The case background image may not be larger than 4 MB.',
+
+            'photos.*.image.image' => 'Each investigation photo must be a valid image file.',
+            'photos.*.image.mimes' => 'Each investigation photo must be a JPG, PNG, WEBP or JPEG file.',
+            'photos.*.image.max'   => 'Each investigation photo may not be larger than 2 MB.',
+
+            'roles.*.role_image.image' => 'Each role image must be a valid image file.',
+            'roles.*.role_image.mimes' => 'Each role image must be a JPG, PNG, WEBP or JPEG file.',
+            'roles.*.role_image.max'   => 'Each role image may not be larger than 2 MB.',
+
+            'clues.*.clue_image.image' => 'The clue image must be a valid image file.',
+            'clues.*.clue_image.mimes' => 'The clue image must be a JPG, PNG, WEBP or JPEG file.',
+            'clues.*.clue_image.max'   => 'The clue image may not be larger than 2 MB.',
         ];
     }
 }

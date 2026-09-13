@@ -102,6 +102,8 @@ export type GamePlayer = {
   character_name?: string | null;
   /** This player's own character portrait, keyed to their session so avatars never mismatch. */
   role_image?: string | null;
+  /** The Investigator is public; used to exclude them from the culprit-accusation list. */
+  is_investigator?: boolean;
   is_you: boolean;
 };
 

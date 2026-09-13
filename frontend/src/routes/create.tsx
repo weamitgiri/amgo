@@ -1858,7 +1858,7 @@ function SuccessCard({
           <SummaryMeta
             icon={LockKeyhole}
             label="Access Validity"
-            v1={pkg?.validity_days ? `${pkg.validity_days} Days` : "—"}
+            v1="5 Days"
             v2="from date of payment"
             divider
           />
@@ -1872,8 +1872,7 @@ function SuccessCard({
             <p className="text-sm font-semibold text-sky-700">Note</p>
             <ul className="mt-2 space-y-1.5 pl-4 text-xs text-foreground/80 list-disc marker:text-foreground/40">
               <li>
-                Access is valid for {pkg?.validity_days ?? 5} days from the date and time of payment,
-                expiry is shown above.
+                Access is valid for 5 days from the date and time of payment, expiry is shown above.
               </li>
               <li>
                 The session will start at start time, employees need to click the access link and
@@ -1884,8 +1883,8 @@ function SuccessCard({
                 using their email ID and OTP.
               </li>
               <li>
-                You can reschedule your session date and time once from the dashboard. The{" "}
-                {pkg?.validity_days ?? 5}-day access window will not reset on rescheduling.
+                You can reschedule your session date and time once from the dashboard. The 5-day
+                access window will not reset on rescheduling.
               </li>
               <li>
                 Your package supports up to {pkg?.max_users ?? 50} participants. For best results,

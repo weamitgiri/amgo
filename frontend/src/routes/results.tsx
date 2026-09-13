@@ -21,10 +21,15 @@ export const Route = createFileRoute("/results")({
   component: ResultsPage,
 });
 
+// Both the short keys and the admin's actual role_type values ("hidden culprit",
+// "key suspect") are mapped, so the label/colour lookups never fall through to
+// the raw string regardless of which form the API sends.
 const ROLE_LABELS: Record<string, string> = {
   investigator: "Investigator",
   culprit: "Hidden Culprit",
+  "hidden culprit": "Hidden Culprit",
   suspect: "Key Suspect",
+  "key suspect": "Key Suspect",
   witness: "Witness",
   participant: "Participant",
 };
@@ -32,7 +37,9 @@ const ROLE_LABELS: Record<string, string> = {
 const ROLE_TEXT: Record<string, string> = {
   investigator: "text-purple-300",
   culprit: "text-rose-400",
+  "hidden culprit": "text-rose-400",
   suspect: "text-amber-300",
+  "key suspect": "text-amber-300",
   witness: "text-emerald-400",
   participant: "text-sky-400",
 };
@@ -40,7 +47,9 @@ const ROLE_TEXT: Record<string, string> = {
 const ROLE_BADGES: Record<string, string> = {
   investigator: "bg-purple-500/15 text-purple-300 border-purple-400/40",
   culprit: "bg-rose-500/15 text-rose-300 border-rose-400/40",
+  "hidden culprit": "bg-rose-500/15 text-rose-300 border-rose-400/40",
   suspect: "bg-amber-500/15 text-amber-300 border-amber-400/40",
+  "key suspect": "bg-amber-500/15 text-amber-300 border-amber-400/40",
   witness: "bg-emerald-500/15 text-emerald-300 border-emerald-400/40",
   participant: "bg-sky-500/15 text-sky-300 border-sky-400/40",
 };
@@ -48,7 +57,9 @@ const ROLE_BADGES: Record<string, string> = {
 const ROLE_GRADS: Record<string, string> = {
   investigator: "from-violet-600 to-purple-900",
   culprit: "from-fuchsia-700 to-rose-900",
+  "hidden culprit": "from-fuchsia-700 to-rose-900",
   suspect: "from-amber-700 to-red-900",
+  "key suspect": "from-amber-700 to-red-900",
   witness: "from-emerald-800 to-zinc-900",
   participant: "from-slate-700 to-zinc-900",
 };
@@ -76,7 +87,7 @@ function StatusBadge({ status, roleType }: { status?: ResultPlayerStatus; roleTy
   if (!status) return null;
   // A caught culprit's "loser" reads better as "Caught!" than "Wrong guess".
   const meta =
-    status === "loser" && roleType === "culprit"
+    status === "loser" && roleType.toLowerCase().includes("culprit")
       ? { ...STATUS_META.loser, label: "Caught!" }
       : STATUS_META[status];
   if (!meta) return null;
@@ -204,7 +215,7 @@ function ResultsPage() {
   }
 
   const statusLabel = (p: ResultPlayer) =>
-    p.status === "loser" && p.role_type === "culprit"
+    p.status === "loser" && p.role_type.toLowerCase().includes("culprit")
       ? "Caught!"
       : p.status
         ? STATUS_META[p.status]?.label ?? p.status

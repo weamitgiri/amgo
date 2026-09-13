@@ -323,8 +323,8 @@ function JoinPage() {
   return (
     <div className="min-h-screen text-white relative overflow-hidden bg-[#0a0715]">
       {/* Background Image */}
-      <img src={heroBg} alt="" className="absolute h-full w-full" />
-      <div className="absolute bg-gradient-to-br from-[#0a0715]/90 via-[#0a0715]/70 to-[#0a0715]/90" />
+      <img src={heroBg} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0a0715]/90 via-[#0a0715]/70 to-[#0a0715]/90" />
 
       <header className="relative px-6 py-5 max-w-7xl mx-auto flex items-center justify-between">
         {/*<Logo />*/}
@@ -338,10 +338,10 @@ function JoinPage() {
             <img
               src={activityCover ? (resolveMediaUrl(activityCover) ?? undefined) : (isCookAndCreateSlug(activitySlug) ? cook : mystery)}
               alt={activityTitle}
-              className="absolute  h-full w-full"
+              className="absolute inset-0 h-full w-full object-cover object-left"
             />
-            <div className="absolute bg-gradient-to-r from-[#0a0715] via-[#0a0715]/70 to-transparent" />
-            <div className="absolute inset-0 bg-black/30" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0715]/40 via-transparent to-[#0a0715]/70" />
+            <div className="absolute inset-0 bg-black/25" />
 
             {/* Content Container */}
             <div className="relative z-10 flex flex-col h-full p-8 md:p-10">

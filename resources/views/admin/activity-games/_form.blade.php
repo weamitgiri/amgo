@@ -217,12 +217,16 @@
                                 <div class="col-md-4">
                                     <label>Image</label>
                                     <div class="custom-file">
-                                        <input type="file" name="photos[{{ $index }}][image]" class="custom-file-input">
+                                        <input type="file" name="photos[{{ $index }}][image]" accept="image/*" class="custom-file-input @error('photos.'.$index.'.image') is-invalid @enderror">
                                         <label class="custom-file-label">Choose photo</label>
                                     </div>
+                                    <small class="form-text text-muted">Max 2 MB &middot; JPG, PNG, WEBP or JPEG.</small>
+                                    @error('photos.'.$index.'.image')<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                     @if(isset($photo->image))
                                         <input type="hidden" name="photos[{{ $index }}][existing_image]" value="{{ $photo->image }}">
-                                        <img src="{{ asset('storage/' . $photo->image) }}" class="mt-2 img-thumbnail" style="height:60px;">
+                                        <img src="{{ asset('storage/' . $photo->image) }}" class="mt-2 img-thumbnail" style="height:60px;"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                                        <small class="text-muted" style="display:none;">Current image unavailable — upload a new one.</small>
                                     @endif
                                 </div>
                                 <div class="col-md-1 text-right">
@@ -590,9 +594,10 @@
                     <div class="col-md-4">
                         <label>Image</label>
                         <div class="custom-file">
-                            <input type="file" name="photos[${index}][image]" class="custom-file-input">
+                            <input type="file" name="photos[${index}][image]" accept="image/*" class="custom-file-input">
                             <label class="custom-file-label">Choose photo</label>
                         </div>
+                        <small class="form-text text-muted">Max 2 MB &middot; JPG, PNG, WEBP or JPEG.</small>
                     </div>
                     <div class="col-md-1 text-right">
                         <label>&nbsp;</label><br>

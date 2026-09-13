@@ -326,6 +326,11 @@ export async function buildGameSummaryPayload(
             // share an index order (they do not — roles are ordered by role id,
             // players by session), which mismatched every avatar.
             role_image: role?.role_image ?? null,
+            // The Investigator is PUBLIC — everyone sees them asking the questions —
+            // so it is safe to flag them here (no secret role leaks). The UI uses this
+            // to keep the Investigator out of the "who is the culprit?" accusation list,
+            // since the killer is always one of the non-investigator suspects.
+            is_investigator: (role?.role_type ?? '') === 'investigator',
             is_you: String(s.participant_id) === String(participant.id),
         };
     });

@@ -236,7 +236,10 @@ function GamePage() {
 
   const yourPerson = useMemo(() => people.find((p: GamePerson) => p.is_you) ?? null, [people]);
   const isInvestigator = yourPerson?.role_type === "investigator";
-  const isCulprit = yourPerson?.role_type === "culprit";
+  // The culprit's role_type is stored as "hidden culprit" (admin dropdown value),
+  // so match by substring — an exact "culprit" check left isCulprit permanently
+  // false, which let the culprit see and use the Final Accusation UI.
+  const isCulprit = (yourPerson?.role_type ?? "").toLowerCase().includes("culprit");
 
   // Strategy Guide is for EVERY role except the Investigator: all non-investigator
   // players get the full set of strategy slides (guidance covering all roles), and
@@ -1403,12 +1406,16 @@ function InvestigationView(props: {
             )}
           </div>
 
-          <div className="flex flex-col items-center justify-center gap-0.5">
-            <div className="text-[10px] text-white/50">Questions Left</div>
-            <div className="text-white text-xl font-bold leading-none">
-              {lieMode ? `${lieQuestionsLeft}/${lieMaxQuestions}` : `${questionsLeft}/${maxQuestions}`}
+          {/* Questions Left only matters to the Investigator — they are the only role
+              that asks questions, so hide this counter for everyone else. */}
+          {isInvestigator && (
+            <div className="flex flex-col items-center justify-center gap-0.5">
+              <div className="text-[10px] text-white/50">Questions Left</div>
+              <div className="text-white text-xl font-bold leading-none">
+                {lieMode ? `${lieQuestionsLeft}/${lieMaxQuestions}` : `${questionsLeft}/${maxQuestions}`}
+              </div>
             </div>
-          </div>
+          )}
 
           {isInvestigator && (
             <div className="relative flex flex-col items-center justify-center">
@@ -1511,7 +1518,9 @@ function InvestigationView(props: {
                     <div className="text-[17px] text-white break-words">
                       {p.pseudonym} {p.is_you && <span className="font-normal">(You)</span>}
                     </div>
-                    {p.character_name && (
+                    {/* Character identities stay hidden to preserve the mystery — only the
+                        Investigator (a public role) shows their character label. */}
+                    {p.is_investigator && p.character_name && (
                       <div className="text-[12px] text-purple-300/90 break-words leading-tight mt-0.5">
                         {p.character_name}
                       </div>
@@ -1538,7 +1547,12 @@ function InvestigationView(props: {
               <div className="h-px bg-white/10 mb-6 w-full" />
               <div className="text-[10px] text-white/50 mb-1 uppercase tracking-widest">Your Role</div>
               <div className="text-purple-300 text-base font-black tracking-widest uppercase">{roleDisplayName(yourRole)}</div>
-              <p className="text-[10px] text-white/50 mt-1 leading-relaxed">Ask up to 5 questions to uncover the truth</p>
+              {/* Only the Investigator asks questions — other roles answer and vote. */}
+              {isInvestigator ? (
+                <p className="text-[10px] text-white/50 mt-1 leading-relaxed">Ask up to 5 questions to uncover the truth</p>
+              ) : (
+                <p className="text-[10px] text-white/50 mt-1 leading-relaxed">Answer honestly and vote in the Lie Detector rounds.</p>
+              )}
             </div>
           ) : null}
         </div>
@@ -1601,7 +1615,7 @@ function InvestigationView(props: {
                           <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
                             {p.pseudonym}
                             {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
-                            {p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
+                            {p.is_investigator && p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
                           </div>
                         </div>
                         {/* Selected indicator dot */}
@@ -1653,7 +1667,7 @@ function InvestigationView(props: {
                           <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
                             {p.pseudonym}
                             {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
-                            {p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
+                            {p.is_investigator && p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
                           </div>
                         </div>
                       </div>
@@ -1935,7 +1949,7 @@ function PhotosModal({ photos, onClose }: { photos: string[]; onClose: () => voi
             </div>
           ))}
         </div>
-        <p className="mt-5 text-center text-xs text-white/70">Check the image carefully, you might get clues.</p>
+        <p className="mt-5 text-center text-xs text-white/70">Every photo holds a secret. Look closely.</p>
         <button onClick={onClose} className="mt-4 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow">Okay Continue</button>
       </div>
     </ModalShell>
@@ -2218,7 +2232,9 @@ function AccuseModal({
 }) {
   const [pickSessionId, setPickSessionId] = useState<number | null>(null);
   const [reason, setReason] = useState("");
-  const candidates = players.filter((p) => !p.is_you);
+  // The killer is always a non-investigator suspect, and the Investigator's identity
+  // is public — so never offer them as someone to accuse.
+  const candidates = players.filter((p) => !p.is_you && !p.is_investigator);
   return (
     <ModalShell onClose={onClose} max="max-w-2xl">
       <div className="p-6">
@@ -2290,7 +2306,9 @@ function FinalAccusationModal({
 }) {
   const [pickSessionId, setPickSessionId] = useState<number | null>(null);
   const [reason, setReason] = useState("");
-  const candidates = players.filter((p) => !p.is_you);
+  // The killer is always a non-investigator suspect, and the Investigator's identity
+  // is public — so never offer them as someone to accuse.
+  const candidates = players.filter((p) => !p.is_you && !p.is_investigator);
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 backdrop-blur p-4">
