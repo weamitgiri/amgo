@@ -1546,16 +1546,18 @@ function InvestigationView(props: {
                     <div className="text-[17px] text-white break-words">
                       {p.pseudonym} {p.is_you && <span className="font-normal">(You)</span>}
                     </div>
-                    {/* Character identities stay hidden to preserve the mystery — only the
-                        Investigator (a public role) shows their character label. */}
-                    {p.is_investigator && p.character_name && (
+                    {p.character_name && (
                       <div className="text-[12px] text-purple-300/90 break-words leading-tight mt-0.5">
                         {p.character_name}
                       </div>
                     )}
-                    <div className={`text-[15px] flex items-center gap-2 mt-1 ${statusColor}`}>
-                      <div className={`h-2 w-2 rounded-full shrink-0 ${statusDot}`} /> {statusText}
-                    </div>
+                    {/* Presence text ("Available"/"Offline") is hidden — only the active
+                        "Answering" / "Left" states, which affect gameplay, still show. */}
+                    {(isAnswering || frozen) && (
+                      <div className={`text-[15px] flex items-center gap-2 mt-1 ${statusColor}`}>
+                        <div className={`h-2 w-2 rounded-full shrink-0 ${statusDot}`} /> {statusText}
+                      </div>
+                    )}
                   </div>
                   {isAnswering && (
                     <AnswerCountdown
@@ -1574,7 +1576,7 @@ function InvestigationView(props: {
             <div className="mt-auto pt-8">
               <div className="h-px bg-white/10 mb-6 w-full" />
               <div className="text-[10px] text-white/50 mb-1 uppercase tracking-widest">Your Role</div>
-              <div className="text-purple-300 text-base font-black tracking-widest uppercase">{roleDisplayName(yourRole)}</div>
+              <div className="text-purple-300 text-base font-black tracking-widest uppercase">{yourRole.role_type || roleDisplayName(yourRole)}</div>
               {/* Only the Investigator asks questions — other roles answer and vote. */}
               {isInvestigator ? (
                 <p className="text-[10px] text-white/50 mt-1 leading-relaxed">Ask up to 5 questions to uncover the truth</p>
@@ -1643,7 +1645,7 @@ function InvestigationView(props: {
                           <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
                             {p.pseudonym}
                             {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
-                            {p.is_investigator && p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
+                            {p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
                           </div>
                         </div>
                         {/* Selected indicator dot */}
@@ -1695,7 +1697,7 @@ function InvestigationView(props: {
                           <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
                             {p.pseudonym}
                             {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
-                            {p.is_investigator && p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
+                            {p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
                           </div>
                         </div>
                       </div>
