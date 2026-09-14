@@ -7,7 +7,7 @@ const NAV = [
   { label: "Activities...", to: "/#activities" },
   { label: "How It Works", to: "/#how" },
   { label: "Pricing", to: "/#pricing" },
-  { label: "Contact", to: "/#contact" },
+  { label: "Contact...", to: "/#contact" },
 ];
 
 export function Header({ floating = false }: { floating?: boolean }) {
