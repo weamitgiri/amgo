@@ -26,6 +26,8 @@ export const API_ENDPOINTS = {
     usePasscard: "/v1/game/use-passcard",
     reopenCaseSummary: "/v1/game/reopen-case-summary",
     submitAccusation: "/v1/game/submit-accusation",
+    // DEV / TESTING ONLY — skip the current phase timer (remove before production).
+    devAdvance: (groupId: number | string) => `/v1/game/dev/advance/${groupId}`,
   },
   results: {
     get: (groupId: number | string) => `/v1/results/${groupId}`,

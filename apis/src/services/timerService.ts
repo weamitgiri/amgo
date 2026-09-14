@@ -64,6 +64,43 @@ export async function ensureCaseSummaryTimer(groupId: number | string, caseSumma
     console.log(`[TimerService] case_summary timer started for group ${groupId}`);
 }
 
+/**
+ * DEV / TESTING ONLY — skip the current phase's timer so the next screen opens
+ * without waiting out the clock. If the game hasn't started yet it starts it;
+ * otherwise it expires the current active phase timer and runs its transition
+ * immediately (Lie Detector round → Case Summary → Questioning → Final Verdict →
+ * Results). Wire this behind a button you remove before production.
+ */
+export async function devAdvancePhase(groupId: number | string): Promise<{ advanced: string | null }> {
+    // Not started yet (no case_summary timer) → start the game now.
+    const [csRows] = await query<any>(
+        "SELECT id FROM timers WHERE group_id = ? AND timer_type = 'case_summary' LIMIT 1",
+        [groupId]
+    );
+    if ((csRows as any[]).length === 0) {
+        await query("UPDATE game_groups SET status = 'active' WHERE id = ? AND status IN ('waiting','active')", [groupId]);
+        const cfg = await getActivityConfigForGroup(groupId);
+        await ensureCaseSummaryTimer(groupId, Number(cfg?.case_summary_view_secs) || 300);
+        return { advanced: 'game_started' };
+    }
+
+    // Otherwise expire the current active phase timer and process it right away.
+    const priority = ['lie_detector', 'final_verdict', 'questioning', 'case_summary'];
+    const [timerRows] = await query<any>('SELECT * FROM timers WHERE group_id = ? AND is_active = 1', [groupId]);
+    const active = timerRows as any[];
+    let target: any = null;
+    for (const type of priority) {
+        target = active.find((t: any) => t.timer_type === type);
+        if (target) break;
+    }
+    if (!target) return { advanced: null };
+
+    target.expires_at = new Date(Date.now() - 1000);
+    await query('UPDATE timers SET expires_at = ? WHERE id = ?', [target.expires_at, target.id]);
+    await handleTimerExpiration(target);
+    return { advanced: target.timer_type };
+}
+
 async function getActivityConfigForGroup(groupId: number | string) {
     const [rows] = await query<any>(
         `SELECT a.* FROM game_groups gg

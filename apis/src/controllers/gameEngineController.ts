@@ -23,7 +23,7 @@ import { AppError } from '../utils/AppError';
 import { io } from '../server';
 import moment from 'moment';
 import { submitAccusation as submitAccusationService } from '../services/verdictScoringService';
-import { ensureCaseSummaryTimer } from '../services/timerService';
+import { ensureCaseSummaryTimer, devAdvancePhase } from '../services/timerService';
 
 async function getSessionForParticipant(groupId: number | string, participantId: number | string) {
     const [rows] = await query<any>(
@@ -271,6 +271,18 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
         ),
         is_investigator: userSession.role_type === 'investigator',
     });
+});
+
+/**
+ * DEV / TESTING ONLY — skip the current phase's timer so the next screen opens
+ * immediately. Drives the same transitions the timer service would, then broadcasts
+ * to the group. Remove the button that calls this before production.
+ */
+export const devAdvance = asyncHandler(async (req: Request, res: Response) => {
+    const { group_id } = req.params;
+    if (!group_id) throw new AppError('group_id is required', 400);
+    const result = await devAdvancePhase(group_id);
+    return successResponse(res, 'Phase advanced', result);
 });
 
 /**

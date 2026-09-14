@@ -12,6 +12,9 @@ const router = Router();
 // Get game state
 router.get('/state/:group_id', gameEngineController.getGameState);
 
+// DEV / TESTING ONLY — skip the current phase timer (remove before production).
+router.post('/dev/advance/:group_id', gameEngineController.devAdvance);
+
 // Case Summary Reopen
 router.post(
     '/reopen-case-summary',

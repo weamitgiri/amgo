@@ -100,6 +100,10 @@ export const participantService = {
     );
   },
 
+  // DEV / TESTING ONLY — skip the current phase timer (remove before production).
+  devAdvance: (groupId: number | string) =>
+    apiClient.post<{ advanced: string | null }>(API_ENDPOINTS.game.devAdvance(groupId), {}, noAuth),
+
   askQuestion: (payload: {
     group_id: number | string;
     participant_id: number | string;

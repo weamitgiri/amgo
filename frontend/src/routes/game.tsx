@@ -222,6 +222,7 @@ function GamePage() {
   const [onlineSessionIds, setOnlineSessionIds] = useState<Set<number>>(new Set());
   const [frozenSessionIds, setFrozenSessionIds] = useState<Set<number>>(new Set());
   const [scoresBySessionId, setScoresBySessionId] = useState<Map<number, number>>(new Map());
+  const [devSkipping, setDevSkipping] = useState(false); // DEV: remove before production
 
   const people = useMemo(
     () => (gameData?.roles ?? []).map(mapRoleToPerson),
@@ -821,6 +822,23 @@ function GamePage() {
     }
   };
 
+  // DEV / TESTING ONLY — skip the current phase timer so the next screen opens
+  // without waiting out the clock. Remove the header button that calls this before
+  // production. It advances for everyone (the server drives the real transition).
+  const handleDevNext = async () => {
+    if (!session?.groupId || devSkipping) return;
+    setDevSkipping(true);
+    try {
+      await participantService.devAdvance(session.groupId);
+      const state = await participantService.getGameState(session.groupId, session.participantId);
+      applyGameState(state);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not skip the timer.");
+    } finally {
+      setDevSkipping(false);
+    }
+  };
+
   const handleAccuse = async (accusedSessionId: number, reasoning: string) => {
     if (!session?.participantId) return;
     try {
@@ -847,6 +865,16 @@ function GamePage() {
           <span className="font-bold text-lg tracking-wide">Mystery Quest</span>
         </div>
         <div className="flex items-center gap-5">
+          {/* DEV / TESTING ONLY — skip the current timer. Remove before production. */}
+          <button
+            type="button"
+            onClick={handleDevNext}
+            disabled={devSkipping}
+            title="Testing: skip the current timer and open the next screen"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
+          >
+            {devSkipping ? "Skipping…" : "Next ⏭"}
+          </button>
           <div className="rounded-lg border border-[#2c1b44] px-4 py-2 text-sm text-[#b8b8b8]">
             Game Time Remaining <span className="ml-2 font-bold text-white tabular-nums">{fmt(secsHdr)}</span>
           </div>

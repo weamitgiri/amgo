@@ -66,6 +66,7 @@ function LobbyPage() {
   const [lobby, setLobby] = useState<LobbySessionResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [devSkipping, setDevSkipping] = useState(false); // DEV: remove before production
 
   const session = useMemo(() => getParticipantSession(), []);
 
@@ -247,6 +248,20 @@ function LobbyPage() {
     }
   };
 
+  // DEV / TESTING ONLY — start the game immediately, skipping the lobby countdown.
+  // Remove the header button that calls this before production.
+  const handleDevNext = async () => {
+    if (!session?.groupId || devSkipping) return;
+    setDevSkipping(true);
+    try {
+      await participantService.devAdvance(session.groupId);
+      navigate({ to: "/game", search: { game: slug } });
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not start the game.");
+      setDevSkipping(false);
+    }
+  };
+
   const timerLabel =
     lobby.lobby_phase === "lobby_timer"
       ? "Session Starts in"
@@ -269,7 +284,17 @@ function LobbyPage() {
             <img src={mqlogo} alt="Mystery Quest" className="h-9 w-9 shrink-0 object-contain" />
             <span className="text-lg font-bold tracking-wide">Mystery Quest</span>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
+            {/* DEV / TESTING ONLY — start the game now. Remove before production. */}
+            <button
+              type="button"
+              onClick={handleDevNext}
+              disabled={devSkipping}
+              title="Testing: skip the lobby countdown and start the game"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-sm font-semibold text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
+            >
+              {devSkipping ? "Starting…" : "Next ⏭"}
+            </button>
             <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-xs font-bold">
               {initials(session?.name ?? "You")}
             </div>
