@@ -1263,6 +1263,10 @@ const CONSENT_ITEMS: { key: keyof BookingConsents; text: string }[] = [
     key: "participant_max",
     text: "I understand that participants must join in multiples of 5. If my organization has participants who are not divisible by 5, the remaining users will not be assigned to a group and will be unable to participate in the activity. Zoventro is not responsible for unassigned participants due to incomplete group formation.",
   },
+   {
+    key: "confirm_user",
+    text: "I confirm all participants are aware their names will be used in this activity and have consented.",
+  },
 ];
 
 function PaymentStep({

@@ -404,10 +404,10 @@ function JoinPage() {
                   <div className="px-3">
                     <Meta icon={User} label="Organizer" v1={organizerName || "—"} v2={organizerCompany || ""} />
                   </div>
-                  <div className="px-5 border-l border-black/10">
+                  <div className="px-5 border-l border-white/10">
                     <Meta icon={Calendar} label="Date" v1={scheduledDate || "TBA"} v2={scheduledDateDay} />
                   </div>
-                  <div className="px-5 border-l border-black/10">
+                  <div className="px-5 border-l border-white/10">
                     <Meta icon={Clock} label="Start Time" v1={scheduledTime || "TBA"} v2={scheduledTimezone} />
                   </div>
                 </div>

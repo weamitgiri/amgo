@@ -3,11 +3,11 @@ import { ArrowRight, LogIn } from "lucide-react";
 import { Flogo } from "./Flogo";
 
 const NAV = [
-  { label: "Overview ...1", to: "/" as const },
-  { label: "Activities...", to: "/#activities" },
+  { label: "Overview.", to: "/" as const },
+  { label: "Activities", to: "/#activities" },
   { label: "How It Works", to: "/#how" },
-  { label: "Pricing...", to: "/#pricing" },
-  { label: "Contact...", to: "/#contact" },
+  { label: "Pricing", to: "/#pricing" },
+  { label: "Contact", to: "/#contact" },
 ];
 
 export function Header({ floating = false }: { floating?: boolean }) {

@@ -105,7 +105,7 @@ function Home() {
           <Header floating />
           <div className="relative px-6 md:px-14 pt-44 pb-32 max-w-3xl">
             <h1 className="text-[52px] md:text-[64px] font-extrabold text-white leading-[1.1] tracking-tight">
-              Turn Teams Activities <br className="hidden md:block" />
+              Turn Team Activities <br className="hidden md:block" />
               Into Interactive <br className="hidden md:block" />
               Experiences
             </h1>
@@ -251,7 +251,10 @@ function Home() {
           <div className="mt-10 grid md:grid-cols-2 gap-5">
             {STEPS.map((s) => (
               <div key={s.n} className="rounded-[2.5rem] bg-white p-7 shadow-elevated border border-white/80">
-                <div className="text-primary text-xs font-semibold tracking-widest border border-primary/30 inline-flex rounded-full px-3 py-1">{s.n}</div>
+                
+                <div className="text-xs font-bold tracking-widest border border-[#844CDA]/30 inline-flex rounded-full px-3 py-1 bg-gradient-to-r from-[#3B82F6] 0% via-[#844CDA] 50% to-[#A855F7] 100% bg-clip-text text-transparent">
+                {s.n}
+                </div>                
                 <div className="mt-6 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold text-xl md:text-lg">{s.title}</h3>
