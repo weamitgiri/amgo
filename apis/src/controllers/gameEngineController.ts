@@ -424,43 +424,58 @@ export const answerQuestion = asyncHandler(async (req: Request, res: Response) =
     const lieParticipationBonus = Number(config?.lie_detector_participation_bonus ?? 5);
     const lieDetectorBonus = lieRoundRows?.[0] && penalty === 0 ? lieParticipationBonus : 0;
 
-    const answer = await withTransaction(async (conn) => {
-        await conn.query(
-            `INSERT INTO answers (question_id, participant_session_id, answer_text, penalty_applied, answered_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
-            [question_id, participantSession.id, answer_text, penalty, now.toDate()]
-        );
-
-        if (penalty > 0) {
-            await conn.query(`UPDATE participant_sessions SET total_score = total_score - ? WHERE id = ?`, [
-                penalty,
-                participantSession.id,
-            ]);
-        }
-
-        if (lieDetectorBonus > 0) {
-            await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
-                lieDetectorBonus,
-                participantSession.id,
-            ]);
+    // The `existingAnswers` check above runs OUTSIDE this transaction, so two
+    // near-simultaneous submits (a double-click, or a retried request) can both
+    // pass it before either has committed. The insert is guarded by a unique key
+    // on `answers.question_id` and is the FIRST statement in the transaction, so
+    // the loser's insert fails and the whole transaction rolls back before any
+    // penalty/bonus is applied twice — mirrors the same race guard already used
+    // for group_accusations in verdictScoringService.ts.
+    let answer;
+    try {
+        answer = await withTransaction(async (conn) => {
             await conn.query(
-                `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
-                    VALUES (?, ?, 'lie_detector_answer', NOW(), NOW())`,
-                [participantSession.id, lieDetectorBonus]
+                `INSERT INTO answers (question_id, participant_session_id, answer_text, penalty_applied, answered_at, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+                [question_id, participantSession.id, answer_text, penalty, now.toDate()]
             );
+
+            if (penalty > 0) {
+                await conn.query(`UPDATE participant_sessions SET total_score = total_score - ? WHERE id = ?`, [
+                    penalty,
+                    participantSession.id,
+                ]);
+            }
+
+            if (lieDetectorBonus > 0) {
+                await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
+                    lieDetectorBonus,
+                    participantSession.id,
+                ]);
+                await conn.query(
+                    `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                        VALUES (?, ?, 'lie_detector_answer', NOW(), NOW())`,
+                    [participantSession.id, lieDetectorBonus]
+                );
+            }
+
+            // The answer arrived — defuse the timeout timer so it doesn't also fire.
+            await conn.query(
+                `UPDATE timers SET is_active = 0 WHERE group_id = ? AND timer_type = 'question_response' AND reference_id = ?`,
+                [question.group_id, question_id]
+            );
+
+            const [rows] = await conn.query<any[]>(`SELECT * FROM answers WHERE question_id = ? ORDER BY id DESC LIMIT 1`, [
+                question_id,
+            ]);
+            return rows?.[0];
+        });
+    } catch (err: any) {
+        if (err?.code === 'ER_DUP_ENTRY') {
+            throw new AppError('Already answered', 400);
         }
-
-        // The answer arrived — defuse the timeout timer so it doesn't also fire.
-        await conn.query(
-            `UPDATE timers SET is_active = 0 WHERE group_id = ? AND timer_type = 'question_response' AND reference_id = ?`,
-            [question.group_id, question_id]
-        );
-
-        const [rows] = await conn.query<any[]>(`SELECT * FROM answers WHERE question_id = ? ORDER BY id DESC LIMIT 1`, [
-            question_id,
-        ]);
-        return rows?.[0];
-    });
+        throw err;
+    }
 
     io.to(`group_${question.group_id}`).emit('new_answer', serializeData(answer));
     await emitScoresUpdate(question.group_id);

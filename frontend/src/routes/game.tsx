@@ -273,6 +273,15 @@ function GamePage() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [pendingAnswerForMe, setPendingAnswerForMe] = useState<ActivityItem | null>(null);
   const [answerTimeoutPenalty, setAnswerTimeoutPenalty] = useState(0);
+  // Guards against a fast double-click firing two answerQuestion requests before
+  // either resolves — pendingAnswerForMe only clears on success, so without this
+  // both clicks would go out (the backend now rejects the loser via a DB unique
+  // constraint, but this avoids the round-trip and the error toast entirely).
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+  // Same guard, for the Investigator's "Send Question" button — `question` (the
+  // textarea) isn't cleared until the request resolves, so a fast double-click
+  // could otherwise fire two askQuestion requests before either completes.
+  const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
 
   const handleAnswerTimeout = useCallback(() => {
     // Don't close the modal yet, just handle timeout logic (we'll wait for new_answer event from server to close)
@@ -751,7 +760,8 @@ function GamePage() {
   const sendQuestion = async () => {
     const target = players[selectedAskee];
     const noQuestionsLeft = lieMode ? lieQuestionsLeft <= 0 : questionsLeft <= 0;
-    if (!question.trim() || noQuestionsLeft || !target || target.is_you || !session?.participantId) return;
+    if (!question.trim() || noQuestionsLeft || !target || target.is_you || !session?.participantId || isSubmittingQuestion) return;
+    setIsSubmittingQuestion(true);
     try {
       await participantService.askQuestion({
         group_id: session.groupId,
@@ -762,11 +772,14 @@ function GamePage() {
       setQuestion("");
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Could not send question.");
+    } finally {
+      setIsSubmittingQuestion(false);
     }
   };
 
   const submitAnswer = async (text: string) => {
-    if (!pendingAnswerForMe || !session?.participantId || !text.trim()) return;
+    if (!pendingAnswerForMe || !session?.participantId || !text.trim() || isSubmittingAnswer) return;
+    setIsSubmittingAnswer(true);
     try {
       await participantService.answerQuestion({
         question_id: pendingAnswerForMe.questionId,
@@ -776,6 +789,8 @@ function GamePage() {
       setPendingAnswerForMe(null);
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Could not submit answer.");
+    } finally {
+      setIsSubmittingAnswer(false);
     }
   };
 
@@ -927,6 +942,7 @@ function GamePage() {
           question={question}
           setQuestion={setQuestion}
           sendQuestion={sendQuestion}
+          isSubmittingQuestion={isSubmittingQuestion}
           activity={activity}
           openModal={setModal}
           locked={activity.some((a) => !a.a)}
@@ -964,6 +980,7 @@ function GamePage() {
           question={pendingAnswerForMe.q}
           answerSecs={gameData.settings.question_response_secs}
           onSubmit={submitAnswer}
+          isSubmitting={isSubmittingAnswer}
           investigatorRole={isInvestigator ? "Investigator" : "Investigator"}
           onTimeout={handleAnswerTimeout}
           activity={activity}
@@ -1318,6 +1335,7 @@ function InvestigationView(props: {
   question: string;
   setQuestion: (s: string) => void;
   sendQuestion: () => void;
+  isSubmittingQuestion?: boolean;
   activity: ActivityItem[];
   openModal: (m: ModalKey) => void;
   locked?: boolean;
@@ -1352,6 +1370,7 @@ function InvestigationView(props: {
     question,
     setQuestion,
     sendQuestion,
+    isSubmittingQuestion = false,
     activity,
     openModal,
     locked = false,
@@ -1663,13 +1682,14 @@ function InvestigationView(props: {
                   <div className="mt-1.5 relative">
                     <textarea value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 120))}
                       placeholder="Type your question here..."
+                      disabled={isSubmittingQuestion}
                       className="w-full h-24 rounded-xl bg-transparent border border-white/15 p-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#a855f7] disabled:cursor-not-allowed resize-none" />
                     <span className="absolute bottom-3 right-3 text-[10px] text-white/50">{question.length}/120</span>
                   </div>
                 </div>
-                <button type="button" onClick={sendQuestion} disabled={!question.trim() || (lieMode ? lieQuestionsLeft <= 0 : questionsLeft <= 0) || locked}
+                <button type="button" onClick={sendQuestion} disabled={!question.trim() || (lieMode ? lieQuestionsLeft <= 0 : questionsLeft <= 0) || locked || isSubmittingQuestion}
                   className="mt-5 w-full rounded-full bg-gradient-to-r from-[#a855f7] to-[#d946ef] py-3 text-sm font-bold shadow-glow disabled:opacity-40 disabled:cursor-not-allowed text-white hover:opacity-90">
-                  Send Question
+                  {isSubmittingQuestion ? "Sending…" : "Send Question"}
                 </button>
               </fieldset>
             </>
@@ -1990,6 +2010,7 @@ function AnswerModal({
   question,
   answerSecs,
   onSubmit,
+  isSubmitting = false,
   investigatorRole = "Investigator",
   onTimeout,
   activity,
@@ -1999,6 +2020,7 @@ function AnswerModal({
   question: string;
   answerSecs: number;
   onSubmit: (text: string) => void;
+  isSubmitting?: boolean;
   investigatorRole?: string;
   onTimeout?: () => void;
   activity: ActivityItem[];
@@ -2060,9 +2082,9 @@ function AnswerModal({
                 value={ans}
                 onChange={(e) => setAns(e.target.value.slice(0, 120))}
                 placeholder="Type your answer here..."
-                disabled={isTimeUp}
+                disabled={isTimeUp || isSubmitting}
                 className={`w-full h-20 rounded-xl bg-black/20 border border-white/20 p-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#a855f7] resize-none ${
-                  isTimeUp ? "opacity-50 cursor-not-allowed" : ""
+                  isTimeUp || isSubmitting ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               />
               <span className="absolute bottom-2 right-3 text-[10px] text-white/40">{ans.length}/120</span>
@@ -2070,14 +2092,14 @@ function AnswerModal({
           </div>
           <button
             onClick={() => onSubmit(ans)}
-            disabled={!ans.trim() || isTimeUp}
+            disabled={!ans.trim() || isTimeUp || isSubmitting}
             className={`mt-5 w-full rounded-full py-3 text-sm font-bold shadow-glow ${
-              isTimeUp
+              isTimeUp || isSubmitting
                 ? "bg-white/5 text-white/40 cursor-not-allowed"
                 : "bg-gradient-to-r from-[#a855f7] to-[#d946ef] text-white disabled:opacity-40"
             }`}
           >
-            Submit Answer
+            {isSubmitting ? "Submitting…" : "Submit Answer"}
           </button>
           <p className="mt-3 text-center text-xs text-white/70">Your answer will be visible to all players.</p>
         </div>

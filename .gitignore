@@ -44,3 +44,4 @@ apis/logs/*.log
 Thumbs.db
 *.zip
 /frontend/dist/
+*.sql
