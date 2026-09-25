@@ -59,3 +59,7 @@
 2026-09-19 21:19:16:1916 info: [Socket] Client joined lobby room: group_24
 2026-09-19 21:19:16:1916 info: [Socket] Client joined lobby room: group_24
 2026-09-19 21:19:16:1916 info: [Socket] Client joined lobby room: group_24
+2026-09-19 23:02:04:24 debug: [Socket] User disconnected: kxXUymEV9XN9SyVHAAAJ, Reason: transport close
+2026-09-19 23:02:05:25 debug: [Socket] User connected: hPaoKHCJ6Srbluf4AAAL
+2026-09-19 23:02:05:25 info: [Socket] Client joined lobby room: group_24
+2026-09-25 20:27:51:2751 info: [Server] Node.js API running on port 6001 in development mode

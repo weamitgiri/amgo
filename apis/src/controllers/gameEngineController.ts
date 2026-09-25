@@ -101,9 +101,23 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
     // at 0, i.e. a 00:00 clock that never recovers (the game page has no periodic
     // state poll). Creating the case-summary timer here too guarantees the clock is
     // present on the first paint. It's idempotent (only the first call per group
-    // inserts) and gated on `active`, so it neither duplicates a running game's timer
-    // nor resurrects an already-finished group whose timers have expired.
-    if (group.status === 'active') {
+    // inserts).
+    //
+    // Also cover `waiting`: the lobby page navigates to /game as soon as its LOCAL
+    // countdown hits zero, which can beat the server round-trip that actually flips
+    // the group to `active` and starts this timer (buildLobbyPayload's "ready"
+    // branch, driven by a 15s poll / socket push — see lobby.tsx). When that race is
+    // lost, a participant lands here with the group still `waiting`, so the old
+    // `active`-only guard silently skipped starting the clock — the game then reads
+    // as "no active timer" and jumps straight to Investigation with 00:00 showing.
+    // Treat `waiting` the same as `active` here (the participant has already been
+    // routed to the game screen, so the game IS starting for them regardless of
+    // which flag value happens to be stored yet) while still never resurrecting a
+    // timer for a `finished`/`completed`/`incomplete` group.
+    if (group.status === 'active' || group.status === 'waiting') {
+        if (group.status === 'waiting') {
+            await query("UPDATE game_groups SET status = 'active' WHERE id = ? AND status = 'waiting'", [group_id]);
+        }
         const activeCfg = await getActivityConfigForGroup(group_id);
         await ensureCaseSummaryTimer(group_id, Number(activeCfg?.case_summary_view_secs) || 300);
     }

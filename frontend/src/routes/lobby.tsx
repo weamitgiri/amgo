@@ -163,16 +163,45 @@ function LobbyPage() {
 
   const slug = gameSlug ?? session?.gameSlug ?? lobby?.activity.slug ?? "detective-mystery";
 
+  // When our LOCAL countdown reaches zero, actively re-poll the server instead of
+  // just waiting for the 15s background poll below. The server is the only place
+  // that flips the group to "active" and starts the Case Summary timer
+  // (buildLobbyPayload's "ready" branch) — without this, the navigation effect
+  // below could wait up to 15s (plus any client/server clock drift built up over
+  // the full wait) before ever seeing lobby_phase: "ready".
+  useEffect(() => {
+    if (countdown !== 0) return;
+    if (!session?.groupId || !session.participantId) return;
+    if (lobby?.lobby_phase === "ready") return;
+    let cancelled = false;
+    let attempts = 0;
+    const poll = () => {
+      if (cancelled || attempts >= 15) return;
+      attempts += 1;
+      fetchLobby(session.groupId, session.participantId)
+        .catch(() => undefined)
+        .finally(() => {
+          if (!cancelled) setTimeout(poll, 800);
+        });
+    };
+    poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [countdown, session?.groupId, session?.participantId, fetchLobby, lobby?.lobby_phase]);
+
   useEffect(() => {
     if (!lobby) return;
-    if (
-      lobby.lobby_phase === "ready" ||
-      (lobby.lobby_phase === "lobby_timer" && countdown === 0)
-    ) {
+    // Navigate only once the SERVER confirms the game has actually started.
+    // Navigating off the local countdown alone (dropped below) let a player reach
+    // /game before the server had created the Case Summary timer — the game then
+    // found no active timer at all and silently skipped straight to Investigation
+    // with the clock reading 00:00.
+    if (lobby.lobby_phase === "ready") {
       const target = resolveGameRoute(slug);
       navigate({ to: target.to, search: target.search });
     }
-  }, [lobby, countdown, navigate, slug]);
+  }, [lobby, navigate, slug]);
 
   useEffect(() => {
     if (!session?.groupId || !session.participantId) return;

@@ -288,8 +288,18 @@ export async function buildGameSummaryPayload(
     }
 
     // Fallback game-clock start for participants who land on the game screen
-    // without a final lobby poll (e.g. direct refresh after the redirect).
-    if (row.group_status === 'active') {
+    // without a final lobby poll (e.g. direct refresh after the redirect, or the
+    // lobby's local countdown hitting zero and navigating before the server's own
+    // "ready" round-trip has flipped the group to `active` — see the matching
+    // comment in gameEngineController.ts's getGameState). Treat `waiting` the same
+    // as `active`: by the time this endpoint is hit the participant has already
+    // been routed to the game screen, so the game is starting for them regardless
+    // of which status value is stored yet. Never resurrect a timer for a
+    // `finished`/`completed`/`incomplete` group.
+    if (row.group_status === 'active' || row.group_status === 'waiting') {
+        if (row.group_status === 'waiting') {
+            await query("UPDATE game_groups SET status = 'active' WHERE id = ? AND status = 'waiting'", [row.id]);
+        }
         await ensureCaseSummaryTimer(Number(row.id), Number(row.case_summary_view_secs) || 300);
     }
 
