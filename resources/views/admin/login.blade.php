@@ -64,7 +64,7 @@
                                     <span class="text-danger text-white">{{ $errors->first('email') }}</span>
                                 </div>
                                 <div class="form-group">
-                                    <label for="inputPassword3" class="col-form-label">Password <span
+                                    <label for="inputPassword3" class="col-form-label">Password .... <span
                                             class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="password" id="inputPassword3" name="password" class="form-control"
