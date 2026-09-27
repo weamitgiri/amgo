@@ -195,6 +195,10 @@ export type LieDetectorRound = {
   tally?: LieDetectorTally;
   created_at?: string;
   updated_at?: string;
+  /** Server-computed time left on the round's timer when it was sent. */
+  seconds_remaining?: number;
+  /** Total round length in seconds (admin-configurable, 420 = 7 min). */
+  duration_secs?: number;
 };
 
 export type SubmitAccusationResponse = { accepted: true; all_submitted: boolean };

@@ -40,19 +40,15 @@ function useCountdown(initialSeconds: number, onTimeout: (() => void) | undefine
     onTimeoutRef.current = onTimeout;
   }, [onTimeout]);
 
-  console.log("[useCountdown] Initializing", { initialSeconds, onTimeout });
 
   useEffect(() => {
-    console.log("[useCountdown] Effect running (only initialSeconds changes!)", { initialSeconds });
     // Reset timer if initialSeconds changes
     setSeconds(initialSeconds);
     let timeoutCalled = false;
 
-    console.log("[useCountdown] Setting interval");
     const intervalId = setInterval(() => {
       setSeconds((s) => {
         const next = Math.max(0, s - 1);
-        console.log("[useCountdown] Tick", { previous: s, next });
         if (next === 0 && !timeoutCalled && onTimeoutRef.current) {
           timeoutCalled = true;
           onTimeoutRef.current();
@@ -62,12 +58,10 @@ function useCountdown(initialSeconds: number, onTimeout: (() => void) | undefine
     }, 1000);
 
     return () => {
-      console.log("[useCountdown] Clearing interval");
       clearInterval(intervalId);
     };
   }, [initialSeconds]); // Only depend on initialSeconds!
 
-  console.log("[useCountdown] Returning", { seconds });
   return seconds;
 }
 
@@ -214,6 +208,15 @@ function GamePage() {
   // of the max-3 lie questions the Investigator has spent so far.
   const [lieEndsAt, setLieEndsAt] = useState<number | null>(null);
   const [lieQuestionsUsed, setLieQuestionsUsed] = useState(0);
+  // The Lie Detector is once per game: true as soon as a round has been started (by
+  // us or seen in the room/state) and it stays true after the round closes, so the
+  // header button stays disabled for good and clicking it does nothing.
+  const [lieDetectorUsed, setLieDetectorUsed] = useState(false);
+  const [isStartingLie, setIsStartingLie] = useState(false);
+  // Refs read by the shared "register" helpers below so an event that arrives twice
+  // (the HTTP response AND the socket broadcast for the same action) is applied once.
+  const lieRoundIdRef = useRef<number | null>(null);
+  const knownQuestionIdsRef = useRef<Set<number>>(new Set());
   const [myAccusationSubmitted, setMyAccusationSubmitted] = useState(false);
   // When the main game clock runs out the server opens a fixed final-accusation
   // window (2 minutes). Until then the Final Accusation button stays locked; once
@@ -242,12 +245,16 @@ function GamePage() {
   // false, which let the culprit see and use the Final Accusation UI.
   const isCulprit = (yourPerson?.role_type ?? "").toLowerCase().includes("culprit");
 
-  // Strategy Guide is for EVERY role except the Investigator: all non-investigator
-  // players get the full set of strategy slides (guidance covering all roles), and
-  // the Investigator gets none. Game Rules stay available to everyone.
+  // Strategy Guide is for EVERY role except the Investigator, and each player sees
+  // ONLY their OWN role's strategy cards (role_strategy_slides) — e.g. their situation,
+  // weak points and how to handle questioning. It must NOT show strategy_slides: those
+  // are the Investigator's timed all-suspect profile cards ("Suspect 1: …"), and
+  // surfacing them to a suspect/witness/participant both leaks other roles' briefings
+  // and is simply not their guide. The Investigator gets none here. Game Rules stay
+  // available to everyone.
   const guideSlides = useMemo(
     () => ({
-      strategy: !isInvestigator ? gameData?.strategy_slides ?? [] : [],
+      strategy: !isInvestigator ? gameData?.role_strategy_slides ?? [] : [],
       rules: gameData?.rules ?? [],
     }),
     [gameData, isInvestigator]
@@ -300,7 +307,6 @@ function GamePage() {
   }, [gameData]);
 
   const applyGameState = useCallback((state: GameStateResponse) => {
-    console.log("[GamePage] applyGameState called", { myPlayerSessionId: myPlayer?.session_id });
     setGameState(state);
     setMyAccusationSubmitted(Boolean(state.group.my_accusation_submitted));
 
@@ -339,7 +345,11 @@ function GamePage() {
     setScoresBySessionId(scores);
 
     const activeRound = state.group.lie_detector_rounds.find((r) => r.status === "active");
-    setLieDetectorRoundId(activeRound ? activeRound.id : null);
+    setLieDetectorRoundId(activeRound ? Number(activeRound.id) : null);
+    lieRoundIdRef.current = activeRound ? Number(activeRound.id) : null;
+    // Any round in the state (running OR already finished) means the once-per-game
+    // Lie Detector has been used.
+    if (state.group.lie_detector_rounds.length > 0) setLieDetectorUsed(true);
 
     // Lie Detector round deadline comes from the server's timer row so every
     // player (and a reloaded page) sees the same countdown.
@@ -406,19 +416,73 @@ function GamePage() {
     });
     setQuestionsUsed(activityItems.filter((item) => !item.isLie).length);
     setLieQuestionsUsed(activityItems.filter((item) => item.isLie).length);
-    console.log("[GamePage] Built activity items", { activityItems, myPlayerSessionId: myPlayer?.session_id });
+    knownQuestionIdsRef.current = new Set(activityItems.map((item) => item.questionId));
     setActivity(activityItems);
 
     // Check if there's an unanswered question for the current player and set pendingAnswerForMe
     const unansweredQuestionForMe = activityItems.find((item) => !item.a && Number(item.toSessionId) === Number(myPlayer?.session_id));
-    console.log("[GamePage] Found unanswered question for me?", { unansweredQuestionForMe });
     if (unansweredQuestionForMe) {
-      console.log("[GamePage] Setting pendingAnswerForMe from applyGameState");
       setPendingAnswerForMe(unansweredQuestionForMe);
     } else {
       setPendingAnswerForMe(null);
     }
   }, [myPlayer?.session_id, navigate, session?.groupId, session?.participantId]);
+
+  // ---- Idempotent appliers -------------------------------------------------------
+  // The UI must not depend on the socket echo of the player's OWN action: if the
+  // broadcast is late, dropped, or lands on a different server worker, the player
+  // would only see their question / Lie Detector round after a refresh. So every
+  // action applies its HTTP response through these, and the socket handlers call the
+  // same functions — whichever arrives first wins, the second is a no-op.
+
+  const registerQuestion = useCallback(
+    (q: { id: number | string; asked_to: number | string; question_text: string; asked_by?: number | string | null; created_at?: string }) => {
+      const id = Number(q.id);
+      if (knownQuestionIdsRef.current.has(id)) return;
+      knownQuestionIdsRef.current.add(id);
+      const isLie = lieRoundIdRef.current !== null;
+      const item: ActivityItem = {
+        questionId: id,
+        toSessionId: Number(q.asked_to),
+        q: q.question_text,
+        fromSessionId: q.asked_by != null ? Number(q.asked_by) : undefined,
+        askedAt: q.created_at ?? new Date().toISOString(),
+        isLie,
+      };
+      if (isLie) setLieQuestionsUsed((n) => n + 1);
+      else setQuestionsUsed((n) => n + 1);
+      setActivity((prev) => [item, ...prev]);
+      if (myPlayer?.session_id != null && Number(myPlayer.session_id) === Number(q.asked_to)) {
+        setPendingAnswerForMe(item);
+      }
+    },
+    [myPlayer?.session_id]
+  );
+
+  const registerAnswer = useCallback(
+    (a: { question_id: number | string; answer_text: string; auto_skipped?: boolean }) => {
+      const qid = Number(a.question_id);
+      setActivity((prev) =>
+        prev.map((item) => (item.questionId === qid ? { ...item, a: a.answer_text, autoSkipped: a.auto_skipped } : item))
+      );
+      setPendingAnswerForMe((prev) => (prev && prev.questionId === qid ? null : prev));
+    },
+    []
+  );
+
+  const activateLieMode = useCallback((round: { id: number | string; seconds_remaining?: number }) => {
+    const id = Number(round.id);
+    setLieDetectorUsed(true);
+    // Only the first call for a round starts the local clock and resets the counters;
+    // the duplicate (response + broadcast) must not restart a 7-minute countdown.
+    if (lieRoundIdRef.current === id) return;
+    lieRoundIdRef.current = id;
+    const secs = typeof round.seconds_remaining === "number" ? round.seconds_remaining : lieTimerSecsRef.current;
+    setLieDetectorRoundId(id);
+    setLieEndsAt(Date.now() + secs * 1000);
+    setLieQuestionsUsed(0);
+    setLieTally(null);
+  }, []);
 
   useEffect(() => {
     if (!session?.groupId) {
@@ -523,25 +587,11 @@ function GamePage() {
     };
     socket.on("connect", rejoinAndResync);
 
-    const onNewQuestion = (q: { id: number; asked_to: number; question_text: string; asked_by?: number; created_at?: string }) => {
-      console.log("[GamePage] onNewQuestion received", { q, myPlayerSessionId: myPlayer?.session_id });
-      const item: ActivityItem = { questionId: Number(q.id), toSessionId: q.asked_to, q: q.question_text, fromSessionId: q.asked_by, askedAt: q.created_at ?? new Date().toISOString(), isLie: lieDetectorRoundId !== null };
-      if (lieDetectorRoundId !== null) setLieQuestionsUsed((n) => n + 1);
-      console.log("[GamePage] Created activity item", item);
-      setActivity((prev) => [item, ...prev]);
-      if (lieDetectorRoundId === null) setQuestionsUsed((n) => n + 1);
-      const isForMe = myPlayer?.session_id != null && Number(myPlayer.session_id) === Number(q.asked_to);
-      console.log("[GamePage] isForMe?", isForMe);
-      if (isForMe) {
-        console.log("[GamePage] Setting pendingAnswerForMe!");
-        setPendingAnswerForMe(item);
-      }
+    const onNewQuestion = (q: { id: number | string; asked_to: number | string; question_text: string; asked_by?: number | string; created_at?: string }) => {
+      registerQuestion(q);
     };
     const onNewAnswer = (a: { question_id: number; participant_session_id: number; answer_text: string; auto_skipped?: boolean }) => {
-      setActivity((prev) =>
-        prev.map((item) => (item.questionId === Number(a.question_id) ? { ...item, a: a.answer_text, autoSkipped: a.auto_skipped } : item))
-      );
-      setPendingAnswerForMe((prev) => (prev && prev.questionId === Number(a.question_id) ? null : prev));
+      registerAnswer(a);
       // During a Lie Detector round, everyone except the answerer votes on the answer.
       // Compare as numbers — session_id can arrive as a string, and a strict !==
       // against a numeric participant_session_id would (wrongly) let the questioned
@@ -564,18 +614,17 @@ function GamePage() {
         });
       }
     };
-    const onLieDetectorStarted = (round: { id: number }) => {
-      setLieDetectorRoundId(round.id);
-      setLieEndsAt(Date.now() + lieTimerSecsRef.current * 1000);
-      setLieQuestionsUsed(0);
-      setLieTally(null);
+    const onLieDetectorStarted = (round: { id: number | string; seconds_remaining?: number }) => {
+      activateLieMode(round);
     };
     const onLieDetectorEnded = () => {
+      lieRoundIdRef.current = null;
       setLieDetectorRoundId(null);
       setLieEndsAt(null);
     };
     const onPhaseChanged = (payload: { new_phase: string; ends_at?: string }) => {
       if (payload.new_phase === "questioning") {
+        lieRoundIdRef.current = null;
         setLieDetectorRoundId(null);
         setLieEndsAt(null);
         // Case Summary just closed server-side — move everyone to the investigation
@@ -588,6 +637,7 @@ function GamePage() {
       // window. Force everyone into the accusation screen; a stray lie-detector
       // round is torn down so the forced modal isn't fighting a vote prompt.
       if (payload.new_phase === "final_verdict") {
+        lieRoundIdRef.current = null;
         setLieDetectorRoundId(null);
         setLieEndsAt(null);
         setVoteContext(null);
@@ -678,7 +728,43 @@ function GamePage() {
       socket.off("game_ended", onGameEnded);
       socket.off("game_incomplete", onGameIncomplete);
     };
-  }, [session?.groupId, session?.participantId, navigate, myPlayer?.session_id, lieDetectorRoundId, applyGameState]);
+  }, [session?.groupId, session?.participantId, navigate, myPlayer?.session_id, lieDetectorRoundId, applyGameState, registerQuestion, registerAnswer, activateLieMode]);
+
+  // Keep the ref that the idempotent appliers read in step with the state.
+  useEffect(() => {
+    lieRoundIdRef.current = lieDetectorRoundId;
+  }, [lieDetectorRoundId]);
+
+  // Safety-net resync. Realtime events are the fast path, but a broadcast can be
+  // missed (a reconnect gap, a proxy that drops WebSocket upgrades, a server that
+  // isn't a single instance). Re-reading the authoritative state every few seconds —
+  // and immediately when the tab becomes visible or the network returns — means the
+  // screen catches up on its own instead of needing a manual refresh.
+  useEffect(() => {
+    if (loading || !session?.groupId || !session.participantId) return;
+    let inFlight = false;
+    const resync = () => {
+      if (inFlight || document.visibilityState === "hidden") return;
+      inFlight = true;
+      participantService
+        .getGameState(session.groupId, session.participantId)
+        .then(applyGameState)
+        .catch(() => {
+          /* transient — the next tick or a socket event recovers */
+        })
+        .finally(() => {
+          inFlight = false;
+        });
+    };
+    const timer = setInterval(resync, 8000);
+    document.addEventListener("visibilitychange", resync);
+    window.addEventListener("online", resync);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", resync);
+      window.removeEventListener("online", resync);
+    };
+  }, [loading, session?.groupId, session?.participantId, applyGameState]);
 
   useEffect(() => {
     if (loading) return;
@@ -700,9 +786,10 @@ function GamePage() {
   // Strategy Guide is for every role EXCEPT the Investigator, and can be opened
   // from its button at any time with no limit. On top of that, force it open once,
   // two minutes into the Case Summary, so non-investigators are nudged to read it.
+  // Uses the player's OWN role cards (role_strategy_slides), matching the button.
   useEffect(() => {
     if (isInvestigator || phase !== "summary" || !gameData) return;
-    if ((gameData.strategy_slides?.length ?? 0) === 0) return;
+    if ((gameData.role_strategy_slides?.length ?? 0) === 0) return;
     if (!session?.groupId || !session.participantId) return;
     const total = gameData.settings.case_summary_view_secs || 300;
     // secsCase counts DOWN from `total`; two minutes have passed once it reaches
@@ -763,12 +850,14 @@ function GamePage() {
     if (!question.trim() || noQuestionsLeft || !target || target.is_you || !session?.participantId || isSubmittingQuestion) return;
     setIsSubmittingQuestion(true);
     try {
-      await participantService.askQuestion({
+      const asked = await participantService.askQuestion({
         group_id: session.groupId,
         participant_id: session.participantId,
         asked_to_session_id: target.session_id,
         question_text: question.trim(),
       });
+      // Show it now — don't wait for the socket broadcast (deduped if it also arrives).
+      registerQuestion(asked);
       setQuestion("");
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Could not send question.");
@@ -781,11 +870,12 @@ function GamePage() {
     if (!pendingAnswerForMe || !session?.participantId || !text.trim() || isSubmittingAnswer) return;
     setIsSubmittingAnswer(true);
     try {
-      await participantService.answerQuestion({
+      const answered = await participantService.answerQuestion({
         question_id: pendingAnswerForMe.questionId,
         participant_id: session.participantId,
         answer_text: text.trim(),
       });
+      registerAnswer(answered);
       setPendingAnswerForMe(null);
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Could not submit answer.");
@@ -811,29 +901,32 @@ function GamePage() {
     }
   };
 
+  // Start the once-per-game Lie Detector. It runs for its full duration (7 min) and
+  // closes itself when the server's timer expires — there is no "end early", and once
+  // it is running or has been used the header button is disabled, so clicking it does
+  // nothing (the guards below are a second line of defence for a fast double-click).
   const toggleLieDetector = async () => {
     if (!session?.participantId || !isInvestigator) return;
+    if (lieMode || lieDetectorUsed || isStartingLie) return;
+    const target = players[selectedAskee];
+    if (!target || target.is_you) {
+      toastError("Select a player to target with the lie detector first.");
+      return;
+    }
+    setIsStartingLie(true);
     try {
-      if (lieMode && lieDetectorRoundId) {
-        await participantService.endLieDetector({
-          group_id: session.groupId,
-          participant_id: session.participantId,
-          round_id: lieDetectorRoundId,
-        });
-      } else {
-        const target = players[selectedAskee];
-        if (!target || target.is_you) {
-          toastError("Select a player to target with the lie detector first.");
-          return;
-        }
-        await participantService.startLieDetector({
-          group_id: session.groupId,
-          participant_id: session.participantId,
-          suspect_session_id: target.session_id,
-        });
-      }
+      const round = await participantService.startLieDetector({
+        group_id: session.groupId,
+        participant_id: session.participantId,
+        suspect_session_id: target.session_id,
+      });
+      // Switch into Lie Detector mode right away from the response; the room
+      // broadcast for the same round is a no-op (activateLieMode is idempotent).
+      activateLieMode(round);
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Lie detector action failed.");
+    } finally {
+      setIsStartingLie(false);
     }
   };
 
@@ -948,6 +1041,7 @@ function GamePage() {
           locked={activity.some((a) => !a.a)}
           lieMode={lieMode}
           onToggleLieDetector={toggleLieDetector}
+          lieDetectorUsed={lieDetectorUsed}
           cluesUnlocked={cluesUnlocked}
           myAccusationSubmitted={myAccusationSubmitted}
           frozenSessionIds={frozenSessionIds}
@@ -1111,7 +1205,13 @@ function SummaryView(props: {
   );
 
   const revealSecretBox = useCallback(() => {
-    if (secretOpened || boxOpening) return;
+    if (boxOpening) return;
+    // The box stays usable for the whole Case Summary: after the first open, clicking
+    // it simply shows the player's role again (no animation, no state reset).
+    if (secretOpened) {
+      onRevealRole();
+      return;
+    }
     setBoxOpening(true);
     setTimeout(() => {
       setBoxOpening(false);
@@ -1139,8 +1239,10 @@ function SummaryView(props: {
         </div>
         <div className="flex items-center gap-4">
           {/* Strategy Guide is for every role EXCEPT the Investigator; it can be
-              opened at any time, with no limit. The Investigator sees Game Rules only. */}
-          {!isInvestigator && (
+              opened at any time, with no limit. The Investigator sees Game Rules only.
+              Also require the player to actually have their own role strategy cards, so
+              a role with none doesn't get a button that opens an empty modal. */}
+          {!isInvestigator && (gameData.role_strategy_slides?.length ?? 0) > 0 && (
             <button onClick={() => onOpenInfoModal("strategy")} className="inline-flex items-center gap-2 rounded-full bg-[#3ca9f9] px-6 py-2.5 text-[15px] font-bold text-white hover:opacity-90 transition-opacity">
               <Lightbulb className="h-5 w-5" /> Strategy Guide
             </button>
@@ -1195,7 +1297,7 @@ function SummaryView(props: {
             </div>
           </div>
 
-          <div className="mt-10 flex justify-center w-full">
+          <div className="mt-10 flex justify-end w-full">
             <button onClick={() => setOpenPhotos(true)} className="inline-flex items-center gap-2 rounded-[20px] bg-[#b15cf7] px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_0_15px_rgba(177,92,247,0.3)] hover:bg-[#a643f8] transition-colors">
               <Camera className="h-5 w-5" /> View Investigation Photos
             </button>
@@ -1263,30 +1365,28 @@ function SummaryView(props: {
                 Open the Secret Box to<br />reveal your role.
               </h3>
               
-              <div 
-                className={`my-3 relative w-40 h-40 transition-transform flex items-center justify-center ${secretOpened ? 'opacity-50 grayscale pointer-events-none' : 'hover:scale-105'}`}
+              <div
+                className="my-3 relative w-40 h-40 transition-transform flex items-center justify-center hover:scale-105"
               >
-                {!secretOpened && <div className="absolute inset-0 bg-[#b15cf7]/20 blur-[30px] rounded-full scale-75" />}
+                <div className="absolute inset-0 bg-[#b15cf7]/20 blur-[30px] rounded-full scale-75" />
                 <button
                   type="button"
-                  disabled={secretOpened || boxOpening}
+                  disabled={boxOpening}
                   onClick={revealSecretBox}
-                  className="relative z-10 w-full h-full flex items-center justify-center"
+                  aria-label={secretOpened ? "View your role again" : "Open the secret box"}
+                  className="relative z-10 w-full h-full flex items-center justify-center cursor-pointer"
                 >
-                  <img src={secretBoxImg} alt="Secret Box" className={`h-[120%] w-[120%] object-contain max-w-none ${secretOpened ? "opacity-50" : boxOpening ? "animate-boxOpen" : "animate-float"}`} />
+                  <img src={secretBoxImg} alt="Secret Box" className={`h-[120%] w-[120%] object-contain max-w-none ${boxOpening ? "animate-boxOpen" : "animate-float"}`} />
                 </button>
               </div>
 
               <button
-                disabled={secretOpened || boxOpening}
+                type="button"
+                disabled={boxOpening}
                 onClick={revealSecretBox}
-                className={`w-full rounded-[20px] py-3 text-[14.5px] font-bold transition-all ${
-                  secretOpened 
-                    ? "bg-[#2a1b3d] text-white/40 cursor-not-allowed border border-[#3b235d]" 
-                    : "bg-gradient-to-r from-[#b15cf7] to-[#da61f6] hover:opacity-90 shadow-[0_0_15px_rgba(177,92,247,0.3)] text-white"
-                }`}
+                className="w-full rounded-[20px] py-3 text-[14.5px] font-bold transition-all cursor-pointer bg-gradient-to-r from-[#b15cf7] to-[#da61f6] hover:opacity-90 shadow-[0_0_15px_rgba(177,92,247,0.3)] text-white disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {secretOpened ? "Role Revealed" : "Open Secret Box"}
+                {secretOpened ? "View My Role" : "Open Secret Box"}
               </button>
             </div>
             
@@ -1341,6 +1441,7 @@ function InvestigationView(props: {
   locked?: boolean;
   lieMode: boolean;
   onToggleLieDetector: () => void;
+  lieDetectorUsed?: boolean;
   cluesUnlocked: boolean;
   myAccusationSubmitted: boolean;
   frozenSessionIds: Set<number>;
@@ -1376,6 +1477,7 @@ function InvestigationView(props: {
     locked = false,
     lieMode,
     onToggleLieDetector,
+    lieDetectorUsed = false,
     cluesUnlocked,
     myAccusationSubmitted,
     frozenSessionIds,
@@ -1466,12 +1568,25 @@ function InvestigationView(props: {
 
           {isInvestigator && (
             <div className="relative flex flex-col items-center justify-center">
-              <button onClick={onToggleLieDetector} className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[13px] font-bold transition-opacity ${lieMode ? "bg-[#3b82f6] text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "bg-[#3b82f6] text-white hover:opacity-90"}`}>
+              {/* One-shot control: enabled only before the Lie Detector has been used.
+                  While its 7 minutes run — and forever after — it is disabled, so
+                  clicking it does nothing. */}
+              <button
+                type="button"
+                onClick={onToggleLieDetector}
+                disabled={lieMode || lieDetectorUsed}
+                title={lieMode ? "Lie Detector is running" : lieDetectorUsed ? "Lie Detector already used" : undefined}
+                className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[13px] font-bold transition-opacity ${
+                  lieMode || lieDetectorUsed
+                    ? "bg-[#3b82f6]/35 text-white/55 cursor-not-allowed"
+                    : "bg-[#3b82f6] text-white hover:opacity-90"
+                }`}
+              >
                 <ScanSearch className="h-4 w-4" /> Lie Detector
               </button>
-              <div className="absolute -bottom-5 flex items-center gap-1.5 text-[10px] text-[#00d084] whitespace-nowrap">
-                <div className="h-1.5 w-1.5 rounded-full bg-[#00d084]" />
-                {lieMode ? "Active" : "Available"}
+              <div className={`absolute -bottom-5 flex items-center gap-1.5 text-[10px] whitespace-nowrap ${lieMode ? "text-[#00d084]" : lieDetectorUsed ? "text-white/45" : "text-[#00d084]"}`}>
+                <div className={`h-1.5 w-1.5 rounded-full ${lieMode ? "bg-[#00d084]" : lieDetectorUsed ? "bg-white/40" : "bg-[#00d084]"}`} />
+                {lieMode ? "Active" : lieDetectorUsed ? "Used" : "Available"}
               </div>
             </div>
           )}
@@ -2027,14 +2142,12 @@ function AnswerModal({
   players: GamePlayer[];
   isInvestigator: boolean;
 }) {
-  console.log("[AnswerModal] Rendered!", { question, answerSecs, onTimeout, activity, players, isInvestigator });
   const [ans, setAns] = useState("");
   const secs = useCountdown(answerSecs, onTimeout);
   const isTimeUp = secs === 0;
 
   // Reset answer when question changes
   useEffect(() => {
-    console.log("[AnswerModal] question changed, resetting answer", { question });
     setAns("");
   }, [question]);
 

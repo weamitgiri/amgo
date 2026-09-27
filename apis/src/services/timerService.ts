@@ -1,4 +1,4 @@
-import { query, withTransaction } from '../config/db';
+import { pool, query, withTransaction } from '../config/db';
 import moment from 'moment';
 import { io } from '../server';
 import { finalizeVerdict } from './verdictScoringService';
@@ -26,7 +26,12 @@ export const startTimerService = () => {
     console.log('[TimerService] Started...');
 
     // Run every 5 seconds — game-phase timers need second-level responsiveness.
+    // `ticking` stops a slow tick (DB stall, a long transition) from overlapping the
+    // next one and picking up the same expired timer twice.
+    let ticking = false;
     setInterval(async () => {
+        if (ticking) return;
+        ticking = true;
         try {
             const now = new Date();
             const [expiredTimers] = await query<any>('SELECT * FROM timers WHERE is_active = 1 AND expires_at <= ?', [now]);
@@ -35,6 +40,8 @@ export const startTimerService = () => {
             }
         } catch (error) {
             console.error('[TimerService] Error:', error);
+        } finally {
+            ticking = false;
         }
     }, 5000);
 
@@ -51,17 +58,36 @@ export const startTimerService = () => {
  * first call after game start actually inserts the timer.
  */
 export async function ensureCaseSummaryTimer(groupId: number | string, caseSummarySecs: number): Promise<void> {
-    const [existing] = await query<any>(
-        "SELECT id FROM timers WHERE group_id = ? AND timer_type = 'case_summary' LIMIT 1",
-        [groupId]
-    );
-    if ((existing as any[]).length > 0) return;
-    await query('INSERT INTO timers (group_id, timer_type, expires_at, is_active) VALUES (?, ?, ?, 1)', [
-        groupId,
-        'case_summary',
-        moment().add(Number(caseSummarySecs) || 300, 'seconds').toDate(),
-    ]);
-    console.log(`[TimerService] case_summary timer started for group ${groupId}`);
+    // check-then-insert is NOT atomic: the lobby poll, the game-summary load and the
+    // game-state load all call this at the moment the game starts, so two of them can
+    // both see "no timer yet" and both insert — leaving two case_summary timers that
+    // each spawn their own questioning / clue-room timers (double phase_changed,
+    // double final_verdict). A MySQL advisory lock (held on one dedicated connection)
+    // serialises the check+insert across concurrent requests AND across processes.
+    const lockName = `zoventro_case_summary_${groupId}`;
+    const conn = await pool.getConnection();
+    try {
+        const [lockRows] = await conn.query<any[]>('SELECT GET_LOCK(?, 5) AS got', [lockName]);
+        // Couldn't get the lock in 5s → someone else is creating it right now.
+        if (!Number((lockRows as any[])[0]?.got)) return;
+        try {
+            const [existing] = await conn.query<any[]>(
+                "SELECT id FROM timers WHERE group_id = ? AND timer_type = 'case_summary' LIMIT 1",
+                [groupId]
+            );
+            if ((existing as any[]).length > 0) return;
+            await conn.query('INSERT INTO timers (group_id, timer_type, expires_at, is_active) VALUES (?, ?, ?, 1)', [
+                groupId,
+                'case_summary',
+                moment().add(Number(caseSummarySecs) || 300, 'seconds').toDate(),
+            ]);
+            console.log(`[TimerService] case_summary timer started for group ${groupId}`);
+        } finally {
+            await conn.query('SELECT RELEASE_LOCK(?)', [lockName]);
+        }
+    } finally {
+        conn.release();
+    }
 }
 
 /**
@@ -118,10 +144,19 @@ async function handleTimerExpiration(timer: any) {
     // Cook & Create round advancement is queued in the switch below and invoked
     // only once the transaction has committed — see the note on the cc_* cases.
     let ccHandler: (() => Promise<void>) | null = null;
+    let claimed = true;
 
     await withTransaction(async (conn) => {
-        // Mark timer as inactive
-        await conn.query('UPDATE timers SET is_active = 0 WHERE id = ?', [timer.id]);
+        // Claim the timer atomically. Only the caller whose UPDATE actually flips
+        // is_active 1 → 0 may run the transition; a concurrent tick / second process /
+        // the dev "Next" button that raced us gets affectedRows = 0 and backs off.
+        // Without this, both would run the transition and create duplicate follow-up
+        // timers and broadcasts.
+        const [claim] = await conn.query<any>('UPDATE timers SET is_active = 0 WHERE id = ? AND is_active = 1', [timer.id]);
+        if (!claim?.affectedRows) {
+            claimed = false;
+            return;
+        }
 
         switch (timer.timer_type) {
             case 'case_summary': {
@@ -296,6 +331,8 @@ async function handleTimerExpiration(timer: any) {
                 break;
         }
     });
+
+    if (!claimed) return;
 
     // Committed now, so the `timers` row lock is released and the CC handler's
     // ensureCCTimer call can start the next phase's timer. (Read through a local

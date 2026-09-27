@@ -549,10 +549,40 @@ function PendingStep({
 
       <div className="mt-8 rounded-3xl bg-white/10 p-6 text-left text-white/85">
         <div className="text-sm font-semibold text-white">Event Schedule</div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Meta icon={Calendar} label="Date" v1={scheduledDate || "TBA"} v2={scheduledDateDay} />
-          <Meta icon={Clock} label="Start Time" v1={scheduledTime || "TBA"} v2={scheduledTimezone} />
-        </div>
+          
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            
+            <Meta
+            icon={Calendar}
+            label="Date"
+            v1={
+            <span className="text-white">
+            {scheduledDate || "TBA"}
+            </span>
+            }
+            v2={
+            <span className="text-white">
+            {scheduledDateDay}
+            </span>
+            }
+            />
+
+            <Meta
+              icon={Clock}
+              label="Start Time"
+              v1={
+                <span className="text-white">
+                  {scheduledTime || "TBA"}
+                </span>
+              }
+              v2={
+                <span className="text-white">
+                  {scheduledTimezone}
+                </span>
+              }
+            />
+          </div>
+
         <div className="mt-5 rounded-2xl bg-white/5 p-4 text-sm text-white/80">
           The game is not scheduled today. Please join at the right date and time. Please contact the organiser.
         </div>

@@ -513,17 +513,30 @@ export const startLieDetector = asyncHandler(async (req: Request, res: Response)
         throw new AppError('Only the Investigator can start the lie detector', 403);
     }
 
-    const [usedRows] = await query<any>(
-        `SELECT id FROM score_logs WHERE participant_session_id = ? AND reason = 'lie_detector_used' LIMIT 1`,
-        [investigatorSession.id]
-    );
-    if (usedRows?.[0]) throw new AppError('The Lie Detector can only be used once per game', 400);
-
     const config = await getActivityConfigForGroup(group_id);
     const timerSecs = Number(config?.lie_detector_timer_secs ?? 420);
     const initBonus = Number(config?.lie_detector_init_bonus ?? 5);
 
-    const round = await withTransaction(async (conn) => {
+    // The Lie Detector is once per game, so "is there already a round for this
+    // group?" is the source of truth. The check and the insert MUST be serialised:
+    // a fast double-click (or a retry) used to send two requests that both passed a
+    // plain SELECT before either had inserted. Locking the group row makes the second
+    // request wait, then see the first one's round.
+    const { round, created } = await withTransaction(async (conn) => {
+        await conn.query('SELECT id FROM game_groups WHERE id = ? FOR UPDATE', [group_id]);
+
+        const [existingRows] = await conn.query<any[]>(
+            `SELECT * FROM lie_detector_rounds WHERE group_id = ? ORDER BY id DESC LIMIT 1`,
+            [group_id]
+        );
+        const existing = (existingRows as any[])?.[0];
+        if (existing) {
+            // Still running → this is a duplicate click / retry: hand back the live
+            // round instead of erroring, so the UI just shows lie-detector mode.
+            if (existing.status === 'active') return { round: existing, created: false };
+            throw new AppError('The Lie Detector can only be used once per game', 400);
+        }
+
         const [insertResult] = await conn.query<any>(
             `INSERT INTO lie_detector_rounds (group_id, suspect_id, status, created_at, updated_at)
                 VALUES (?, ?, 'active', NOW(), NOW())`,
@@ -551,13 +564,27 @@ export const startLieDetector = asyncHandler(async (req: Request, res: Response)
         );
 
         const [rows] = await conn.query<any[]>(`SELECT * FROM lie_detector_rounds WHERE id = ? LIMIT 1`, [roundId]);
-        return rows?.[0];
+        return { round: (rows as any[])?.[0], created: true };
     });
 
-    io.to(`group_${group_id}`).emit('lie_detector_started', serializeData(round));
-    await emitScoresUpdate(group_id);
+    // How long the round has left, from the SERVER's timer row — so every client
+    // (the investigator's own response, the room broadcast, and a duplicate click)
+    // counts down the same clock instead of each starting a fresh 7 minutes.
+    const [timerRows] = await query<any>(
+        `SELECT TIMESTAMPDIFF(SECOND, NOW(), expires_at) AS secs FROM timers
+            WHERE group_id = ? AND timer_type = 'lie_detector' AND reference_id = ? AND is_active = 1
+            ORDER BY id DESC LIMIT 1`,
+        [group_id, round.id]
+    );
+    const secondsRemaining = Math.min(timerSecs, Math.max(0, Number(timerRows?.[0]?.secs ?? timerSecs)));
+    const payload = serializeData({ ...round, seconds_remaining: secondsRemaining, duration_secs: timerSecs });
 
-    return successResponse(res, 'Lie detector round started', serializeData(round));
+    if (created) {
+        io.to(`group_${group_id}`).emit('lie_detector_started', payload);
+        await emitScoresUpdate(group_id);
+    }
+
+    return successResponse(res, created ? 'Lie detector round started' : 'Lie detector already running', payload);
 });
 
 /**
@@ -642,15 +669,12 @@ export const endLieDetectorRound = asyncHandler(async (req: Request, res: Respon
         throw new AppError('Only the Investigator can end the lie detector round', 403);
     }
 
-    await query(`UPDATE lie_detector_rounds SET status = 'completed', updated_at = NOW() WHERE id = ?`, [round_id]);
-    await query(`UPDATE timers SET is_active = 0 WHERE group_id = ? AND timer_type = 'lie_detector'`, [group_id]);
-
-    io.to(`group_${group_id}`).emit('phase_changed', {
-        new_phase: 'questioning',
-        message: 'Lie Detector round has ended.',
-    });
-
-    return successResponse(res, 'Lie detector round ended');
+    // The Lie Detector always runs its full duration (7 min by default) and closes
+    // itself when its timer expires (timerService 'lie_detector' case). It cannot be
+    // cut short — refuse rather than end it, so a stray click/request can't end the
+    // round early. `round_id` is only echoed back for the client's benefit.
+    void round_id;
+    throw new AppError('The Lie Detector runs for its full duration and ends automatically.', 400);
 });
 
 /**
