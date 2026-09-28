@@ -125,9 +125,43 @@ function DeadlineCountdown({ endsAtMs, className }: { endsAtMs: number | null; c
 /** Small circular avatar for the Recent Activity feed: the player's role
  * portrait when available, otherwise their initials. */
 function ActivityAvatar({ image, fallback }: { image?: string | null; fallback: string }) {
+  const [failed, setFailed] = useState(false);
   return (
     <div className="h-8 w-8 rounded-full bg-black/40 overflow-hidden shrink-0 border border-white/10 grid place-items-center text-[10px] text-white font-bold">
-      {image ? <img src={image} alt="" className="h-full w-full object-cover" /> : fallback}
+      {image && !failed ? (
+        <img src={image} alt="" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+      ) : (
+        fallback
+      )}
+    </div>
+  );
+}
+
+/**
+ * Player/role portrait that shows an initials chip when there's no image OR the
+ * image fails to load — a missing file, a stale deploy, or a wrong storage base
+ * URL then degrades to a clean initials circle instead of a broken-image icon.
+ * Also uses `h-full w-full object-cover` so portraits fill the circle without the
+ * bottom-cropping that a width-only <img> produced.
+ */
+function RoleAvatar({
+  src,
+  fallback,
+  gradient,
+  fallbackTextClass = "",
+}: {
+  src?: string | null;
+  fallback: string;
+  gradient: string;
+  fallbackTextClass?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return <img src={src} alt="" onError={() => setFailed(true)} className="h-full w-full object-cover" />;
+  }
+  return (
+    <div className={`h-full w-full bg-gradient-to-br ${gradient} grid place-items-center font-bold text-white ${fallbackTextClass}`}>
+      {fallback}
     </div>
   );
 }
@@ -1608,7 +1642,7 @@ function InvestigationView(props: {
             <button onClick={() => openModal("summary")} className="inline-flex items-center gap-2 rounded-full bg-[#00d084] px-6 py-2.5 text-[13px] font-bold text-white hover:opacity-90 transition-opacity">
               <FileText className="h-4 w-4" /> Case Summary
             </button>
-            <div className="absolute -bottom-5 text-[10px] text-[#00d084] whitespace-nowrap">Available for {caseSummaryMins}:00 minutes only</div>
+            {/*<div className="absolute -bottom-5 text-[10px] text-[#00d084] whitespace-nowrap">Available for {caseSummaryMins}:00 minutes only</div>*/}
           </div>
 
           {/* Strategy Cards — Investigator only. Opens the all-suspect profile cards
@@ -1745,13 +1779,7 @@ function InvestigationView(props: {
                 >
                   {/* Circular avatar */}
                   <div className="relative h-14 w-14 rounded-full overflow-hidden shrink-0 shadow-lg">
-                    {roleImage ? (
-                      <img src={roleImage} alt="role" className="w-full object-cover" />
-                    ) : (
-                      <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold text-white`}>
-                        {initials(p.pseudonym)}
-                      </div>
-                    )}
+                    <RoleAvatar src={roleImage} fallback={initials(p.pseudonym)} gradient={PLAYER_GRADS[i % PLAYER_GRADS.length]} fallbackTextClass="text-sm" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[17px] text-white break-words">
@@ -1844,13 +1872,7 @@ function InvestigationView(props: {
                         }`}>
                           {/* Circular portrait */}
                           <div className="h-[90px] w-[90px] rounded-full overflow-hidden shadow-lg flex-shrink-0">
-                            {roleImage ? (
-                              <img src={roleImage} alt={p.pseudonym} className="object-cover" />
-                            ) : (
-                              <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-2xl font-bold text-white`}>
-                                {initials(p.pseudonym)}
-                              </div>
-                            )}
+                            <RoleAvatar src={roleImage} fallback={initials(p.pseudonym)} gradient={PLAYER_GRADS[i % PLAYER_GRADS.length]} fallbackTextClass="text-2xl" />
                           </div>
                           {/* Name + public character / role (same as the observer grid) */}
                           <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
@@ -1898,13 +1920,7 @@ function InvestigationView(props: {
                         {/* Card with circular portrait inside */}
                         <div className="relative w-[120px] h-[155px] rounded-2xl flex flex-col items-center justify-center gap-3 border border-[#4a3473] bg-transparent">
                           <div className="h-[90px] w-[90px] rounded-full overflow-hidden shadow-lg flex-shrink-0">
-                            {roleImage ? (
-                              <img src={roleImage} alt={p.pseudonym} className="w-full object-cover" />
-                            ) : (
-                              <div className={`h-full w-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-2xl font-bold text-white`}>
-                                {initials(p.pseudonym)}
-                              </div>
-                            )}
+                            <RoleAvatar src={roleImage} fallback={initials(p.pseudonym)} gradient={PLAYER_GRADS[i % PLAYER_GRADS.length]} fallbackTextClass="text-2xl" />
                           </div>
                           <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
                             {p.pseudonym}
