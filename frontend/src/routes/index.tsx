@@ -105,8 +105,8 @@ function Home() {
           <Header floating />
           <div className="relative px-6 md:px-14 pt-44 pb-32 max-w-3xl">
             <h1 className="text-[52px] md:text-[64px] font-extrabold text-white leading-[1.1] tracking-tight">
-              Turn Team Activities <br className="hidden md:block" />
-              Into Interactive <br className="hidden md:block" />
+              Turn Team Activities ...<br className="hidden md:block" />
+              Into Interactive ...<br className="hidden md:block" />
               Experiences
             </h1>
             <p className="mt-6 text-white/80 text-base md:text-lg whitespace-nowrap">
