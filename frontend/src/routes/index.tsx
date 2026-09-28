@@ -105,12 +105,12 @@ function Home() {
           <Header floating />
           <div className="relative px-6 md:px-14 pt-44 pb-32 max-w-3xl">
             <h1 className="text-[52px] md:text-[64px] font-extrabold text-white leading-[1.1] tracking-tight">
-              Turn Team Activities.. <br className="hidden md:block" />
-              Into Interactive.. <br className="hidden md:block" />
-              Experiences.,,,
+              Turn Team Activities <br className="hidden md:block" />
+              Into Interactive <br className="hidden md:block" />
+              Experiences
             </h1>
             <p className="mt-6 text-white/80 text-base md:text-lg whitespace-nowrap">
-              Boost engagement.... collaboration...., and energy, without complicated setups....
+              Boost engagement.collaboration.and energy, without complicated setups....
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/create" search={{ activity: undefined }}><PillButton variant="light">Get Started Now</PillButton></Link>
