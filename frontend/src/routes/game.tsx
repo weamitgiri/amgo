@@ -812,36 +812,54 @@ function GamePage() {
     lieRoundIdRef.current = lieDetectorRoundId;
   }, [lieDetectorRoundId]);
 
-  // Safety-net resync. Realtime events are the fast path, but a broadcast can be
-  // missed (a reconnect gap, a proxy that drops WebSocket upgrades, a server that
-  // isn't a single instance). Re-reading the authoritative state every few seconds —
-  // and immediately when the tab becomes visible or the network returns — means the
-  // screen catches up on its own instead of needing a manual refresh.
+  // Re-read the authoritative game state and apply it. Realtime events are the fast
+  // path, but a broadcast can be missed (a reconnect gap, a proxy that drops WebSocket
+  // upgrades, a server that isn't a single instance), so this is the safety net —
+  // applyGameState opens the Final Accusation window / navigates to Results on its own
+  // from the fresh state, no broadcast required.
+  const resyncInFlight = useRef(false);
+  const resyncNow = useCallback(() => {
+    if (resyncInFlight.current || document.visibilityState === "hidden") return;
+    if (!session?.groupId || !session.participantId) return;
+    resyncInFlight.current = true;
+    participantService
+      .getGameState(session.groupId, session.participantId)
+      .then(applyGameState)
+      .catch(() => {
+        /* transient — the next tick or a socket event recovers */
+      })
+      .finally(() => {
+        resyncInFlight.current = false;
+      });
+  }, [session?.groupId, session?.participantId, applyGameState]);
+
+  // Heartbeat resync every few seconds, plus immediately when the tab becomes visible
+  // or the network returns, so the screen catches up without a manual refresh.
   useEffect(() => {
     if (loading || !session?.groupId || !session.participantId) return;
-    let inFlight = false;
-    const resync = () => {
-      if (inFlight || document.visibilityState === "hidden") return;
-      inFlight = true;
-      participantService
-        .getGameState(session.groupId, session.participantId)
-        .then(applyGameState)
-        .catch(() => {
-          /* transient — the next tick or a socket event recovers */
-        })
-        .finally(() => {
-          inFlight = false;
-        });
-    };
-    const timer = setInterval(resync, 8000);
-    document.addEventListener("visibilitychange", resync);
-    window.addEventListener("online", resync);
+    const timer = setInterval(resyncNow, 8000);
+    document.addEventListener("visibilitychange", resyncNow);
+    window.addEventListener("online", resyncNow);
     return () => {
       clearInterval(timer);
-      document.removeEventListener("visibilitychange", resync);
-      window.removeEventListener("online", resync);
+      document.removeEventListener("visibilitychange", resyncNow);
+      window.removeEventListener("online", resyncNow);
     };
-  }, [loading, session?.groupId, session?.participantId, applyGameState]);
+  }, [loading, session?.groupId, session?.participantId, resyncNow]);
+
+  // The game clock hit 00:00 but the screen hasn't moved on. The server is mid-
+  // transition: questioning ended → it opens the 2-minute Final Accusation window,
+  // then finalizes and marks the group completed. Instead of sitting at 00:00 for up
+  // to a full 8s heartbeat (and relying on a phase_changed / game_ended broadcast that
+  // a multi-worker server may not deliver), poll faster until the Final Accusation
+  // screen opens or applyGameState routes to Results. Cheap and self-limiting: it
+  // stops as soon as finalVerdictActive flips or the phase leaves investigation.
+  useEffect(() => {
+    if (loading || phase !== "investigation" || secsHdr > 0 || finalVerdictActive) return;
+    resyncNow();
+    const t = setInterval(resyncNow, 2500);
+    return () => clearInterval(t);
+  }, [loading, phase, secsHdr, finalVerdictActive, resyncNow]);
 
   useEffect(() => {
     if (loading) return;
