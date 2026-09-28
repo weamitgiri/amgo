@@ -223,6 +223,17 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
         if (r.vote_value === 'suspicious') lieVoteTallies[key].suspicious = Number(r.cnt);
     }
 
+    // Which lie-detector answers THIS player has already voted on. The client uses
+    // this to re-open the believable/suspicious popup on resync for any answer it
+    // still owes a vote on — so a missed `new_answer` broadcast (reconnect gap, or a
+    // multi-worker deploy) no longer means the player silently never gets to vote.
+    const [myVoteRows] = await query<any>(
+        `SELECT reference_id AS question_id FROM votes
+            WHERE group_id = ? AND reference_type = 'lie_detector' AND voter_id = ?`,
+        [group_id, userSession.id]
+    );
+    const myLieVotes = (myVoteRows as any[]).map((r) => Number(r.question_id));
+
     const [clueRooms] = await query<any>(
         `SELECT cr.*, gc.clue_title, gc.clue_short_description, gc.clue_detail, gc.clue_image
             FROM clue_rooms cr
@@ -263,6 +274,7 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
         questions: hydratedQuestions,
         lie_detector_rounds: lieDetectorRoundsWithTally,
         lie_vote_tallies: lieVoteTallies,
+        my_lie_votes: myLieVotes,
         clue_rooms: clueRooms.map((c: any) => ({
             ...c,
             game_clues: {
@@ -407,8 +419,20 @@ export const answerQuestion = asyncHandler(async (req: Request, res: Response) =
     const responseSecs = Number(config?.question_response_secs ?? 120);
     const noResponsePenalty = Math.abs(Number(config?.no_response_penalty ?? -10));
 
+    // Compute how late the answer is using the DATABASE clock for BOTH timestamps.
+    // Previously this did moment(question.created_at) vs moment() (Node's clock),
+    // which silently added the offset between the MySQL server timezone and the Node
+    // process timezone. When they differ (very common in production: MySQL on UTC,
+    // Node on IST), an answer submitted immediately looked hours "late", so the
+    // no-response penalty was deducted even though the player answered on time —
+    // i.e. scores went negative for correct, timely answers. TIMESTAMPDIFF against
+    // NOW() keeps created_at and "now" on the same clock, so no offset can creep in.
+    const [elapsedRows] = await query<any>(
+        'SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) AS elapsed FROM questions WHERE id = ? LIMIT 1',
+        [question_id]
+    );
+    const lateBySecs = Number(elapsedRows?.[0]?.elapsed ?? 0);
     const now = moment();
-    const lateBySecs = now.diff(moment(question.created_at), 'seconds');
     const penalty = lateBySecs > responseSecs ? noResponsePenalty : 0;
 
     // Lie Detector engagement bonus (spec §2): answering a question directed at
