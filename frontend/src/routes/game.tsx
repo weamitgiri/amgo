@@ -245,16 +245,19 @@ function GamePage() {
   // false, which let the culprit see and use the Final Accusation UI.
   const isCulprit = (yourPerson?.role_type ?? "").toLowerCase().includes("culprit");
 
-  // Strategy Guide is for EVERY role except the Investigator, and each player sees
-  // ONLY their OWN role's strategy cards (role_strategy_slides) — e.g. their situation,
-  // weak points and how to handle questioning. It must NOT show strategy_slides: those
-  // are the Investigator's timed all-suspect profile cards ("Suspect 1: …"), and
-  // surfacing them to a suspect/witness/participant both leaks other roles' briefings
-  // and is simply not their guide. The Investigator gets none here. Game Rules stay
-  // available to everyone.
+  // Strategy Guide content depends on role:
+  //  • Investigator → the all-suspect profile cards (strategy_slides, "Suspect 1: …"),
+  //    which is their whole job — study every suspect. Opened from the "Strategy Cards"
+  //    button in the investigation header.
+  //  • Every other role → ONLY their OWN role cards (role_strategy_slides): their
+  //    situation, weak points, how to handle questioning. They must NOT see the
+  //    all-suspect cards (that would leak other roles' briefings).
+  // Game Rules stay available to everyone.
   const guideSlides = useMemo(
     () => ({
-      strategy: !isInvestigator ? gameData?.role_strategy_slides ?? [] : [],
+      strategy: isInvestigator
+        ? gameData?.strategy_slides ?? []
+        : gameData?.role_strategy_slides ?? [],
       rules: gameData?.rules ?? [],
     }),
     [gameData, isInvestigator]
@@ -425,6 +428,38 @@ function GamePage() {
       setPendingAnswerForMe(unansweredQuestionForMe);
     } else {
       setPendingAnswerForMe(null);
+    }
+
+    // Believable/Suspicious popup resilience. The live path (onNewAnswer) opens the
+    // vote popup only from the `new_answer` broadcast, so a missed event — reconnect
+    // gap, or a multi-worker deploy where the broadcast lands on another worker —
+    // used to mean the player never got prompted to vote at all. On every state sync,
+    // re-open it for any lie-detector answer this player still owes a vote on (not
+    // their own answer, not auto-skipped, not already voted). Once the round is over,
+    // close any lingering popup — voting is no longer possible.
+    if (activeRound) {
+      const myVotes = new Set((state.group.my_lie_votes ?? []).map(Number));
+      const owed = activityItems.filter(
+        (item) =>
+          item.isLie &&
+          item.a != null &&
+          !item.autoSkipped &&
+          Number(item.toSessionId) !== Number(myPlayer?.session_id) &&
+          !myVotes.has(item.questionId)
+      );
+      const mostRecentOwed = owed[owed.length - 1];
+      if (mostRecentOwed) {
+        // Don't clobber a popup already open (e.g. the live event beat this sync).
+        setVoteContext((prev) =>
+          prev ?? {
+            questionId: mostRecentOwed.questionId,
+            answerText: mostRecentOwed.a as string,
+            answererSessionId: Number(mostRecentOwed.toSessionId),
+          }
+        );
+      }
+    } else {
+      setVoteContext(null);
     }
   }, [myPlayer?.session_id, navigate, session?.groupId, session?.participantId]);
 
@@ -1038,6 +1073,8 @@ function GamePage() {
           isSubmittingQuestion={isSubmittingQuestion}
           activity={activity}
           openModal={setModal}
+          onOpenStrategyCards={() => { setGuideModal("strategy"); setGuideSlide(0); }}
+          hasStrategyCards={(guideSlides.strategy?.length ?? 0) > 0}
           locked={activity.some((a) => !a.a)}
           lieMode={lieMode}
           onToggleLieDetector={toggleLieDetector}
@@ -1438,6 +1475,8 @@ function InvestigationView(props: {
   isSubmittingQuestion?: boolean;
   activity: ActivityItem[];
   openModal: (m: ModalKey) => void;
+  onOpenStrategyCards?: () => void;
+  hasStrategyCards?: boolean;
   locked?: boolean;
   lieMode: boolean;
   onToggleLieDetector: () => void;
@@ -1474,6 +1513,8 @@ function InvestigationView(props: {
     isSubmittingQuestion = false,
     activity,
     openModal,
+    onOpenStrategyCards,
+    hasStrategyCards = false,
     locked = false,
     lieMode,
     onToggleLieDetector,
@@ -1545,6 +1586,18 @@ function InvestigationView(props: {
             </button>
             <div className="absolute -bottom-5 text-[10px] text-[#00d084] whitespace-nowrap">Available for {caseSummaryMins}:00 minutes only</div>
           </div>
+
+          {/* Strategy Cards — Investigator only. Opens the all-suspect profile cards
+              (their core tool for the investigation). Hidden for every other role,
+              who each have their own private role guide in the Case Summary instead. */}
+          {isInvestigator && hasStrategyCards && (
+            <div className="relative flex flex-col items-center justify-center">
+              <button onClick={() => onOpenStrategyCards?.()} className="inline-flex items-center gap-2 rounded-full bg-[#3ca9f9] px-6 py-2.5 text-[13px] font-bold text-white hover:opacity-90 transition-opacity">
+                <Lightbulb className="h-4 w-4" /> Strategy Cards
+              </button>
+              <div className="absolute -bottom-5 text-[10px] text-[#3ca9f9] whitespace-nowrap">All suspect profiles</div>
+            </div>
+          )}
 
           <div className="flex flex-col items-center justify-center gap-0.5">
             <div className="text-[10px] text-white/50">{lieMode ? "Lie Detector Mode Time Left" : "Investigation Time Left"}</div>

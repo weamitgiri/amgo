@@ -46,6 +46,8 @@ export type GameStateResponse = {
     lie_detector_rounds: LieDetectorRound[];
     /** Per-answer lie-detector vote tallies, keyed by question id. */
     lie_vote_tallies?: Record<string, { believable: number; suspicious: number }>;
+    /** Question ids the requesting player has already cast a lie-detector vote on. */
+    my_lie_votes?: number[];
     my_accusation_submitted: boolean;
   };
   my_role: { id: number; role_type: string; character_name: string } | null;
