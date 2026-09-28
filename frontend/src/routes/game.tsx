@@ -298,6 +298,13 @@ function GamePage() {
     setAnswerTimeoutPenalty(-10);
   }, []);
   const [voteContext, setVoteContext] = useState<{ questionId: number; answerText: string; answererSessionId: number } | null>(null);
+  // Lie-detector answers this player has already dealt with THIS session — voted on
+  // OR dismissed. The resync (applyGameState) checks this so it never re-opens the
+  // Believable/Suspicious popup for an answer the player is done with, even in the
+  // brief window before the server's my_lie_votes reflects a just-cast vote, and even
+  // when the player chose to dismiss without voting. my_lie_votes still covers the
+  // cross-reload case for votes that actually persisted.
+  const handledVoteQuestionIds = useRef<Set<number>>(new Set());
   const [lieTally, setLieTally] = useState<LieDetectorTally | null>(null);
   // Vote tallies are per-answer (per lie-detector question), keyed by question id —
   // a single round can have several questioned answers, each with its own count.
@@ -445,7 +452,8 @@ function GamePage() {
           item.a != null &&
           !item.autoSkipped &&
           Number(item.toSessionId) !== Number(myPlayer?.session_id) &&
-          !myVotes.has(item.questionId)
+          !myVotes.has(item.questionId) &&
+          !handledVoteQuestionIds.current.has(item.questionId)
       );
       const mostRecentOwed = owed[owed.length - 1];
       if (mostRecentOwed) {
@@ -921,19 +929,35 @@ function GamePage() {
 
   const castVote = async (vote: "believable" | "suspicious") => {
     if (!voteContext || !lieDetectorRoundId || !session?.participantId) return;
+    const votedQuestionId = voteContext.questionId;
+    // Mark it handled up front so the 8s resync can't re-open this same answer's
+    // popup during the round-trip / before my_lie_votes catches up.
+    handledVoteQuestionIds.current.add(votedQuestionId);
     try {
       await participantService.voteLieDetector({
         group_id: session.groupId,
         participant_id: session.participantId,
         round_id: lieDetectorRoundId,
-        question_id: voteContext.questionId,
+        question_id: votedQuestionId,
         vote_value: vote,
       });
       setVoteContext(null);
     } catch (err) {
-      toastError(err instanceof Error ? err.message : "Could not cast vote.");
+      // The server may reject a genuine duplicate ("already voted") — that still
+      // means it's handled, so keep it suppressed. Any other failure: let them retry.
+      const msg = err instanceof Error ? err.message : "Could not cast vote.";
+      if (!/already voted/i.test(msg)) handledVoteQuestionIds.current.delete(votedQuestionId);
+      toastError(msg);
       setVoteContext(null);
     }
+  };
+
+  // Dismissing the popup without voting also counts as "handled" for this session,
+  // so the resync doesn't immediately pop it back up. A page reload gives a fresh
+  // chance (this ref is per-session), which is the intended escape hatch.
+  const dismissVotePopup = () => {
+    if (voteContext) handledVoteQuestionIds.current.add(voteContext.questionId);
+    setVoteContext(null);
   };
 
   // Start the once-per-game Lie Detector. It runs for its full duration (7 min) and
@@ -1125,7 +1149,7 @@ function GamePage() {
           answerText={voteContext.answerText}
           question={activity.find((a) => a.questionId === voteContext.questionId)?.q ?? ""}
           onVote={castVote}
-          onClose={() => setVoteContext(null)}
+          onClose={dismissVotePopup}
         />
       )}
       {modal === "clue" && (
