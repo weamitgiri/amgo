@@ -282,20 +282,22 @@ function GamePage() {
   // false, which let the culprit see and use the Final Accusation UI.
   const isCulprit = (yourPerson?.role_type ?? "").toLowerCase().includes("culprit");
 
-  // EVERY role — including the Investigator — sees ONLY their OWN role's strategy
-  // cards (role_strategy_slides). These are exactly the per-role cards configured in
-  // the admin "Strategy Cards (Max 4)" section (each role's form has its own set), so
-  // whatever the admin adds for a role is what that player sees. The Investigator
-  // opens theirs from the header "Strategy Cards" button; every other role from the
-  // Case Summary "Strategy Guide". (strategy_slides — the separate "Suspect 1: …"
-  // investigator_cards — are NOT used here; they're a different admin section.)
+  // Strategy guide content, per role — all sourced from the admin "Strategy Cards"
+  // section (each role's form has its own set):
+  //  • Non-investigator roles → their OWN cards only (role_strategy_slides), opened
+  //    from the Case Summary "Strategy Guide" button.
+  //  • Investigator → has NO cards of their own; instead reviews every OTHER role's
+  //    cards, ONE SLIDE PER ROLE (all_role_strategy_slides), from the header
+  //    "Strategy Cards" button.
   // Game Rules stay available to everyone.
   const guideSlides = useMemo(
     () => ({
-      strategy: gameData?.role_strategy_slides ?? [],
+      strategy: isInvestigator
+        ? gameData?.all_role_strategy_slides ?? []
+        : gameData?.role_strategy_slides ?? [],
       rules: gameData?.rules ?? [],
     }),
-    [gameData]
+    [gameData, isInvestigator]
   );
 
   const photoUrls = useMemo(
@@ -1664,16 +1666,16 @@ function InvestigationView(props: {
             {/*<div className="absolute -bottom-5 text-[10px] text-[#00d084] whitespace-nowrap">Available for {caseSummaryMins}:00 minutes only</div>*/}
           </div>
 
-          {/* Strategy Cards — Investigator only. Opens the Investigator's OWN role
-              strategy cards (configured per-role in the admin "Strategy Cards"
-              section). Every other role opens the same thing from the Case Summary
-              "Strategy Guide" button instead. */}
+          {/* Strategy Cards — Investigator only. The Investigator has no cards of
+              their own; this opens every OTHER role's strategy cards, one slide per
+              role (all_role_strategy_slides). Non-investigator roles open their own
+              cards from the Case Summary "Strategy Guide" button instead. */}
           {isInvestigator && hasStrategyCards && (
             <div className="relative flex flex-col items-center justify-center">
               <button onClick={() => onOpenStrategyCards?.()} className="inline-flex items-center gap-2 rounded-full bg-[#3ca9f9] px-6 py-2.5 text-[13px] font-bold text-white hover:opacity-90 transition-opacity">
                 <Lightbulb className="h-4 w-4" /> Strategy Cards
               </button>
-              <div className="absolute -bottom-5 text-[10px] text-[#3ca9f9] whitespace-nowrap">Your strategy</div>
+              <div className="absolute -bottom-5 text-[10px] text-[#3ca9f9] whitespace-nowrap">Each role's strategy</div>
             </div>
           )}
 

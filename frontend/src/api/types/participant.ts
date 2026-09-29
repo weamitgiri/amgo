@@ -154,6 +154,8 @@ export type GameSummaryResponse = {
   photos: { id: number; label: string; image: string | null }[];
   rules: { id: number; title: string; description: string; details: string[] }[];
   role_strategy_slides: { title: string; description: string; details: string[] }[];
+  /** Investigator only: every OTHER role's strategy cards, one slide per role. */
+  all_role_strategy_slides?: { title: string; description: string; details: string[] }[];
   strategy_slides: { title: string; description: string; details: string[]; appears_at_secs: number; closes_at_secs: number }[];
   clues: {
     id: number;

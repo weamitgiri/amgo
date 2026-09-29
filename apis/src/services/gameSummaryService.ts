@@ -212,6 +212,8 @@ export type GameSummaryPayload = {
     }[];
     rules: { id: number; title: string; description: string; details: string[] }[];
     role_strategy_slides: { title: string; description: string; details: string[] }[];
+    /** Investigator only: every OTHER role's strategy cards, one slide per role. */
+    all_role_strategy_slides: { title: string; description: string; details: string[] }[];
     strategy_slides: { title: string; description: string; details: string[]; appears_at_secs: number; closes_at_secs: number }[];
 };
 
@@ -345,9 +347,8 @@ export async function buildGameSummaryPayload(
         };
     });
 
-    // Role-specific strategy cards (strategy_cards table) — shown to every role
-    // EXCEPT the investigator, who instead gets the timed suspect-profile cards
-    // (investigator_cards) mapped into strategy_slides below.
+    // Role-specific strategy cards (strategy_cards table). Every NON-investigator
+    // role sees only their OWN cards (roleStrategyRows below → role_strategy_slides).
     let roleStrategyRows: any[] = [];
     if (myRoleId) {
         const [rows] = await query(
@@ -355,6 +356,48 @@ export async function buildGameSummaryPayload(
             [myRoleId]
         );
         roleStrategyRows = rows as any[];
+    }
+
+    // The Investigator has no strategy guide of their OWN — instead they review the
+    // OTHER roles' strategy cards, one slide per role (each slide = one role's cards,
+    // straight from the admin "Strategy Cards" section). Only the Investigator ever
+    // receives this, so no other role's private briefing leaks to a suspect.
+    const myRole = (roleRows as any[]).find((r: any) => Number(r.id) === Number(myRoleId));
+    const requesterIsInvestigator = String(myRole?.role_type ?? '').toLowerCase().includes('investigator');
+    let allRoleStrategySlides: { title: string; description: string; details: string[] }[] = [];
+    if (requesterIsInvestigator) {
+        const [allCards] = await query(
+            `SELECT sc.role_id, sc.card_number, sc.heading, sc.body_content
+             FROM strategy_cards sc
+             JOIN game_roles gr ON gr.id = sc.role_id
+             WHERE gr.game_id = ? ORDER BY gr.id, sc.card_number ASC`,
+            [row.game_row_id]
+        );
+        const cardsByRole = new Map<number, any[]>();
+        for (const c of allCards as any[]) {
+            const list = cardsByRole.get(Number(c.role_id)) ?? [];
+            list.push(c);
+            cardsByRole.set(Number(c.role_id), list);
+        }
+        for (const r of roleRows as any[]) {
+            // Skip the Investigator's own role — they review everyone ELSE.
+            if (String(r.role_type ?? '').toLowerCase().includes('investigator')) continue;
+            const cards = cardsByRole.get(Number(r.id)) ?? [];
+            if (cards.length === 0) continue;
+            allRoleStrategySlides.push({
+                // The character name is public; the mechanic role_type (e.g. "hidden
+                // culprit") is NOT surfaced here as a label.
+                title: r.character_name || 'Suspect',
+                description: '',
+                details: cards
+                    .map((c: any) => {
+                        const heading = String(c.heading || '').trim();
+                        const body = String(c.body_content || '').trim();
+                        return heading && body ? `${heading}: ${body}` : heading || body;
+                    })
+                    .filter(Boolean),
+            });
+        }
     }
 
     // Roles are the CASE CHARACTERS (public: everyone sees the same Key People
@@ -455,6 +498,7 @@ export async function buildGameSummaryPayload(
             description: '',
             details: [c.body_content].filter(Boolean).map(String),
         })),
+        all_role_strategy_slides: allRoleStrategySlides,
         strategy_slides:
             strategy_slides.length > 0
                 ? strategy_slides
