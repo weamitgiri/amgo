@@ -375,7 +375,19 @@ function GamePage() {
     }
     if (typeof state.group.case_summary_seconds_remaining === "number") {
       setSecsCase(state.group.case_summary_seconds_remaining);
-      setPhase(state.group.case_summary_seconds_remaining > 0 ? "summary" : "investigation");
+      // Phase is STICKY forward: once a player has moved to Investigation they never
+      // get yanked back to the Case Summary screen by a slightly-behind server clock
+      // reading case_summary_seconds_remaining > 0 (client/server drift near the
+      // transition otherwise caused a flicker back to Case Summary). Only advance
+      // summary → investigation, never the reverse. (The in-game "Case Summary"
+      // button is a modal, not this phase, so it's unaffected.)
+      setPhase((prev) =>
+        prev === "investigation"
+          ? "investigation"
+          : (state.group.case_summary_seconds_remaining ?? 0) > 0
+            ? "summary"
+            : "investigation"
+      );
     }
 
     const online = new Set<number>();

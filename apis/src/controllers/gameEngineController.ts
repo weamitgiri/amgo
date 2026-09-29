@@ -23,7 +23,7 @@ import { AppError } from '../utils/AppError';
 import { io } from '../server';
 import moment from 'moment';
 import { submitAccusation as submitAccusationService } from '../services/verdictScoringService';
-import { ensureCaseSummaryTimer, devAdvancePhase } from '../services/timerService';
+import { ensureCaseSummaryTimer, devAdvancePhase, recoverMissedQuestioningPhase } from '../services/timerService';
 
 async function getSessionForParticipant(groupId: number | string, participantId: number | string) {
     const [rows] = await query<any>(
@@ -120,6 +120,9 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
         }
         const activeCfg = await getActivityConfigForGroup(group_id);
         await ensureCaseSummaryTimer(group_id, Number(activeCfg?.case_summary_view_secs) || 300);
+        // Self-heal a game whose Case Summary ended but whose Questioning phase was
+        // never started (missed timer tick) — otherwise it stays stuck at 00:00.
+        await recoverMissedQuestioningPhase(group_id);
     }
 
     const [sessions] = await query<any>(

@@ -91,6 +91,84 @@ export async function ensureCaseSummaryTimer(groupId: number | string, caseSumma
 }
 
 /**
+ * Self-heal a group whose Case Summary has ended but whose Questioning phase never
+ * started — i.e. the questioning + clue_room timers were never created (the process
+ * was down for the 5-second tick that should have advanced it, so the game sits at
+ * 00:00 forever). Safe to call from getGameState on every load: a cheap unlocked
+ * pre-check returns immediately in the normal case (a questioning timer already
+ * exists), and the actual repair is serialised by a lock and re-checked, so it can
+ * never race the timer service into duplicate timers.
+ */
+export async function recoverMissedQuestioningPhase(groupId: number | string): Promise<void> {
+    // Fast path (no lock): the game already advanced past case summary.
+    const [qPre] = await query<any>(
+        "SELECT id FROM timers WHERE group_id = ? AND timer_type = 'questioning' LIMIT 1",
+        [groupId]
+    );
+    if ((qPre as any[]).length > 0) return;
+
+    const lockName = `zoventro_phase_${groupId}`;
+    const conn = await pool.getConnection();
+    try {
+        const [lockRows] = await conn.query<any[]>('SELECT GET_LOCK(?, 3) AS got', [lockName]);
+        if (!Number((lockRows as any[])[0]?.got)) return;
+        try {
+            // Re-check under the lock (the timer service may have just created it).
+            const [qRows] = await conn.query<any[]>(
+                "SELECT id FROM timers WHERE group_id = ? AND timer_type = 'questioning' LIMIT 1",
+                [groupId]
+            );
+            if ((qRows as any[]).length > 0) return;
+
+            // Only recover once the case summary has actually ended.
+            const [csRows] = await conn.query<any[]>(
+                "SELECT expires_at, is_active FROM timers WHERE group_id = ? AND timer_type = 'case_summary' ORDER BY id DESC LIMIT 1",
+                [groupId]
+            );
+            const cs = (csRows as any[])[0];
+            if (!cs) return; // case summary never started — nothing to recover
+            const caseEnded = Number(cs.is_active) === 0 || new Date(cs.expires_at) <= new Date();
+            if (!caseEnded) return; // still inside the case summary window
+
+            const config = await getActivityConfigForGroup(groupId);
+            const totalSecs = Number(config?.game_duration_secs ?? 1500);
+            const caseSummarySecs = Number(config?.case_summary_view_secs ?? 300);
+            const clueUnlockSecs = Number(config?.clue_room_unlock_secs ?? 600);
+            const questioningSecs = Math.max(totalSecs - caseSummarySecs, 60);
+
+            // Anchor to when the case summary actually ended so the recovered clock is
+            // honest (a long-stuck game will produce an already-past questioning
+            // deadline, which the timer loop then advances straight to the verdict).
+            const caseEnd = new Date(cs.expires_at);
+            const anchor = caseEnd > new Date() ? new Date() : caseEnd;
+            const questioningExpiry = new Date(anchor.getTime() + questioningSecs * 1000);
+            const clueDelaySecs = Math.max(questioningSecs - clueUnlockSecs, 0);
+            const clueExpiry = new Date(anchor.getTime() + clueDelaySecs * 1000);
+
+            await conn.query('INSERT INTO timers (group_id, timer_type, expires_at, is_active) VALUES (?, ?, ?, 1)', [
+                groupId,
+                'questioning',
+                questioningExpiry,
+            ]);
+            await conn.query('INSERT INTO timers (group_id, timer_type, expires_at, is_active) VALUES (?, ?, ?, 1)', [
+                groupId,
+                'clue_room_unlock',
+                clueExpiry,
+            ]);
+            io.to(`group_${groupId}`).emit('phase_changed', {
+                new_phase: 'questioning',
+                message: 'Case Summary ended. Questioning phase started!',
+            });
+            console.log(`[TimerService] Recovered missed questioning phase for group ${groupId}`);
+        } finally {
+            await conn.query('SELECT RELEASE_LOCK(?)', [lockName]);
+        }
+    } finally {
+        conn.release();
+    }
+}
+
+/**
  * DEV / TESTING ONLY — skip the current phase's timer so the next screen opens
  * without waiting out the clock. If the game hasn't started yet it starts it;
  * otherwise it expires the current active phase timer and runs its transition
