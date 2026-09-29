@@ -45,3 +45,4 @@ Thumbs.db
 *.zip
 /frontend/dist/
 *.sql
+apis/logs/
