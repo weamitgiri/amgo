@@ -263,6 +263,9 @@ function GamePage() {
   const [frozenSessionIds, setFrozenSessionIds] = useState<Set<number>>(new Set());
   const [scoresBySessionId, setScoresBySessionId] = useState<Map<number, number>>(new Map());
   const [devSkipping, setDevSkipping] = useState(false); // DEV: remove before production
+  // Investigator-only timed suspect cards: once a card's scheduled window has been
+  // dismissed we don't force it back open for the rest of that window.
+  const [dismissedForcedCards, setDismissedForcedCards] = useState<Set<number>>(new Set());
 
   const people = useMemo(
     () => (gameData?.roles ?? []).map(mapRoleToPerson),
@@ -299,6 +302,32 @@ function GamePage() {
     }),
     [gameData, isInvestigator]
   );
+
+  // Investigator-only TIMED suspect cards (strategy_slides / investigator_cards).
+  // Each carries an appears_at_secs / closes_at_secs schedule (measured from the
+  // start of the investigation phase, set per-card in admin). The matching card
+  // FORCEFULLY pops up when its window opens and auto-closes when it ends. Only the
+  // Investigator ever receives strategy_slides, so no other role sees these.
+  const forcedStrategyCard = useMemo(() => {
+    if (!isInvestigator || phase !== "investigation" || !gameData) return null;
+    const cards = gameData.strategy_slides ?? [];
+    if (cards.length === 0) return null;
+    // secsHdr during Investigation = questioning seconds remaining. Elapsed since the
+    // investigation began = full questioning duration − what's left.
+    const questioningSecs = Math.max(
+      (gameData.settings.game_duration_secs ?? 1500) - (gameData.settings.case_summary_view_secs ?? 300),
+      60
+    );
+    const elapsed = questioningSecs - secsHdr;
+    const active = cards.find(
+      (c) =>
+        (c.closes_at_secs ?? 0) > (c.appears_at_secs ?? 0) &&
+        (c.appears_at_secs ?? 0) <= elapsed &&
+        elapsed < (c.closes_at_secs ?? 0)
+    );
+    if (!active || dismissedForcedCards.has(active.appears_at_secs)) return null;
+    return active;
+  }, [isInvestigator, phase, gameData, secsHdr, dismissedForcedCards]);
 
   const photoUrls = useMemo(
     () =>
@@ -1194,6 +1223,26 @@ function GamePage() {
           onPrev={() => setGuideSlide((i: number) => Math.max(0, i - 1))}
           onNext={() => setGuideSlide((i: number) => Math.min(guideSlides[guideModal].length - 1, i + 1))}
           onSelectSlide={(index) => setGuideSlide(index)}
+        />
+      )}
+      {/* Investigator's timed suspect card — forcefully opens on schedule, auto-closes
+          when its window ends. Closing early just dismisses it for the rest of that
+          window; the next scheduled card still pops up on time. */}
+      {forcedStrategyCard && (
+        <InfoSliderModal
+          type="strategy"
+          slideIndex={0}
+          slides={[{
+            title: forcedStrategyCard.title,
+            description: forcedStrategyCard.description,
+            details: forcedStrategyCard.details,
+          }]}
+          onClose={() =>
+            setDismissedForcedCards((prev) => new Set(prev).add(forcedStrategyCard.appears_at_secs))
+          }
+          onPrev={() => {}}
+          onNext={() => {}}
+          onSelectSlide={() => {}}
         />
       )}
       {pendingAnswerForMe && gameData && (
