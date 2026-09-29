@@ -129,7 +129,7 @@ function ActivityAvatar({ image, fallback }: { image?: string | null; fallback: 
   return (
     <div className="h-8 w-8 rounded-full bg-black/40 overflow-hidden shrink-0 border border-white/10 grid place-items-center text-[10px] text-white font-bold">
       {image && !failed ? (
-        <img src={image} alt="" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+        <img src={image} alt="" onError={() => setFailed(true)} className="h-full w-full object-cover object-top" />
       ) : (
         fallback
       )}
@@ -157,7 +157,10 @@ function RoleAvatar({
 }) {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
-    return <img src={src} alt="" onError={() => setFailed(true)} className="h-full w-full object-cover" />;
+    // The role portraits are tall (~1:2) with the face in the TOP third. `object-top`
+    // anchors the crop to the top so the circle frames the FACE — plain `object-cover`
+    // centers and would show the torso/chest and cut the head off.
+    return <img src={src} alt="" onError={() => setFailed(true)} className="h-full w-full object-cover object-top" />;
   }
   return (
     <div className={`h-full w-full bg-gradient-to-br ${gradient} grid place-items-center font-bold text-white ${fallbackTextClass}`}>
@@ -2157,7 +2160,7 @@ function YourRoleModal({ person, onClose }: { person: GamePerson; onClose: () =>
             <ShieldCheck className="h-4 w-4 text-purple-300" />
           </div>
           {person.role_image ? (
-            <img src={resolveMediaUrl(person.role_image) ?? ""} alt="" className="h-full w-full object-cover" />
+            <img src={resolveMediaUrl(person.role_image) ?? ""} alt="" className="h-full w-full object-cover object-top" />
           ) : (
             <div className="h-full grid place-items-center">
               <Eye className="h-16 w-16 text-white/80" />
