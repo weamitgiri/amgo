@@ -56,6 +56,8 @@ class StoreActivityGameRequest extends FormRequest
             'roles.*.objective' => 'nullable|string',
             'roles.*.footer_text' => 'nullable|string|max:255',
             'roles.*.role_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            // Small badge shown on the player's own role card — displayed at 60×60.
+            'roles.*.role_icon' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:1024',
             'roles.*.what_you_know' => 'nullable|array',
             'roles.*.what_you_know.*' => 'nullable|string|max:255',
             'roles.*.keep_in_mind' => 'nullable|array',
@@ -110,6 +112,10 @@ class StoreActivityGameRequest extends FormRequest
             'roles.*.role_image.image' => 'Each role image must be a valid image file.',
             'roles.*.role_image.mimes' => 'Each role image must be a JPG, PNG, WEBP or JPEG file.',
             'roles.*.role_image.max'   => 'Each role image may not be larger than 2 MB.',
+
+            'roles.*.role_icon.image' => 'Each role icon must be a valid image file.',
+            'roles.*.role_icon.mimes' => 'Each role icon must be a JPG, PNG, WEBP or JPEG file.',
+            'roles.*.role_icon.max'   => 'Each role icon may not be larger than 1 MB.',
 
             'clues.*.clue_image.image' => 'The clue image must be a valid image file.',
             'clues.*.clue_image.mimes' => 'The clue image must be a JPG, PNG, WEBP or JPEG file.',

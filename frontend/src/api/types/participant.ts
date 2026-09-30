@@ -120,6 +120,8 @@ export type GameSummaryRole = {
   you_know: string[];
   keep_in_mind: string[];
   role_image: string | null;
+  /** Own role only: 60×60 badge icon uploaded in admin (null for other roles). */
+  role_icon?: string | null;
   is_you: boolean;
 };
 

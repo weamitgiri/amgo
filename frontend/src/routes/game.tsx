@@ -2211,6 +2211,25 @@ function splitCharacterName(rawName: string): { displayName: string; title: stri
   return { displayName: rawName.trim(), title: null };
 }
 
+/**
+ * 60×60 badge on the player's own role card. Shows the role icon uploaded in the
+ * admin wizard; falls back to the default shield if none was uploaded or the image
+ * fails to load (missing file / wrong storage URL).
+ */
+function RoleIconBadge({ icon }: { icon?: string | null }) {
+  const [failed, setFailed] = useState(false);
+  const src = icon && !failed ? resolveMediaUrl(icon) : null;
+  return (
+    <div className="absolute top-3 left-3 z-10 h-[60px] w-[60px] rounded-full overflow-hidden border border-purple-400/40 bg-black/50 grid place-items-center shadow-lg">
+      {src ? (
+        <img src={src} alt="" onError={() => setFailed(true)} className="h-full w-full object-contain" />
+      ) : (
+        <ShieldCheck className="h-7 w-7 text-purple-300" />
+      )}
+    </div>
+  );
+}
+
 function YourRoleModal({ person, onClose }: { person: GamePerson; onClose: () => void }) {
   const roleName = roleDisplayName(person);
   const roleTagline = person.role_subtitle || person.role_label || person.role;
@@ -2218,9 +2237,7 @@ function YourRoleModal({ person, onClose }: { person: GamePerson; onClose: () =>
     <ModalShell onClose={onClose} max="max-w-3xl">
       <div className="grid grid-cols-1 md:grid-cols-[minmax(200px,240px)_1fr] overflow-hidden rounded-3xl bg-[#1a0f2e]">
         <div className={`relative bg-gradient-to-br ${person.grad} min-h-[280px] md:min-h-[360px]`}>
-          <div className="absolute top-3 left-3 z-10 h-9 w-9 rounded-full border border-purple-400/40 bg-black/40 grid place-items-center">
-            <ShieldCheck className="h-4 w-4 text-purple-300" />
-          </div>
+          <RoleIconBadge icon={person.role_icon} />
           {person.role_image ? (
             <img src={resolveMediaUrl(person.role_image) ?? ""} alt="" className="h-full w-full object-cover object-top" />
           ) : (

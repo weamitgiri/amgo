@@ -68,6 +68,11 @@ class ActivityGameController extends Controller
                             $role->save();
                         }
 
+                        if ($request->hasFile("roles.{$roleIndex}.role_icon")) {
+                            $role->role_icon = $this->storePublicImageOrFail($request->file("roles.{$roleIndex}.role_icon"), 'role_icons');
+                            $role->save();
+                        }
+
                         if (isset($roleData['strategy_cards'])) {
                             foreach ($roleData['strategy_cards'] as $cardData) {
                                 $role->strategyCards()->create($cardData);
@@ -179,6 +184,15 @@ class ActivityGameController extends Controller
                         if ($request->hasFile("roles.{$roleIndex}.role_image")) {
                             $old = $role->role_image;
                             $role->role_image = $this->storePublicImageOrFail($request->file("roles.{$roleIndex}.role_image"), 'roles');
+                            $role->save();
+                            $this->deletePublicPathQuietly($old);
+                        }
+
+                        // Role icon — replace only when a new file is uploaded; otherwise
+                        // keep the existing one. Old file is cleaned up on replace.
+                        if ($request->hasFile("roles.{$roleIndex}.role_icon")) {
+                            $old = $role->role_icon;
+                            $role->role_icon = $this->storePublicImageOrFail($request->file("roles.{$roleIndex}.role_icon"), 'role_icons');
                             $role->save();
                             $this->deletePublicPathQuietly($old);
                         }

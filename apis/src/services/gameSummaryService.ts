@@ -200,6 +200,8 @@ export type GameSummaryPayload = {
         you_know: string[];
         keep_in_mind: string[];
         role_image: string | null;
+        /** Own role only: the 60×60 badge icon uploaded in admin (null for others). */
+        role_icon: string | null;
         is_you: boolean;
     }[];
     photos: { id: number; label: string; image: string | null }[];
@@ -254,7 +256,7 @@ export async function buildGameSummaryPayload(
     }
 
     const [roleRows] = await query(
-        `SELECT id, role_type, character_name, subtitle, role_image, objective, what_you_know, keep_in_mind
+        `SELECT id, role_type, character_name, subtitle, role_image, role_icon, objective, what_you_know, keep_in_mind
          FROM game_roles WHERE game_id = ? ORDER BY id ASC`,
         [row.game_row_id]
     );
@@ -426,6 +428,9 @@ export async function buildGameSummaryPayload(
             you_know: isYou ? parseJsonArray(r.what_you_know) : [],
             keep_in_mind: isYou ? parseJsonArray(r.keep_in_mind) : [],
             role_image: r.role_image,
+            // Private like objective/subtitle: an icon can give away the role type
+            // (e.g. a culprit badge), so it's only sent for the player's own role.
+            role_icon: isYou ? r.role_icon ?? null : null,
             is_you: isYou,
         };
         return base;

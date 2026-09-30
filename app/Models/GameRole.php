@@ -15,6 +15,7 @@ class GameRole extends Model
         'character_name',
         'subtitle',
         'role_image',
+        'role_icon',
         'objective',
         'what_you_know',
         'keep_in_mind',

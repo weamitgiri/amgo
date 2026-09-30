@@ -155,6 +155,23 @@ export async function ensureActivityGamesVictimName(): Promise<void> {
     }
 }
 
+/**
+ * game_roles.role_icon — the small (60×60) badge image shown on the player's own
+ * "Your Role" card, uploaded per role in the admin wizard. The Laravel migration
+ * adds it too; this guard exists because gameSummaryService SELECTs the column,
+ * so a deploy that forgot `php artisan migrate` would otherwise break every game.
+ */
+export async function ensureGameRolesRoleIcon(): Promise<void> {
+    try {
+        const [rows] = await query<any>("SHOW COLUMNS FROM game_roles LIKE 'role_icon'");
+        if ((rows as any).length === 0) {
+            await query('ALTER TABLE game_roles ADD COLUMN role_icon VARCHAR(255) NULL DEFAULT NULL AFTER role_image');
+        }
+    } catch (err: any) {
+        console.warn('[schemaHelpers] Could not ensure game_roles.role_icon:', err.message || err);
+    }
+}
+
 export async function ensureGameDurationDefault(): Promise<void> {
     try {
         // Total session should be 25 minutes (5 min case summary + 20 min investigation).
@@ -659,6 +676,7 @@ export async function ensureGameSchemaUpdates(): Promise<void> {
     await ensureGroupAccusationsTable();
     await ensureResultsScoringColumns();
     await ensureActivityGamesVictimName();
+    await ensureGameRolesRoleIcon();
     await ensureGameDurationDefault();
     await ensureCookAndCreateSchema();
 }
