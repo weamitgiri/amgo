@@ -1935,7 +1935,7 @@ function InvestigationView(props: {
                 </div>
               )}
               <fieldset disabled={locked} aria-busy={locked} className={locked ? "opacity-60 pointer-events-none select-none" : ""}>
-                <div className="mt-6 flex flex-wrap gap-6 justify-start">
+                <div className="mt-6 flex flex-wrap gap-6 justify-start items-start">
                   {players.map((p, i) => {
                     const roleImage = roleImageBySessionId.get(Number(p.session_id)) ?? null;
                     const isSelected = i === selectedAskee;
@@ -1948,7 +1948,7 @@ function InvestigationView(props: {
                         className={`relative flex flex-col items-center gap-3 text-center transition disabled:opacity-40 disabled:cursor-not-allowed`}
                       >
                         {/* Rounded rect card with circular portrait inside */}
-                        <div className={`relative w-[120px] h-[155px] rounded-2xl flex flex-col items-center justify-center gap-3 border transition-all bg-transparent ${
+                        <div className={`relative w-[120px] min-h-[155px] rounded-2xl flex flex-col items-center justify-center gap-3 px-2 py-3 border transition-all bg-transparent ${
                           isSelected
                             ? "border-[#c492ed]"
                             : "border-[#4a3473] hover:border-purple-400/60"
@@ -1994,14 +1994,14 @@ function InvestigationView(props: {
             <>
               <div>
                 <label className="text-xs text-white/70 block mb-5">All Players</label>
-                <div className="flex flex-wrap gap-6 justify-start">
+                <div className="flex flex-wrap gap-6 justify-start items-start">
                   {players.map((p, i) => {
                     const frozen = frozenSessionIds.has(p.session_id);
                     const roleImage = roleImageBySessionId.get(Number(p.session_id)) ?? null;
                     return (
                       <div key={p.session_id} className={`flex flex-col items-center gap-0 ${frozen ? "opacity-40" : ""}`}>
                         {/* Card with circular portrait inside */}
-                        <div className="relative w-[120px] h-[155px] rounded-2xl flex flex-col items-center justify-center gap-3 border border-[#4a3473] bg-transparent">
+                        <div className="relative w-[120px] min-h-[155px] rounded-2xl flex flex-col items-center justify-center gap-3 px-2 py-3 border border-[#4a3473] bg-transparent">
                           <div className="h-[90px] w-[90px] rounded-full overflow-hidden shadow-lg flex-shrink-0">
                             <RoleAvatar src={roleImage} fallback={initials(p.pseudonym)} gradient={PLAYER_GRADS[i % PLAYER_GRADS.length]} fallbackTextClass="text-2xl" />
                           </div>
