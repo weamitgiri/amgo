@@ -10,7 +10,8 @@ class AllowHostsMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $allowedHosts = explode(',', env('TRUSTED_HOSTS'));
+        // From config (not env()) so it keeps working after `php artisan config:cache`.
+        $allowedHosts = config('app.trusted_hosts', []);
         //echo $request->getHttpHost()." >> ".$request->getSchemeAndHttpHost()." >>> ".$request->getHost(); die;
         $host = $request->getHost();
         //die('---');

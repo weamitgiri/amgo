@@ -59,7 +59,7 @@
                 <div class="col-md-12">
                     <label>Webhook URL to configure in the Razorpay Dashboard</label>
                     <input type="text" class="form-control" readonly
-                           value="{{ rtrim(env('API_BASE_URL', config('app.url')), '/') }}/v1/webhooks/razorpay">
+                           value="{{ rtrim(config('app.api_base_url') ?: config('app.url'), '/') }}/v1/webhooks/razorpay">
                     <small class="text-muted">
                         Subscribe to: <code>payment.captured</code>, <code>payment.failed</code>, <code>order.paid</code>.
                     </small>

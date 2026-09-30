@@ -55,6 +55,17 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | Hosts allowed to reach the app (checked by AllowHostsMiddleware). Read here —
+    | NOT via env() in the middleware — because once `php artisan config:cache` runs,
+    | env() outside config files returns null, which rejected every host with 401.
+    | Comma-separated in .env: TRUSTED_HOSTS=3.109.19.235,yourdomain.com,localhost
+    */
+    'trusted_hosts' => array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_HOSTS', ''))))),
+
+    // Public base URL of the Node API (used to show the Razorpay webhook URL in admin).
+    'api_base_url' => env('API_BASE_URL'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
