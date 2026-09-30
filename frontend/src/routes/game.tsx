@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   FileText, Lightbulb, Gamepad2, Camera, X, MapPin, Calendar, Cloud, Video,
   ZoomIn, ShieldCheck, Eye, Send, Clock, UserX, ScanSearch,
@@ -165,6 +165,66 @@ function RoleAvatar({
   return (
     <div className={`h-full w-full bg-gradient-to-br ${gradient} grid place-items-center font-bold text-white ${fallbackTextClass}`}>
       {fallback}
+    </div>
+  );
+}
+
+/**
+ * Grid for player cards. Every card gets the same width AND height (auto-rows-fr),
+ * and the columns stretch so the row always ends at the panel's right edge — no
+ * empty gap after the last card, whatever the player count or screen width.
+ */
+function PlayerCardGrid({ children, minCardPx = 112 }: { children: ReactNode; minCardPx?: number }) {
+  return (
+    <div
+      className="grid auto-rows-fr gap-x-4 gap-y-7"
+      style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${minCardPx}px, 1fr))` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** One player card: circular portrait on top, name + public character below. */
+function PlayerCard({
+  player,
+  index,
+  selected = false,
+  avatarClass = "h-[84px] w-[84px]",
+}: {
+  player: GamePlayer;
+  index: number;
+  selected?: boolean;
+  avatarClass?: string;
+}) {
+  return (
+    <div
+      className={`relative h-full w-full rounded-2xl flex flex-col items-center gap-3 px-2 pt-4 pb-5 border transition-all ${
+        selected ? "border-[#c492ed] bg-[#c492ed]/10" : "border-[#4a3473] hover:border-purple-400/60"
+      }`}
+    >
+      <div className={`${avatarClass} rounded-full overflow-hidden shadow-lg shrink-0`}>
+        <RoleAvatar
+          src={player.role_image ? resolveMediaUrl(player.role_image) : null}
+          fallback={player.pseudonym.slice(0, 2).toUpperCase()}
+          gradient={PLAYER_GRADS[index % PLAYER_GRADS.length]}
+          fallbackTextClass="text-2xl"
+        />
+      </div>
+      <div className="w-full min-w-0 flex flex-col items-center gap-0.5 text-center leading-tight">
+        <span className="text-[14px] text-white break-words">
+          {player.pseudonym}
+          {player.is_you && <span className="text-white/70"> (You)</span>}
+        </span>
+        {player.character_name && (
+          <span className="text-[11px] text-purple-300/90 break-words">{player.character_name}</span>
+        )}
+      </div>
+      {selected && (
+        <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full bg-[#1a0f2e] border-[3px] border-[#c492ed] flex items-center justify-center">
+          <div className="h-3 w-3 bg-white rounded-full" />
+        </div>
+      )}
     </div>
   );
 }
@@ -341,6 +401,15 @@ function GamePage() {
   const lieMode = lieDetectorRoundId !== null;
   const finalVerdictActive = finalVerdictEndsAt !== null;
   const [selectedAskee, setSelectedAskee] = useState(0);
+  // Index 0 is usually the Investigator themself (a disabled card), which left the
+  // selection on "You" and made Send Question silently do nothing. Keep the
+  // selection on someone who can actually be asked.
+  useEffect(() => {
+    const canAsk = (p?: GamePlayer) => !!p && !p.is_you && !frozenSessionIds.has(Number(p.session_id));
+    if (players.length === 0 || canAsk(players[selectedAskee])) return;
+    const next = players.findIndex((p) => canAsk(p));
+    if (next !== -1) setSelectedAskee(next);
+  }, [players, frozenSessionIds, selectedAskee]);
   const [question, setQuestion] = useState("");
   const [modal, setModal] = useState<ModalKey>(null);
   // Normal (non-Lie-Detector) questions the Investigator has spent so far —
@@ -1816,7 +1885,8 @@ function InvestigationView(props: {
       <div className="mt-5 grid gap-5 lg:grid-cols-[260px_1fr_320px]">
         <div className="flex flex-col h-full bg-[#1e103c] rounded-none lg:rounded-2xl border-0 lg:border lg:border-[#3b2a59] p-5">
           <h3 className="text-[22px] font-bold mb-5 text-white">Players</h3>
-          <div className="space-y-4">
+          {/* auto-rows-fr: every player row is as tall as the tallest one. */}
+          <div className="grid auto-rows-fr gap-4">
             {players.map((p, i) => {
               const sid = Number(p.session_id);
               const frozen = frozenSessionIds.has(sid);
@@ -1873,20 +1943,23 @@ function InvestigationView(props: {
                         {p.character_name}
                       </div>
                     )}
-                    {/* Presence text ("Available"/"Offline") is hidden — only the active
-                        "Answering" / "Left" states, which affect gameplay, still show. */}
-                    {(isAnswering || frozen) && (
-                      <div className={`text-[15px] flex items-center gap-2 mt-1 ${statusColor}`}>
-                        <div className={`h-2 w-2 rounded-full shrink-0 ${statusDot}`} /> {statusText}
-                      </div>
-                    )}
                   </div>
-                  {isAnswering && (
-                    <AnswerCountdown
-                      askedAt={answeringItem?.askedAt}
-                      totalSecs={answerSecs}
-                      className="shrink-0 text-[#facc15] text-lg font-semibold tabular-nums whitespace-nowrap"
-                    />
+                  {/* Presence text ("Available"/"Offline") is hidden — only the active
+                      "Answering" / "Left" states, which affect gameplay, still show. They sit
+                      on the right (not under the name) so every row keeps the same height. */}
+                  {(isAnswering || frozen) && (
+                    <div className="shrink-0 flex flex-col items-end gap-0.5">
+                      {isAnswering && (
+                        <AnswerCountdown
+                          askedAt={answeringItem?.askedAt}
+                          totalSecs={answerSecs}
+                          className="text-[#facc15] text-lg font-semibold tabular-nums whitespace-nowrap leading-none"
+                        />
+                      )}
+                      <div className={`text-[11px] flex items-center gap-1.5 whitespace-nowrap ${statusColor}`}>
+                        <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot}`} /> {statusText}
+                      </div>
+                    </div>
                   )}
                 </button>
               );
@@ -1935,44 +2008,20 @@ function InvestigationView(props: {
                 </div>
               )}
               <fieldset disabled={locked} aria-busy={locked} className={locked ? "opacity-60 pointer-events-none select-none" : ""}>
-                <div className="mt-6 flex flex-wrap gap-6 justify-start items-start">
-                  {players.map((p, i) => {
-                    const roleImage = roleImageBySessionId.get(Number(p.session_id)) ?? null;
-                    const isSelected = i === selectedAskee;
-                    return (
+                <div className="mt-6">
+                  <PlayerCardGrid>
+                    {players.map((p, i) => (
                       <button
                         type="button"
                         key={p.session_id}
                         onClick={() => setSelectedAskee(i)}
                         disabled={p.is_you || frozenSessionIds.has(p.session_id)}
-                        className={`relative flex flex-col items-center gap-3 text-center transition disabled:opacity-40 disabled:cursor-not-allowed`}
+                        className="h-full transition disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        {/* Rounded rect card with circular portrait inside */}
-                        <div className={`relative w-[120px] min-h-[155px] rounded-2xl flex flex-col items-center justify-center gap-3 px-2 py-3 border transition-all bg-transparent ${
-                          isSelected
-                            ? "border-[#c492ed]"
-                            : "border-[#4a3473] hover:border-purple-400/60"
-                        }`}>
-                          {/* Circular portrait */}
-                          <div className="h-[90px] w-[90px] rounded-full overflow-hidden shadow-lg flex-shrink-0">
-                            <RoleAvatar src={roleImage} fallback={initials(p.pseudonym)} gradient={PLAYER_GRADS[i % PLAYER_GRADS.length]} fallbackTextClass="text-2xl" />
-                          </div>
-                          {/* Name + public character / role (same as the observer grid) */}
-                          <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
-                            {p.pseudonym}
-                            {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
-                            {p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
-                          </div>
-                        </div>
-                        {/* Selected indicator dot */}
-                        {isSelected && (
-                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full bg-[#1a0f2e] border-[3px] border-[#c492ed] flex items-center justify-center">
-                            <div className="h-3 w-3 bg-white rounded-full" />
-                          </div>
-                        )}
+                        <PlayerCard player={p} index={i} selected={i === selectedAskee} />
                       </button>
-                    );
-                  })}
+                    ))}
+                  </PlayerCardGrid>
                 </div>
                 <div className="mt-8">
                   <label className="text-xs text-white/70">Type your question (max 120 characters)</label>
@@ -1994,27 +2043,13 @@ function InvestigationView(props: {
             <>
               <div>
                 <label className="text-xs text-white/70 block mb-5">All Players</label>
-                <div className="flex flex-wrap gap-6 justify-start items-start">
-                  {players.map((p, i) => {
-                    const frozen = frozenSessionIds.has(p.session_id);
-                    const roleImage = roleImageBySessionId.get(Number(p.session_id)) ?? null;
-                    return (
-                      <div key={p.session_id} className={`flex flex-col items-center gap-0 ${frozen ? "opacity-40" : ""}`}>
-                        {/* Card with circular portrait inside */}
-                        <div className="relative w-[120px] min-h-[155px] rounded-2xl flex flex-col items-center justify-center gap-3 px-2 py-3 border border-[#4a3473] bg-transparent">
-                          <div className="h-[90px] w-[90px] rounded-full overflow-hidden shadow-lg flex-shrink-0">
-                            <RoleAvatar src={roleImage} fallback={initials(p.pseudonym)} gradient={PLAYER_GRADS[i % PLAYER_GRADS.length]} fallbackTextClass="text-2xl" />
-                          </div>
-                          <div className="text-[14px] text-white leading-tight text-center flex flex-col items-center gap-0.5">
-                            {p.pseudonym}
-                            {p.is_you && <span className="text-[11px] text-white/70">(You)</span>}
-                            {p.character_name && <span className="text-[11px] text-purple-300/90 leading-tight">{p.character_name}</span>}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <PlayerCardGrid>
+                  {players.map((p, i) => (
+                    <div key={p.session_id} className={`h-full ${frozenSessionIds.has(p.session_id) ? "opacity-40" : ""}`}>
+                      <PlayerCard player={p} index={i} />
+                    </div>
+                  ))}
+                </PlayerCardGrid>
               </div>
             </>
           )}
@@ -2607,16 +2642,14 @@ function AccuseModal({
           <p className="mt-6 text-center text-sm text-emerald-300">Your accusation has been submitted. Waiting for the other players…</p>
         ) : (
           <>
-            <div className="mt-5 grid grid-cols-5 gap-2">
-              {candidates.map((p, i) => (
-                <button key={p.session_id} type="button" onClick={() => setPickSessionId(p.session_id)} className={`relative rounded-xl border p-2 text-center ${pickSessionId === p.session_id ? "border-purple-400 ring-2 ring-purple-400/40 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
-                  <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold`}>
-                    {p.pseudonym.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="mt-1.5 text-[11px] font-semibold">{p.pseudonym}</div>
-                  {pickSessionId === p.session_id && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-purple-500 ring-2 ring-purple-300" />}
-                </button>
-              ))}
+            <div className="mt-5">
+              <PlayerCardGrid minCardPx={104}>
+                {candidates.map((p, i) => (
+                  <button key={p.session_id} type="button" onClick={() => setPickSessionId(p.session_id)} className="h-full">
+                    <PlayerCard player={p} index={i} selected={pickSessionId === p.session_id} avatarClass="h-16 w-16" />
+                  </button>
+                ))}
+              </PlayerCardGrid>
             </div>
             <div className="mt-5">
               <label className="text-xs text-white/80">Why do you think this player is the culprit?</label>
@@ -2695,16 +2728,14 @@ function FinalAccusationModal({
             <p className="mt-8 text-center text-sm text-emerald-300">Your accusation is locked in. Waiting for the other players and the final verdict…</p>
           ) : (
             <>
-              <div className="mt-5 grid grid-cols-5 gap-2">
-                {candidates.map((p, i) => (
-                  <button key={p.session_id} type="button" onClick={() => setPickSessionId(p.session_id)} className={`relative rounded-xl border p-2 text-center ${pickSessionId === p.session_id ? "border-purple-400 ring-2 ring-purple-400/40 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
-                    <div className={`mx-auto h-14 w-14 rounded-full bg-gradient-to-br ${PLAYER_GRADS[i % PLAYER_GRADS.length]} grid place-items-center text-sm font-bold`}>
-                      {p.pseudonym.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="mt-1.5 text-[11px] font-semibold">{p.pseudonym}</div>
-                    {pickSessionId === p.session_id && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-purple-500 ring-2 ring-purple-300" />}
-                  </button>
-                ))}
+              <div className="mt-5">
+                <PlayerCardGrid minCardPx={104}>
+                  {candidates.map((p, i) => (
+                    <button key={p.session_id} type="button" onClick={() => setPickSessionId(p.session_id)} className="h-full">
+                      <PlayerCard player={p} index={i} selected={pickSessionId === p.session_id} avatarClass="h-16 w-16" />
+                    </button>
+                  ))}
+                </PlayerCardGrid>
               </div>
               <div className="mt-5">
                 <label className="text-xs text-white/80">Why do you think this player is the culprit?</label>
