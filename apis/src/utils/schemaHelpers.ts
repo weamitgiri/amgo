@@ -1,4 +1,5 @@
 import { query } from '../config/db';
+import { purgeStaleGroupRowsOnBoot } from '../services/groupDataCleanup';
 
 export async function ensureOrganizerStatusColumns(): Promise<void> {
     try {
@@ -679,6 +680,8 @@ export async function ensureGameSchemaUpdates(): Promise<void> {
     await ensureGameRolesRoleIcon();
     await ensureGameDurationDefault();
     await ensureCookAndCreateSchema();
+    // Last: clear rows left behind by deleted groups whose ids were later reused.
+    await purgeStaleGroupRowsOnBoot();
 }
 
 export default ensureOrganizerStatusColumns;

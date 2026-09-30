@@ -1,4 +1,5 @@
 import type { PoolConnection } from 'mysql2/promise';
+import { clearStaleDataForNewGroup } from './groupDataCleanup';
 import { AppError } from '../utils/AppError';
 import { assertCanJoinBooking, getBookingLimits } from './eventStatsService';
 
@@ -106,6 +107,11 @@ export async function assignParticipantToGroup(
             [bookingId, gameId, groupName, 'waiting']
         )) as any;
         groupId = newGroup.insertId;
+        // The id may have been used by an earlier (since-deleted) group whose timers,
+        // questions, sessions etc. were left behind. Clear them now so this new game
+        // doesn't inherit an old, already-expired clock (fresh game opening on
+        // Investigation at 00:00) or old players/answers.
+        await clearStaleDataForNewGroup(conn, groupId);
     }
 
     await conn.query('UPDATE game_participants SET group_id = ? WHERE id = ?', [groupId, participantId]);

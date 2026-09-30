@@ -72,7 +72,8 @@ export async function ensureCaseSummaryTimer(groupId: number | string, caseSumma
         if (!Number((lockRows as any[])[0]?.got)) return;
         try {
             const [existing] = await conn.query<any[]>(
-                "SELECT id FROM timers WHERE group_id = ? AND timer_type = 'case_summary' LIMIT 1",
+                `SELECT t.id FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'case_summary' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) LIMIT 1`,
                 [groupId]
             );
             if ((existing as any[]).length > 0) return;
@@ -102,7 +103,8 @@ export async function ensureCaseSummaryTimer(groupId: number | string, caseSumma
 export async function recoverMissedQuestioningPhase(groupId: number | string): Promise<void> {
     // Fast path (no lock): the game already advanced past case summary.
     const [qPre] = await query<any>(
-        "SELECT id FROM timers WHERE group_id = ? AND timer_type = 'questioning' LIMIT 1",
+        `SELECT t.id FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'questioning' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) LIMIT 1`,
         [groupId]
     );
     if ((qPre as any[]).length > 0) return;
@@ -115,14 +117,16 @@ export async function recoverMissedQuestioningPhase(groupId: number | string): P
         try {
             // Re-check under the lock (the timer service may have just created it).
             const [qRows] = await conn.query<any[]>(
-                "SELECT id FROM timers WHERE group_id = ? AND timer_type = 'questioning' LIMIT 1",
+                `SELECT t.id FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'questioning' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) LIMIT 1`,
                 [groupId]
             );
             if ((qRows as any[]).length > 0) return;
 
             // Only recover once the case summary has actually ended.
             const [csRows] = await conn.query<any[]>(
-                "SELECT expires_at, is_active FROM timers WHERE group_id = ? AND timer_type = 'case_summary' ORDER BY id DESC LIMIT 1",
+                `SELECT t.expires_at, t.is_active FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'case_summary' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) ORDER BY t.id DESC LIMIT 1`,
                 [groupId]
             );
             const cs = (csRows as any[])[0];
@@ -178,7 +182,8 @@ export async function recoverMissedQuestioningPhase(groupId: number | string): P
 export async function devAdvancePhase(groupId: number | string): Promise<{ advanced: string | null }> {
     // Not started yet (no case_summary timer) → start the game now.
     const [csRows] = await query<any>(
-        "SELECT id FROM timers WHERE group_id = ? AND timer_type = 'case_summary' LIMIT 1",
+        `SELECT t.id FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'case_summary' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) LIMIT 1`,
         [groupId]
     );
     if ((csRows as any[]).length === 0) {
