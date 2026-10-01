@@ -19,6 +19,11 @@ import secretBoxImg from "@/assets/secret_box.png";
 import caseCollage from "@/assets/game-summery/case-summary-collage.png";
 import suspectBanner from "@/assets/game-summery/Group 1000004660.png";
 
+import ri1 from "@/assets/role-icon/1.png";
+import ri2 from "@/assets/role-icon/2.png";
+import ri3 from "@/assets/role-icon/3.png";
+
+
 type GameSearch = { game?: string };
 
 export const Route = createFileRoute("/game")({
@@ -2289,7 +2294,7 @@ function YourRoleModal({ person, onClose }: { person: GamePerson; onClose: () =>
           {roleTagline ? (
             <p className="mt-2 text-sm text-white/75 leading-relaxed">{roleTagline}</p>
           ) : null}
-          {person.objective ? <Section title="OBJECTIVE" items={[person.objective]} icon="🎯" /> : null}
+          {person.objective ? <Section title="OBJECTIVE" items={[person.objective]} icon={ri3} /> : null}
           {person.youKnow.length > 0 ? <Section title="WHAT YOU KNOW" items={person.youKnow} icon="💡" /> : null}
           {person.keep.length > 0 ? <Section title="KEEP IN MIND" items={person.keep} icon="📌" /> : null}
           <div className="mt-auto pt-4 rounded-xl border border-white/10 bg-black/25 px-4 py-3 flex items-center gap-2 text-sm text-white/80">
