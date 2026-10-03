@@ -16,6 +16,7 @@ class GameFullStory extends Model
         'part_number',
         'part_title',
         'part_body',
+        'part_image',
     ];
 
     public function game()

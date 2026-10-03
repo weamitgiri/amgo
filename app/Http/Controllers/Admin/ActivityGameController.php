@@ -126,8 +126,16 @@ class ActivityGameController extends Controller
 
                 // Save Full Story
                 if ($request->has('full_story')) {
-                    foreach ($request->full_story as $storyData) {
-                        $game->fullStory()->create($storyData);
+                    foreach ($request->full_story as $index => $storyData) {
+                        $story = $game->fullStory()->create([
+                            'part_number' => $storyData['part_number'],
+                            'part_title' => $storyData['part_title'],
+                            'part_body' => $storyData['part_body'],
+                        ]);
+                        if ($request->hasFile("full_story.{$index}.part_image")) {
+                            $story->part_image = $this->storePublicImageOrFail($request->file("full_story.{$index}.part_image"), 'full_story');
+                            $story->save();
+                        }
                     }
                 }
             });
@@ -270,8 +278,19 @@ class ActivityGameController extends Controller
                 // 6. Synchronize Full Story
                 $game->fullStory()->delete();
                 if ($request->has('full_story')) {
-                    foreach ($request->full_story as $storyData) {
-                        $game->fullStory()->create($storyData);
+                    foreach ($request->full_story as $index => $storyData) {
+                        $story = $game->fullStory()->create([
+                            'part_number' => $storyData['part_number'],
+                            'part_title' => $storyData['part_title'],
+                            'part_body' => $storyData['part_body'],
+                            'part_image' => $storyData['existing_image'] ?? null,
+                        ]);
+                        if ($request->hasFile("full_story.{$index}.part_image")) {
+                            $old = $story->part_image;
+                            $story->part_image = $this->storePublicImageOrFail($request->file("full_story.{$index}.part_image"), 'full_story');
+                            $story->save();
+                            $this->deletePublicPathQuietly($old);
+                        }
                     }
                 }
             });

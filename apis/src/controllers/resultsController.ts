@@ -6,14 +6,33 @@ import { successResponse } from '../utils/apiResponse';
 import { AppError } from '../utils/AppError';
 import { query } from '../config/db';
 import { serializeData } from '../utils/serializer';
-import { shortName } from '../utils/pseudonym';
 import { resolvePdfPath } from '../services/resultsPdfService';
 import { isCulpritRole } from '../services/verdictScoringService';
 import { getJwtSecret } from '../utils/jwtSecret';
 
+/** Strip HTML tags/entities from admin-authored rich text down to plain text. */
+function htmlToPlainText(html: string | null | undefined): string {
+    if (!html) return '';
+    return String(html)
+        .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&quot;/gi, '"')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 /**
- * Post-game results for a group — always rendered with pseudonyms (never raw
- * participant names), matching how the live game already hides identities.
+ * Post-game results for a group. The game is over, so identities are no longer
+ * secret — the reveal screen shows each player's real registered name alongside
+ * their character and role (the PDF already does the same).
  */
 export const getGameResults = asyncHandler(async (req: Request, res: Response) => {
     const { group_id } = req.params;
@@ -42,7 +61,9 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
         [group_id]
     );
 
-    // Post-game "Full Story" reveal: the game's clues in order, plus the tagline.
+    // Post-game "Full Story" reveal: the admin-authored Full Story Reveal parts
+    // (game_full_story), in order, plus the tagline. part_body is rich HTML pasted
+    // from the admin editor, so strip tags to plain text for the results card.
     const [gameRows] = await query<any>(
         `SELECT ag.id AS game_row_id, ag.tagline
             FROM game_groups gg
@@ -54,16 +75,16 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
     const gameRowId = gameRows?.[0]?.game_row_id;
     let fullStory: any[] = [];
     if (gameRowId) {
-        const [clueRows] = await query<any>(
-            `SELECT id, clue_title, clue_short_description, clue_detail, clue_image
-                FROM game_clues WHERE game_id = ? ORDER BY id ASC`,
+        const [storyRows] = await query<any>(
+            `SELECT id, part_title, part_body, part_image
+                FROM game_full_story WHERE game_id = ? ORDER BY part_number ASC, id ASC`,
             [gameRowId]
         );
-        fullStory = (clueRows ?? []).map((c: any) => ({
-            id: Number(c.id),
-            title: c.clue_title,
-            text: c.clue_detail || c.clue_short_description,
-            image: c.clue_image,
+        fullStory = (storyRows ?? []).map((s: any) => ({
+            id: Number(s.id),
+            title: s.part_title,
+            text: htmlToPlainText(s.part_body),
+            image: s.part_image,
         }));
     }
 
@@ -87,7 +108,8 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
 
     const withPseudonym = (s: any) => ({
         session_id: Number(s.id),
-        pseudonym: shortName(s.participant_name || 'Player', Number(s.id)),
+        // Real registered name — the game is over, identities are revealed.
+        pseudonym: (s.participant_name || '').trim() || 'Player',
         role_type: s.role_type,
         score: s.total_score,
         status: statusBySession.get(String(s.id)) ?? (winnerSet.has(String(s.id)) ? 'winner' : 'loser'),

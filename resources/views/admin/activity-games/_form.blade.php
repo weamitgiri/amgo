@@ -432,6 +432,18 @@
                                         <label>Content</label>
                                         <textarea name="full_story[{{ $index }}][part_body]" class="form-control summernote">{{ $story['part_body'] ?? $story->part_body ?? '' }}</textarea>
                                     </div>
+                                    <div class="col-md-12 mt-2">
+                                        <label>Part Image</label>
+                                        <div class="custom-file">
+                                            <input type="file" name="full_story[{{ $index }}][part_image]" class="custom-file-input">
+                                            <label class="custom-file-label">Choose image</label>
+                                        </div>
+                                        @php $existingStoryImage = $story['part_image'] ?? $story->part_image ?? null; @endphp
+                                        @if($existingStoryImage)
+                                            <input type="hidden" name="full_story[{{ $index }}][existing_image]" value="{{ $existingStoryImage }}">
+                                            <img src="{{ asset('storage/' . $existingStoryImage) }}" class="mt-2 img-thumbnail" style="height:60px;">
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         @endforeach
@@ -692,6 +704,13 @@
                         <div class="col-md-12 mt-2">
                             <label>Content</label>
                             <textarea name="full_story[${index}][part_body]" class="form-control summernote-dynamic"></textarea>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <label>Part Image</label>
+                            <div class="custom-file">
+                                <input type="file" name="full_story[${index}][part_image]" class="custom-file-input">
+                                <label class="custom-file-label">Choose image</label>
+                            </div>
                         </div>
                     </div>
                 </div>`;

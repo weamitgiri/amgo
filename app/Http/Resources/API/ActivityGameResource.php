@@ -75,6 +75,7 @@ class ActivityGameResource extends JsonResource
                     'part_number' => $story->part_number,
                     'part_title' => $story->part_title,
                     'part_body' => $story->part_body,
+                    'part_image' => $story->part_image,
                 ];
             }),
         ];

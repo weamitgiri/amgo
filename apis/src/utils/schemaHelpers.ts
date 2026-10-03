@@ -173,6 +173,23 @@ export async function ensureGameRolesRoleIcon(): Promise<void> {
     }
 }
 
+/**
+ * game_full_story.part_image — the image shown next to each Full Story Reveal part
+ * on the results screen, uploaded per part in the admin wizard. The Laravel
+ * migration adds it too; this guard exists because the results endpoint SELECTs
+ * the column, so a deploy that forgot `php artisan migrate` would break results.
+ */
+export async function ensureFullStoryPartImage(): Promise<void> {
+    try {
+        const [rows] = await query<any>("SHOW COLUMNS FROM game_full_story LIKE 'part_image'");
+        if ((rows as any).length === 0) {
+            await query('ALTER TABLE game_full_story ADD COLUMN part_image VARCHAR(255) NULL DEFAULT NULL AFTER part_body');
+        }
+    } catch (err: any) {
+        console.warn('[schemaHelpers] Could not ensure game_full_story.part_image:', err.message || err);
+    }
+}
+
 export async function ensureGameDurationDefault(): Promise<void> {
     try {
         // Total session should be 25 minutes (5 min case summary + 20 min investigation).
@@ -678,6 +695,7 @@ export async function ensureGameSchemaUpdates(): Promise<void> {
     await ensureResultsScoringColumns();
     await ensureActivityGamesVictimName();
     await ensureGameRolesRoleIcon();
+    await ensureFullStoryPartImage();
     await ensureGameDurationDefault();
     await ensureCookAndCreateSchema();
     // Last: clear rows left behind by deleted groups whose ids were later reused.

@@ -90,6 +90,7 @@ class StoreActivityGameRequest extends FormRequest
             'full_story.*.part_number' => 'required|integer|min:1|max:3',
             'full_story.*.part_title' => 'required|string|max:150',
             'full_story.*.part_body' => 'required|string',
+            'full_story.*.part_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
         ];
     }
 
@@ -120,6 +121,10 @@ class StoreActivityGameRequest extends FormRequest
             'clues.*.clue_image.image' => 'The clue image must be a valid image file.',
             'clues.*.clue_image.mimes' => 'The clue image must be a JPG, PNG, WEBP or JPEG file.',
             'clues.*.clue_image.max'   => 'The clue image may not be larger than 2 MB.',
+
+            'full_story.*.part_image.image' => 'Each story image must be a valid image file.',
+            'full_story.*.part_image.mimes' => 'Each story image must be a JPG, PNG, WEBP or JPEG file.',
+            'full_story.*.part_image.max'   => 'Each story image may not be larger than 2 MB.',
         ];
     }
 }
