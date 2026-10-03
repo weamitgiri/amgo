@@ -2289,9 +2289,9 @@ function YourRoleModal({ person, onClose }: { person: GamePerson; onClose: () =>
           {roleTagline ? (
             <p className="mt-2 text-sm text-white/75 leading-relaxed">{roleTagline}</p>
           ) : null}
-          {person.objective ? <Section title="OBJECTIVE" items={[person.objective]} icon={ri3} /> : null}
-          {person.youKnow.length > 0 ? <Section title="WHAT YOU KNOW" items={person.youKnow} icon="💡" /> : null}
-          {person.keep.length > 0 ? <Section title="KEEP IN MIND" items={person.keep} icon="📌" /> : null}
+          {person.objective ? <Section title="OBJECTIVE" items={[person.objective]} icon={ri1} /> : null}
+          {person.youKnow.length > 0 ? <Section title="WHAT YOU KNOW" items={person.youKnow} icon={ri2} /> : null}
+          {person.keep.length > 0 ? <Section title="KEEP IN MIND" items={person.keep} icon={ri3} /> : null}
           <div className="mt-auto pt-4 rounded-xl border border-white/10 bg-black/25 px-4 py-3 flex items-center gap-2 text-sm text-white/80">
             <ShieldCheck className="h-4 w-4 text-white/70 shrink-0" /> Keep your role secret
           </div>
@@ -2306,9 +2306,11 @@ function YourRoleModal({ person, onClose }: { person: GamePerson; onClose: () =>
 
 function Section({ title, items, icon }: { title: string; items: string[]; icon: string }) {
   return (
-    <div className="mt-4">
-      <div className="text-[11px] font-bold tracking-widest text-purple-300 flex items-center gap-2"><span>{icon}</span> {title}</div>
-      <ul className="mt-1.5 space-y-1 text-xs text-white/85 list-disc pl-5">{items.map((t, i) => <li key={i}>{t}</li>)}</ul>
+    <div className="mt-4 border-t border-white/10 pt-4">
+      <div className="text-[13px] font-bold tracking-widest text-purple-300 flex items-center gap-2">
+        <img src={icon} alt="" className="h-5 w-5 object-contain shrink-0" /> {title}
+      </div>
+      <ul className="mt-2 space-y-1 text-[13px] text-white/85 list-disc pl-5">{items.map((t, i) => <li key={i}>{t}</li>)}</ul>
     </div>
   );
 }
