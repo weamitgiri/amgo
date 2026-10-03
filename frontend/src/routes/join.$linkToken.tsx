@@ -249,6 +249,10 @@ function JoinPage() {
       toastError("Please enter a valid email address.");
       return;
     }
+    if (!disclaimerAccepted) {
+      toastError("Please confirm the checkbox to continue.");
+      return;
+    }
 
     setIsSubmitting(true);
     participantService
@@ -441,7 +445,7 @@ function JoinPage() {
                 disclaimerAccepted={disclaimerAccepted}
                 setDisclaimerAccepted={setDisclaimerAccepted}
                 onNext={handleSendOtp}
-                canProceed={name.trim().length > 0 && email.includes("@")}
+                canProceed={name.trim().length > 0 && email.includes("@") && disclaimerAccepted}
                 isSubmitting={isSubmitting}
                 activityTitle={activityTitle}
                 activityDescription={activityDescription}
@@ -664,6 +668,19 @@ function FormStep({
           type="email"
         />
       </div>
+
+      {/* Required consent — player must confirm real-name use before an OTP is sent. */}
+      <label className="mt-5 flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={disclaimerAccepted}
+          onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border border-white/30 bg-white/10 accent-[#8B5CF6] cursor-pointer"
+        />
+        <span className="text-[13px] leading-relaxed text-white/75">
+          I confirm that my original name will be used for this game, and that this game is purely for entertainment purposes.
+        </span>
+      </label>
 
       <button
         type="button"
