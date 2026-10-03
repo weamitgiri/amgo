@@ -316,7 +316,13 @@
                                     </div>
                                     <div class="col-md-12 mt-2">
                                         <label>Profile Text</label>
-                                        <textarea name="investigator_cards[{{ $index }}][profile_text]" class="form-control" rows="2">{{ $iCard['profile_text'] ?? $iCard->profile_text ?? '' }}</textarea>
+                                        <small class="form-text text-muted mb-1">Use bullet lists for "Why he looks suspicious" and "Suggested questions" — the formatting shows on the player's Strategy Guide card.</small>
+                                        @php
+                                            $ptRaw = is_array($iCard) ? ($iCard['profile_text'] ?? '') : ($iCard->profile_text ?? '');
+                                            // Already-HTML passes through; older plain text keeps its line breaks in the editor.
+                                            $ptEditor = \Illuminate\Support\Str::contains($ptRaw, '<') ? e($ptRaw) : nl2br(e($ptRaw));
+                                        @endphp
+                                        <textarea name="investigator_cards[{{ $index }}][profile_text]" class="form-control summernote">{!! $ptEditor !!}</textarea>
                                     </div>
                                     <div class="col-md-5 mt-2">
                                         <label>Appears (seconds)</label>
@@ -656,7 +662,7 @@
                         </div>
                         <div class="col-md-12 mt-2">
                             <label>Profile Text</label>
-                            <textarea name="investigator_cards[${index}][profile_text]" class="form-control" rows="2"></textarea>
+                            <textarea name="investigator_cards[${index}][profile_text]" class="form-control summernote-dynamic"></textarea>
                         </div>
                         <div class="col-md-5 mt-2">
                             <label>Appears (seconds)</label>
@@ -673,6 +679,16 @@
                     </div>
                 </div>`;
             $('#investigator-cards-container').append(html);
+            // Initialize Summernote for the new card's Profile Text editor
+            $('#investigator-cards-container .summernote-dynamic').last().summernote({
+                height: 200,
+                toolbar: [
+                    ['style', ['style']],
+                    ['font', ['bold', 'underline', 'clear']],
+                    ['para', ['ul', 'ol', 'paragraph']],
+                    ['view', ['fullscreen', 'codeview']]
+                ]
+            });
         });
 
         // Add Rule Item

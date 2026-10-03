@@ -2163,6 +2163,20 @@ function ModalShell({ children, onClose, max = "max-w-lg" }: { children: React.R
   );
 }
 
+/** Admin rich-text (summernote) renders as HTML; older plain text keeps its line breaks. */
+function RichText({ text, className = "" }: { text: string; className?: string }) {
+  const looksHtml = /<\/?[a-z][\s\S]*>/i.test(text);
+  if (looksHtml) {
+    return (
+      <div
+        className={`${className} [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mt-1 [&_p]:mt-2 [&_strong]:text-white [&_b]:text-white [&_a]:text-emerald-300 [&_a]:underline`}
+        dangerouslySetInnerHTML={{ __html: text }}
+      />
+    );
+  }
+  return <p className={`${className} whitespace-pre-line`}>{text}</p>;
+}
+
 function InfoSliderModal({
   type,
   slideIndex,
@@ -2188,7 +2202,9 @@ function InfoSliderModal({
           <div>
             <div className="text-xs uppercase tracking-widest text-emerald-300">{type === "strategy" ? "Strategy Guide" : "Game Rules"}</div>
             <h2 className="mt-2 text-3xl font-black text-white">{slide.title}</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">{slide.description}</p>
+            {slide.description && (
+              <RichText text={slide.description} className="mt-3 max-w-2xl text-sm leading-6 text-white/70" />
+            )}
           </div>
           <div className="flex items-center gap-2 rounded-full bg-white/5 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-white/70">
             <span>{slideIndex + 1}</span>
@@ -2197,16 +2213,18 @@ function InfoSliderModal({
           </div>
         </div>
 
-        <div className="mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5">
-          <div className="grid gap-4">
-            {slide.details.map((item, index) => (
-              <div key={index} className="flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-300" />
-                <p className="text-sm text-white/80">{item}</p>
-              </div>
-            ))}
+        {slide.details.length > 0 && (
+          <div className="mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5">
+            <div className="grid gap-4">
+              {slide.details.map((item, index) => (
+                <div key={index} className="flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-300 shrink-0" />
+                  <RichText text={item} className="text-sm text-white/80" />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex justify-center gap-2">
