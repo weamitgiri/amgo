@@ -15,6 +15,7 @@ import { getParticipantSession } from "@/lib/participant-session";
 import { resolveMediaUrl } from "@/utils/media";
 import { toastError, toastSuccess } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
+import gameTop from "@/assets/game-top-img.png";
 
 export const Route = createFileRoute("/results")({
   head: () => ({ meta: [{ title: "Mystery Quest — Results" }] }),
@@ -284,7 +285,7 @@ function ResultsPage() {
           <h1 className="text-xl font-bold tracking-wide">Results & Role Revealed</h1>
         </div>
         <div className="flex items-center gap-2 print:hidden">
-          {results.pdf_available && (
+          {/*{results.pdf_available && (
             <button
               onClick={handleDownloadPdf}
               className="rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2"
@@ -292,7 +293,7 @@ function ResultsPage() {
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Download Results PDF</span>
             </button>
-          )}
+          )}*/}
          {/*  <button
             onClick={handleExportCSV}
             className="rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2"
@@ -310,12 +311,12 @@ function ResultsPage() {
         </div>
       </div>
 
-      {results.pdf_available && results.pdf_expires_at && (
+     {/* {results.pdf_available && results.pdf_expires_at && (
         <p className="mt-2 text-[11px] text-white/50">
           The results PDF is available for 1 hour after the game ends, then it is permanently deleted
           along with all participant data.
         </p>
-      )}
+      )}*/}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr] items-start">
         {/* Left column: culprit reveal + full story */}
@@ -377,8 +378,8 @@ function ResultsPage() {
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <h3 className="text-2xl font-bold text-pink-400">The Full Story</h3>
                 {results.tagline && (
-                  <div className="rotate-[-1deg] bg-amber-100/95 text-zinc-900 text-xs font-bold px-4 py-2 rounded-sm shadow-elevated">
-                    {results.tagline}
+                  <div className="rotate-[-1deg]">
+                    <img src={gameTop} alt="" className="h-full w-full object-cover" />
                   </div>
                 )}
               </div>
@@ -478,6 +479,7 @@ function ResultsPage() {
           <h3 className="text-center text-lg font-bold text-white">Roles Revealed</h3>
           <div className="mt-5 flex flex-wrap justify-center gap-4">
             {rolesRevealed.map((p) => {
+              console.log(p)
               const character = p.character_name ? splitCharacterName(p.character_name) : null;
               return (
                 <div

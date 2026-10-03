@@ -77,10 +77,10 @@ function HrResultsPage() {
           </span>
           <div>
             <h1 className="text-2xl font-bold">Results</h1>
-            <p className="text-sm text-muted-foreground">
+           {/* <p className="text-sm text-muted-foreground">
               Download game result PDFs. Each PDF is available for 1 hour after the game ends,
               then it is permanently deleted along with all participant data.
-            </p>
+            </p>*/}
           </div>
         </div>
 

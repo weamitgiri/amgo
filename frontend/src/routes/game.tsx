@@ -17,6 +17,7 @@ import mystery from "@/assets/mystery.jpg";
 import mqlogo from "@/assets/mqlogo.png";
 import top from "@/assets/top-s.png";
 import secretBoxImg from "@/assets/secret_box.png";
+import gameTop from "@/assets/game-top-img.png";
 import caseCollage from "@/assets/game-summery/case-summary-collage.png";
 import suspectBanner from "@/assets/game-summery/Group 1000004660.png";
 
@@ -2318,8 +2319,12 @@ function YourRoleModal({ person, onClose }: { person: GamePerson; onClose: () =>
           <div className="mt-auto pt-4 rounded-xl border border-white/10 bg-black/25 px-4 py-3 flex items-center gap-2 text-sm text-white/80">
             <ShieldCheck className="h-4 w-4 text-white/70 shrink-0" /> Keep your role secret
           </div>
-          <button onClick={onClose} className="mt-4 w-full rounded-full bg-gradient-primary py-3 text-sm font-semibold shadow-glow">
-            Okay, Continue
+          <button
+          type="button"
+          onClick={onClose}
+          className="mt-4 w-full rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 py-3 text-sm font-semibold text-white shadow-lg transition hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
+          >
+          Okay, Continue
           </button>
         </div>
       </div>
@@ -2602,7 +2607,7 @@ function ClueRoomModal({
           <div className="h-12 w-12 rounded-full bg-gradient-to-br from-amber-300/35 to-amber-600/15 border border-amber-400/60 grid place-items-center shadow-[0_0_22px_rgba(251,191,36,0.4)]"><Lightbulb className="h-6 w-6 text-amber-200" /></div>
           <div>
             <h3 className="text-lg font-black tracking-widest">CLUE ROOM</h3>
-            <div className="text-xs text-emerald-400">Unlocked — visible to all players</div>
+            <div className="text-xs text-emerald-400">Unlocked at 10:00</div>
           </div>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
