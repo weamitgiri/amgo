@@ -34,9 +34,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Zoventro — Interactive Team Engagement Platform" },
-      { name: "description", content: "Turn team activities into interactive experiences. Built for HR, designed for real engagement. Setup in minutes, no IT required..." },
+      { name: "description", content: "Turn team activities into interactive experiences. Built for HR, designed for real engagement. Setup in minutes, no IT required." },
       { property: "og:title", content: "Zoventro — Interactive Team Engagement" },
-      { property: "og:description", content: "Boost engagement, collaboration and energy without complicated setups..." },
+      { property: "og:description", content: "Boost engagement, collaboration and energy without complicated setups." },
     ],
   }),
   component: Home,
@@ -105,9 +105,9 @@ function Home() {
           <Header floating />
           <div className="relative px-6 md:px-14 pt-44 pb-32 max-w-3xl">
             <h1 className="text-[52px] md:text-[64px] font-extrabold text-white leading-[1.1] tracking-tight">
-              Turn Team Activities...<br className="hidden md:block" />
-              Into Interactive...<br className="hidden md:block" />
-              Experiences...
+              Turn Team Activities<br className="hidden md:block" />
+              Into Interactive<br className="hidden md:block" />
+              Experiences
             </h1>
             <p className="mt-6 text-white/80 text-base md:text-lg whitespace-nowrap">
               Boost engagement.collaboration.and energy, without complicated setups....
