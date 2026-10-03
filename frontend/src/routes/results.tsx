@@ -222,7 +222,8 @@ function ResultsPage() {
         : "—";
   const culprit = results.culprit ?? null;
   const culpritName = culprit?.character_name ? splitCharacterName(culprit.character_name) : null;
-  const culpritImage = resolveMediaUrl(culprit?.role_image ?? null);
+  // Admin-set culprit reveal image wins; otherwise the culprit role's portrait.
+  const culpritImage = resolveMediaUrl(culprit?.culprit_image ?? culprit?.role_image ?? null);
   const fullStory = results.full_story ?? [];
   const rolesRevealed = [...players].sort((a, b) => Number(b.is_you ?? false) - Number(a.is_you ?? false));
 

@@ -407,6 +407,19 @@
                             <button type="button" class="btn btn-primary btn-sm add-story-item"><i class="fas fa-plus mr-1"></i> Add Part</button>
                         </div>
                     </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Hidden Culprit Reveal Image</label>
+                            <small class="form-text text-muted mb-1">Shown on the results screen with "The hidden Culprit was ...". Leave empty to use the culprit role's portrait.</small>
+                            <div class="custom-file">
+                                <input type="file" name="culprit_image" class="custom-file-input">
+                                <label class="custom-file-label">Choose image</label>
+                            </div>
+                            @if(!empty($game?->culprit_image))
+                                <img src="{{ asset('storage/' . $game->culprit_image) }}" class="mt-2 img-thumbnail" style="height:60px;">
+                            @endif
+                        </div>
+                    </div>
                     <div class="card-body" id="story-container">
                         @php $stories = old('full_story', isset($game->fullStory) ? $game->fullStory : []); @endphp
                         @foreach($stories as $index => $story)

@@ -174,6 +174,22 @@ export async function ensureGameRolesRoleIcon(): Promise<void> {
 }
 
 /**
+ * activity_games.culprit_image — the image shown for the Hidden Culprit reveal on
+ * the results screen, uploaded in the admin wizard. The Laravel migration adds it
+ * too; this guard exists because the results endpoint SELECTs the column.
+ */
+export async function ensureActivityGamesCulpritImage(): Promise<void> {
+    try {
+        const [rows] = await query<any>("SHOW COLUMNS FROM activity_games LIKE 'culprit_image'");
+        if ((rows as any).length === 0) {
+            await query('ALTER TABLE activity_games ADD COLUMN culprit_image VARCHAR(255) NULL DEFAULT NULL AFTER victim_name');
+        }
+    } catch (err: any) {
+        console.warn('[schemaHelpers] Could not ensure activity_games.culprit_image:', err.message || err);
+    }
+}
+
+/**
  * game_full_story.part_image — the image shown next to each Full Story Reveal part
  * on the results screen, uploaded per part in the admin wizard. The Laravel
  * migration adds it too; this guard exists because the results endpoint SELECTs
@@ -696,6 +712,7 @@ export async function ensureGameSchemaUpdates(): Promise<void> {
     await ensureActivityGamesVictimName();
     await ensureGameRolesRoleIcon();
     await ensureFullStoryPartImage();
+    await ensureActivityGamesCulpritImage();
     await ensureGameDurationDefault();
     await ensureCookAndCreateSchema();
     // Last: clear rows left behind by deleted groups whose ids were later reused.

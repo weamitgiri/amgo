@@ -17,6 +17,7 @@ class ActivityGame extends Model
         'quick_facts',
         'tagline',
         'bg_image',
+        'culprit_image',
         'status',
     ];
 

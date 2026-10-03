@@ -65,7 +65,7 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
     // (game_full_story), in order, plus the tagline. part_body is rich HTML pasted
     // from the admin editor, so strip tags to plain text for the results card.
     const [gameRows] = await query<any>(
-        `SELECT ag.id AS game_row_id, ag.tagline
+        `SELECT ag.id AS game_row_id, ag.tagline, ag.culprit_image
             FROM game_groups gg
             JOIN organizer_bookings ob ON ob.id = gg.booking_id
             LEFT JOIN activity_games ag ON ag.id = COALESCE(gg.game_id, ob.game_id)
@@ -73,6 +73,9 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
         [group_id]
     );
     const gameRowId = gameRows?.[0]?.game_row_id;
+    // Admin-set Hidden Culprit reveal image; the frontend falls back to the
+    // culprit role's portrait when this is null.
+    const culpritRevealImage = gameRows?.[0]?.culprit_image ?? null;
     let fullStory: any[] = [];
     if (gameRowId) {
         const [storyRows] = await query<any>(
@@ -128,7 +131,9 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
         group_id: Number(group.id),
         completed_at: group.completed_at,
         killer_wins: result ? !result.is_correct : false,
-        culprit: culpritSession ? withPseudonym(culpritSession) : null,
+        culprit: culpritSession
+            ? { ...withPseudonym(culpritSession), culprit_image: culpritRevealImage }
+            : null,
         players: sessions.filter((s: any) => s.role_type).map(withPseudonym),
         winners: sessions.filter((s: any) => winnerSet.has(String(s.id))).map(withPseudonym),
         losers: sessions.filter((s: any) => s.role_type && !winnerSet.has(String(s.id))).map(withPseudonym),

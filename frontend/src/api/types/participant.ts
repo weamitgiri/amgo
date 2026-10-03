@@ -229,7 +229,7 @@ export type GameResultsResponse = {
   group_id?: number;
   completed_at?: string | null;
   killer_wins?: boolean;
-  culprit?: ResultPlayer | null;
+  culprit?: (ResultPlayer & { culprit_image?: string | null }) | null;
   players?: ResultPlayer[];
   winners?: ResultPlayer[];
   losers?: ResultPlayer[];

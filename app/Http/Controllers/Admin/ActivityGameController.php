@@ -50,6 +50,12 @@ class ActivityGameController extends Controller
                     $game->save();
                 }
 
+                // Hidden Culprit reveal image (shown on the results screen)
+                if ($request->hasFile('culprit_image')) {
+                    $game->culprit_image = $this->storePublicImageOrFail($request->file('culprit_image'), 'culprit');
+                    $game->save();
+                }
+
                 // Save Roles and Strategy Cards
                 if ($request->has('roles')) {
                     foreach ($request->roles as $roleIndex => $roleData) {
@@ -169,6 +175,14 @@ class ActivityGameController extends Controller
                 if ($request->hasFile('bg_image')) {
                     $old = $game->bg_image;
                     $game->bg_image = $this->storePublicImageOrFail($request->file('bg_image'), 'games');
+                    $game->save();
+                    $this->deletePublicPathQuietly($old);
+                }
+
+                // Hidden Culprit reveal image — same replace-on-upload behaviour.
+                if ($request->hasFile('culprit_image')) {
+                    $old = $game->culprit_image;
+                    $game->culprit_image = $this->storePublicImageOrFail($request->file('culprit_image'), 'culprit');
                     $game->save();
                     $this->deletePublicPathQuietly($old);
                 }
