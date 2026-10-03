@@ -15,6 +15,7 @@ import { isCookAndCreateSlug } from "@/utils/common";
 import { toastError } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
 import mqlogo from "@/assets/mqlogo.png";
+import top from "@/assets/top-s.png";
 import secretBoxImg from "@/assets/secret_box.png";
 import caseCollage from "@/assets/game-summery/case-summary-collage.png";
 import suspectBanner from "@/assets/game-summery/Group 1000004660.png";
@@ -2556,8 +2557,8 @@ function ClueRoomModal({
     return (
       <ModalShell onClose={onClose} max="max-w-md">
         <div className="p-8 text-center">
-          <div className="mx-auto h-14 w-14 rounded-full border border-amber-400/50 bg-amber-500/10 grid place-items-center">
-            <Lightbulb className="h-6 w-6 text-amber-300" />
+          <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-amber-300/35 to-amber-600/15 border border-amber-400/60 grid place-items-center shadow-[0_0_22px_rgba(251,191,36,0.4)]">
+            <Lightbulb className="h-7 w-7 text-amber-200" />
           </div>
           <h3 className="mt-4 text-lg font-black tracking-widest">CLUE ROOM LOCKED</h3>
           <p className="mt-3 text-sm text-white/75">
@@ -2576,7 +2577,7 @@ function ClueRoomModal({
     <ModalShell onClose={onClose} max="max-w-2xl">
       <div className="p-6">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-full border border-amber-400/50 bg-amber-500/10 grid place-items-center"><Lightbulb className="h-5 w-5 text-amber-300" /></div>
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-amber-300/35 to-amber-600/15 border border-amber-400/60 grid place-items-center shadow-[0_0_22px_rgba(251,191,36,0.4)]"><Lightbulb className="h-6 w-6 text-amber-200" /></div>
           <div>
             <h3 className="text-lg font-black tracking-widest">CLUE ROOM</h3>
             <div className="text-xs text-emerald-400">Unlocked — visible to all players</div>
@@ -2584,7 +2585,9 @@ function ClueRoomModal({
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="aspect-square rounded-xl bg-gradient-to-br from-amber-700 to-amber-900 grid place-items-center text-amber-200 font-black tracking-widest">TOP SECRET</div>
+            {/* Decorative "Key Evidences" folder graphic (static asset); the real
+                admin-uploaded clue image is shown in the Clue Details panel. */}
+            <img src={top} alt="Key Evidences" className="h-52 w-full object-contain" />
             <div className="mt-3 text-amber-300 text-sm font-bold">{firstClue?.clue_title ?? 'Clue unavailable'}</div>
             <p className="text-xs text-white/80 mt-1">{firstClue?.clue_short_description ?? 'A clue will appear here once it is unlocked.'}</p>
           </div>
