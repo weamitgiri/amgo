@@ -38,6 +38,7 @@ export const startTimerService = () => {
             for (const timer of expiredTimers) {
                 await handleTimerExpiration(timer);
             }
+            await recoverStuckVerdicts();
         } catch (error) {
             console.error('[TimerService] Error:', error);
         } finally {
@@ -51,6 +52,41 @@ export const startTimerService = () => {
         runRetentionSweep();
     }, 60000);
 };
+
+/**
+ * Safety net for games stuck on the Final Accusation screen at 00:00: the
+ * final_verdict timer was already used up (is_active = 0) but the verdict never
+ * landed — finalizeVerdict threw, or the API restarted between claiming the timer
+ * and finalizing. Nothing retried it, so players waited forever and never reached
+ * the results page. finalizeVerdict is idempotent (it claims the group atomically),
+ * so re-running it here is safe. The short grace period leaves the normal path,
+ * which finalizes right after claiming the timer, to finish first.
+ */
+const lastStuckVerdictAttempt = new Map<string, number>();
+async function recoverStuckVerdicts(): Promise<void> {
+    const [rows] = await query<any>(
+        `SELECT DISTINCT t.group_id FROM timers t
+           JOIN game_groups g ON g.id = t.group_id
+          WHERE t.timer_type = 'final_verdict' AND t.is_active = 0 AND t.expires_at <= ?
+            AND g.status NOT IN ('completed', 'incomplete')
+            AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at)
+          LIMIT 20`,
+        [moment().subtract(15, 'seconds').toDate()]
+    );
+    for (const row of rows) {
+        // At most one attempt per group per minute, so a group that keeps failing
+        // doesn't get hammered (and flood the log) every 5-second tick.
+        const key = String(row.group_id);
+        if (Date.now() - (lastStuckVerdictAttempt.get(key) ?? 0) < 60_000) continue;
+        lastStuckVerdictAttempt.set(key, Date.now());
+        try {
+            await finalizeVerdict(row.group_id);
+            console.log(`[TimerService] Recovered stuck final verdict for group ${row.group_id}`);
+        } catch (err) {
+            console.error(`[TimerService] Could not finalize stuck verdict for group ${row.group_id}:`, err);
+        }
+    }
+}
 
 /**
  * Starts the game clock for a group by creating its initial case_summary timer.

@@ -1249,7 +1249,6 @@ function GamePage() {
           people={people}
           yourRole={yourPerson}
           isInvestigator={isInvestigator}
-          isCulprit={isCulprit}
           caseSummaryMins={Math.round(gameData.settings.case_summary_view_secs / 60)}
           maxQuestions={gameData.settings.max_questions}
           lieMaxQuestions={lieMaxQuestions}
@@ -1360,7 +1359,7 @@ function GamePage() {
           onSubmit={handleAccuse}
         />
       ) : (
-        modal === "accuse" && !isCulprit && (
+        modal === "accuse" && (
           <AccuseModal
             players={players}
             victimName={gameData.game.victim_name}
@@ -1671,7 +1670,6 @@ function InvestigationView(props: {
   people: GamePerson[];
   yourRole: GamePerson | null;
   isInvestigator: boolean;
-  isCulprit: boolean;
   caseSummaryMins: number;
   maxQuestions: number;
   lieMaxQuestions: number;
@@ -1709,7 +1707,6 @@ function InvestigationView(props: {
     people,
     yourRole,
     isInvestigator,
-    isCulprit,
     caseSummaryMins,
     maxQuestions,
     lieMaxQuestions,
@@ -1869,21 +1866,19 @@ function InvestigationView(props: {
             </div>
           </div>
 
-          {!isCulprit && (
-            <div className="relative flex flex-col items-center justify-center">
-              <button
-                onClick={() => finalVerdictActive && openModal("accuse")}
-                disabled={myAccusationSubmitted || !finalVerdictActive}
-                title={!finalVerdictActive ? "Unlocks automatically when the game time ends" : undefined}
-                className="inline-flex items-center gap-2 rounded-full bg-[#f43f5e] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <UserX className="h-4 w-4" /> {myAccusationSubmitted ? "Accusation Submitted" : "Final Accusation"}
-              </button>
-              {!finalVerdictActive && !myAccusationSubmitted && (
-                <div className="absolute -bottom-5 text-[10px] text-white/40 whitespace-nowrap">Unlocks when time ends</div>
-              )}
-            </div>
-          )}
+          <div className="relative flex flex-col items-center justify-center">
+            <button
+              onClick={() => finalVerdictActive && openModal("accuse")}
+              disabled={myAccusationSubmitted || !finalVerdictActive}
+              title={!finalVerdictActive ? "Unlocks automatically when the game time ends" : undefined}
+              className="inline-flex items-center gap-2 rounded-full bg-[#f43f5e] px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <UserX className="h-4 w-4" /> {myAccusationSubmitted ? "Accusation Submitted" : "Final Accusation"}
+            </button>
+            {!finalVerdictActive && !myAccusationSubmitted && (
+              <div className="absolute -bottom-5 text-[10px] text-white/40 whitespace-nowrap">Unlocks when time ends</div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -2724,15 +2719,17 @@ function FinalAccusationModal({
             </div>
           </div>
 
-          {isCulprit ? (
-            <div className="mt-8 text-center">
-              <p className="text-sm text-white/80">You are the culprit — sit tight while the group decides your fate.</p>
-              <p className="mt-2 text-xs text-white/50">The results are revealed as soon as everyone has accused, or when the timer runs out.</p>
-            </div>
-          ) : submitted ? (
+          {submitted ? (
             <p className="mt-8 text-center text-sm text-emerald-300">Your accusation is locked in. Waiting for the other players and the final verdict…</p>
           ) : (
             <>
+              {/* Every player accuses — the culprit too, so nobody can spot them by who
+                  isn't voting. Only the culprit sees this reminder, on their own screen. */}
+              {isCulprit && (
+                <p className="mt-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-200">
+                  You are the culprit — keep your cover and accuse someone else.
+                </p>
+              )}
               <div className="mt-5">
                 <PlayerCardGrid minCardPx={104}>
                   {candidates.map((p, i) => (

@@ -8,6 +8,7 @@ import { query } from '../config/db';
 import { serializeData } from '../utils/serializer';
 import { shortName } from '../utils/pseudonym';
 import { resolvePdfPath } from '../services/resultsPdfService';
+import { isCulpritRole } from '../services/verdictScoringService';
 import { getJwtSecret } from '../utils/jwtSecret';
 
 /**
@@ -95,7 +96,9 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
         is_you: participantId != null && String(s.participant_id) === String(participantId),
     });
 
-    const culpritSession = sessions.find((s: any) => s.role_type === 'culprit');
+    // role_type is stored as "hidden culprit" — an exact 'culprit' match never found
+    // them, so the results page never showed who the killer was.
+    const culpritSession = sessions.find((s: any) => isCulpritRole(s.role_type));
 
     const payload = {
         is_finished: true,
@@ -108,7 +111,7 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
         winners: sessions.filter((s: any) => winnerSet.has(String(s.id))).map(withPseudonym),
         losers: sessions.filter((s: any) => s.role_type && !winnerSet.has(String(s.id))).map(withPseudonym),
         correct_guess_count: result?.correct_guess_count ?? null,
-        total_guessers: sessions.filter((s: any) => s.role_type && s.role_type !== 'culprit').length,
+        total_guessers: sessions.filter((s: any) => s.role_type && !isCulpritRole(s.role_type)).length,
         tagline: gameRows?.[0]?.tagline ?? null,
         full_story: fullStory,
         pdf_available: Boolean(

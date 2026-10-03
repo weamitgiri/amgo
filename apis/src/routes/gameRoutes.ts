@@ -99,7 +99,7 @@ router.post(
     gameEngineController.useWitnessPasscard
 );
 
-// Final Accusation (any non-culprit role — see verdictScoringService.ts)
+// Final Accusation (every player, culprit included — see verdictScoringService.ts)
 router.post(
     '/submit-accusation',
     [

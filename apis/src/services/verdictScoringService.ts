@@ -7,11 +7,10 @@ import { generateResultsPdf } from './resultsPdfService';
 
 /**
  * The culprit's role_type is stored as "hidden culprit" (the admin dropdown value),
- * so detect it by substring. Anyone whose role is NOT the culprit may accuse and is
- * scored as a guesser — an exact "culprit" comparison both let the culprit accuse
- * and wrongly blocked the "key suspect" from accusing.
+ * so detect it by substring. Everyone accuses, but only non-culprit roles are scored
+ * as guessers; the culprit is scored on whether they were caught.
  */
-function isCulpritRole(roleType?: string | null): boolean {
+export function isCulpritRole(roleType?: string | null): boolean {
     return typeof roleType === 'string' && roleType.toLowerCase().includes('culprit');
 }
 
@@ -53,9 +52,11 @@ type PerRoleResult = {
 };
 
 /**
- * Records one participant's final accusation. Once every non-culprit role in the
- * group has submitted (or the questioning timer independently expires — see
- * timerService.ts), finalizeVerdict computes and broadcasts the outcome.
+ * Records one participant's final accusation. EVERY player names the killer —
+ * including the culprit, who has to bluff and accuse someone else (their pick is
+ * not scored; see finalizeVerdict). Once every player still in the game has
+ * submitted (or the final-accusation timer expires — see timerService.ts),
+ * finalizeVerdict computes and broadcasts the outcome.
  */
 export async function submitAccusation(
     groupId: number | string,
@@ -73,8 +74,22 @@ export async function submitAccusation(
     if (!session || String(session.group_id) !== String(groupId)) {
         throw new AppError('Session not found in this group', 404);
     }
-    if (!session.role_type || isCulpritRole(session.role_type)) {
-        throw new AppError('The culprit cannot submit an accusation', 403);
+    if (!session.role_type) {
+        throw new AppError('You have no role in this game', 403);
+    }
+    if (String(accusedSessionId) === String(participantSessionId)) {
+        throw new AppError('You cannot accuse yourself', 400);
+    }
+    const [accusedRows] = await query<any>(
+        'SELECT id FROM participant_sessions WHERE id = ? AND group_id = ? LIMIT 1',
+        [accusedSessionId, groupId]
+    );
+    if (!accusedRows?.[0]) {
+        throw new AppError('That player is not in this game', 400);
+    }
+    const [groupRows] = await query<any>('SELECT status FROM game_groups WHERE id = ? LIMIT 1', [groupId]);
+    if (['completed', 'incomplete'].includes(groupRows?.[0]?.status)) {
+        throw new AppError('The verdict is already in — accusations are closed', 400);
     }
 
     const [existingRows] = await query<any>(
@@ -102,14 +117,20 @@ export async function submitAccusation(
 
     io.to(`group_${groupId}`).emit('accusation_submitted', { participant_session_id: participantSessionId });
 
-    const [nonCulpritRows] = await query<any>(
-        `SELECT ps.id FROM participant_sessions ps
-         JOIN game_roles gr ON gr.id = ps.role_id
-         WHERE ps.group_id = ? AND gr.role_type != 'culprit'`,
+    // Everyone with a role who hasn't left the game must accuse. (This used to compare
+    // against role_type != 'culprit', but the stored value is "hidden culprit", so it
+    // counted the culprit — who couldn't submit — and the verdict only ever came when
+    // the timer ran out.)
+    const [progressRows] = await query<any>(
+        `SELECT COUNT(*) AS total, COALESCE(SUM(ga.id IS NOT NULL), 0) AS submitted
+           FROM participant_sessions ps
+           JOIN game_roles gr ON gr.id = ps.role_id
+           LEFT JOIN group_accusations ga ON ga.participant_session_id = ps.id
+          WHERE ps.group_id = ? AND ps.left_at IS NULL`,
         [groupId]
     );
-    const [countRows] = await query<any>('SELECT COUNT(*) as cnt FROM group_accusations WHERE group_id = ?', [groupId]);
-    const allSubmitted = Number(countRows?.[0]?.cnt || 0) >= nonCulpritRows.length && nonCulpritRows.length > 0;
+    const total = Number(progressRows?.[0]?.total || 0);
+    const allSubmitted = total > 0 && Number(progressRows?.[0]?.submitted || 0) >= total;
 
     if (allSubmitted) {
         await finalizeVerdict(groupId);
