@@ -351,18 +351,22 @@ function GamePage() {
   // false, which let the culprit see and use the Final Accusation UI.
   const isCulprit = (yourPerson?.role_type ?? "").toLowerCase().includes("culprit");
 
-  // Strategy guide content, per role — all sourced from the admin "Strategy Cards"
-  // section (each role's form has its own set):
-  //  • Non-investigator roles → their OWN cards only (role_strategy_slides), opened
-  //    from the Case Summary "Strategy Guide" button.
-  //  • Investigator → has NO cards of their own; instead reviews every OTHER role's
-  //    cards, ONE SLIDE PER ROLE (all_role_strategy_slides), from the header
-  //    "Strategy Cards" button.
+  // Strategy guide content, per role:
+  //  • Non-investigator roles → their OWN strategy cards (role_strategy_slides),
+  //    opened from the Case Summary "Strategy Guide" button.
+  //  • Investigator → the header "Strategy Cards" button opens ALL the suspect
+  //    Investigator Cards (same source as the timed pop-ups, strategy_slides), one
+  //    per slide, so the Investigator can review every suspect's profile on demand.
+  //    The timing (appears/closes) only drives the forced pop-ups, not this button.
   // Game Rules stay available to everyone.
   const guideSlides = useMemo(
     () => ({
       strategy: isInvestigator
-        ? gameData?.all_role_strategy_slides ?? []
+        ? (gameData?.strategy_slides ?? []).map((s) => ({
+            title: s.title,
+            description: s.description,
+            details: s.details,
+          }))
         : gameData?.role_strategy_slides ?? [],
       rules: gameData?.rules ?? [],
     }),
@@ -1799,16 +1803,16 @@ function InvestigationView(props: {
             {/*<div className="absolute -bottom-5 text-[10px] text-[#00d084] whitespace-nowrap">Available for {caseSummaryMins}:00 minutes only</div>*/}
           </div>
 
-          {/* Strategy Cards — Investigator only. The Investigator has no cards of
-              their own; this opens every OTHER role's strategy cards, one slide per
-              role (all_role_strategy_slides). Non-investigator roles open their own
-              cards from the Case Summary "Strategy Guide" button instead. */}
+          {/* Strategy Cards — Investigator only. Opens every suspect's Investigator
+              Card (strategy_slides), one slide per suspect, so the Investigator can
+              review all suspect profiles on demand. Non-investigator roles open their
+              own cards from the Case Summary "Strategy Guide" button instead. */}
           {isInvestigator && hasStrategyCards && (
             <div className="relative flex flex-col items-center justify-center">
               <button onClick={() => onOpenStrategyCards?.()} className="inline-flex items-center gap-2 rounded-full bg-[#3ca9f9] px-6 py-2.5 text-[13px] font-bold text-white hover:opacity-90 transition-opacity">
                 <Lightbulb className="h-4 w-4" /> Strategy Cards
               </button>
-              <div className="absolute -bottom-5 text-[10px] text-[#3ca9f9] whitespace-nowrap">Each role's strategy</div>
+              <div className="absolute -bottom-5 text-[10px] text-[#3ca9f9] whitespace-nowrap">All suspect profiles</div>
             </div>
           )}
 
