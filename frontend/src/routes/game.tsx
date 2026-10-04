@@ -2378,7 +2378,7 @@ function PhotosModal({ photos, onClose }: { photos: string[]; onClose: () => voi
       <div className="p-7">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-full border border-purple-400/40 grid place-items-center"><Camera className="h-5 w-5 text-purple-300" /></div>
-          <div><h3 className="text-lg font-bold">Investigation Photos</h3><p className="text-xs text-white/65">You can submit your accusation now.</p></div>
+          <div><h3 className="text-lg font-bold">Investigation Photos</h3></div>
         </div>
         <div className="mt-6 grid grid-cols-3 gap-3">
           {(photos.length > 0 ? photos : [mystery]).map((src, i) => (
