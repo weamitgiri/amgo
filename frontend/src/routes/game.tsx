@@ -1771,10 +1771,12 @@ function InvestigationView(props: {
   const scoreBoard = (
     <div className="rounded-2xl border border-[#3b2a59] bg-[#1a0f2e] p-5">
       <h3 className="text-[15px] font-bold mb-4 text-white">Score Board</h3>
-      <div className="flex items-center justify-between gap-2 text-center text-[12px]">
+      <div className="grid grid-flow-col auto-cols-fr gap-2 text-center text-[12px]">
         {players.map((p) => (
-          <div key={p.session_id} className="flex flex-col gap-1 items-center">
-            <div className="text-white/60 truncate">{p.is_you ? "You" : p.pseudonym}</div>
+          <div key={p.session_id} className="flex flex-col gap-1 items-center min-w-0">
+            <div className="text-white/60 truncate w-full" title={p.is_you ? "You" : p.pseudonym}>
+              {p.is_you ? "You" : p.pseudonym}
+            </div>
             <div className="text-amber-400 font-bold">{scoresBySessionId.get(Number(p.session_id)) ?? 0}</div>
           </div>
         ))}
