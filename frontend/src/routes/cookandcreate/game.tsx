@@ -511,7 +511,10 @@ function GamePage() {
             </div>
 
             <div className="flex items-center gap-3 bg-white/70 border border-[#F5E2C8] rounded-xl px-4 py-1.5">
-              <span className="text-base font-black text-[#3D2E1F] font-mono">
+              <span className="text-[10px] leading-[1.15] font-semibold text-[#8B7355] text-right max-w-[92px]">
+                {currentRound === 2 ? 'Submit your step before time Runs Out' : 'Confirm the Vote before times Runs Out'}
+              </span>
+              <span className="text-lg font-black text-[#3D2E1F] font-mono">
                 {timerMm}:{timerSs}
               </span>
             </div>
