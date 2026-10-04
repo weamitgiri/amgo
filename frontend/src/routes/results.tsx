@@ -132,6 +132,11 @@ function ResultsPage() {
   const [results, setResults] = useState<GameResultsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
+  // Gate first paint on mount: the session comes from sessionStorage (client-only),
+  // so rendering session-dependent content before mount causes an SSR hydration
+  // mismatch that can leave the page uninteractive in the production build.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!session?.groupId) return;
@@ -178,6 +183,14 @@ function ResultsPage() {
       : [...(results?.winners ?? []), ...(results?.losers ?? [])];
     return [...list].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   }, [results]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#0d0820] text-white grid place-items-center">
+        <p className="text-white/60 animate-pulse">Loading results…</p>
+      </div>
+    );
+  }
 
   if (!session?.groupId) {
     return (

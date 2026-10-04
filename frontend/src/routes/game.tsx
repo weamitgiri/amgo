@@ -306,6 +306,11 @@ function GamePage() {
   const [guideModal, setGuideModal] = useState<GuideType>(null);
   const [guideSlide, setGuideSlide] = useState(0);
   const [showInstinctWarning, setShowInstinctWarning] = useState(false);
+  // SSR renders with no sessionStorage (so no session), the client has one — rendering
+  // real content before the client has mounted causes a hydration mismatch that can
+  // leave buttons unresponsive in the production build. Gate the first paint on mount.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [cluesUnlocked, setCluesUnlocked] = useState(false);
   const [lieDetectorRoundId, setLieDetectorRoundId] = useState<number | null>(null);
   // Absolute deadline (ms epoch) of the active Lie Detector round, and how many
@@ -1039,6 +1044,16 @@ function GamePage() {
   }, [secretOpened, roleViewed, session?.groupId, session?.participantId]);
 
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  // Until the client has mounted, server and client render the exact same thing so
+  // hydration can't mismatch (session/gameData are only known on the client).
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#0d0820] text-white grid place-items-center">
+        <p className="text-white/60 animate-pulse">Loading case summary…</p>
+      </div>
+    );
+  }
 
   if (!session?.groupId) {
     return (
