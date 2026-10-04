@@ -5,6 +5,7 @@ import type { CCAwardEntry, CCRatingCategory, CCTemplate } from '@/api/types/coo
 import { clearParticipantSession } from '@/lib/participant-session';
 import { disconnectSocket } from '@/lib/socket';
 import { portraitForRole } from './portraits';
+import { dishImageFor } from './dishImages';
 import imposterImg from '../../../assets/cookandcreate/imposter 1.png';
 
 interface ReviewRatingPageProps {
@@ -84,11 +85,16 @@ export function ReviewRatingPage({
         {/* Recipe Reveal + Ratings & Reaction */}
         <div className="bg-[#FFFDF9] rounded-2xl border border-[#F0DECA] p-6 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            {/* Recipe Reveal — no photo, just the dish */}
-            <div className="text-center py-4">
+            {/* Recipe Reveal — dish name + a plate illustration (keyed to the group) */}
+            <div className="text-center py-2">
               <h3 className="text-[17px] font-black text-[#5C432E] mb-3">Recipe Reveal</h3>
-              <p className="text-[11px] font-medium text-[#8B7355] mb-2">Your group cooked up...</p>
-              <p className="text-2xl font-black text-[#E8881E]">{dishName}</p>
+              <p className="text-[11px] font-medium text-[#8B7355] mb-1">Your group cooked up...</p>
+              <p className="text-xl font-black text-[#E8881E] mb-3">{dishName}</p>
+              <img
+                src={dishImageFor(myGroupId)}
+                alt={dishName}
+                className="mx-auto w-full max-w-[230px] rounded-2xl object-contain drop-shadow-md"
+              />
             </div>
 
             {/* Ratings & Reaction */}
@@ -159,33 +165,35 @@ export function ReviewRatingPage({
             </p>
 
             {mostVoted && (
-              <div className="flex items-end justify-center gap-3">
-                <img src={imposterImg} alt="Suspected" className="w-16 h-20 object-contain drop-shadow" />
-                <div className="text-center">
-                  <img
-                    src={portraitForRole(mostVoted.roleLabel, template)}
-                    alt={mostVoted.name}
-                    className="w-20 h-24 rounded-2xl object-cover border-2 border-[#E8881E] shadow-sm"
-                    style={{ objectPosition: 'center 15%' }}
-                  />
-                  <p className="text-xs font-black text-[#E8881E] mt-1">{mostVoted.name}</p>
-                  <p className="text-[10px] text-[#8B7355]">{mostVoted.roleLabel}</p>
+              <>
+                <div className="text-center mb-4">
+                  <p className="text-sm font-bold text-[#E8881E]">The group has spoken.</p>
+                  <p className="text-sm text-[#5C432E]">
+                    The most suspected player is <span className="font-black text-[#3D2E1F]">{mostVoted.name}</span>
+                  </p>
                 </div>
-              </div>
+                <div className="flex items-end justify-center gap-3">
+                  <img src={imposterImg} alt="Suspected" className="w-20 h-24 object-contain drop-shadow" />
+                  <div className="text-center">
+                    <img
+                      src={portraitForRole(mostVoted.roleLabel, template)}
+                      alt={mostVoted.name}
+                      className="w-20 h-24 rounded-2xl object-cover border-2 border-[#E8881E] shadow-sm"
+                      style={{ objectPosition: 'center 15%' }}
+                    />
+                    <p className="text-xs font-black text-[#E8881E] mt-1">{mostVoted.name}</p>
+                    <p className="text-[10px] text-[#8B7355]">{mostVoted.roleLabel}</p>
+                  </div>
+                  <span className="text-3xl leading-none pb-6">😈</span>
+                </div>
+              </>
             )}
 
-            <div className="mt-5 space-y-1 text-center text-sm text-[#5C432E]">
-              {mostVoted && (
-                <p>
-                  The group's most suspected player is <span className="font-black text-[#3D2E1F]">{mostVoted.name}</span>
-                </p>
-              )}
-              {impostor && (
-                <p>
-                  The impostor was <span className="font-black text-[#E8881E]">{impostor.name}</span>
-                </p>
-              )}
-            </div>
+            {impostor && (
+              <p className="mt-5 text-center text-sm text-[#5C432E]">
+                The impostor was <span className="font-black text-[#E8881E]">{impostor.name}</span>
+              </p>
+            )}
           </div>
 
           {/* Fun Awards — real category winners; empty slots render greyed */}
