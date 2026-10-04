@@ -44,6 +44,11 @@ class Activity extends Model
         'role_correct_bonus',
         'role_wrong_penalty',
         'witness_passcard_bonus',
+        // Equal-Chance scoreboard model (Scoreboard Logic PDF)
+        'role_goal_bonus',
+        'cooperation_bonus',
+        'clue_room_bonus',
+        'final_accusation_bonus',
         'lie_detector_enabled',
         'lie_detector_max_questions',
         'lie_detector_timer_secs',

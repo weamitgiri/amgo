@@ -69,6 +69,10 @@ class ActivityController extends Controller
                 'role_correct_bonus' => 'nullable|integer|min:0',
                 'role_wrong_penalty' => 'nullable|integer|max:0',
                 'witness_passcard_bonus' => 'nullable|integer|min:0',
+                'role_goal_bonus' => 'nullable|integer|min:0',
+                'cooperation_bonus' => 'nullable|integer|min:0',
+                'clue_room_bonus' => 'nullable|integer|min:0',
+                'final_accusation_bonus' => 'nullable|integer|min:0',
                 'lie_detector_enabled' => 'boolean',
                 'lie_detector_voting_timer_secs' => 'required_if:lie_detector_enabled,1|nullable|integer',
             ], $this->validationMessages());
@@ -130,6 +134,10 @@ class ActivityController extends Controller
                 'role_correct_bonus' => 'nullable|integer|min:0',
                 'role_wrong_penalty' => 'nullable|integer|max:0',
                 'witness_passcard_bonus' => 'nullable|integer|min:0',
+                'role_goal_bonus' => 'nullable|integer|min:0',
+                'cooperation_bonus' => 'nullable|integer|min:0',
+                'clue_room_bonus' => 'nullable|integer|min:0',
+                'final_accusation_bonus' => 'nullable|integer|min:0',
                 'lie_detector_enabled' => 'boolean',
                 'lie_detector_voting_timer_secs' => 'required_if:lie_detector_enabled,1|nullable|integer',
             ], $this->validationMessages());

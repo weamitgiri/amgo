@@ -174,6 +174,30 @@ export async function ensureGameRolesRoleIcon(): Promise<void> {
 }
 
 /**
+ * "Equal Chance" scoring columns on activities (Scoreboard Logic PDF). The verdict
+ * service SELECTs these; the Laravel migration adds them too, so this guard keeps a
+ * deploy that skipped `php artisan migrate` from breaking end-game scoring.
+ */
+export async function ensureEqualChanceScoringColumns(): Promise<void> {
+    const cols: Record<string, number> = {
+        role_goal_bonus: 60,
+        cooperation_bonus: 10,
+        clue_room_bonus: 10,
+        final_accusation_bonus: 10,
+    };
+    for (const [name, def] of Object.entries(cols)) {
+        try {
+            const [rows] = await query<any>(`SHOW COLUMNS FROM activities LIKE '${name}'`);
+            if ((rows as any).length === 0) {
+                await query(`ALTER TABLE activities ADD COLUMN ${name} INT NOT NULL DEFAULT ${def} AFTER no_response_penalty`);
+            }
+        } catch (err: any) {
+            console.warn(`[schemaHelpers] Could not ensure activities.${name}:`, err.message || err);
+        }
+    }
+}
+
+/**
  * activity_games.culprit_image — the image shown for the Hidden Culprit reveal on
  * the results screen, uploaded in the admin wizard. The Laravel migration adds it
  * too; this guard exists because the results endpoint SELECTs the column.
@@ -713,6 +737,7 @@ export async function ensureGameSchemaUpdates(): Promise<void> {
     await ensureGameRolesRoleIcon();
     await ensureFullStoryPartImage();
     await ensureActivityGamesCulpritImage();
+    await ensureEqualChanceScoringColumns();
     await ensureGameDurationDefault();
     await ensureCookAndCreateSchema();
     // Last: clear rows left behind by deleted groups whose ids were later reused.

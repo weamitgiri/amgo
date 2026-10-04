@@ -49,6 +49,8 @@ type PerRoleResult = {
     verdict_points: number;
     final_score: number;
     status: PlayerStatus;
+    /** Highest final score in the group (ties share it). Extra badge, not a win. */
+    is_mvp?: boolean;
 };
 
 /**
@@ -184,11 +186,15 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
             (accusations as any[]).map((a: any) => [String(a.participant_session_id), a])
         );
 
-        // Admin-configurable end-game points for this activity (fall back to the
-        // spec defaults in VERDICT_POINTS when a column is null/unset).
+        // Equal-Chance scoreboard (Scoreboard Logic PDF). Every role earns the same
+        // five parts (max 100): role goal, cooperation, lie detector, clue room,
+        // final accusation; minus answer-timeout and investigator-no-accusation
+        // penalties. The final score is computed from scratch here (not the live
+        // in-game running total), so the results always reflect the PDF model.
         const [cfgRows] = await conn.query<any[]>(
-            `SELECT a.investigator_correct_bonus, a.investigator_wrong_penalty, a.investigator_no_accusation_penalty,
-                    a.role_correct_bonus, a.role_wrong_penalty, a.culprit_win_bonus, a.culprit_caught_penalty
+            `SELECT a.role_goal_bonus, a.cooperation_bonus, a.lie_detector_participation_bonus,
+                    a.clue_room_bonus, a.final_accusation_bonus, a.no_response_penalty,
+                    a.investigator_no_accusation_penalty
              FROM game_groups gg
              JOIN organizer_bookings ob ON ob.id = gg.booking_id
              JOIN activities a ON a.id = ob.activity_id
@@ -196,103 +202,101 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
             [groupId]
         );
         const cfg = (cfgRows as any[])[0] || {};
-        const points = {
-            investigatorCorrect: numOr(cfg.investigator_correct_bonus, VERDICT_POINTS.investigatorCorrect),
-            investigatorWrong: numOr(cfg.investigator_wrong_penalty, VERDICT_POINTS.investigatorWrong),
-            investigatorNoAccusation: numOr(cfg.investigator_no_accusation_penalty, VERDICT_POINTS.investigatorNoAccusation),
-            othersCorrect: numOr(cfg.role_correct_bonus, VERDICT_POINTS.othersCorrect),
-            othersWrong: numOr(cfg.role_wrong_penalty, VERDICT_POINTS.othersWrong),
-            culpritEscaped: numOr(cfg.culprit_win_bonus, VERDICT_POINTS.culpritEscaped),
-            culpritCaught: numOr(cfg.culprit_caught_penalty, VERDICT_POINTS.culpritCaught),
+        const P = {
+            roleGoal: numOr(cfg.role_goal_bonus, 60),
+            cooperation: numOr(cfg.cooperation_bonus, 10),
+            lieDetector: numOr(cfg.lie_detector_participation_bonus, 10),
+            clueRoom: numOr(cfg.clue_room_bonus, 10),
+            accusation: numOr(cfg.final_accusation_bonus, 10),
+            noResponsePenalty: Math.abs(numOr(cfg.no_response_penalty, -10)),
+            investigatorNoAccusation: Math.abs(numOr(cfg.investigator_no_accusation_penalty, -20)),
         };
 
-        const perRoleResults: PerRoleResult[] = nonCulpritSessions.map((s: any) => {
-            // Spec §7: a non-Investigator who leaves mid-game has their final score
-            // recorded as 0 and cannot win — no accusation counts, no verdict points.
+        // Per-player facts the model needs.
+        const [qRows] = await conn.query<any[]>('SELECT asked_by FROM questions WHERE group_id = ?', [groupId]);
+        const questionsAskedBy = new Map<string, number>();
+        for (const q of qRows as any[]) {
+            questionsAskedBy.set(String(q.asked_by), (questionsAskedBy.get(String(q.asked_by)) || 0) + 1);
+        }
+        const [missRows] = await conn.query<any[]>(
+            `SELECT a.participant_session_id AS sid, COUNT(*) AS misses
+               FROM answers a JOIN questions q ON q.id = a.question_id
+              WHERE q.group_id = ? AND a.answer_text = '(No response — auto-skipped)'
+              GROUP BY a.participant_session_id`,
+            [groupId]
+        );
+        const missedBySession = new Map<string, number>();
+        for (const m of missRows as any[]) missedBySession.set(String(m.sid), Number(m.misses));
+
+        // Lie Detector and Clue Room are cooperative team actions: if the round happened /
+        // the clue room unlocked at all, every player who stayed earns that part.
+        const [ldRows] = await conn.query<any[]>('SELECT id FROM lie_detector_rounds WHERE group_id = ? LIMIT 1', [groupId]);
+        const lieDetectorHappened = (ldRows as any[]).length > 0;
+        const [crTimerRows] = await conn.query<any[]>(
+            `SELECT is_active, expires_at FROM timers WHERE group_id = ? AND timer_type = 'clue_room_unlock' ORDER BY id DESC LIMIT 1`,
+            [groupId]
+        );
+        const crTimer = (crTimerRows as any[])[0];
+        const clueRoomOpened = !!crTimer && (Number(crTimer.is_active) === 0 || new Date(crTimer.expires_at) <= new Date());
+
+        // Did a player correctly name the Hidden Culprit?
+        const namedCulprit = (s: any): boolean => {
+            const acc = accusationBySession.get(String(s.id));
+            return !s.left_at && !!acc && !!culpritSession && String(acc.accused_session_id) === String(culpritSession.id);
+        };
+        const correctGuessers = nonCulpritSessions.filter(namedCulprit);
+        const correctGuessCount = correctGuessers.length;
+        const culpritWins = correctGuessCount === 0;
+
+        const roleSessions = (sessions as any[]).filter((s: any) => s.role_type);
+        const perRoleResults: PerRoleResult[] = roleSessions.map((s: any) => {
+            const isInvestigator = s.role_type === 'investigator';
+            const isCulprit = isCulpritRole(s.role_type);
             const hasLeft = Boolean(s.left_at);
             const acc = accusationBySession.get(String(s.id));
-            const isCorrect =
-                !hasLeft && !!acc && !!culpritSession && String(acc.accused_session_id) === String(culpritSession.id);
-            const isInvestigator = s.role_type === 'investigator';
-            const verdictPoints = hasLeft
-                ? 0
-                : acc
-                  ? isCorrect
-                      ? isInvestigator
-                          ? points.investigatorCorrect
-                          : points.othersCorrect
-                      : isInvestigator
-                        ? points.investigatorWrong
-                        : points.othersWrong
-                  : isInvestigator
-                    ? points.investigatorNoAccusation
-                    : 0;
+            const submitted = !!acc;
+            const reachedGoal = isCulprit ? culpritWins : namedCulprit(s);
+            const missed = Math.min(missedBySession.get(String(s.id)) || 0, 2);
+
+            // A player who left mid-game scores 0 and cannot win (spec §8).
+            let bonus = 0;
+            let penalty = 0;
+            if (!hasLeft) {
+                if (reachedGoal) bonus += P.roleGoal;
+                const cooperationOk = isInvestigator
+                    ? (questionsAskedBy.get(String(s.id)) || 0) >= 3
+                    : missed === 0;
+                if (cooperationOk) bonus += P.cooperation;
+                if (lieDetectorHappened) bonus += P.lieDetector;
+                if (clueRoomOpened) bonus += P.clueRoom;
+                if (submitted) bonus += P.accusation;
+                bonus = Math.min(bonus, 100);
+                penalty = missed * P.noResponsePenalty;
+                if (isInvestigator && !submitted) penalty += P.investigatorNoAccusation;
+            }
+            const finalScore = hasLeft ? 0 : bonus - penalty;
+
             return {
                 session_id: Number(s.id),
-                role_type: s.role_type,
+                role_type: isCulprit ? 'culprit' : s.role_type,
                 guessed_session_id: acc ? Number(acc.accused_session_id) : null,
-                is_correct: isCorrect,
+                is_correct: !isCulprit && reachedGoal,
                 guess_submitted_at: acc?.created_at ? moment(acc.created_at).toISOString() : null,
-                verdict_points: verdictPoints,
-                final_score: hasLeft ? 0 : Number(s.total_score || 0) + verdictPoints,
-                status: 'loser', // provisional; resolved below
+                verdict_points: finalScore,
+                final_score: finalScore,
+                status: hasLeft ? 'loser' : reachedGoal ? (isCulprit ? 'killer_wins' : 'winner') : 'loser',
+                is_mvp: false,
             };
         });
 
-        const correctResults = perRoleResults.filter((r) => r.is_correct);
-        const correctGuessCount = correctResults.length;
-        const culpritWins = correctGuessCount === 0;
-
-        // A culprit who leaves mid-game is also recorded as 0 (spec §7).
-        const culpritLeft = Boolean(culpritSession?.left_at);
-        const culpritVerdictPoints = culpritSession && !culpritLeft
-            ? culpritWins
-                ? points.culpritEscaped
-                : points.culpritCaught
-            : 0;
-
-        // Winner declaration per the Scoreboard Logic spec (§4 & §6): among all
-        // players who identified the culprit correctly, ONLY the highest scorer is
-        // the WINNER; the other correct guessers are marked CORRECT (right answer,
-        // not top score). Ties are broken by the earliest guess timestamp, and an
-        // exact tie on both score AND timestamp declares co-winners. Wrong guessers
-        // and the caught culprit are LOSERS; if nobody guesses correctly the culprit
-        // escapes (KILLER WINS) and all guessers lose.
-        let winners: number[] = [];
-        if (culpritWins) {
-            if (culpritSession) winners = [Number(culpritSession.id)];
-        } else {
-            const ranked = [...correctResults].sort((a, b) => {
-                if (b.final_score !== a.final_score) return b.final_score - a.final_score;
-                const aTime = a.guess_submitted_at ? Date.parse(a.guess_submitted_at) : Number.MAX_SAFE_INTEGER;
-                const bTime = b.guess_submitted_at ? Date.parse(b.guess_submitted_at) : Number.MAX_SAFE_INTEGER;
-                return aTime - bTime;
-            });
-            const top = ranked[0];
-            winners = ranked
-                .filter(
-                    (r) =>
-                        r.final_score === top.final_score &&
-                        (r.guess_submitted_at ?? null) === (top.guess_submitted_at ?? null)
-                )
-                .map((r) => r.session_id);
-        }
-        const winnerSet = new Set(winners.map((id) => String(id)));
-
+        // WINNER = everyone who reached their role goal (1–4 possible, plus the culprit
+        // when they escape). MVP badge = highest final score; ties share it.
+        const winners = perRoleResults
+            .filter((r) => r.status === 'winner' || r.status === 'killer_wins')
+            .map((r) => r.session_id);
+        const topScore = perRoleResults.reduce((m, r) => (r.final_score > m ? r.final_score : m), -Infinity);
         for (const r of perRoleResults) {
-            r.status = winnerSet.has(String(r.session_id)) ? 'winner' : r.is_correct ? 'correct' : 'loser';
-        }
-        if (culpritSession) {
-            perRoleResults.push({
-                session_id: Number(culpritSession.id),
-                role_type: 'culprit',
-                guessed_session_id: null,
-                is_correct: false,
-                guess_submitted_at: null,
-                verdict_points: culpritVerdictPoints,
-                final_score: culpritLeft ? 0 : Number(culpritSession.total_score || 0) + culpritVerdictPoints,
-                status: culpritWins ? 'killer_wins' : 'loser',
-            });
+            if (topScore > -Infinity && r.final_score === topScore) r.is_mvp = true;
         }
 
         const investigatorSession = nonCulpritSessions.find((s: any) => s.role_type === 'investigator');
@@ -300,18 +304,15 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
             ? accusationBySession.get(String(investigatorSession.id))
             : null;
 
+        // Set each player's final total to the equal-chance score (replacing the live
+        // running total), and record it in the score log for audit.
         for (const r of perRoleResults) {
-            if (r.verdict_points !== 0) {
-                await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
-                    r.verdict_points,
-                    r.session_id,
-                ]);
-                await conn.query(
-                    `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
-                        VALUES (?, ?, 'final_verdict', NOW(), NOW())`,
-                    [r.session_id, r.verdict_points]
-                );
-            }
+            await conn.query(`UPDATE participant_sessions SET total_score = ? WHERE id = ?`, [r.final_score, r.session_id]);
+            await conn.query(
+                `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                    VALUES (?, ?, 'final_scoreboard', NOW(), NOW())`,
+                [r.session_id, r.final_score]
+            );
         }
 
         await conn.query(
