@@ -2222,8 +2222,7 @@ function InfoSliderModal({
           <div className="mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5">
             <div className="grid gap-4">
               {slide.details.map((item, index) => (
-                <div key={index} className="flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-300 shrink-0" />
+                <div key={index} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                   <RichText text={item} className="text-sm text-white/80" />
                 </div>
               ))}
