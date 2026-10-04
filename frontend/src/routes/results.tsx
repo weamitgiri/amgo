@@ -277,7 +277,7 @@ function ResultsPage() {
       )}
 
       {/* Banner */}
-      <div className="mt-4 rounded-2xl border border-purple-500/20 bg-gradient-to-r from-[#241243] to-[#170d31] px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
+      <div className="mt-4 rounded-2xl border border-purple-400/30 bg-gradient-to-r from-[#241243] to-[#170d31] px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-full bg-purple-500/25 border border-purple-400/30 grid place-items-center">
             <FileText className="h-5 w-5 text-purple-200" />
@@ -344,11 +344,6 @@ function ResultsPage() {
                   {culpritName?.title && (
                     <div className="text-rose-300 text-lg mt-1">({culpritName.title})!</div>
                   )}
-                  {typeof results.correct_guess_count === "number" && typeof results.total_guessers === "number" && (
-                    <div className="text-[11px] text-white/50 mt-2">
-                      {results.correct_guess_count} of {results.total_guessers} players identified them correctly
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -374,7 +369,7 @@ function ResultsPage() {
 
           {/* The Full Story */}
           {fullStory.length > 0 && (
-            <div className="rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#231240] to-[#160d2c] p-6 md:p-7">
+            <div className="rounded-3xl border border-purple-400/30 bg-gradient-to-b from-[#231240] to-[#160d2c] p-6 md:p-7">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <h3 className="text-2xl font-bold text-pink-400">The Full Story</h3>
                 {results.tagline && (
@@ -407,7 +402,7 @@ function ResultsPage() {
         </div>
 
         {/* Right column: final results card */}
-        <div className="rounded-3xl border border-purple-500/20 bg-gradient-to-b from-[#231240] to-[#160d2c] p-6 md:p-7">
+        <div className="rounded-3xl border border-purple-400/30 bg-gradient-to-b from-[#231240] to-[#160d2c] p-6 md:p-7">
           <div className="flex items-center justify-center gap-4">
             <span className="text-5xl" aria-hidden>🎉</span>
             <div className="text-center">
