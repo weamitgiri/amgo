@@ -318,7 +318,7 @@ function ResultsPage() {
         </p>
       )}*/}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr] items-start">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr] items-stretch">
         {/* Left column: culprit reveal + full story */}
         <div>
           <div className="flex items-center justify-center gap-8 py-6 flex-wrap">
@@ -401,8 +401,9 @@ function ResultsPage() {
           )}
         </div>
 
-        {/* Right column: final results card */}
-        <div className="rounded-3xl border border-purple-400/30 bg-gradient-to-b from-[#231240] to-[#160d2c] p-6 md:p-7">
+        {/* Right column: final results card — stretches to match the left column so
+            both cards end level; the Exit button is pinned to the bottom. */}
+        <div className="rounded-3xl border border-purple-400/30 bg-gradient-to-b from-[#231240] to-[#160d2c] p-6 md:p-7 flex flex-col">
           <div className="flex items-center justify-center gap-4">
             <span className="text-5xl" aria-hidden>🎉</span>
             <div className="text-center">
@@ -468,7 +469,7 @@ function ResultsPage() {
 
           <Link
             to="/"
-            className="mt-6 block text-center w-full rounded-full bg-gradient-to-r from-[#a855f7] to-[#d946ef] py-3.5 text-sm font-bold text-white shadow-glow hover:opacity-90 transition-opacity print:hidden"
+            className="mt-6 lg:mt-auto block text-center w-full rounded-full bg-gradient-to-r from-[#a855f7] to-[#d946ef] py-3.5 text-sm font-bold text-white shadow-glow hover:opacity-90 transition-opacity print:hidden"
           >
             Exit to Lobby
           </Link>
