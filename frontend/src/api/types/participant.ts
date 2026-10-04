@@ -218,6 +218,8 @@ export type ResultPlayer = {
   role_type: string;
   score: number;
   status?: ResultPlayerStatus;
+  /** Highest final score in the group (ties share). An extra badge, not a win. */
+  is_mvp?: boolean;
   character_name?: string | null;
   role_image?: string | null;
   is_you?: boolean;

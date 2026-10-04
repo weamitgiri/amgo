@@ -108,6 +108,9 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
     const statusBySession = new Map<string, string>(
         perRoleResults.map((r: any) => [String(r.session_id), r.status])
     );
+    const mvpBySession = new Set<string>(
+        perRoleResults.filter((r: any) => r.is_mvp).map((r: any) => String(r.session_id))
+    );
 
     const withPseudonym = (s: any) => ({
         session_id: Number(s.id),
@@ -116,6 +119,7 @@ export const getGameResults = asyncHandler(async (req: Request, res: Response) =
         role_type: s.role_type,
         score: s.total_score,
         status: statusBySession.get(String(s.id)) ?? (winnerSet.has(String(s.id)) ? 'winner' : 'loser'),
+        is_mvp: mvpBySession.has(String(s.id)),
         character_name: s.character_name ?? null,
         role_image: s.role_image ?? null,
         is_you: participantId != null && String(s.participant_id) === String(participantId),

@@ -441,9 +441,16 @@ function ResultsPage() {
                 </div>
                 <PlayerAvatar player={p} />
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-white truncate">
-                    {p.pseudonym}
-                    {p.is_you && <span className="text-white/60 font-normal"> (You)</span>}
+                  <div className="font-medium text-white truncate flex items-center gap-2">
+                    <span className="truncate">
+                      {p.pseudonym}
+                      {p.is_you && <span className="text-white/60 font-normal"> (You)</span>}
+                    </span>
+                    {!results.is_incomplete && p.is_mvp && (
+                      <span className="shrink-0 rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-300 text-[10px] font-bold px-2 py-0.5 flex items-center gap-1">
+                        ⭐ MVP
+                      </span>
+                    )}
                   </div>
                   <div className="mt-1 flex items-center gap-2 flex-wrap">
                     <span className={`text-xs ${ROLE_TEXT[p.role_type] ?? "text-white/70"}`}>
