@@ -13,9 +13,10 @@ interface RoleRevealModalProps {
 
 const ROLE_COPY: Record<
   'chef' | 'show_host' | 'impostor',
-  { blurb: string; goals: string[]; know: string[]; keepInMind: string; image: string }
+  { intro: string; blurb: string; goals: string[]; know: string[]; keepInMind: string; image: string }
 > = {
   chef: {
+    intro: 'You are the Chef.',
     blurb: 'You are part of the cooking team. Work together to create the best dish.',
     goals: ['Choose useful ingredients', 'Add logical cooking steps', 'Help identify the impostor'],
     know: [
@@ -27,6 +28,7 @@ const ROLE_COPY: Record<
     image: chef1Img,
   },
   show_host: {
+    intro: 'You are the Show Host.',
     blurb: 'You lead the kitchen — same team as everyone else, plus the final say on the dish name.',
     goals: ['Choose useful ingredients', 'Add logical cooking steps', 'Name the team’s dish once steps are finalized'],
     know: [
@@ -38,6 +40,7 @@ const ROLE_COPY: Record<
     image: showHostImg,
   },
   impostor: {
+    intro: 'You are the Impostor.',
     blurb: 'You are secretly trying to spoil the dish and mislead the team — without getting caught.',
     goals: ['Blend in with the group', 'Nudge bad choices without being obvious', 'Avoid getting voted out'],
     know: ['Everyone else is genuinely trying to cook well', 'Your choices need to look plausible'],
@@ -78,7 +81,11 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
             <div className="space-y-1">
               <span className="text-sm font-bold text-[#E8881E] tracking-wide">Your Role</span>
               <h2 className="text-4xl font-black text-[#3D2E1F] tracking-tight uppercase">{roleLabel}</h2>
-              <p className="text-sm text-[#6E5A44] leading-relaxed pt-1">{copy.blurb}</p>
+              <p className="text-sm text-[#6E5A44] leading-relaxed pt-1">
+                {copy.intro}
+                <br />
+                {copy.blurb}
+              </p>
 
               <hr className="!my-4 border-t border-[#F0D5B5]" />
 
