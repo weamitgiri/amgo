@@ -13,8 +13,6 @@ import { CountdownTimer } from './-components/CountdownTimer';
 import { CC } from './-components/cc-theme';
 import lobbyBg from '../../assets/cookandcreate/game-2-lobby-bg.jpg';
 import lobbyLogo from '../../assets/cookandcreate/Cook  and Create Logo.png';
-import decorLeft from '../../assets/cookandcreate/decor-left.png';
-import decorRight from '../../assets/cookandcreate/decor-right.png';
 import { cookAndCreateService } from '@/api/services/cookandcreate.service';
 import type { CCGameStateResponse } from '@/api/types/cookandcreate';
 import { getParticipantSession } from '@/lib/participant-session';
@@ -183,8 +181,8 @@ function LobbyPage() {
 
   return (
     <CookCreateLayout maxWidthClass="max-w-[1360px]">
-      <img src={decorLeft} alt="" className="fixed bottom-0 left-0 w-32 md:w-48 opacity-80 pointer-events-none z-0" />
-      <img src={decorRight} alt="" className="fixed bottom-0 right-0 w-40 md:w-64 opacity-80 pointer-events-none z-0" />
+      {/* Corner leaf decorations are rendered once by CookCreateLayout — no
+          duplicate set here (two overlapping copies looked broken). */}
       <div className="flex flex-col gap-5 relative z-10">
         <CookCreateHeader participantName={session?.name} showGameTimer={false} />
 
@@ -194,11 +192,11 @@ function LobbyPage() {
               className="relative flex flex-col md:flex-row items-center min-h-[300px] lg:h-full bg-cover bg-center"
               style={{ backgroundImage: `url(${lobbyBg})` }}
             >
-              <div className="flex-1 flex items-center justify-center p-6 relative z-10">
-                 <img src={lobbyLogo} alt="Cook & Create Logo" className="w-full max-w-[180px] drop-shadow-2xl" />
+              <div className="flex items-center justify-center p-6 relative z-10 md:basis-[38%] md:shrink-0">
+                 <img src={lobbyLogo} alt="Cook & Create Logo" className="w-full max-w-[190px] drop-shadow-2xl" />
               </div>
-              <div className="flex-1 p-6 md:pr-8 relative z-10">
-                <div className="bg-white/50 backdrop-blur-md rounded-2xl p-6 border border-white/50 shadow-lg">
+              <div className="flex-1 p-6 md:pl-2 md:pr-8 relative z-10">
+                <div className="bg-white/55 backdrop-blur-md rounded-2xl p-6 border border-white/50 shadow-lg">
                   <h1
                     className="text-2xl md:text-3xl font-bold leading-tight mb-3"
                     style={{ color: CC.text }}
@@ -210,7 +208,7 @@ function LobbyPage() {
                     className="text-sm leading-relaxed font-medium"
                     style={{ color: CC.textMuted }}
                   >
-                    {gameState?.template.description || 'Work together to create the best dish while finding the hidden imposter in your team'}
+                    {gameState?.template.description || 'Work together to create the best dish while finding the hidden imposter in your team.'}
                   </p>
                 </div>
               </div>
