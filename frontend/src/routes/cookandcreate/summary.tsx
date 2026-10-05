@@ -179,12 +179,11 @@ function SummaryPage() {
               <div className="grid grid-cols-5 gap-3 text-center">
                 {gameState.participants.map((p) => (
                   <div key={p.id} className="flex flex-col items-center gap-2">
-                    <div className="w-full aspect-[3/4] rounded-2xl bg-[#FFF0DB]/80 border border-[#F5DEC3] overflow-hidden">
+                    <div className="w-full aspect-[4/5] rounded-2xl bg-[#FBF1E4] border border-[#F5DEC3] overflow-hidden flex items-end justify-center">
                       <img
                         src={portraitForRole(p.role_label, gameState.template)}
                         alt={p.role_label}
-                        className="w-full h-full object-cover"
-                        style={{ objectPosition: 'center 15%' }}
+                        className="h-full w-auto object-contain object-bottom"
                       />
                     </div>
                     <span className="text-[11px] font-bold text-[#3D2E1F] leading-tight w-full whitespace-nowrap">

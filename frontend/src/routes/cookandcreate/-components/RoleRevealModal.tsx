@@ -59,11 +59,14 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
       <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" onClick={onClose} />
 
       {/* Modal card */}
-      <div className="relative z-10 w-full max-w-[820px] bg-[#FFF5E6] rounded-[28px] border border-[#F5D8B6] shadow-2xl overflow-hidden p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+      <div
+        className="relative z-10 w-full max-w-[820px] rounded-[28px] border border-[#F3CF9F] shadow-2xl overflow-hidden p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+        style={{ background: 'linear-gradient(165deg, #FDE6C6 0%, #F8D6AA 100%)' }}
+      >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-11 h-11 rounded-full bg-[#C06A15] hover:bg-[#A85A10] flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-md z-20 cursor-pointer"
+          className="absolute top-5 right-5 w-11 h-11 rounded-full bg-[#CC6128] hover:bg-[#B5551F] flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-md z-20 cursor-pointer"
         >
           <X size={22} className="text-white" strokeWidth={2.5} />
         </button>
@@ -71,7 +74,7 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
         <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-stretch">
           {/* LEFT: portrait illustration */}
           <div className="md:w-[42%] flex items-stretch">
-            <div className="w-full rounded-2xl bg-[#FFF8EE] border border-[#F5E2C8] overflow-hidden flex items-end justify-center p-3 shadow-inner">
+            <div className="w-full rounded-2xl bg-[#F9EEE2] border border-[#F0DFC9] overflow-hidden flex items-end justify-center p-3 shadow-inner">
               <img src={copy.image} alt={roleLabel} className="w-full object-contain drop-shadow-md" />
             </div>
           </div>
@@ -146,7 +149,7 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
               )}
 
               {/* Secret badge */}
-              <div className="!mt-5 bg-[#FFEAD1] rounded-xl px-4 py-3 flex items-center gap-2.5 border border-[#F5CE9E]">
+              <div className="!mt-5 bg-[#F6BD77] rounded-xl px-4 py-3 flex items-center gap-2.5 border border-[#EFAC5C]">
                 <Lock size={16} className="text-[#6E5A44] shrink-0" />
                 <span className="text-sm font-bold text-[#3D2E1F]">Keep your role secret</span>
               </div>
@@ -158,7 +161,7 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
         <div className="mt-7 flex justify-center">
           <button
             onClick={onClose}
-            className="px-20 py-3.5 rounded-full bg-[#E8881E] hover:bg-[#D47815] text-white font-extrabold text-base transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-[#E8881E]/30 cursor-pointer"
+            className="px-20 py-3.5 rounded-full bg-[#F39E3B] hover:bg-[#E08A28] text-white font-extrabold text-base transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-[#F39E3B]/30 cursor-pointer"
           >
             Okay Continue
           </button>
