@@ -156,10 +156,10 @@ function SummaryPage() {
                     <div key={round.num} className="flex items-center justify-between">
                       <div className="flex-1 flex flex-col items-center text-center">
                         <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#FFF3E0] border border-[#F5DEC3] flex items-center justify-center mb-2.5 shadow-inner">
-                          <span className="absolute top-0 left-0 w-5 h-5 rounded-full bg-[#E8881E] text-white font-bold text-[11px] flex items-center justify-center shadow-xs">
+                          <span className="absolute top-0 left-0 w-5 h-5 rounded-full bg-[#E8881E] text-white font-bold text-[11px] flex items-center justify-center shadow-xs z-10">
                             {round.num}
                           </span>
-                          <img src={round.img} alt={round.title} className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-xs" />
+                          <img src={round.img} alt={round.title} className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-xs" />
                         </div>
                         <h4 className="text-xs font-bold text-[#3D2E1F] leading-tight">{round.title}</h4>
                         <p className="text-[11px] text-[#7A644D] font-medium mt-1 leading-snug max-w-[150px]">{round.desc}</p>
@@ -179,11 +179,11 @@ function SummaryPage() {
               <div className="grid grid-cols-5 gap-3 text-center">
                 {gameState.participants.map((p) => (
                   <div key={p.id} className="flex flex-col items-center gap-2">
-                    <div className="w-full aspect-[4/5] rounded-2xl bg-[#FBF1E4] border border-[#F5DEC3] overflow-hidden flex items-end justify-center">
+                    <div className="w-full aspect-square rounded-2xl bg-[#FBF1E4] border border-[#F5DEC3] overflow-hidden">
                       <img
                         src={portraitForRole(p.role_label, gameState.template)}
                         alt={p.role_label}
-                        className="h-full w-auto object-contain object-bottom"
+                        className="w-full h-full object-cover object-top"
                       />
                     </div>
                     <span className="text-[11px] font-bold text-[#3D2E1F] leading-tight w-full whitespace-nowrap">
