@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Utensils, Check, Send, Lock } from 'lucide-react';
+import { Leaf, Check, Send, Lock } from 'lucide-react';
 import { CookCreateLayout } from './-components/CookCreateLayout';
 import { CookCreateHeader } from './-components/CookCreateHeader';
 import { RoundProgress } from './-components/RoundProgress';
@@ -376,15 +376,23 @@ function GamePage() {
 
   const activityItems: CCActivityItem[] = (() => {
     if (currentRound === 1) {
-      return [
-        {
-          id: 'r1',
-          name: 'Round 1',
-          text: `${submittedIds.length}/${participants.length} players have voted.`,
-          time: '',
-          type: 'info',
-        },
-      ];
+      // Per-player vote status (matches the design's activity feed), those
+      // who've already voted listed first.
+      return [...participants]
+        .map((p) => {
+          const submitted = submittedIds.includes(p.id);
+          const online = p.isYou || (onlineParticipantIds ? onlineParticipantIds.has(p.id) : p.status === 'online');
+          const item: CCActivityItem = {
+            id: `r1-${p.id}`,
+            name: p.isYou ? `${p.name} (You)` : p.name,
+            text: submitted ? 'Has submitted their vote.' : online ? 'submitting…' : 'Yet to submit their vote',
+            time: submitted ? 'Just now' : '',
+            type: submitted ? 'submitted' : online ? 'submitting' : 'missed',
+          };
+          return { rank: submitted ? 0 : online ? 1 : 2, item };
+        })
+        .sort((a, b) => a.rank - b.rank)
+        .map((x) => x.item);
     }
     if (currentRound === 2 && instance.round2_phase === 'submit') {
       const turn = gameState.round2_turn;
@@ -496,25 +504,28 @@ function GamePage() {
         />
 
         {/* Sub-header status bar */}
-        <div className="bg-[#FFF3E0] border border-[#F5DCBD] rounded-2xl px-5 py-3 shadow-xs">
+        <div
+          className="border border-[#F3D3A3] rounded-[20px] px-6 py-4 shadow-xs"
+          style={{ background: 'linear-gradient(180deg, #FDEFD8 0%, #FAE4C0 100%)' }}
+        >
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#E8881E] flex items-center justify-center shadow-xs">
-                <Utensils size={16} className="text-white" />
+              <div className="w-12 h-12 rounded-xl bg-[#E8881E] flex items-center justify-center shadow-sm shrink-0">
+                <Leaf size={22} className="text-white" />
               </div>
               <div>
-                <h2 className="text-sm font-extrabold text-[#3D2E1F] leading-tight">Cook &amp; Create</h2>
-                <p className="text-[11px] font-bold text-[#E8881E]">
+                <h2 className="text-base font-extrabold text-[#3F2B20] leading-tight">Cook &amp; Create</h2>
+                <p className="text-xs font-bold text-[#E8881E]">
                   Round {currentRound}: {getRoundLabel()}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-white/70 border border-[#F5E2C8] rounded-xl px-4 py-1.5">
-              <span className="text-[10px] leading-[1.15] font-semibold text-[#8B7355] text-right max-w-[92px]">
+            <div className="flex items-center gap-3 bg-[#FBEFD9] border border-[#F3DCB4] rounded-xl px-5 py-2.5">
+              <span className="text-[11px] leading-[1.2] font-semibold text-[#6F625A] text-left max-w-[112px]">
                 {currentRound === 2 ? 'Submit your step before time Runs Out' : 'Confirm the Vote before times Runs Out'}
               </span>
-              <span className="text-lg font-black text-[#3D2E1F] font-mono">
+              <span className="text-2xl font-black text-[#3F2B20] font-mono tracking-wide">
                 {timerMm}:{timerSs}
               </span>
             </div>
@@ -690,16 +701,18 @@ function Round1Content({
       <div className="grid grid-cols-5 gap-3">
         {ingredients.map((item) => {
           const isSelected = selectedIngredientIds.has(item.id);
-          const disabled = selectedIngredientIds.size >= votesPerPlayer && !isSelected;
+          // At the cap, extra cards aren't dimmed (matches the design) — the
+          // toggle itself caps selection, so clicking a non-selected one is a
+          // no-op rather than a disabled, greyed-out state.
+          const atCap = selectedIngredientIds.size >= votesPerPlayer && !isSelected;
           return (
             <button
               key={item.id}
               type="button"
               onClick={() => toggleIngredient(item.id)}
-              disabled={disabled}
               className={`relative flex flex-col items-center justify-between p-3 rounded-2xl bg-white border-2 transition-all duration-150 ease-out cursor-pointer min-h-[125px] w-full shadow-xs ${
                 isSelected ? 'border-[#E8881E] ring-2 ring-[#E8881E]/20 bg-[#FFFDF9]' : 'border-[#F5E6D3] hover:border-[#E8881E]/50'
-              } ${!disabled ? 'hover:scale-[1.03]' : ''} ${disabled && !isSelected ? 'opacity-40 cursor-not-allowed' : ''}`}
+              } ${!atCap ? 'hover:scale-[1.03]' : 'cursor-default'}`}
             >
               {isSelected && (
                 <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#E8881E] flex items-center justify-center shadow-xs z-10">
@@ -720,21 +733,20 @@ function Round1Content({
       </div>
 
       <div className="pt-2 space-y-3">
-        <div className="flex items-center justify-start text-xs font-bold text-[#3D2E1F]">
-          Selected <span className="text-[#E8881E] mx-1">{selectedIngredientIds.size}/{votesPerPlayer}</span> ingredients
-        </div>
-
-        <div className="flex justify-center">
+        <div className="flex items-center gap-4">
+          <span className="text-xs font-bold text-[#3D2E1F] whitespace-nowrap">
+            Selected <span className="text-[#E8881E] mx-0.5">{selectedIngredientIds.size}/{votesPerPlayer}</span> ingredients
+          </span>
           <button
             onClick={onConfirmVote}
             disabled={selectedIngredientIds.size !== votesPerPlayer || submitting}
-            className="px-12 py-3 rounded-full bg-[#E8881E] hover:bg-[#D47815] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm transition-transform hover:scale-105 active:scale-95 shadow-md shadow-[#E8881E]/30 cursor-pointer"
+            className="flex-1 py-3 rounded-full bg-[#E8881E] hover:bg-[#D47815] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm transition-transform hover:scale-[1.02] active:scale-[0.99] shadow-md shadow-[#E8881E]/30 cursor-pointer"
           >
             Confirm Vote
           </button>
         </div>
 
-        <p className="text-[11px] text-[#8B7355] font-medium">Your actions are anonymous, observe patterns carefully.</p>
+        <p className="text-[11px] text-[#8B7355] font-medium text-center">Your actions are anonymous, observe patterns carefully.</p>
       </div>
     </div>
   );
