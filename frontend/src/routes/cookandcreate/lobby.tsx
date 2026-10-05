@@ -193,17 +193,20 @@ function LobbyPage() {
                  <img src={lobbyLogo} alt="Cook & Create Logo" className="w-full max-w-[190px] drop-shadow-2xl" />
               </div>
               <div className="flex-1 p-6 md:pl-2 md:pr-8 relative z-10">
-                <div className="bg-white/55 backdrop-blur-md rounded-2xl p-6 border border-white/50 shadow-lg">
+                <div
+                  className="backdrop-blur-md rounded-2xl p-6 border border-white/50 shadow-lg"
+                  style={{ backgroundColor: 'rgba(254, 198, 107, 0.5)' }}
+                >
                   <h1
                     className="text-2xl md:text-3xl font-bold leading-tight mb-3"
-                    style={{ color: CC.text }}
+                    style={{ color: '#FFFFFF' }}
                   >
                     Welcome to<br />
                     Cook &amp; Create
                   </h1>
                   <p
                     className="text-sm leading-relaxed font-medium"
-                    style={{ color: CC.textMuted }}
+                    style={{ color: 'rgba(255, 255, 255, 0.92)' }}
                   >
                     {gameState?.template.description || 'Work together to create the best dish while finding the hidden imposter in your team.'}
                   </p>
@@ -256,7 +259,7 @@ function LobbyPage() {
               <StatBox label="Remaining" value={remaining} last />
             </div>
 
-            <div className="flex items-start gap-4 flex-wrap">
+            <div className="flex items-start gap-18 flex-wrap">
               {players.map((p, i) => (
                 <PlayerAvatar
                   key={p.id}
@@ -344,8 +347,8 @@ function LobbyPage() {
             <button
               className="mt-5 w-full py-3.5 rounded-full text-white font-semibold text-base flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               style={{
-                background: `linear-gradient(135deg, ${CC.gold} 0%, ${CC.primary} 100%)`,
-                boxShadow: '0 4px 16px rgba(232,136,30,0.3)',
+                background: '#f39e3a',
+                boxShadow: '0 4px 16px rgba(243,158,58,0.35)',
               }}
               onClick={() => navigate({ to: '/' })}
             >
