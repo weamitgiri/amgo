@@ -57,14 +57,14 @@ export function CountdownTimer({
 
   if (variant === 'large') {
     return (
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-1">
         {label && (
-          <span className="text-sm font-medium" style={{ color: '#8B7355' }}>
+          <span className="text-sm font-medium" style={{ color: '#3D2E1F' }}>
             {label}
           </span>
         )}
-        <div className="rounded-2xl px-8 py-4 text-center" style={{ backgroundColor: '#FFF3E0' }}>
-          <span className="text-4xl font-bold tracking-wider font-mono" style={{ color: '#E8881E' }}>
+        <div className="px-3 py-1 text-center">
+          <span className="text-4xl font-bold tracking-wider font-mono" style={{ color: '#2E2E2E' }}>
             {display}
           </span>
         </div>

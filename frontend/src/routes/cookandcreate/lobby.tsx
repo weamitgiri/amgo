@@ -64,19 +64,16 @@ function Card({
   );
 }
 
-function StatBox({ label, value }: { label: string; value: string | number }) {
+function StatBox({ label, value, last }: { label: string; value: string | number; last?: boolean }) {
   return (
     <div
-      className="flex flex-col items-center justify-center rounded-xl px-5 py-3 flex-1"
-      style={{
-        border: `1px solid ${CC.border}`,
-        backgroundColor: CC.primaryPale,
-      }}
+      className="flex-1 px-5 py-3.5"
+      style={last ? undefined : { borderRight: `1px solid ${CC.border}` }}
     >
-      <span className="text-xs font-medium" style={{ color: CC.textMuted }}>
+      <span className="block text-sm font-medium" style={{ color: CC.textMuted }}>
         {label}
       </span>
-      <span className="text-lg font-bold mt-0.5" style={{ color: CC.text }}>
+      <span className="block text-lg font-bold mt-1" style={{ color: CC.text }}>
         {value}
       </span>
     </div>
@@ -238,17 +235,25 @@ function LobbyPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Users size={20} style={{ color: CC.primary }} />
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="flex items-center justify-center rounded-xl shrink-0"
+                style={{ width: 40, height: 40, backgroundColor: '#F8F3E3' }}
+              >
+                <Users size={20} style={{ color: CC.primary }} />
+              </div>
               <h2 className="text-lg font-bold" style={{ color: CC.text }}>
                 Your Group &amp; Status
               </h2>
             </div>
 
-            <div className="flex gap-3 mb-6">
+            <div
+              className="flex rounded-xl mb-6 overflow-hidden"
+              style={{ border: `1px solid ${CC.border}`, backgroundColor: '#FEFDFB' }}
+            >
               <StatBox label="Group Capacity" value={groupCapacity} />
               <StatBox label="Joined" value={joined} />
-              <StatBox label="Remaining" value={remaining} />
+              <StatBox label="Remaining" value={remaining} last />
             </div>
 
             <div className="flex items-start gap-4 flex-wrap">
@@ -288,19 +293,26 @@ function LobbyPage() {
           </Card>
 
           <Card className="p-6 flex flex-col">
-            <div className="flex items-center gap-2 mb-1">
-              <CalendarClock size={20} style={{ color: CC.primary }} />
-              <h2 className="text-lg font-bold" style={{ color: CC.text }}>
-                Event Status
-              </h2>
+            <div className="flex items-start gap-3 mb-4">
+              <div
+                className="flex items-center justify-center rounded-xl shrink-0"
+                style={{ width: 40, height: 40, backgroundColor: '#F8F3E3' }}
+              >
+                <CalendarClock size={20} style={{ color: CC.primary }} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold" style={{ color: CC.text }}>
+                  Event Status
+                </h2>
+                <p className="text-sm" style={{ color: CC.textMuted }}>
+                  {loading
+                    ? 'Loading...'
+                    : remaining > 0
+                      ? 'Ensure all the participants have joined and groups are complete'
+                      : 'Game starting soon'}
+                </p>
+              </div>
             </div>
-            <p className="text-sm mb-4" style={{ color: CC.textMuted }}>
-              {loading
-                ? 'Loading...'
-                : remaining > 0
-                  ? 'Ensure all the participants have joined and groups are complete'
-                  : 'Game starting soon'}
-            </p>
 
             <div className="flex flex-col md:flex-row gap-4">
               <div
@@ -317,7 +329,7 @@ function LobbyPage() {
 
               <div
                 className="flex flex-col items-center justify-center rounded-xl px-5 py-3 shrink-0"
-                style={{ backgroundColor: CC.primaryPale, border: `1px solid ${CC.border}` }}
+                style={{ backgroundColor: '#FAE5C9', border: '1px solid #F2DCBA' }}
               >
                 <CountdownTimer
                   targetAt={gameState?.schedule.game_starts_at ?? null}
