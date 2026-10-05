@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { Users, CalendarClock, AlertTriangle } from 'lucide-react';
+import { Users, CalendarClock, Info, LogOut, BookOpen, Boxes, Pencil, Eye, Bell, Lightbulb, Vote, Clock } from 'lucide-react';
 import { CookCreateLayout } from './-components/CookCreateLayout';
 import { CookCreateHeader } from './-components/CookCreateHeader';
 import { PlayerAvatar } from './-components/PlayerAvatar';
@@ -23,15 +23,16 @@ export const Route = createFileRoute('/cookandcreate/lobby')({
 
 // Fallback only — used before the API responds, or if an admin hasn't set
 // any rules yet for this template (Laravel admin: Cook & Create > Templates).
-const DEFAULT_RULES = [
-  { emoji: '🎮', text: 'Play 3 rounds: Ingredients → Steps → Elimination.' },
-  { emoji: '✏️', text: 'Select ingredients and submit one step, actions are time-bound.' },
-  { emoji: '👁️', text: 'All actions are anonymous, observe patterns carefully.' },
-  { emoji: '🕵️', text: 'One player is the hidden Impostor trying to mislead the group.' },
-  { emoji: '🔍', text: 'Use clues to identify suspicious actions.' },
-  { emoji: '🗳️', text: 'Vote wisely to eliminate the Impostor and win.' },
+const DEFAULT_RULE_TEXTS = [
+  'Play 3 rounds: Ingredients → Steps → Elimination.',
+  'Select ingredients and submit one step, actions are time-bound.',
+  'All actions are anonymous, observe patterns carefully.',
+  'One player is the hidden Impostor trying to mislead the group.',
+  'Use clues to identify suspicious actions.',
+  'Vote wisely to eliminate the Impostor and win.',
 ];
-const RULE_EMOJIS = ['🎮', '✏️', '👁️', '🕵️', '🔍', '🗳️', '⏱️', '💡'];
+// Line icons per rule, matching the design (cycled if an admin adds more rules).
+const RULE_ICONS = [Boxes, Pencil, Eye, Bell, Lightbulb, Vote];
 
 /* ---------- sub-components ---------- */
 
@@ -164,21 +165,22 @@ function LobbyPage() {
   const groupCapacity = 5;
   const joined = players.length;
   const remaining = Math.max(0, groupCapacity - joined);
-  const rules =
-    gameState && gameState.rules.length > 0
-      ? gameState.rules.map((r, i) => ({ emoji: RULE_EMOJIS[i % RULE_EMOJIS.length], text: r.rule_text }))
-      : DEFAULT_RULES;
+  const ruleTexts =
+    gameState && gameState.rules.length > 0 ? gameState.rules.map((r) => r.rule_text) : DEFAULT_RULE_TEXTS;
+  const durationMin = Math.round((gameState?.schedule.game_duration_secs ?? 1500) / 60);
+  const rules: { Icon: typeof Clock; text: string }[] = ruleTexts.map((text, i) => ({
+    Icon: RULE_ICONS[i % RULE_ICONS.length],
+    text,
+  }));
+  // Always show the game duration as the final rule (clock icon), per the design.
+  rules.push({ Icon: Clock, text: `Game Duration: ${durationMin} Minutes` });
 
   return (
     <CookCreateLayout breadcrumb="Cook & Create / Lobby">
       <img src={decorLeft} alt="" className="fixed bottom-0 left-0 w-32 md:w-48 opacity-80 pointer-events-none z-0" />
       <img src={decorRight} alt="" className="fixed bottom-0 right-0 w-40 md:w-64 opacity-80 pointer-events-none z-0" />
       <div className="flex flex-col gap-5 relative z-10">
-        <CookCreateHeader
-          participantName={session?.name}
-          gameEndsAt={gameState?.schedule.game_ends_at ?? null}
-          clockOffsetMs={clockOffset}
-        />
+        <CookCreateHeader participantName={session?.name} showGameTimer={false} />
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
           <Card className="lg:col-span-3 overflow-hidden relative" style={{ padding: 0 }}>
@@ -210,18 +212,21 @@ function LobbyPage() {
           </Card>
 
           <Card className="lg:col-span-2 p-6">
-            <h2 className="text-lg font-bold mb-4" style={{ color: CC.text }}>
-              📖 Game Rules
+            <h2 className="flex items-center gap-2 text-lg font-bold mb-4" style={{ color: CC.text }}>
+              <BookOpen size={20} style={{ color: CC.primary }} /> Game Rules ...
             </h2>
-            <div className="flex flex-col gap-3">
-              {rules.map((rule, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <span className="text-lg shrink-0 mt-0.5">{rule.emoji}</span>
-                  <span className="text-sm leading-relaxed" style={{ color: CC.textMuted }}>
-                    {rule.text}
-                  </span>
-                </div>
-              ))}
+            <div className="flex flex-col gap-3.5">
+              {rules.map((rule, i) => {
+                const Icon = rule.Icon;
+                return (
+                  <div key={i} className="flex items-start gap-3">
+                    <Icon size={18} strokeWidth={1.75} className="shrink-0 mt-0.5" style={{ color: CC.primary }} />
+                    <span className="text-sm leading-relaxed" style={{ color: CC.textMuted }}>
+                      {rule.text}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         </div>
@@ -277,7 +282,7 @@ function LobbyPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-1">
               <CalendarClock size={20} style={{ color: CC.primary }} />
               <h2 className="text-lg font-bold" style={{ color: CC.text }}>
@@ -285,30 +290,30 @@ function LobbyPage() {
               </h2>
             </div>
             <p className="text-sm mb-4" style={{ color: CC.textMuted }}>
-              {loading ? 'Loading...' : remaining > 0 ? 'Waiting for all participants to join' : 'Game starting soon'}
+              {loading
+                ? 'Loading...'
+                : remaining > 0
+                  ? 'Ensure all the participants have joined and groups are complete'
+                  : 'Game starting soon'}
             </p>
 
             <div className="flex flex-col md:flex-row gap-4">
               <div
                 className="flex-1 rounded-xl p-4 flex items-start gap-3"
-                style={{
-                  backgroundColor: CC.primaryLight,
-                  border: `1px solid ${CC.gold}`,
-                }}
+                style={{ backgroundColor: CC.primaryPale, border: `1px solid ${CC.border}` }}
               >
-                <AlertTriangle
-                  size={20}
-                  className="shrink-0 mt-0.5"
-                  style={{ color: CC.primary }}
-                />
-                <p className="text-xs leading-relaxed" style={{ color: CC.textOrange }}>
+                <Info size={20} className="shrink-0 mt-0.5" style={{ color: CC.primary }} />
+                <p className="text-xs leading-relaxed" style={{ color: CC.textMuted }}>
                   Your group requires exactly {groupCapacity} participants. The game will start automatically once
                   all players have joined at the scheduled time. Please contact your organizer to
                   complete your group.
                 </p>
               </div>
 
-              <div className="flex flex-col items-center justify-center">
+              <div
+                className="flex flex-col items-center justify-center rounded-xl px-5 py-3 shrink-0"
+                style={{ backgroundColor: CC.primaryPale, border: `1px solid ${CC.border}` }}
+              >
                 <CountdownTimer
                   targetAt={gameState?.schedule.game_starts_at ?? null}
                   clockOffsetMs={clockOffset}
@@ -318,19 +323,19 @@ function LobbyPage() {
                 />
               </div>
             </div>
+
+            <button
+              className="mt-5 w-full py-3.5 rounded-full text-white font-semibold text-base flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              style={{
+                background: `linear-gradient(135deg, ${CC.gold} 0%, ${CC.primary} 100%)`,
+                boxShadow: '0 4px 16px rgba(232,136,30,0.3)',
+              }}
+              onClick={() => navigate({ to: '/' })}
+            >
+              <LogOut size={18} /> Leave Lobby
+            </button>
           </Card>
         </div>
-
-        <button
-          className="w-full py-4 rounded-full text-white font-semibold text-base flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-          style={{
-            background: `linear-gradient(135deg, ${CC.gold} 0%, ${CC.primary} 100%)`,
-            boxShadow: '0 4px 16px rgba(232,136,30,0.3)',
-          }}
-          onClick={() => navigate({ to: '/' })}
-        >
-          🚪 Leave Lobby
-        </button>
       </div>
     </CookCreateLayout>
   );
