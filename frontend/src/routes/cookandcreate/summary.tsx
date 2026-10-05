@@ -123,11 +123,12 @@ function SummaryPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-5 items-stretch">
           {/* LEFT COLUMN */}
           <div
-            className="rounded-[28px] border border-[#F5DCBD] p-6 sm:p-7 shadow-xs flex flex-col justify-between"
+            className="rounded-[28px] border border-[#F5DCBD] p-6 sm:p-7 shadow-xs flex flex-col justify-between relative overflow-hidden"
             style={{
+              backgroundColor: '#FFECD4',
               backgroundImage: `url(${resolveMediaUrl(gameState.template.background_image) ?? gameSummeryBg})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
+              backgroundSize: '100% auto',
+              backgroundPosition: 'top center',
               backgroundRepeat: 'no-repeat',
             }}
           >
@@ -149,7 +150,7 @@ function SummaryPage() {
 
             <div className="relative z-10">
               <h3 className="text-xs font-bold text-[#E8881E] uppercase tracking-wider mb-2.5">Rounds</h3>
-              <div className="bg-[#FFF8EE]/95 backdrop-blur-xs rounded-2xl border border-[#F5E6D3] p-4 shadow-xs">
+              <div className="bg-[#FFF8EE] rounded-2xl border border-[#F5E6D3] p-4 shadow-sm">
                 <div className="grid grid-cols-3 gap-2 items-center">
                   {ROUNDS.map((round, i) => (
                     <div key={round.num} className="flex items-center justify-between">
@@ -186,7 +187,7 @@ function SummaryPage() {
                         style={{ objectPosition: 'center 15%' }}
                       />
                     </div>
-                    <span className="text-xs font-bold text-[#3D2E1F] truncate w-full">
+                    <span className="text-[11px] font-bold text-[#3D2E1F] leading-tight w-full whitespace-nowrap">
                       {p.role_label}
                       {p.isYou ? ' (You)' : ''}
                     </span>
@@ -227,7 +228,7 @@ function SummaryPage() {
                     You can view the Challenge brief only once. Remember the details!
                   </p>
                   <div className="bg-gradient-to-b from-[#FFF3E0] to-[#FFEAD1] rounded-2xl p-5 border border-[#F5CE9E] text-center shadow-xs">
-                    <p className="text-xs font-bold text-[#6E5A44] mb-2">Heading to Round 1 in</p>
+                    <p className="text-xs font-bold text-[#6E5A44] mb-2">The Round 1 is starting in</p>
                     <div className="text-3xl font-black text-[#3D2E1F] font-mono tracking-widest">
                       {mm}:{ss}
                     </div>

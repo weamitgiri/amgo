@@ -52,7 +52,7 @@ export function CookCreateHeader({
       {/* Center/Right: Game Timer */}
       {showGameTimer && (
         <div className="flex items-center gap-3 bg-[#FFF3E0] border border-[#E8881E]/15 rounded-xl px-4 py-2">
-          <span className="text-xs font-bold text-[#8B7355] uppercase tracking-wider">Game Time Remaining</span>
+          <span className="text-xs font-bold text-[#8B7355] tracking-wide">Game Time Remaining</span>
           <span className="text-base font-extrabold text-[#3D2E1F] font-mono">{remaining}</span>
         </div>
       )}
