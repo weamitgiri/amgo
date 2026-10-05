@@ -1,5 +1,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { Users, CalendarClock, Info, LogOut, BookOpen, Boxes, Pencil, Eye, Bell, Lightbulb, Vote, Clock } from 'lucide-react';
+import { Users, CalendarClock, Info, LogOut, BookOpen, Clock } from 'lucide-react';
+import ruleIcon1 from '../../assets/cookandcreate/cook-game-rule-icon/icon1.png';
+import ruleIcon2 from '../../assets/cookandcreate/cook-game-rule-icon/icon2.png';
+import ruleIcon3 from '../../assets/cookandcreate/cook-game-rule-icon/icon3.png';
+import ruleIcon4 from '../../assets/cookandcreate/cook-game-rule-icon/icon4.png';
+import ruleIcon5 from '../../assets/cookandcreate/cook-game-rule-icon/icon5.png';
+import ruleIcon6 from '../../assets/cookandcreate/cook-game-rule-icon/icon6.png';
 import { CookCreateLayout } from './-components/CookCreateLayout';
 import { CookCreateHeader } from './-components/CookCreateHeader';
 import { PlayerAvatar } from './-components/PlayerAvatar';
@@ -31,8 +37,8 @@ const DEFAULT_RULE_TEXTS = [
   'Use clues to identify suspicious actions.',
   'Vote wisely to eliminate the Impostor and win.',
 ];
-// Line icons per rule, matching the design (cycled if an admin adds more rules).
-const RULE_ICONS = [Boxes, Pencil, Eye, Bell, Lightbulb, Vote];
+// Custom per-rule icons (icon1–6), matching the design (cycled if an admin adds more).
+const RULE_PNG_ICONS = [ruleIcon1, ruleIcon2, ruleIcon3, ruleIcon4, ruleIcon5, ruleIcon6];
 
 /* ---------- sub-components ---------- */
 
@@ -168,12 +174,12 @@ function LobbyPage() {
   const ruleTexts =
     gameState && gameState.rules.length > 0 ? gameState.rules.map((r) => r.rule_text) : DEFAULT_RULE_TEXTS;
   const durationMin = Math.round((gameState?.schedule.game_duration_secs ?? 1500) / 60);
-  const rules: { Icon: typeof Clock; text: string }[] = ruleTexts.map((text, i) => ({
-    Icon: RULE_ICONS[i % RULE_ICONS.length],
+  const rules: { iconImg: string | null; text: string }[] = ruleTexts.map((text, i) => ({
+    iconImg: RULE_PNG_ICONS[i % RULE_PNG_ICONS.length],
     text,
   }));
   // Always show the game duration as the final rule (clock icon), per the design.
-  rules.push({ Icon: Clock, text: `Game Duration: ${durationMin} Minutes` });
+  rules.push({ iconImg: null, text: `Game Duration: ${durationMin} Minutes` });
 
   return (
     <CookCreateLayout breadcrumb="Cook & Create / Lobby">
@@ -183,9 +189,9 @@ function LobbyPage() {
         <CookCreateHeader participantName={session?.name} showGameTimer={false} />
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-          <Card className="lg:col-span-3 overflow-hidden relative" style={{ padding: 0 }}>
+          <Card className="lg:col-span-3 overflow-hidden relative self-start" style={{ padding: 0 }}>
             <div
-              className="relative flex flex-col md:flex-row items-center min-h-[410px] bg-center"
+              className="relative flex flex-col md:flex-row items-center min-h-[300px] md:min-h-0 md:aspect-[1323/573] bg-cover bg-center"
               style={{ backgroundImage: `url(${lobbyBg})` }}
             >
               <div className="flex-1 flex items-center justify-center p-6 relative z-10">
@@ -213,20 +219,21 @@ function LobbyPage() {
 
           <Card className="lg:col-span-2 p-6">
             <h2 className="flex items-center gap-2 text-lg font-bold mb-4" style={{ color: CC.text }}>
-              <BookOpen size={20} style={{ color: CC.primary }} /> Game Rules ...
+              <BookOpen size={20} style={{ color: CC.primary }} /> Game Rules
             </h2>
             <div className="flex flex-col gap-3.5">
-              {rules.map((rule, i) => {
-                const Icon = rule.Icon;
-                return (
-                  <div key={i} className="flex items-start gap-3">
-                    <Icon size={18} strokeWidth={1.75} className="shrink-0 mt-0.5" style={{ color: CC.primary }} />
-                    <span className="text-sm leading-relaxed" style={{ color: CC.textMuted }}>
-                      {rule.text}
-                    </span>
-                  </div>
-                );
-              })}
+              {rules.map((rule, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  {rule.iconImg ? (
+                    <img src={rule.iconImg} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" />
+                  ) : (
+                    <Clock size={20} strokeWidth={1.75} className="shrink-0 mt-0.5" style={{ color: CC.primary }} />
+                  )}
+                  <span className="text-sm leading-relaxed" style={{ color: CC.textMuted }}>
+                    {rule.text}
+                  </span>
+                </div>
+              ))}
             </div>
           </Card>
         </div>
