@@ -4,27 +4,34 @@ import decorRight from '../../../assets/cookandcreate/decor-right.png';
 
 interface CookCreateLayoutProps {
   children: ReactNode;
-  breadcrumb: string;
+  breadcrumb?: string;
+  /** Tailwind max-width class for the content column. Defaults to max-w-6xl;
+   *  the lobby uses a wider canvas to match the Figma hero/rules proportions. */
+  maxWidthClass?: string;
 }
 
-export function CookCreateLayout({ children, breadcrumb }: CookCreateLayoutProps) {
+export function CookCreateLayout({ children, breadcrumb, maxWidthClass = 'max-w-6xl' }: CookCreateLayoutProps) {
   return (
     <div
       className="relative min-h-screen overflow-hidden"
       style={{ backgroundColor: '#FFF8F0' }}
     >
-      {/* Breadcrumb */}
-      <div className="px-6 pt-4 pb-2">
-        <span
-          className="text-sm font-semibold"
-          style={{ color: '#8B7355' }}
-        >
-          {breadcrumb}
-        </span>
-      </div>
+      {/* Breadcrumb (omit the prop entirely — as the lobby does — for a compact top) */}
+      {breadcrumb === undefined ? (
+        <div className="pt-4" />
+      ) : (
+        <div className="px-6 pt-4 pb-2">
+          <span
+            className="text-sm font-semibold"
+            style={{ color: '#8B7355' }}
+          >
+            {breadcrumb}
+          </span>
+        </div>
+      )}
 
       {/* Main content */}
-      <div className="relative z-10 mx-auto max-w-6xl px-6 pb-16">
+      <div className={`relative z-10 mx-auto ${maxWidthClass} px-6 pb-16`}>
         {children}
       </div>
 

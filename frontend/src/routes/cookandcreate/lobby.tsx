@@ -182,16 +182,16 @@ function LobbyPage() {
   rules.push({ iconImg: null, text: `Game Duration: ${durationMin} Minutes` });
 
   return (
-    <CookCreateLayout breadcrumb="Cook & Create / Lobby">
+    <CookCreateLayout maxWidthClass="max-w-[1360px]">
       <img src={decorLeft} alt="" className="fixed bottom-0 left-0 w-32 md:w-48 opacity-80 pointer-events-none z-0" />
       <img src={decorRight} alt="" className="fixed bottom-0 right-0 w-40 md:w-64 opacity-80 pointer-events-none z-0" />
       <div className="flex flex-col gap-5 relative z-10">
         <CookCreateHeader participantName={session?.name} showGameTimer={false} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-          <Card className="lg:col-span-3 overflow-hidden relative self-start" style={{ padding: 0 }}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+          <Card className="lg:col-span-2 overflow-hidden relative" style={{ padding: 0 }}>
             <div
-              className="relative flex flex-col md:flex-row items-center min-h-[300px] md:min-h-0 md:aspect-[1323/573] bg-cover bg-center"
+              className="relative flex flex-col md:flex-row items-center min-h-[300px] lg:h-full bg-cover bg-center"
               style={{ backgroundImage: `url(${lobbyBg})` }}
             >
               <div className="flex-1 flex items-center justify-center p-6 relative z-10">
@@ -217,11 +217,11 @@ function LobbyPage() {
             </div>
           </Card>
 
-          <Card className="lg:col-span-2 p-6">
+          <Card className="lg:col-span-1 p-6">
             <h2 className="flex items-center gap-2 text-lg font-bold mb-4" style={{ color: CC.text }}>
               <BookOpen size={20} style={{ color: CC.primary }} /> Game Rules
             </h2>
-            <div className="flex flex-col gap-3.5">
+            <div className="flex flex-col gap-2.5">
               {rules.map((rule, i) => (
                 <div key={i} className="flex items-start gap-3">
                   {rule.iconImg ? (
