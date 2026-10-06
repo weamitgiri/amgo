@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Leaf, Check, Send, Lock } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Leaf, Check, Send, Lock, ChefHat } from 'lucide-react';
 import { CookCreateLayout } from './-components/CookCreateLayout';
-import { CookCreateHeader } from './-components/CookCreateHeader';
-import { RoundProgress } from './-components/RoundProgress';
-import { PlayersSidebar, type CCPlayerSidebarEntry } from './-components/PlayersSidebar';
-import { ActivityFeed, type CCActivityItem } from './-components/ActivityFeed';
+import type { CCPlayerSidebarEntry } from './-components/PlayersSidebar';
+import type { CCActivityItem } from './-components/ActivityFeed';
+import logoImg from '../../assets/cookandcreate/Cook  and Create Logo.png';
+import step1Img from '../../assets/cookandcreate/game-flow-step-1.png';
+import step2Img from '../../assets/cookandcreate/game-flow-step-2.png';
+import step4Img from '../../assets/cookandcreate/game-flow-step-4.png';
 import { RoundResultsModal } from './-components/RoundResultsModal';
 import { CookingStepReviewModal } from './-components/CookingStepReviewModal';
 import { NameDishModal } from './-components/NameDishModal';
@@ -31,12 +33,6 @@ function secondsRemaining(startedAt: string | null, durationSecs: number): numbe
   const elapsed = Math.floor((Date.now() - startedMs) / 1000);
   return Math.max(0, durationSecs - elapsed);
 }
-
-const ROLE_EMOJI: Record<string, string> = {
-  chef: '🍳',
-  show_host: '🎬',
-  impostor: '🎭',
-};
 
 function GamePage() {
   const navigate = useNavigate();
@@ -207,7 +203,7 @@ function GamePage() {
 
   if (loading || !gameState) {
     return (
-      <CookCreateLayout breadcrumb="Cook & Create / Game">
+      <CookCreateLayout maxWidthClass="max-w-[1376px]">
         <div className="flex items-center justify-center min-h-[50vh] text-[#8B7355]">Loading game…</div>
       </CookCreateLayout>
     );
@@ -229,8 +225,6 @@ function GamePage() {
     online: p.isYou || (onlineParticipantIds ? onlineParticipantIds.has(p.id) : p.status === 'online'),
     submitted: submittedIds.includes(p.id),
   }));
-
-  const myRoleEmoji = gameState.my_role ? ROLE_EMOJI[gameState.my_role] ?? '🍳' : '🍳';
 
   const submit = async (fn: () => Promise<unknown>) => {
     if (submitting) return;
@@ -494,53 +488,79 @@ function GamePage() {
   const myMessagesSent = gameState.chat_messages.filter((m) => m.is_you && !m.is_impostor_private).length;
   const messagesRemaining = Math.max(0, template.round3_max_messages_per_player - myMessagesSent);
 
+  // Players panel rows: same order (and avatar colour) as the activity feed.
+  // Only your own turn is ever known to be "submitting" — the server never
+  // says whose Round 2 turn it is, so the impostor can't be traced.
+  const myTurnLive =
+    currentRound === 2 &&
+    instance.round2_phase === 'submit' &&
+    !!gameState.round2_turn?.is_my_turn &&
+    !gameState.my_cooking_step;
+  const panelPlayers: PanelPlayer[] = sidebarPlayers.map((p, i) => {
+    const submitting = p.isYou && myTurnLive;
+    return {
+      ...p,
+      colorIndex: i,
+      status: !p.online ? 'offline' : submitting ? 'submitting' : p.submitted ? 'submitted' : 'available',
+      timer: submitting ? `${timerMm}:${timerSs}` : undefined,
+    };
+  });
+  const colorIndexByName = new Map<string, number>();
+  participants.forEach((p, i) => {
+    colorIndexByName.set(p.name, i);
+    if (p.isYou) colorIndexByName.set('You', i);
+  });
+  const activityColor = (name: string, fallback: number) =>
+    colorIndexByName.get(name.replace(/\s*\(You\)$/, '')) ?? fallback;
+
   return (
-    <CookCreateLayout breadcrumb="">
-      <div className="relative z-10 space-y-4">
-        <CookCreateHeader
+    <CookCreateLayout maxWidthClass="max-w-[1376px]">
+      <div className="relative z-10">
+        <GameHeader
           participantName={session?.name}
           gameEndsAt={gameState.schedule.game_ends_at}
           clockOffsetMs={clockOffset}
         />
 
-        {/* Sub-header status bar */}
+        {/* Round status bar */}
         <div
-          className="border border-[#F3D3A3] rounded-[20px] px-6 py-4 shadow-xs"
-          style={{ background: 'linear-gradient(180deg, #FDEFD8 0%, #FAE4C0 100%)' }}
+          className="mt-8 border border-[#E9CDA6] rounded-[20px] px-6 py-4 lg:min-h-[118px] flex items-center"
+          style={{ background: 'linear-gradient(180deg, #FDE8CB 0%, #FCE0B6 100%)' }}
         >
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-[#E8881E] flex items-center justify-center shadow-sm shrink-0">
-                <Leaf size={22} className="text-white" />
+          <div className="flex items-center justify-between flex-wrap gap-x-6 gap-y-4 w-full">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-[46px] h-[46px] rounded-[10px] flex items-center justify-center shadow-sm shrink-0"
+                style={{ background: 'linear-gradient(180deg, #E57C25 0%, #D7650F 100%)' }}
+              >
+                <Leaf size={24} strokeWidth={1.75} className="text-white" />
               </div>
               <div>
-                <h2 className="text-base font-extrabold text-[#3F2B20] leading-tight">Cook &amp; Create</h2>
-                <p className="text-xs font-bold text-[#E8881E]">
+                <h2 className="text-[22px] font-semibold text-[#2E2A26] leading-tight">Cook &amp; Create</h2>
+                <p className="text-base text-[#DE8234] mt-0.5">
                   Round {currentRound}: {getRoundLabel()}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-[#FBEFD9] border border-[#F3DCB4] rounded-xl px-5 py-2.5">
-              <span className="text-[11px] leading-[1.2] font-semibold text-[#6F625A] text-left max-w-[112px]">
+            <div className="flex items-center gap-5 rounded-lg border border-[#F2CD9C] bg-[#FDD9A9] px-4 py-2">
+              <span className="text-sm leading-snug text-[#5A4A3A] text-center max-w-[150px]">
                 {currentRound === 2 ? 'Submit your step before time Runs Out' : 'Confirm the Vote before times Runs Out'}
               </span>
-              <span className="text-2xl font-black text-[#3F2B20] font-mono tracking-wide">
+              <span className="text-[34px] font-bold text-[#2E2A26] tabular-nums leading-none">
                 {timerMm}:{timerSs}
               </span>
             </div>
 
-            <RoundProgress currentRound={currentRound} />
+            <RoundSteps currentRound={currentRound} />
           </div>
         </div>
 
-        {/* Three column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_260px] gap-4 items-start">
-          <div>
-            <PlayersSidebar players={sidebarPlayers} myRoleLabel={gameState.my_role_label ?? 'Chef'} myRoleEmoji={myRoleEmoji} />
-          </div>
+        {/* Three column layout — Players / round content / Recent Activity, equal height */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,260fr)_minmax(0,682fr)_minmax(0,323fr)] gap-8 items-stretch mt-7">
+          <PlayersPanel players={panelPlayers} roleLabel={gameState.my_role_label ?? 'Chef'} />
 
-          <div>
+          <div className="lg:min-h-[600px]">
             {currentRound === 1 ? (
               <Round1Content
                 ingredients={gameState.all_ingredients}
@@ -587,9 +607,7 @@ function GamePage() {
             )}
           </div>
 
-          <div>
-            <ActivityFeed currentRound={currentRound} items={activityItems} />
-          </div>
+          <ActivityPanel currentRound={currentRound} items={activityItems} colorFor={activityColor} />
         </div>
 
         <RoundResultsModal
@@ -660,6 +678,237 @@ function GamePage() {
   );
 }
 
+/* ---------- Screen chrome (header, round steps, side panels) ---------- */
+
+/** Background of the centre (round content) panel. */
+const CENTER_PANEL_STYLE = { background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF6E9 100%)' };
+const CENTER_PANEL_CLASS =
+  'h-full flex flex-col rounded-[20px] border border-[#F1E2D0] shadow-[0_2px_8px_rgba(80,50,20,0.05)]';
+
+/** Same alias order everywhere: orange, yellow, green, blue, purple. */
+const AVATAR_GRADIENTS = [
+  'radial-gradient(circle at 35% 30%, #F7B56C 0%, #D9691C 75%)',
+  'radial-gradient(circle at 35% 30%, #E6CC48 0%, #B39612 75%)',
+  'radial-gradient(circle at 35% 30%, #86DD5E 0%, #3BA62D 75%)',
+  'radial-gradient(circle at 35% 30%, #63C9E2 0%, #2890B3 75%)',
+  'radial-gradient(circle at 35% 30%, #A274E4 0%, #6738B5 75%)',
+];
+
+/** "amit70" -> "A7", "John32 (You)" -> "J3"; names without digits -> first letters. */
+function aliasInitials(name: string): string {
+  const clean = name.replace(/\s*\(You\)$/, '').trim();
+  const digit = /\d/.exec(clean)?.[0];
+  const letter = /[A-Za-z]/.exec(clean)?.[0];
+  if (letter && digit) return (letter + digit).toUpperCase();
+  const words = clean.split(/\s+/).filter(Boolean);
+  return (words.length > 1 ? words[0][0] + words[1][0] : clean.slice(0, 2)).toUpperCase() || '?';
+}
+
+function AliasAvatar({ name, colorIndex, size }: { name: string; colorIndex: number; size: number }) {
+  return (
+    <span
+      className="rounded-full flex items-center justify-center text-white font-medium shrink-0"
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.round(size * 0.36),
+        background: AVATAR_GRADIENTS[colorIndex % AVATAR_GRADIENTS.length],
+        border: '1px solid rgba(90, 55, 20, 0.35)',
+      }}
+    >
+      {aliasInitials(name)}
+    </span>
+  );
+}
+
+function formatGameRemaining(endsAt: string | null | undefined, offsetMs: number): string {
+  if (!endsAt) return '--:--';
+  const end = new Date(endsAt).getTime();
+  if (Number.isNaN(end)) return '--:--';
+  const secs = Math.max(0, Math.round((end - (Date.now() + offsetMs)) / 1000));
+  return `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
+}
+
+/** Header — game timer sits beside the player, as in the design. Re-renders every second with the page. */
+function GameHeader({
+  participantName = 'Participant',
+  gameEndsAt,
+  clockOffsetMs,
+}: {
+  participantName?: string;
+  gameEndsAt: string | null | undefined;
+  clockOffsetMs: number;
+}) {
+  const words = participantName.trim().split(/\s+/).filter(Boolean);
+  const initials =
+    (words.length > 1 ? words[0][0] + words[1][0] : participantName.trim().slice(0, 2)).toUpperCase() || 'P';
+
+  return (
+    <div className="w-full bg-white rounded-[20px] border border-[#E8E7E3] px-5 py-[13px] flex items-center justify-between gap-4 shadow-[0_2px_8px_rgba(80,50,20,0.04)]">
+      <div className="flex items-center gap-3 min-w-0">
+        <img src={logoImg} alt="Cook & Create" className="w-11 h-11 object-contain shrink-0" />
+        <span className="text-[22px] font-semibold text-[#2E2A26] whitespace-nowrap">Cook &amp; Create</span>
+      </div>
+      <div className="flex items-center gap-4 sm:gap-8">
+        <div className="flex items-center gap-3 sm:gap-4 rounded-lg border border-[#F1E3D5] bg-[#FFF5E6] px-3 sm:px-4 py-2.5">
+          <span className="hidden sm:inline text-[15px] text-[#4A4540]">Game Time Remaining</span>
+          <span className="text-xl font-bold text-[#2E2A26] tabular-nums leading-none">
+            {formatGameRemaining(gameEndsAt, clockOffsetMs)}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[13px] font-medium shrink-0"
+            style={{ background: 'radial-gradient(circle at 35% 30%, #FF9EC4 0%, #F35B91 75%)' }}
+          >
+            {initials}
+          </span>
+          <span className="hidden sm:inline text-base text-[#2E2A26] whitespace-nowrap">{participantName}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ROUND_STEPS = [
+  { num: '01', img: step1Img, label: 'Ingredients' },
+  { num: '02', img: step2Img, label: 'Steps' },
+  { num: '03', img: step4Img, label: 'Elimination' },
+] as const;
+
+/** 01 Ingredients → 02 Steps → 03 Elimination: number badge overlapping the icon circle, label below. */
+function RoundSteps({ currentRound }: { currentRound: 1 | 2 | 3 }) {
+  return (
+    <div className="flex items-start gap-3 sm:gap-6">
+      {ROUND_STEPS.map((step, i) => {
+        const active = i + 1 <= currentRound;
+        const done = i + 1 < currentRound;
+        return (
+          <Fragment key={step.num}>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="flex items-center">
+                <span
+                  className="relative z-10 -mr-2 w-[34px] h-[34px] rounded-full flex items-center justify-center text-sm font-semibold text-white"
+                  style={active ? { background: '#F59C36', border: '1px solid #A65B1D' } : { background: '#C8BBA8' }}
+                >
+                  {done ? <Check size={15} strokeWidth={3} /> : step.num}
+                </span>
+                <span className="w-14 h-14 rounded-full bg-[#FDEBCF] flex items-center justify-center shadow-[0_2px_6px_rgba(120,70,20,0.12)]">
+                  <img src={step.img} alt="" className="w-10 h-10 object-contain" />
+                </span>
+              </div>
+              <span className={`text-base leading-none ${active ? 'font-medium text-[#3F3A35]' : 'text-[#8C847B]'}`}>
+                {step.label}
+              </span>
+            </div>
+            {i < ROUND_STEPS.length - 1 && (
+              <span className="text-lg text-[#F2A65A] mt-[16px]" aria-hidden>
+                →
+              </span>
+            )}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+type PanelPlayer = CCPlayerSidebarEntry & {
+  colorIndex: number;
+  status: 'available' | 'submitting' | 'submitted' | 'offline';
+  timer?: string;
+};
+
+const PLAYER_STATUS: Record<PanelPlayer['status'], { label: string; color: string }> = {
+  available: { label: 'Available', color: '#2CC48E' },
+  submitted: { label: 'Submitted', color: '#2CC48E' },
+  submitting: { label: 'Submitting', color: '#DB6D13' },
+  offline: { label: 'Offline', color: '#A99E92' },
+};
+
+function PlayersPanel({ players, roleLabel }: { players: PanelPlayer[]; roleLabel: string }) {
+  return (
+    <div
+      className="h-full flex flex-col rounded-[20px] border border-[#E8CBA6] px-6 pt-7 pb-6 lg:min-h-[600px]"
+      style={{ background: 'linear-gradient(165deg, #FEE7CB 0%, #FDE0B9 100%)' }}
+    >
+      <h3 className="text-[22px] font-semibold text-[#2E2A26]">Players</h3>
+
+      <div className="mt-5 space-y-2.5">
+        {players.map((p) => {
+          const st = PLAYER_STATUS[p.status];
+          return (
+            <div key={p.id} className="flex items-center gap-3 rounded-[10px] bg-[#FFF6EA]/75 px-2.5 py-2">
+              <AliasAvatar name={p.name} colorIndex={p.colorIndex} size={46} />
+              <div className="min-w-0 flex-1">
+                <p className="text-base text-[#3F3A35] truncate">
+                  {p.name}
+                  {p.isYou ? ' (You)' : ''}
+                </p>
+                <p className="flex items-center gap-1.5 text-[13px] font-medium mt-0.5" style={{ color: st.color }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: st.color }} />
+                  {st.label}
+                </p>
+              </div>
+              {p.timer && <span className="text-base tabular-nums text-[#BC7532] shrink-0">{p.timer}</span>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-auto pt-6">
+        <div className="rounded-[10px] border border-[#F5D7AE] bg-[#FFF0DC]/70 px-4 py-3 flex items-center gap-3">
+          <ChefHat size={30} strokeWidth={1.5} className="text-[#7D6B58] shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[13px] text-[#6F625A]">Your Role</p>
+            <p className="text-xl font-bold text-[#502A0E] uppercase leading-tight mt-0.5">{roleLabel}</p>
+            <p className="text-[13px] text-[#6F625A] leading-snug mt-1">Work with your team to win.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityPanel({
+  currentRound,
+  items,
+  colorFor,
+}: {
+  currentRound: 1 | 2 | 3;
+  items: CCActivityItem[];
+  colorFor: (name: string, fallback: number) => number;
+}) {
+  return (
+    <div
+      className="h-full flex flex-col rounded-[20px] border border-[#E9CFB4] px-6 pt-7 pb-6 lg:min-h-[600px]"
+      style={{ background: 'linear-gradient(180deg, #FEF3E2 0%, #FFF6E8 100%)' }}
+    >
+      <h3 className="text-[22px] font-semibold text-[#2E2A26]">Recent Activity</h3>
+      <p className="text-base text-[#E9883A] mt-3">Round {currentRound}</p>
+      <hr className="mt-3 border-t border-[#E1DCD2]" />
+
+      {items.length === 0 ? (
+        <p className="text-sm text-[#8C847B] pt-5">Nothing yet — activity will appear here as your team plays.</p>
+      ) : (
+        <div className="mt-5 flex-1 min-h-0 lg:max-h-[440px] overflow-y-auto pr-2 space-y-5 [scrollbar-width:thin] [scrollbar-color:#C7BFB4_transparent]">
+          {items.map((item, i) => (
+            <div key={item.id} className="flex items-start gap-3">
+              <AliasAvatar name={item.name} colorIndex={colorFor(item.name, i)} size={38} />
+              <div className="min-w-0 pt-1.5">
+                <p className="text-[15px] leading-snug text-[#3F3A35] break-words">
+                  <span className="text-[#D97A2B]">{item.name}</span> {item.text}
+                </p>
+                {item.time && <p className="text-xs text-[#8C847B] mt-1">{item.time}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------- Round 1 ---------- */
 function Round1Content({
   ingredients,
@@ -680,25 +929,25 @@ function Round1Content({
 }) {
   if (alreadyVoted) {
     return (
-      <div className="bg-[#FFF8EE] rounded-2xl border border-[#F5E2C8] p-8 text-center space-y-3">
+      <div className={`${CENTER_PANEL_CLASS} items-center justify-center p-8 text-center space-y-3`} style={CENTER_PANEL_STYLE}>
         <span className="text-2xl block">✅</span>
-        <p className="text-sm font-bold text-[#36B37E]">Your votes are in!</p>
-        <p className="text-xs text-[#8B7355]">Waiting for the rest of your team to vote…</p>
+        <p className="text-base font-semibold text-[#2CC48E]">Your votes are in!</p>
+        <p className="text-sm text-[#6F625A]">Waiting for the rest of your team to vote…</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#FFF8EE] rounded-2xl border border-[#F5E2C8] p-6 text-center space-y-5">
+    <div className={`${CENTER_PANEL_CLASS} px-6 sm:px-8 pt-7 pb-6 text-center`} style={CENTER_PANEL_STYLE}>
       <div>
-        <h2 className="text-lg font-black text-[#3D2E1F]">Round 1 of 3 – Ingredients Market</h2>
-        <h3 className="text-sm font-extrabold text-[#3D2E1F] mt-0.5">Vote for Ingredients</h3>
-        <p className="text-xs text-[#8B7355] mt-1 font-medium">
+        <h2 className="text-[22px] font-semibold text-[#462A11] leading-tight">Round 1 of 3 – Ingredients Market</h2>
+        <h3 className="text-lg font-semibold text-[#2E2A26] mt-1">Vote for Ingredients</h3>
+        <p className="text-sm text-[#4A4540] mt-1.5">
           Select {votesPerPlayer} ingredients you think should go into our recipe.
         </p>
       </div>
 
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 mt-6">
         {ingredients.map((item) => {
           const isSelected = selectedIngredientIds.has(item.id);
           // At the cap, extra cards aren't dimmed (matches the design) — the
@@ -710,43 +959,46 @@ function Round1Content({
               key={item.id}
               type="button"
               onClick={() => toggleIngredient(item.id)}
-              className={`relative flex flex-col items-center justify-between p-3 rounded-2xl bg-white border-2 transition-all duration-150 ease-out cursor-pointer min-h-[125px] w-full shadow-xs ${
-                isSelected ? 'border-[#E8881E] ring-2 ring-[#E8881E]/20 bg-[#FFFDF9]' : 'border-[#F5E6D3] hover:border-[#E8881E]/50'
-              } ${!atCap ? 'hover:scale-[1.03]' : 'cursor-default'}`}
+              className={`relative flex flex-col items-center justify-between h-[140px] w-full rounded-lg border px-2 pt-4 pb-3 transition-all duration-150 ease-out cursor-pointer ${
+                isSelected
+                  ? 'bg-[#FFF8EF] border-[#E2934D] shadow-[0_0_0_0.5px_#E2934D]'
+                  : 'bg-[#FDF7F2] border-[#D8D4D1] hover:border-[#E2934D]/60'
+              } ${!atCap ? 'hover:-translate-y-0.5' : 'cursor-default'}`}
             >
               {isSelected && (
-                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#E8881E] flex items-center justify-center shadow-xs z-10">
-                  <Check size={12} className="text-white" strokeWidth={3} />
+                <span className="absolute top-1.5 right-1.5 w-[22px] h-[22px] rounded-full bg-[#DB6D11] flex items-center justify-center shadow-sm z-10">
+                  <Check size={13} className="text-white" strokeWidth={3} />
                 </span>
               )}
-              <div className="flex-1 flex items-center justify-center w-full my-1">
+              <div className="flex-1 flex items-center justify-center w-full">
                 {item.image_url ? (
-                  <img src={resolveMediaUrl(item.image_url) ?? item.image_url} alt={item.name} className="max-w-[65px] max-h-[65px] object-contain drop-shadow-sm" />
+                  <img src={resolveMediaUrl(item.image_url) ?? item.image_url} alt={item.name} className="max-w-[84px] max-h-[68px] object-contain" />
                 ) : (
-                  <span className="text-3xl">🥘</span>
+                  <span className="text-4xl">🥘</span>
                 )}
               </div>
-              <span className="text-xs font-bold text-[#3D2E1F] text-center leading-tight">{item.name}</span>
+              <span className="text-sm font-medium text-[#3F3A35] text-center leading-tight mt-2">{item.name}</span>
             </button>
           );
         })}
       </div>
 
-      <div className="pt-2 space-y-3">
-        <div className="flex items-center gap-4">
-          <span className="text-xs font-bold text-[#3D2E1F] whitespace-nowrap">
-            Selected <span className="text-[#E8881E] mx-0.5">{selectedIngredientIds.size}/{votesPerPlayer}</span> ingredients
+      <div className="mt-auto pt-8">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
+          <span className="text-base font-semibold text-[#2E2A26] whitespace-nowrap">
+            Selected {selectedIngredientIds.size}/{votesPerPlayer} ingredients
           </span>
           <button
             onClick={onConfirmVote}
             disabled={selectedIngredientIds.size !== votesPerPlayer || submitting}
-            className="flex-1 py-3 rounded-full bg-[#E8881E] hover:bg-[#D47815] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm transition-transform hover:scale-[1.02] active:scale-[0.99] shadow-md shadow-[#E8881E]/30 cursor-pointer"
+            className="w-full sm:max-w-[398px] h-[46px] rounded-full text-white text-[17px] font-medium transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-[0_4px_12px_rgba(243,158,59,0.35)] cursor-pointer"
+            style={{ background: 'linear-gradient(90deg, #F39E3B 0%, #F9A548 50%, #F39E3B 100%)' }}
           >
             Confirm Vote
           </button>
         </div>
 
-        <p className="text-[11px] text-[#8B7355] font-medium text-center">Your actions are anonymous, observe patterns carefully.</p>
+        <p className="text-sm text-[#5A544E] text-center mt-4">Your actions are anonymous, observe patterns carefully.</p>
       </div>
     </div>
   );
@@ -785,7 +1037,7 @@ function Round2Content({
   const myTurnHasPassed =
     turn?.current_index != null && turn.my_turn_index != null && turn.current_index > turn.my_turn_index;
   return (
-    <div className="bg-[#FFF8EE] rounded-2xl border border-[#F5E2C8] p-6 space-y-5">
+    <div className={`${CENTER_PANEL_CLASS} p-6 space-y-5`} style={CENTER_PANEL_STYLE}>
       <div className="text-center">
         <h2 className="text-lg font-black text-[#3D2E1F]">Round 2 of 3 — Cooking Step Submission</h2>
       </div>
@@ -927,7 +1179,7 @@ function Round3Content({
 }) {
   if (status === 'round3_discussion') {
     return (
-      <div className="bg-[#FFF8EE] rounded-2xl border border-[#F5E2C8] p-6 space-y-4 flex flex-col h-[520px]">
+      <div className="flex flex-col h-[600px] rounded-[20px] border border-[#F1E2D0] shadow-[0_2px_8px_rgba(80,50,20,0.05)] p-6 space-y-4" style={CENTER_PANEL_STYLE}>
         <div className="text-center">
           <h2 className="text-lg font-black text-[#3D2E1F]">Round 3 of 3 — The Kitchen Talks</h2>
           <p className="text-xs text-[#8B7355] mt-1">
@@ -946,7 +1198,7 @@ function Round3Content({
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto space-y-2.5 bg-white/60 rounded-xl border border-[#F5E6D3] p-4">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 bg-white/60 rounded-xl border border-[#F5E6D3] p-4">
           {chatMessages.filter((m) => !m.is_impostor_private).length === 0 ? (
             <p className="text-xs text-[#9C826B] text-center py-6">No messages yet — be the first to say something.</p>
           ) : (
@@ -992,7 +1244,7 @@ function Round3Content({
   const votable = participants.filter((p) => p.id !== myId);
 
   return (
-    <div className="bg-[#FFF8EE] rounded-2xl border-2 border-[#E8881E]/30 p-6 text-center space-y-5">
+    <div className={`${CENTER_PANEL_CLASS} p-6 text-center space-y-5`} style={CENTER_PANEL_STYLE}>
       <div>
         <h2 className="text-lg font-black text-[#3D2E1F]">Round 3 of 3 – Imposter Voting</h2>
         <p className="text-sm font-semibold text-[#E8881E] mt-2 leading-relaxed max-w-[400px] mx-auto">
