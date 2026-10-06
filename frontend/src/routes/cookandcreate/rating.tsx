@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CookCreateLayout } from './-components/CookCreateLayout';
 import { ReviewRatingPage } from './-components/ReviewRatingPage';
 import { OtherKitchensModal } from './-components/OtherKitchensModal';
+import { clockOffsetMs } from './-components/clock';
 import { cookAndCreateService } from '@/api/services/cookandcreate.service';
 import type { CCAwardsBoard, CCGameStateResponse, CCOtherDish } from '@/api/types/cookandcreate';
 import { getParticipantSession } from '@/lib/participant-session';
@@ -19,6 +20,8 @@ function RatingPage() {
   const [otherDishes, setOtherDishes] = useState<CCOtherDish[]>([]);
   const [awards, setAwards] = useState<CCAwardsBoard | null>(null);
   const [loading, setLoading] = useState(true);
+  // Browser-to-server clock correction for the header's Game Time.
+  const [clockOffset, setClockOffset] = useState(0);
   // The "What Other Kitchens Cooked Up" review is a first step (a modal) shown
   // before the results/reveal screen. Flipped once the player continues past it.
   const [reviewedOthers, setReviewedOthers] = useState(false);
@@ -35,6 +38,7 @@ function RatingPage() {
         cookAndCreateService.getAwards(groupId).catch(() => null),
       ]);
       setGameState(state);
+      setClockOffset(clockOffsetMs(state.schedule, Date.now()));
       setOtherDishes(dishes.dishes);
       setAwards(board);
     } catch (err) {
@@ -86,7 +90,7 @@ function RatingPage() {
 
   if (loading || !gameState) {
     return (
-      <CookCreateLayout breadcrumb="Cook & Create / Results">
+      <CookCreateLayout maxWidthClass="max-w-[1376px]">
         <div className="flex items-center justify-center min-h-[50vh] text-[#8B7355]">Loading results…</div>
       </CookCreateLayout>
     );
@@ -96,7 +100,7 @@ function RatingPage() {
   // other team has finished yet — the player can still continue to their results.
   if (!reviewedOthers) {
     return (
-      <CookCreateLayout breadcrumb="Cook & Create / Results">
+      <CookCreateLayout maxWidthClass="max-w-[1376px]">
         <OtherKitchensModal
           isOpen
           otherDishes={otherDishes}
@@ -133,6 +137,9 @@ function RatingPage() {
       myGroupId={gameState.instance.group_id}
       template={gameState.template}
       doubleDownOutcome={doubleDownOutcome}
+      participantName={session?.name}
+      gameEndsAt={gameState.schedule.game_ends_at}
+      clockOffsetMs={clockOffset}
     />
   );
 }

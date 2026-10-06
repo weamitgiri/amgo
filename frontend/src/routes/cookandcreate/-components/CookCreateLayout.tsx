@@ -39,7 +39,7 @@ export function CookCreateLayout({ children, breadcrumb, maxWidthClass = 'max-w-
       <img
         src={decorLeft}
         alt=""
-        className="pointer-events-none fixed bottom-0 left-0 w-44 md:w-56 opacity-90 z-0 select-none"
+        className="pointer-events-none fixed bottom-0 left-0 w-35 opacity-90 z-0 select-none"
       />
 
       {/* Bottom-right leaf decoration */}

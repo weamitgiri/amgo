@@ -7,6 +7,8 @@ import ruleIcon3 from '../../assets/cookandcreate/cook-game-rule-icon/icon3.png'
 import ruleIcon4 from '../../assets/cookandcreate/cook-game-rule-icon/icon4.png';
 import ruleIcon5 from '../../assets/cookandcreate/cook-game-rule-icon/icon5.png';
 import ruleIcon6 from '../../assets/cookandcreate/cook-game-rule-icon/icon6.png';
+import gameIcon from '../../assets/cookandcreate/cook-game-rule-icon/game.png';
+import gameW from '../../assets/cookandcreate/cook-game-rule-icon/game-w.png';
 import { CookCreateLayout } from './-components/CookCreateLayout';
 import { CookCreateHeader } from './-components/CookCreateHeader';
 import { PlayerAvatar } from './-components/PlayerAvatar';
@@ -191,25 +193,26 @@ function LobbyPage() {
               style={{ backgroundImage: `url(${lobbyBg})` }}
             >
               <div className="flex items-center justify-center p-6 relative z-10 md:basis-[38%] md:shrink-0">
-                 <img src={lobbyLogo} alt="Cook & Create Logo" className="w-full max-w-[190px] drop-shadow-2xl" />
+                 <img src={lobbyLogo} alt="Cook & Create Logo" className="w-full max-w-[190px] drop-shadow-2xl ml-[156px] mb-[69px]" />
               </div>
               <div className="flex-1 p-6 md:pl-2 md:pr-8 relative z-10">
                 <div
-                  className="backdrop-md rounded-2xl p-6 border border-white/50 shadow-lg"
+                  className="backdrop-md rounded-2xl p-6 border border-white/50 shadow-lg ml-[22px]"
                   style={{ backgroundColor: 'rgba(254, 198, 107, 0.5)',width: '303px'}}
                 >
                   <h1
                     className="text-2xl md:text-3xl font-bold leading-tight mb-3"
-                    style={{ color: '#FFFFFF' }}
+                    style={{ color: '#2e2e2e' }}
                   >
                     Welcome to<br />
                     Cook &amp; Create
                   </h1>
                   <p
                     className="text-sm leading-relaxed font-medium"
-                    style={{ color: 'rgba(255, 255, 255, 0.92)' }}
+                    style={{ color: '#2e2e2e' }}
                   >
-                    {gameState?.template.description || 'Work together to create the best dish while finding the hidden imposter in your team.'}
+                    {/*{gameState?.template.description || 'Work together to create the best dish while finding the hidden imposter in your team.'}*/}
+                    {'Work together to create the best dish while finding the hidden imposter in your team.' || 'Work together to create the best dish while finding the hidden imposter in your team.'}
                   </p>
                 </div>
               </div>
@@ -302,7 +305,8 @@ function LobbyPage() {
                 className="flex items-center justify-center rounded-xl shrink-0"
                 style={{ width: 40, height: 40, backgroundColor: '#F8F3E3' }}
               >
-                <CalendarClock size={20} style={{ color: CC.primary }} />
+                 
+                <img src={gameIcon} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" />
               </div>
               <div>
                 <h2 className="text-lg font-bold" style={{ color: CC.text }}>
@@ -353,7 +357,7 @@ function LobbyPage() {
               }}
               onClick={() => navigate({ to: '/' })}
             >
-              <LogOut size={18} /> Leave Lobby
+              <img src={gameW} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" /> Leave Lobby
             </button>
           </Card>
         </div>

@@ -59,6 +59,7 @@ function SummaryPage() {
     fetchState();
   }, [session?.groupId, session?.participantId, navigate, fetchState]);
 
+  //const goToGame = useCallback(() => navigate({ to: '/cookandcreate/game' }), [navigate]);
   const goToGame = useCallback(() => navigate({ to: '/cookandcreate/game' }), [navigate]);
 
   // If the round has already moved past Round 1 by the time this loads (e.g.
