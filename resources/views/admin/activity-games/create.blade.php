@@ -22,7 +22,7 @@
 
     <section class="content">
         <div class="container-fluid">
-            <form action="{{ route('admin.activity-games.store', $activity->id) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('admin.activity-games.store', $activity->id) }}" method="POST" enctype="multipart/form-data" data-upload-limits='{"bg_image":4,"role_icon":1}' data-upload-default-mb="2" data-upload-types="jpg,jpeg,png,webp">
                 @csrf
                 <div class="card">
                     @include('admin.activity-games._form')

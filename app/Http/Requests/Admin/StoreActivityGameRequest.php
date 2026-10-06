@@ -106,30 +106,37 @@ class StoreActivityGameRequest extends FormRequest
             'bg_image.image' => 'The case background must be a valid image file.',
             'bg_image.mimes' => 'The case background must be a JPG, PNG, WEBP or JPEG file.',
             'bg_image.max'   => 'The case background image may not be larger than 4 MB.',
+            'bg_image.uploaded' => 'The case background image failed to upload — it is probably larger than the server allows. Please choose a smaller image.',
 
             'culprit_image.image' => 'The culprit reveal image must be a valid image file.',
             'culprit_image.mimes' => 'The culprit reveal image must be a JPG, PNG, WEBP or JPEG file.',
             'culprit_image.max'   => 'The culprit reveal image may not be larger than 2 MB.',
+            'culprit_image.uploaded' => 'The culprit reveal image failed to upload — it is probably larger than the server allows. Please choose a smaller image.',
 
             'photos.*.image.image' => 'Each investigation photo must be a valid image file.',
             'photos.*.image.mimes' => 'Each investigation photo must be a JPG, PNG, WEBP or JPEG file.',
             'photos.*.image.max'   => 'Each investigation photo may not be larger than 2 MB.',
+            'photos.*.image.uploaded' => 'An investigation photo failed to upload — it is probably larger than the server allows. Please choose a smaller image.',
 
             'roles.*.role_image.image' => 'Each role image must be a valid image file.',
             'roles.*.role_image.mimes' => 'Each role image must be a JPG, PNG, WEBP or JPEG file.',
             'roles.*.role_image.max'   => 'Each role image may not be larger than 2 MB.',
+            'roles.*.role_image.uploaded' => 'A role image failed to upload — it is probably larger than the server allows. Please choose a smaller image.',
 
             'roles.*.role_icon.image' => 'Each role icon must be a valid image file.',
             'roles.*.role_icon.mimes' => 'Each role icon must be a JPG, PNG, WEBP or JPEG file.',
             'roles.*.role_icon.max'   => 'Each role icon may not be larger than 1 MB.',
+            'roles.*.role_icon.uploaded' => 'A role icon failed to upload — it is probably larger than the server allows. Please choose a smaller image.',
 
             'clues.*.clue_image.image' => 'The clue image must be a valid image file.',
             'clues.*.clue_image.mimes' => 'The clue image must be a JPG, PNG, WEBP or JPEG file.',
             'clues.*.clue_image.max'   => 'The clue image may not be larger than 2 MB.',
+            'clues.*.clue_image.uploaded' => 'The clue image failed to upload — it is probably larger than the server allows. Please choose a smaller image.',
 
             'full_story.*.part_image.image' => 'Each story image must be a valid image file.',
             'full_story.*.part_image.mimes' => 'Each story image must be a JPG, PNG, WEBP or JPEG file.',
             'full_story.*.part_image.max'   => 'Each story image may not be larger than 2 MB.',
+            'full_story.*.part_image.uploaded' => 'A story image failed to upload — it is probably larger than the server allows. Please choose a smaller image.',
         ];
     }
 }

@@ -103,6 +103,13 @@
   <script src="{{ asset('admin/dist/js/forms.js')}}"></script>
   <script src="{{ asset('admin/dist/js/jquery.form.js')}}"></script>
   <script src="{{ asset('admin/dist/js/custom.js')}}"></script>
+  <script>
+    window.ADMIN_UPLOAD_LIMITS = @json([
+      'fileBytes' => \App\Support\UploadLimits::fileBytes(),
+      'requestBytes' => \App\Support\UploadLimits::requestBytes(),
+    ]);
+  </script>
+  <script src="{{ asset('admin/dist/js/upload-guard.js')}}"></script>
 
   <script>
     toastr.options = {
@@ -112,10 +119,17 @@
       "timeOut": "3000"
     };
     @if(Session::has('success'))
-      toastr.success("{{ Session::get('success') }}");
+      toastr.success(@json(Session::get('success')));
     @endif
     @if(Session::has('error'))
-      toastr.error("{{ Session::get('error') }}");
+      toastr.error(@json(Session::get('error')), '', { timeOut: 8000 });
+    @endif
+    {{-- Validation failures (e.g. an image that is too large or failed to upload)
+         also show as toasts, not only inline under the field. --}}
+    @if($errors->any())
+      @foreach(collect($errors->all())->unique()->take(5) as $message)
+        toastr.error(@json($message), '', { timeOut: 8000 });
+      @endforeach
     @endif
   </script>
   @yield('footer_js')
