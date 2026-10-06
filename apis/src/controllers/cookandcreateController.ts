@@ -95,7 +95,10 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
     );
     const participants = participantRows.map((p: any) => ({
         id: Number(p.id),
-        name: myParticipantId === Number(p.id) ? p.name : shortName(p.name, Number(p.id)),
+        // Everyone — including you — is shown by the same in-game alias, so the
+        // player list and activity feed never mix one real name in with aliases
+        // (the header still shows your own registered name).
+        name: shortName(p.name, Number(p.id)),
         isYou: myParticipantId === Number(p.id),
         status: Number(p.is_online) === 1 ? 'online' : 'offline',
     }));
