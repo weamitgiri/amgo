@@ -44,8 +44,18 @@
 </div>
 
 <div class="form-group">
-    <label>Description <span class="text-muted">(shown on the Challenge Brief screen — HTML allowed)</span></label>
-    <textarea name="description" rows="3" class="form-control @error('description') is-invalid @enderror">{{ old('description', $template->description ?? '') }}</textarea>
+    <label>Description <span class="text-muted">(shown on the Challenge Brief screen)</span></label>
+    @php
+        $ccDescription = (string) old('description', $template->description ?? '');
+        // Descriptions saved before the editor are plain text: keep their line
+        // breaks as paragraphs instead of letting the editor collapse them.
+        if ($ccDescription !== '' && $ccDescription === strip_tags($ccDescription)) {
+            $ccDescription = collect(preg_split('/\R{2,}/', trim($ccDescription)))
+                ->map(fn ($para) => '<p>' . nl2br(e(trim($para)), false) . '</p>')
+                ->implode('');
+        }
+    @endphp
+    <textarea name="description" id="cc-template-description" rows="3" class="form-control @error('description') is-invalid @enderror">{{ $ccDescription }}</textarea>
     @error('description') <div class="invalid-feedback">{{ $message }}</div> @enderror
 </div>
 
@@ -310,6 +320,21 @@
      from @section/@show, not @push. A plain inline script tag placed after
      the elements it references works regardless of where it's included. --}}
 <script>
+// Rich-text editor for the Challenge Brief description. jQuery/Summernote load
+// at the bottom of the layout, after this partial, so wait for DOMContentLoaded.
+document.addEventListener('DOMContentLoaded', function () {
+    $('#cc-template-description').summernote({
+        height: 200,
+        toolbar: [
+            ['style', ['bold', 'italic', 'underline', 'clear']],
+            ['color', ['color']],
+            ['para', ['ul', 'ol', 'paragraph']],
+            ['insert', ['link']],
+            ['view', ['codeview', 'help']]
+        ]
+    });
+});
+
 (function () {
     var wrapper = document.getElementById('clues-wrapper');
     var addBtn = document.getElementById('add-clue-row');

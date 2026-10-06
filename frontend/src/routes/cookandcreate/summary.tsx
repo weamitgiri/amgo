@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronRight, FileText, Info } from 'lucide-react';
+import { FileText, Info } from 'lucide-react';
 import { CookCreateLayout } from './-components/CookCreateLayout';
 import { CookCreateHeader } from './-components/CookCreateHeader';
 import { RoleRevealModal } from './-components/RoleRevealModal';
@@ -15,6 +15,7 @@ import secretBoxImg from '../../assets/cookandcreate/secret-box.png';
 import step1Img from '../../assets/cookandcreate/game-flow-step-1.png';
 import step2Img from '../../assets/cookandcreate/game-flow-step-2.png';
 import step4Img from '../../assets/cookandcreate/game-flow-step-4.png';
+import arrowImg from '../../assets/cookandcreate/arrow.png';
 
 export const Route = createFileRoute('/cookandcreate/summary')({
   component: SummaryPage,
@@ -123,33 +124,40 @@ function SummaryPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-5 items-stretch">
           {/* LEFT COLUMN */}
           <div
-            className="rounded-[28px] border border-[#F5DCBD] p-6 sm:p-7 shadow-xs flex flex-col justify-between relative overflow-hidden"
-            style={{
-              backgroundColor: '#FFECD4',
-              backgroundImage: `url(${resolveMediaUrl(gameState.template.background_image) ?? gameSummeryBg})`,
-              backgroundSize: '100% auto',
-              backgroundPosition: 'top center',
-              backgroundRepeat: 'no-repeat',
-            }}
+            className="rounded-[28px] border border-[#F5DCBD] shadow-xs flex flex-col relative overflow-hidden"
+            style={{ backgroundColor: '#FFECD4' }}
           >
-            <div className="max-w-[260px] sm:max-w-[300px] space-y-3 mb-8">
-              <h1 className="text-2xl sm:text-3xl font-black text-[#3D2E1F] leading-tight">
-                The <span className="text-[#E8881E]">Cook &amp; Create</span>
-                <br />
-                Challenge
-              </h1>
-              <div
-                className="text-xs sm:text-sm text-[#7A644D] leading-relaxed font-medium"
-                dangerouslySetInnerHTML={{
-                  __html:
-                    gameState.template.description ||
-                    'Work together to create the best dish with the given ingredients and steps. One player is secretly trying to spoil the dish. Can you spot the impostor and create a masterpiece together?',
-                }}
-              />
+            {/* Illustration area, sized to the art's own aspect (721×481) so the
+                Rounds box below never covers the pot/veggies; it grows instead if
+                the description runs longer. */}
+            <div
+              className="aspect-[721/481] p-6 sm:p-7"
+              style={{
+                backgroundImage: `url(${resolveMediaUrl(gameState.template.background_image) ?? gameSummeryBg})`,
+                backgroundSize: '100% auto',
+                backgroundPosition: 'top center',
+                backgroundRepeat: 'no-repeat',
+              }}
+            >
+              <div className="max-w-[260px] sm:max-w-[300px] space-y-3">
+                <h1 className="text-2xl sm:text-3xl font-black text-[#3D2E1F] leading-tight">
+                  The <span className="text-[#E8881E]">Cook &amp; Create</span>
+                  <br />
+                  Challenge
+                </h1>
+                <div
+                  className="text-xs sm:text-sm text-[#7A644D] leading-relaxed font-medium [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      gameState.template.description ||
+                      'Work together to create the best dish with the given ingredients and steps. One player is secretly trying to spoil the dish. Can you spot the impostor and create a masterpiece together?',
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="relative z-10">
-              <h3 className="text-xs font-bold text-[#E8881E] uppercase tracking-wider mb-2.5">Rounds</h3>
+            <div className="relative z-10 mt-auto px-6 sm:px-7 pb-6 sm:pb-7">
+              <h3 className="text-xs font-bold text-[#E8881E] tracking-wider mb-2.5">Rounds</h3>
               <div className="bg-[#FFF8EE] rounded-2xl border border-[#F5E6D3] p-4 shadow-sm">
                 <div className="grid grid-cols-3 gap-2 items-center">
                   {ROUNDS.map((round, i) => (
@@ -164,7 +172,10 @@ function SummaryPage() {
                         <h4 className="text-xs font-bold text-[#3D2E1F] leading-tight">{round.title}</h4>
                         <p className="text-[11px] text-[#7A644D] font-medium mt-1 leading-snug max-w-[150px]">{round.desc}</p>
                       </div>
-                      {i < ROUNDS.length - 1 && <ChevronRight size={16} className="text-[#E8881E]/40 shrink-0 mx-0.5" />}
+                      {i < ROUNDS.length - 1 && (
+                        // Level with the centre of the round circles (h-20 / sm:h-24).
+                        <img src={arrowImg} alt="" className="w-3.5 h-auto shrink-0 mx-1 self-start mt-[37px] sm:mt-[45px]" />
+                      )}
                     </div>
                   ))}
                 </div>
