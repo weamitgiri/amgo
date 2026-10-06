@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Admin;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCmsPageRequest extends FormRequest
 {
@@ -13,9 +15,12 @@ class StoreCmsPageRequest extends FormRequest
 
     public function rules(): array
     {
+        // On update the page being edited must not collide with its own name/slug.
+        $ignoreId = $this->editingPageId();
+
         return [
-            'page_name' => 'required|string|max:255|unique:cms_pages,page_name,' . ($this->cms_page->id ?? 'NULL'),
-            'slug' => 'nullable|string|max:255|unique:cms_pages,slug,' . ($this->cms_page->id ?? 'NULL'),
+            'page_name' => ['required', 'string', 'max:255', Rule::unique('cms_pages', 'page_name')->ignore($ignoreId)],
+            'slug' => ['nullable', 'string', 'max:255', Rule::unique('cms_pages', 'slug')->ignore($ignoreId)],
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'meta_title' => 'nullable|string|max:255',
@@ -36,5 +41,24 @@ class StoreCmsPageRequest extends FormRequest
             'featured_image.image' => 'The featured image must be a valid image file.',
             'featured_image.max' => 'The featured image must not exceed 5MB.',
         ];
+    }
+
+    /**
+     * Id of the page being updated, or null when creating. The resource route's
+     * {page} parameter carries the encrypted id (the edit form posts to
+     * route('admin.cms.update', encrypt($page->id))), so decrypt it here.
+     */
+    private function editingPageId(): ?int
+    {
+        $param = $this->route('page');
+        if ($param === null) {
+            return null;
+        }
+
+        try {
+            return (int) decrypt($param);
+        } catch (DecryptException $e) {
+            return is_numeric($param) ? (int) $param : null;
+        }
     }
 }
