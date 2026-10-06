@@ -26,6 +26,7 @@ import { Route as CreateRouteImport } from './routes/create'
 import { Route as CookandcreateRouteRouteImport } from './routes/cookandcreate/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CookandcreateIndexRouteImport } from './routes/cookandcreate/index'
+import { Route as PolicySlugRouteImport } from './routes/policy.$slug'
 import { Route as JoinLinkTokenRouteImport } from './routes/join.$linkToken'
 import { Route as CookandcreateSummaryRouteImport } from './routes/cookandcreate/summary'
 import { Route as CookandcreateRatingRouteImport } from './routes/cookandcreate/rating'
@@ -117,6 +118,11 @@ const CookandcreateIndexRoute = CookandcreateIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CookandcreateRouteRoute,
 } as any)
+const PolicySlugRoute = PolicySlugRouteImport.update({
+  id: '/policy/$slug',
+  path: '/policy/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JoinLinkTokenRoute = JoinLinkTokenRouteImport.update({
   id: '/join/$linkToken',
   path: '/join/$linkToken',
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/cookandcreate/rating': typeof CookandcreateRatingRoute
   '/cookandcreate/summary': typeof CookandcreateSummaryRoute
   '/join/$linkToken': typeof JoinLinkTokenRoute
+  '/policy/$slug': typeof PolicySlugRoute
   '/cookandcreate/': typeof CookandcreateIndexRoute
 }
 export interface FileRoutesByTo {
@@ -188,6 +195,7 @@ export interface FileRoutesByTo {
   '/cookandcreate/rating': typeof CookandcreateRatingRoute
   '/cookandcreate/summary': typeof CookandcreateSummaryRoute
   '/join/$linkToken': typeof JoinLinkTokenRoute
+  '/policy/$slug': typeof PolicySlugRoute
   '/cookandcreate': typeof CookandcreateIndexRoute
 }
 export interface FileRoutesById {
@@ -213,6 +221,7 @@ export interface FileRoutesById {
   '/cookandcreate/rating': typeof CookandcreateRatingRoute
   '/cookandcreate/summary': typeof CookandcreateSummaryRoute
   '/join/$linkToken': typeof JoinLinkTokenRoute
+  '/policy/$slug': typeof PolicySlugRoute
   '/cookandcreate/': typeof CookandcreateIndexRoute
 }
 export interface FileRouteTypes {
@@ -239,6 +248,7 @@ export interface FileRouteTypes {
     | '/cookandcreate/rating'
     | '/cookandcreate/summary'
     | '/join/$linkToken'
+    | '/policy/$slug'
     | '/cookandcreate/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/cookandcreate/rating'
     | '/cookandcreate/summary'
     | '/join/$linkToken'
+    | '/policy/$slug'
     | '/cookandcreate'
   id:
     | '__root__'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/cookandcreate/rating'
     | '/cookandcreate/summary'
     | '/join/$linkToken'
+    | '/policy/$slug'
     | '/cookandcreate/'
   fileRoutesById: FileRoutesById
 }
@@ -307,6 +319,7 @@ export interface RootRouteChildren {
   ResultsRoute: typeof ResultsRoute
   TermsRoute: typeof TermsRoute
   JoinLinkTokenRoute: typeof JoinLinkTokenRoute
+  PolicySlugRoute: typeof PolicySlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -430,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CookandcreateIndexRouteImport
       parentRoute: typeof CookandcreateRouteRoute
     }
+    '/policy/$slug': {
+      id: '/policy/$slug'
+      path: '/policy/$slug'
+      fullPath: '/policy/$slug'
+      preLoaderRoute: typeof PolicySlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/join/$linkToken': {
       id: '/join/$linkToken'
       path: '/join/$linkToken'
@@ -505,6 +525,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResultsRoute: ResultsRoute,
   TermsRoute: TermsRoute,
   JoinLinkTokenRoute: JoinLinkTokenRoute,
+  PolicySlugRoute: PolicySlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

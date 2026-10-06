@@ -9,7 +9,7 @@ const CMS_LEGAL_ROUTES: Record<string, string> = {
   "terms-conditions": "/terms",
 };
 
-const LEGAL_SLUGS = ["privacy-policy", "terms-conditions", "refund-policy"];
+const LEGAL_SLUGS = ["privacy-policy", "terms-conditions", "refund-policy", "legal-policy"];
 
 export function Footer() {
   const { data: settings } = useSiteSettings();
@@ -92,7 +92,13 @@ export function Footer() {
                         {item.title}
                       </Link>
                     ) : (
-                      <span className="text-foreground/80">{item.title}</span>
+                      <Link
+                        to="/policy/$slug"
+                        params={{ slug: item.slug }}
+                        className="hover:text-primary transition-colors"
+                      >
+                        {item.title}
+                      </Link>
                     )}
                   </li>
                 );
