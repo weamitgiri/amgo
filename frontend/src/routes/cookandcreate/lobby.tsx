@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Users, CalendarClock, Info, LogOut, BookOpen, Clock } from 'lucide-react';
+import ruleIcon from '../../assets/cookandcreate/cook-game-rule-icon/icon.png';
 import ruleIcon1 from '../../assets/cookandcreate/cook-game-rule-icon/icon1.png';
 import ruleIcon2 from '../../assets/cookandcreate/cook-game-rule-icon/icon2.png';
 import ruleIcon3 from '../../assets/cookandcreate/cook-game-rule-icon/icon3.png';
@@ -36,7 +37,7 @@ const DEFAULT_RULE_TEXTS = [
   'Vote wisely to eliminate the Impostor and win.',
 ];
 // Custom per-rule icons (icon1–6), matching the design (cycled if an admin adds more).
-const RULE_PNG_ICONS = [ruleIcon1, ruleIcon2, ruleIcon3, ruleIcon4, ruleIcon5, ruleIcon6];
+const RULE_PNG_ICONS = [ruleIcon,ruleIcon1, ruleIcon2, ruleIcon3, ruleIcon4, ruleIcon5, ruleIcon6];
 
 /* ---------- sub-components ---------- */
 
@@ -194,8 +195,8 @@ function LobbyPage() {
               </div>
               <div className="flex-1 p-6 md:pl-2 md:pr-8 relative z-10">
                 <div
-                  className="backdrop-blur-md rounded-2xl p-6 border border-white/50 shadow-lg"
-                  style={{ backgroundColor: 'rgba(254, 198, 107, 0.5)' }}
+                  className="backdrop-md rounded-2xl p-6 border border-white/50 shadow-lg"
+                  style={{ backgroundColor: 'rgba(254, 198, 107, 0.5)',width: '303px'}}
                 >
                   <h1
                     className="text-2xl md:text-3xl font-bold leading-tight mb-3"
@@ -217,7 +218,7 @@ function LobbyPage() {
 
           <Card className="lg:col-span-1 p-6">
             <h2 className="flex items-center gap-2 text-lg font-bold mb-4" style={{ color: CC.text }}>
-              <BookOpen size={20} style={{ color: CC.primary }} /> Game Rules
+              {/*<BookOpen size={20} style={{ color: CC.primary }} /> Game Rules*/} Game Rules
             </h2>
             <div className="flex flex-col gap-2.5">
               {rules.map((rule, i) => (

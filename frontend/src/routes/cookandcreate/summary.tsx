@@ -80,7 +80,7 @@ function SummaryPage() {
 
   if (loading || !gameState) {
     return (
-      <CookCreateLayout breadcrumb="Cook & Create / Summary">
+      <CookCreateLayout>
         <div className="flex items-center justify-center min-h-[50vh] text-[#8B7355]">Loading challenge brief…</div>
       </CookCreateLayout>
     );
@@ -95,7 +95,7 @@ function SummaryPage() {
       : 'chef';
 
   return (
-    <CookCreateLayout breadcrumb="Cook & Create / Summary">
+    <CookCreateLayout>
       <style>{`
         @keyframes gentle-shake {
           0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -236,13 +236,13 @@ function SummaryPage() {
               </div>
             </div>
 
-            <button
+            {/*<button
               onClick={goToGame}
               className="w-full py-3.5 rounded-full text-white font-extrabold text-sm transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               style={{ background: 'linear-gradient(135deg, #FFB84D 0%, #E8881E 100%)', boxShadow: '0 4px 16px rgba(232,136,30,0.3)' }}
             >
               Continue to Round 1 →
-            </button>
+            </button>*/}
           </div>
         </div>
       </div>
