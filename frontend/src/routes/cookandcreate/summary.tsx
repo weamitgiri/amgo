@@ -127,11 +127,12 @@ function SummaryPage() {
             className="rounded-[28px] border border-[#F5DCBD] shadow-xs flex flex-col relative overflow-hidden"
             style={{ backgroundColor: '#FFECD4' }}
           >
-            {/* Illustration area, sized to the art's own aspect (721×481) so the
-                Rounds box below never covers the pot/veggies; it grows instead if
-                the description runs longer. */}
+            {/* Illustration area: the art (721×481) drawn full-width from the top,
+                cropped just below the vegetables (the bottom ~17% of the art is
+                blank cream), so the Rounds box below neither covers the pot/veggies
+                nor sits under an empty band. Grows if the description runs longer. */}
             <div
-              className="aspect-[721/481] p-6 sm:p-7"
+              className="aspect-[721/410] p-6 sm:p-7"
               style={{
                 backgroundImage: `url(${resolveMediaUrl(gameState.template.background_image) ?? gameSummeryBg})`,
                 backgroundSize: '100% auto',
@@ -156,7 +157,7 @@ function SummaryPage() {
               </div>
             </div>
 
-            <div className="relative z-10 mt-auto px-6 sm:px-7 pb-6 sm:pb-7">
+            <div className="relative z-10 mt-auto px-6 sm:px-7 pb-6 sm:pb-7 bg-gradient-to-b from-[#FDE8CF] to-[#FDD9A8]">
               <h3 className="text-xs font-bold text-[#E8881E] tracking-wider mb-2.5">Rounds</h3>
               <div className="bg-[#FFF8EE] rounded-2xl border border-[#F5E6D3] p-4 shadow-sm">
                 <div className="grid grid-cols-3 gap-2 items-center">
