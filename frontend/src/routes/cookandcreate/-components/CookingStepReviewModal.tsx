@@ -31,6 +31,24 @@ interface CookingStepReviewModalProps {
   onContinue?: () => void;
 }
 
+/* Design colours for this modal. */
+const BROWN = '#592e16';
+const KEEP = '#29c48e';
+const REMOVE = '#940000';
+const SUBMIT = '#f39e3a';
+
+/** Round Keep/Remove mark: filled with a white check when on, white with a thin border when off. */
+function VoteMark({ on, color }: { on: boolean; color: string }) {
+  return (
+    <span
+      className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+      style={on ? { background: color, border: `1.5px solid ${color}` } : { background: '#FFFFFF', border: '1.5px solid #D9C7B2' }}
+    >
+      {on && <Check size={15} className="text-white" strokeWidth={3} />}
+    </span>
+  );
+}
+
 /**
  * Every step starts on "Keep" and exactly ONE must be voted out: Remove acts as
  * a single-choice radio across the whole table, so picking a new step to remove
@@ -59,16 +77,19 @@ export function CookingStepReviewModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop — voting is mandatory, so this deliberately doesn't dismiss. */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
+      <div className="absolute inset-0 bg-[#2E2A26]/45 backdrop-blur-[2px]" />
 
       {/* Modal card */}
-      <div className="relative z-10 w-full max-w-[700px] bg-[#FFF5E6] rounded-[28px] border border-[#F5D8B6] shadow-2xl overflow-hidden p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+      <div
+        className="relative z-10 w-full max-w-[760px] max-h-[92vh] overflow-y-auto rounded-[28px] border border-[#F2C38A] shadow-[0_24px_60px_rgba(89,46,22,0.25)] p-5 sm:p-8 animate-in fade-in zoom-in-95 duration-200"
+        style={{ background: 'linear-gradient(180deg, #FDE8CB 0%, #FCE0B6 100%)' }}
+      >
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-[#FFF3E0] border border-[#F5E2C8] flex items-center justify-center">
-            <img src={step2Img} alt="Cooking" className="w-6 h-6 object-contain" />
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-[72px] h-[72px] rounded-full bg-[#FFF4E4] border border-[#F3D3A8] flex items-center justify-center shrink-0 shadow-[0_2px_8px_rgba(120,70,20,0.12)]">
+            <img src={step2Img} alt="Cooking" className="w-14 h-14 object-contain" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-[#3D2E1F]">
+          <h2 className="text-[22px] sm:text-[28px] font-bold leading-tight" style={{ color: BROWN }}>
             {resultMode ? 'Round 2: Review the Steps & Result' : 'Round 2: Review the Steps & Vote'}
           </h2>
         </div>
@@ -76,25 +97,23 @@ export function CookingStepReviewModal({
         {resultMode ? (
           /* ===== Result view — final recipe, no checkboxes ===== */
           <>
-            <p className="text-sm font-semibold text-[#6E5A44] mb-5 leading-relaxed">
+            <p className="text-[15px] text-[#5A4A3A] mb-5 leading-relaxed">
               Following steps were selected based on the team's votes:
             </p>
 
-            <div className="bg-[#FFEAD1]/50 rounded-2xl border border-[#F5CE9E]/60 overflow-hidden">
+            <div className="rounded-2xl border border-[#F1D9B8] bg-[#FFFAF3]/85 overflow-hidden">
               {keptSteps.length === 0 ? (
-                <p className="px-5 py-8 text-sm text-center text-[#8B7355]">No steps remained after the vote.</p>
+                <p className="px-5 py-8 text-sm text-center text-[#8C847B]">No steps remained after the vote.</p>
               ) : (
                 keptSteps.map((step, i) => (
                   <div
                     key={step.id}
-                    className={`flex items-start gap-3 px-5 py-3.5 ${
-                      i < keptSteps.length - 1 ? 'border-b border-[#F5CE9E]/40' : ''
-                    }`}
+                    className={`flex items-start gap-3 px-5 py-4 ${i < keptSteps.length - 1 ? 'border-b border-[#F1D9B8]' : ''}`}
                   >
-                    <span className="text-base font-black text-[#E8881E] shrink-0">
+                    <span className="text-base font-bold shrink-0" style={{ color: BROWN }}>
                       Step {String.fromCharCode(65 + i)}:
                     </span>
-                    <p className="text-sm text-[#3D2E1F] leading-relaxed font-medium">{step.text}</p>
+                    <p className="text-[15px] text-[#3F3A35] leading-relaxed">{step.text}</p>
                   </div>
                 ))
               )}
@@ -105,27 +124,28 @@ export function CookingStepReviewModal({
           <>
             {/* Description + Timer row */}
             <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              <p className="text-sm font-semibold text-[#6E5A44] max-w-[340px] leading-relaxed">
-                Review the steps your team submitted and pick the <span className="font-black text-[#D32F2F]">one</span>{' '}
-                step to remove. Everything else stays.
+              <p className="text-[15px] text-[#5A4A3A] max-w-[380px] leading-relaxed">
+                Review all the steps submitted by your team and Vote to keep or remove each step.
               </p>
-              <div className="flex items-center gap-3 bg-white/70 border border-[#F5E2C8] rounded-xl px-4 py-2">
-                <span className="text-xs font-semibold text-[#8B7355]">
-                  Vote before the timer
+              <div className="flex items-center gap-5 rounded-lg border border-[#F2CD9C] bg-[#FDD9A9] px-4 py-2">
+                <span className="text-sm leading-snug text-[#5A4A3A] text-center">
+                  Vote before the times
                   <br />
                   runs out
                 </span>
-                <span className="text-2xl font-black text-[#3D2E1F] font-mono tracking-wider">{timerLabel}</span>
+                <span className="text-[34px] font-bold tabular-nums leading-none" style={{ color: BROWN }}>
+                  {timerLabel}
+                </span>
               </div>
             </div>
 
             {/* Steps voting table */}
-            <div className="bg-[#FFEAD1]/50 rounded-2xl border border-[#F5CE9E]/60 overflow-hidden">
+            <div className="rounded-2xl border border-[#F1D9B8] bg-[#FFFAF3]/85 overflow-hidden">
               {/* Table header */}
-              <div className="grid grid-cols-[1fr_80px_80px] px-5 py-3 border-b border-[#F5CE9E]/60">
-                <span className="text-sm font-extrabold text-[#E8881E]">Step</span>
-                <span className="text-sm font-extrabold text-[#36B37E] text-center">Keep</span>
-                <span className="text-sm font-extrabold text-[#D32F2F] text-center">Remove</span>
+              <div className="grid grid-cols-[1fr_56px_64px] sm:grid-cols-[1fr_88px_88px] px-4 sm:px-5 py-3 border-b border-[#F1D9B8]">
+                <span className="text-[15px] font-semibold" style={{ color: BROWN }}>Step</span>
+                <span className="text-[15px] font-semibold text-center" style={{ color: KEEP }}>Keep</span>
+                <span className="text-[15px] font-semibold text-center" style={{ color: REMOVE }}>Remove</span>
               </div>
 
               {/* Step rows */}
@@ -134,26 +154,21 @@ export function CookingStepReviewModal({
                 return (
                   <div
                     key={step.id}
-                    className={`grid grid-cols-[1fr_80px_80px] px-5 py-3.5 items-center ${
-                      i < steps.length - 1 ? 'border-b border-[#F5CE9E]/40' : ''
+                    className={`grid grid-cols-[1fr_56px_64px] sm:grid-cols-[1fr_88px_88px] px-4 sm:px-5 py-4 items-center ${
+                      i < steps.length - 1 ? 'border-b border-[#F1D9B8]' : ''
                     }`}
                   >
                     {/* Step text */}
-                    <div className="flex items-start gap-3 pr-4">
-                      <span className="text-base font-black text-[#E8881E] shrink-0 mt-0.5">{step.letter}</span>
-                      <p className="text-sm text-[#3D2E1F] leading-relaxed font-medium">{step.text}</p>
+                    <div className="flex items-start gap-3 pr-3 min-w-0">
+                      <span className="text-base font-bold shrink-0 w-4" style={{ color: BROWN }}>
+                        {step.letter}
+                      </span>
+                      <p className="text-[15px] text-[#3F3A35] leading-relaxed break-words">{step.text}</p>
                     </div>
 
                     {/* Keep — derived from the Remove choice, never directly clickable */}
-                    <div className="flex justify-center">
-                      <div
-                        aria-label={removed ? 'Not kept' : 'Kept'}
-                        className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
-                          removed ? 'border-[#D4C5B3] bg-white' : 'bg-[#36B37E] border-[#36B37E]'
-                        }`}
-                      >
-                        {!removed && <Check size={14} className="text-white" strokeWidth={3} />}
-                      </div>
+                    <div className="flex justify-center" aria-label={removed ? 'Not kept' : 'Kept'}>
+                      <VoteMark on={!removed} color={KEEP} />
                     </div>
 
                     {/* Remove — single-choice across all steps */}
@@ -163,15 +178,11 @@ export function CookingStepReviewModal({
                         disabled={locked}
                         onClick={() => onSelectRemove(step.id)}
                         aria-pressed={removed}
-                        className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
-                          locked ? 'cursor-not-allowed' : 'cursor-pointer'
-                        } ${
-                          removed
-                            ? 'bg-[#D32F2F] border-[#D32F2F]'
-                            : `border-[#D4C5B3] bg-white ${locked ? '' : 'hover:border-[#D32F2F]'}`
+                        className={`rounded-full transition-transform ${
+                          locked ? 'cursor-not-allowed' : 'cursor-pointer hover:scale-110'
                         }`}
                       >
-                        {removed && <Check size={14} className="text-white" strokeWidth={3} />}
+                        <VoteMark on={removed} color={REMOVE} />
                       </button>
                     </div>
                   </div>
@@ -180,7 +191,7 @@ export function CookingStepReviewModal({
             </div>
 
             {/* Footer */}
-            <p className="text-center text-sm text-[#6E5A44] font-medium mt-6 mb-4">
+            <p className="text-center text-sm text-[#5A4A3A] mt-6 mb-4">
               Your votes are anonymous. Focus on logic, not assumptions.
             </p>
           </>
@@ -189,7 +200,10 @@ export function CookingStepReviewModal({
         <button
           onClick={resultMode ? onContinue : onSubmit}
           disabled={resultMode ? false : locked || removeStepId === null}
-          className={`w-full py-4 rounded-2xl bg-[#E8881E] hover:bg-[#D47815] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-base transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-[#E8881E]/30 cursor-pointer ${resultMode ? 'mt-6' : ''}`}
+          className={`w-full h-[52px] rounded-full text-white text-[17px] font-semibold transition-all hover:brightness-105 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:brightness-100 shadow-[0_6px_16px_rgba(243,158,58,0.35)] cursor-pointer ${
+            resultMode ? 'mt-6' : ''
+          }`}
+          style={{ background: SUBMIT }}
         >
           {resultMode
             ? 'Continue'
@@ -199,7 +213,7 @@ export function CookingStepReviewModal({
                 ? 'Submitting…'
                 : removeStepId === null
                   ? 'Select 1 step to remove'
-                  : 'Continue'}
+                  : 'Submit Votes'}
         </button>
       </div>
     </div>
