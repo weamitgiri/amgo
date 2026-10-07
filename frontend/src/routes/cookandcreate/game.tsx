@@ -11,7 +11,6 @@ import step4Img from '../../assets/cookandcreate/game-flow-step-4.png';
 import { RoundResultsModal } from './-components/RoundResultsModal';
 import { CookingStepReviewModal } from './-components/CookingStepReviewModal';
 import { NameDishModal } from './-components/NameDishModal';
-import { DoubleDownModal } from './-components/DoubleDownModal';
 import { portraitForRole } from './-components/portraits';
 import { clockOffsetMs } from './-components/clock';
 import { cookAndCreateService } from '@/api/services/cookandcreate.service';
@@ -168,10 +167,6 @@ function GamePage() {
     socket.on('cc_round3_voting_started', refetch);
     socket.on('cc_round3_impostor_vote_submitted', refetch);
     socket.on('cc_round3_complete', refetch);
-    // Private — only the one participant the server secretly picked ever
-    // receives this event. Refetching populates `my_double_down` so the
-    // offer modal below can gate on it.
-    socket.on('cc_double_down_offer', refetch);
 
     return () => {
       socket.off('cc_round1_started', refetch);
@@ -188,7 +183,6 @@ function GamePage() {
       socket.off('cc_round3_voting_started', refetch);
       socket.off('cc_round3_impostor_vote_submitted', refetch);
       socket.off('cc_round3_complete', refetch);
-      socket.off('cc_double_down_offer', refetch);
     };
   }, [groupId, participantId, fetchState]);
 
@@ -320,17 +314,6 @@ function GamePage() {
         instance_id: instance.id,
         participant_id: myId,
         voted_for_participant_id: selectedVoteId,
-      });
-      await fetchState();
-    });
-
-  const handleDoubleDownRespond = (accept: boolean) =>
-    submit(async () => {
-      if (!myId) return;
-      await cookAndCreateService.respondToDoubleDown({
-        instance_id: instance.id,
-        participant_id: myId,
-        accept,
       });
       await fetchState();
     });
@@ -469,8 +452,6 @@ function GamePage() {
     (i) => i.is_absurd && (gameState.ingredient_vote_counts[i.id] ?? 0) > 0
   );
 
-  const doubleDownOpen =
-    gameState.my_double_down?.offered === true && gameState.my_double_down.status === 'offered';
 
   const canNameDish = !template.show_host_role_enabled || gameState.is_show_host;
   const reviewResolved = gameState.cooking_steps.length > 0 && gameState.cooking_steps.every((s) => s.status !== 'submitted');
@@ -665,13 +646,6 @@ function GamePage() {
               ? 'Waiting for the Show Host to name the dish…'
               : 'Waiting for a teammate to name the dish…'
           }
-        />
-
-        <DoubleDownModal
-          isOpen={doubleDownOpen}
-          onAccept={() => handleDoubleDownRespond(true)}
-          onDecline={() => handleDoubleDownRespond(false)}
-          submitting={submitting}
         />
       </div>
     </CookCreateLayout>
