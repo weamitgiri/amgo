@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Leaf, Check, Send, Lock, ChefHat } from 'lucide-react';
+import { Leaf, Check, Send, Lock, ChefHat, UserRound } from 'lucide-react';
 import { CookCreateLayout } from './-components/CookCreateLayout';
 import type { CCPlayerSidebarEntry } from './-components/PlayersSidebar';
 import type { CCActivityItem } from './-components/ActivityFeed';
@@ -8,16 +8,19 @@ import logoImg from '../../assets/cookandcreate/Cook  and Create Logo.png';
 import step1Img from '../../assets/cookandcreate/game-flow-step-1.png';
 import step2Img from '../../assets/cookandcreate/game-flow-step-2.png';
 import step4Img from '../../assets/cookandcreate/game-flow-step-4.png';
+import leaf from '../../assets/cookandcreate/cook-game-rule-icon/leaf.png';
+import maskGroup from '../../assets/cookandcreate/mask-group-removebg-preview.png';
 import { RoundResultsModal } from './-components/RoundResultsModal';
 import { CookingStepReviewModal } from './-components/CookingStepReviewModal';
 import { NameDishModal } from './-components/NameDishModal';
 import { portraitForRole } from './-components/portraits';
 import { clockOffsetMs } from './-components/clock';
 import { cookAndCreateService } from '@/api/services/cookandcreate.service';
-import type { CCGameStateResponse, CCRound2Turn, CCTemplate } from '@/api/types/cookandcreate';
+import type { CCCookingStep, CCGameStateResponse, CCRound2Turn, CCTemplate } from '@/api/types/cookandcreate';
 import { getParticipantSession } from '@/lib/participant-session';
 import { getSocket } from '@/lib/socket';
 import { toastError } from '@/lib/toast';
+import imposterImg from '../../assets/cookandcreate/imposter 1.png';
 import { resolveMediaUrl } from '@/utils/media';
 
 export const Route = createFileRoute('/cookandcreate/game')({
@@ -514,10 +517,12 @@ function GamePage() {
                 className="w-[46px] h-[46px] rounded-[10px] flex items-center justify-center shadow-sm shrink-0"
                 style={{ background: 'linear-gradient(180deg, #E57C25 0%, #D7650F 100%)' }}
               >
-                <Leaf size={24} strokeWidth={1.75} className="text-white" />
+
+                <img src={leaf} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" />
+
               </div>
               <div>
-                <h2 className="text-[22px] font-semibold text-[#2E2A26] leading-tight">Cook &amp; Create</h2>
+                <h2 className="text-[22px] font-semibold text-[#592e16] leading-tight">Cook &amp; Create</h2>
                 <p className="text-base text-[#DE8234] mt-0.5">
                   Round {currentRound}: {getRoundLabel()}
                 </p>
@@ -526,9 +531,9 @@ function GamePage() {
 
             <div className="flex items-center gap-5 rounded-lg border border-[#F2CD9C] bg-[#FDD9A9] px-4 py-2">
               <span className="text-sm leading-snug text-[#5A4A3A] text-center max-w-[150px]">
-                {currentRound === 2 ? 'Submit your step before time Runs Out' : 'Confirm the Vote before times Runs Out'}
+                {currentRound === 2 ? 'Add your cooking step before times Runs Out' : 'Voting Ends in'}
               </span>
-              <span className="text-[34px] font-bold text-[#2E2A26] tabular-nums leading-none">
+              <span className="text-[34px] font-bold text-[#592e16] tabular-nums leading-none">
                 {timerMm}:{timerSs}
               </span>
             </div>
@@ -588,7 +593,14 @@ function GamePage() {
             )}
           </div>
 
-          <ActivityPanel currentRound={currentRound} items={activityItems} colorFor={activityColor} />
+          <ActivityPanel
+            currentRound={currentRound}
+            items={activityItems}
+            colorFor={activityColor}
+            round3Recap={
+              currentRound === 3 ? { steps: gameState.cooking_steps, nowMs: Date.now() + clockOffset } : undefined
+            }
+          />
         </div>
 
         <RoundResultsModal
@@ -598,7 +610,7 @@ function GamePage() {
           absurdVoted={absurdVotedIngredients}
         />
 
-        <CookingStepReviewModal
+      {  <CookingStepReviewModal
           isOpen={currentRound === 2 && instance.round2_phase === 'review' && !reviewResolved}
           steps={gameState.cooking_steps}
           removeStepId={effectiveRemoveStepId}
@@ -607,7 +619,7 @@ function GamePage() {
           submitted={reviewSubmitted}
           submitting={submitting}
           timerLabel={`${timerMm}:${timerSs}`}
-        />
+        />}
 
         {/* Read-only outcome of the vote — same modal, checkboxes locked — shown
             after votes resolve and before the dish-naming step. */}
@@ -832,11 +844,11 @@ function PlayersPanel({ players, roleLabel }: { players: PanelPlayer[]; roleLabe
 
       <div className="mt-auto pt-6">
         <div className="rounded-[10px] border border-[#F5D7AE] bg-[#FFF0DC]/70 px-4 py-3 flex items-center gap-3">
-          <ChefHat size={30} strokeWidth={1.5} className="text-[#7D6B58] shrink-0" />
+          <img src={maskGroup} alt="" className="w-[35px] h-[35px] object-contain shrink-0 mt-0.5" />
           <div className="min-w-0">
-            <p className="text-[13px] text-[#6F625A]">Your Role</p>
-            <p className="text-xl font-bold text-[#502A0E] uppercase leading-tight mt-0.5">{roleLabel}</p>
-            <p className="text-[13px] text-[#6F625A] leading-snug mt-1">Work with your team to win.</p>
+            <p className="text-[13px] text-[#5c5c5c]">Your Role</p>
+            <p className="text-xl font-bold text-[#592e16] uppercase leading-tight mt-0.5">{roleLabel}</p>
+            <p className="text-[13px] text-[#5c5c5c] leading-snug mt-1">Work with your team to win.</p>
           </div>
         </div>
       </div>
@@ -844,14 +856,29 @@ function PlayersPanel({ players, roleLabel }: { players: PanelPlayer[]; roleLabe
   );
 }
 
+/** "Just now" / "3 minutes ago" / "1 hour ago" for the step history. */
+function timeAgo(iso: string | null | undefined, nowMs: number): string {
+  if (!iso) return '';
+  const at = new Date(iso).getTime();
+  if (Number.isNaN(at)) return '';
+  const mins = Math.floor(Math.max(0, nowMs - at) / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(mins / 60);
+  return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+}
+
 function ActivityPanel({
   currentRound,
   items,
   colorFor,
+  round3Recap,
 }: {
   currentRound: 1 | 2 | 3;
   items: CCActivityItem[];
   colorFor: (name: string, fallback: number) => number;
+  /** Round 3 only: the hooded-imposter card plus the anonymous Round 2 step history. */
+  round3Recap?: { steps: CCCookingStep[]; nowMs: number };
 }) {
   return (
     <div
@@ -859,25 +886,79 @@ function ActivityPanel({
       style={{ background: 'linear-gradient(180deg, #FEF3E2 0%, #FFF6E8 100%)' }}
     >
       <h3 className="text-[22px] font-semibold text-[#2E2A26]">Recent Activity</h3>
-      <p className="text-base text-[#E9883A] mt-3">Round {currentRound}</p>
-      <hr className="mt-3 border-t border-[#E1DCD2]" />
 
-      {items.length === 0 ? (
-        <p className="text-sm text-[#8C847B] pt-5">Nothing yet — activity will appear here as your team plays.</p>
-      ) : (
-        <div className="mt-5 flex-1 min-h-0 lg:max-h-[440px] overflow-y-auto pr-2 space-y-5 [scrollbar-width:thin] [scrollbar-color:#C7BFB4_transparent]">
-          {items.map((item, i) => (
-            <div key={item.id} className="flex items-start gap-3">
-              <AliasAvatar name={item.name} colorIndex={colorFor(item.name, i)} size={38} />
-              <div className="min-w-0 pt-1.5">
-                <p className="text-[15px] leading-snug text-[#3F3A35] break-words">
-                  <span className="text-[#D97A2B]">{item.name}</span> {item.text}
-                </p>
-                {item.time && <p className="text-xs text-[#8C847B] mt-1">{item.time}</p>}
-              </div>
-            </div>
-          ))}
+      {round3Recap ? (
+        <div className="mt-5 flex-1 min-h-0 lg:max-h-[500px] overflow-y-auto pr-2 [scrollbar-width:thin] [scrollbar-color:#898989_transparent]">
+          {/* Round 3 */}
+          <p className="text-base font-medium text-[#CB7430]">Round 3</p>
+          <p className="text-[13px] text-[#737373] mt-2">Work together and Vote out the imposter.</p>
+          <div className="mt-4 w-[104px] h-[124px] rounded-lg border border-[#E6DDD0] bg-[#F7EDE2] overflow-hidden">
+            <img src={imposterImg} alt="The hidden imposter" className="w-full h-full object-cover object-top" />
+          </div>
+
+          <hr className="my-5 border-t border-[#DDD6CC]" />
+
+          {/* Round 2 — the steps, still anonymous */}
+          <p className="text-base font-medium text-[#CB7430]">Round 2</p>
+          <p className="text-[13px] text-[#737373] leading-relaxed mt-2">
+            Step order are assigned automatically.
+            <br />
+            After all the Step are submitted, only host can Final submit all step.
+          </p>
+          <div className="mt-4 space-y-2.5">
+            {round3Recap.steps.length === 0 ? (
+              <p className="text-[13px] text-[#898989]">No steps were submitted.</p>
+            ) : (
+              round3Recap.steps.map((step) => {
+                const ago = timeAgo(step.submitted_at, round3Recap.nowMs);
+                return (
+                  <div
+                    key={step.id}
+                    className="flex gap-2.5 rounded-lg border border-[#F6EADB] bg-[#FEF9F2] p-2.5 shadow-[0_1px_3px_rgba(80,50,20,0.05)]"
+                  >
+                    <span className="w-8 h-8 rounded-full bg-[#969696] border border-[#7E7B78] flex items-center justify-center shrink-0">
+                      <UserRound size={18} strokeWidth={1.75} className="text-white" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+                        <span className="text-[15px] font-semibold text-[#CB7430]">Step {step.letter}:</span>
+                        <span className="flex items-center gap-1 text-[11px] text-[#5C5C5C]">
+                          <Check size={12} strokeWidth={2.5} className="text-[#67AD5B]" />
+                          Submitted
+                        </span>
+                        {ago && <span className="ml-auto text-[11px] text-[#898989]">{ago}</span>}
+                      </div>
+                      <p className="text-sm text-[#2E2E2E] leading-snug mt-1 break-words">{step.text}</p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
+      ) : (
+        <>
+          <p className="text-base text-[#E9883A] mt-3">Round {currentRound}</p>
+          <hr className="mt-3 border-t border-[#E1DCD2]" />
+
+          {items.length === 0 ? (
+            <p className="text-sm text-[#8C847B] pt-5">Nothing yet — activity will appear here as your team plays.</p>
+          ) : (
+            <div className="mt-5 flex-1 min-h-0 lg:max-h-[440px] overflow-y-auto pr-2 space-y-5 [scrollbar-width:thin] [scrollbar-color:#C7BFB4_transparent]">
+              {items.map((item, i) => (
+                <div key={item.id} className="flex items-start gap-3">
+                  <AliasAvatar name={item.name} colorIndex={colorFor(item.name, i)} size={38} />
+                  <div className="min-w-0 pt-1.5">
+                    <p className="text-[15px] leading-snug text-[#3F3A35] break-words">
+                      <span className="text-[#D97A2B]">{item.name}</span> {item.text}
+                    </p>
+                    {item.time && <p className="text-xs text-[#8C847B] mt-1">{item.time}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -1013,7 +1094,7 @@ function Round2Content({
   return (
     <div className={`${CENTER_PANEL_CLASS} p-6 space-y-5`} style={CENTER_PANEL_STYLE}>
       <div className="text-center">
-        <h2 className="text-lg font-black text-[#3D2E1F]">Round 2 of 3 — Cooking Step Submission</h2>
+        <h2 className="text-lg font-black text-[#592e16]">Round 2 of 3 — Cooking Step Submission</h2>
       </div>
 
       <div className="flex items-center gap-4 flex-wrap">

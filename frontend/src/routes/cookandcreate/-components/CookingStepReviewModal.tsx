@@ -124,8 +124,8 @@ export function CookingStepReviewModal({
           <>
             {/* Description + Timer row */}
             <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              <p className="text-[15px] text-[#5A4A3A] max-w-[380px] leading-relaxed">
-                Review all the steps submitted by your team and Vote to keep or remove each step.
+              <p className="text-[14px] text-[#592e16] max-w-[380px] leading-relaxed">
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>Review all the steps submitted by your team <br />  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;and Vote to keep or remove each step. </b>
               </p>
               <div className="flex items-center gap-5 rounded-lg border border-[#F2CD9C] bg-[#FDD9A9] px-4 py-2">
                 <span className="text-sm leading-snug text-[#5A4A3A] text-center">

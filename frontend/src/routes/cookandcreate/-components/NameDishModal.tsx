@@ -32,35 +32,51 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
       <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
 
       {/* Modal card */}
-      <div className="relative z-10 w-full max-w-[580px] bg-[#FFF5E6] rounded-[28px] border border-[#F5D8B6] shadow-2xl overflow-hidden p-8 md:p-10 animate-in fade-in zoom-in-95 duration-200">
+      <div
+  className="relative z-10 w-full max-w-[580px] rounded-[28px] border border-[#F5D8B6] shadow-2xl overflow-hidden p-8 md:p-10 animate-in fade-in zoom-in-95 duration-200"
+  style={{
+    background: `
+      radial-gradient(
+        ellipse at 50% 0%,
+        rgba(253, 227, 194, 0.75) 0%,
+        rgba(255, 250, 244, 0) 35%
+      ),
+      radial-gradient(
+        ellipse at 50% 100%,
+        rgba(246, 177, 67, 0.22) 0%,
+        rgba(255, 250, 244, 0) 40%
+      ),
+      rgb(255, 250, 244)
+    `,
+  }}
+>
         {/* Heading */}
-        <h2 className="text-xl sm:text-2xl font-black text-[#3D2E1F] text-center italic">
+        <h2 className="text-xl sm:text-2xl font-black text-[#592e16] text-center">
           Give a Name to your Dish
         </h2>
 
         {/* Cooking pot icon */}
         <div className="flex justify-center my-5">
-          <div className="w-16 h-16 rounded-full bg-[#FFF3E0] border border-[#F5E2C8] flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full bg-[#FFF3E0] border border-[#F5E2C8] flex items-center justify-center">
             <img
               src={step2Img}
               alt="Cooking pot"
-              className="w-10 h-10 object-contain drop-shadow-md"
+              className="object-contain drop-shadow-md"
             />
           </div>
         </div>
 
         {/* Top 4 ingredients */}
         <div className="flex items-center justify-center gap-4 flex-wrap mb-6">
-          <p className="text-xs font-bold text-[#E8881E] leading-tight text-center">
+          <p className="text-xs font-bold text-[#592e16] leading-tight text-center">
             Your top 4 Final
-            <br />
-            Ingredients
+             Ingredients
           </p>
           <div className="flex items-center gap-3">
             {topIngredients.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-col items-center gap-1.5 bg-white rounded-xl px-3 py-2 border border-[#F5E6D3] shadow-xs"
+                className="flex flex-col items-center gap-1.5 bg-[#fdf8f0] rounded-xl px-3 py-2 border border-[#fbd7a9] shadow-xs"
               >
                 {item.image_url ? (
                   <img src={resolveMediaUrl(item.image_url) ?? step2Img} alt={item.name} className="object-contain drop-shadow-xs" />
@@ -76,7 +92,7 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
         </div>
 
         {/* Instruction text */}
-        <p className="text-sm font-black text-[#3D2E1F] text-center leading-snug mb-6">
+        <p className="text-sm font-black text-[#592e16] text-center leading-snug mb-6">
           Check the final steps in Recent Activity and
           <br />
           Name your Team Dish.
@@ -86,7 +102,7 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
           <>
             {/* Name input */}
             <div className="mb-6">
-              <label className="block text-sm font-bold text-[#3D2E1F] mb-2">
+              <label className="block text-sm text-[#592e16] mb-2">
                 Name your Dish
               </label>
               <div className="relative">

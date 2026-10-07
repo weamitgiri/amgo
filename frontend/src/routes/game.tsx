@@ -2047,7 +2047,7 @@ function InvestigationView(props: {
                   </PlayerCardGrid>
                 </div>
                 <div className="mt-8">
-                  <label className="text-xs text-white/70">Type your question (max 120 characters)</label>
+                  <label className="text-xs text-white/45">Type your question (max 120 characters)</label>
                   <div className="mt-1.5 relative">
                     <textarea value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 120))}
                       placeholder="Type your question here..."

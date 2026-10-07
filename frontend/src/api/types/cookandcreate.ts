@@ -78,6 +78,8 @@ export type CCCookingStep = {
   status: "submitted" | "kept" | "removed";
   keep_votes: number;
   remove_votes: number;
+  /** When the step was submitted (absent from older API builds). */
+  submitted_at?: string | null;
 };
 
 export type CCSchedule = {

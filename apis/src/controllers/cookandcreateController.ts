@@ -205,7 +205,7 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
             `SELECT s.id, s.step_letter, s.step_text, s.status,
                     (SELECT COUNT(*) FROM cc_round2_step_votes sv WHERE sv.step_id = s.id AND sv.vote = 'keep') as keep_votes,
                     (SELECT COUNT(*) FROM cc_round2_step_votes sv WHERE sv.step_id = s.id AND sv.vote = 'remove') as remove_votes,
-                    s.participant_id
+                    s.participant_id, s.created_at
              FROM cc_round2_steps s WHERE s.instance_id = ? ORDER BY s.step_letter ASC`,
             [instance.id]
         );
@@ -216,6 +216,9 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
             status: s.status,
             keep_votes: Number(s.keep_votes),
             remove_votes: Number(s.remove_votes),
+            // When the step was written ("3 minutes ago" in the activity feed) —
+            // a time, not an identity.
+            submitted_at: s.created_at ?? null,
             // Never expose who submitted which step — steps are anonymous
             // during review, per the game design (PDF: "Steps appear on
             // screen with no names — just Step A, B, C, D, E").
