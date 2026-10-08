@@ -3,6 +3,12 @@ import chef1Img from '../../../assets/cookandcreate/chef-1 1.png';
 import showHostImg from '../../../assets/cookandcreate/show-hos 1.png';
 import imposterImg from '../../../assets/cookandcreate/imposter 1.png';
 
+import light from '../../../assets/cookandcreate/cook-game-rule-icon/light.png';
+import mind from '../../../assets/cookandcreate/cook-game-rule-icon/mind.png';
+import lock from '../../../assets/cookandcreate/cook-game-rule-icon/lock.png';
+import gole from '../../../assets/cookandcreate/cook-game-rule-icon/gole.png';
+
+
 interface RoleRevealModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -66,7 +72,7 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-11 h-11 rounded-full bg-[#CC6128] hover:bg-[#B5551F] flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-md z-20 cursor-pointer"
+          className="absolute top-5 right-5 w-11 h-11 rounded-full bg-[#cc6127] hover:bg-[#B5551F] flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-md z-20 cursor-pointer"
         >
           <X size={22} className="text-white" strokeWidth={2.5} />
         </button>
@@ -82,8 +88,8 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
           {/* RIGHT: Role details */}
           <div className="md:w-[58%] flex flex-col justify-between">
             <div className="space-y-1">
-              <span className="text-sm font-bold text-[#E8881E] tracking-wide">Your Role</span>
-              <h2 className="text-4xl font-black text-[#3D2E1F] tracking-tight uppercase">{roleLabel}</h2>
+              <span className="text-sm font-bold text-[#d96e14] tracking-wide">Your Role</span>
+              <h2 className="text-4xl font-black text-[#592e16] tracking-tight uppercase">{roleLabel}</h2>
               <p className="text-sm text-[#6E5A44] leading-relaxed pt-1">
                 {copy.intro}
                 <br />
@@ -94,7 +100,7 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
 
               <div className="space-y-2">
                 <h3 className="text-base font-extrabold text-[#E8881E] flex items-center gap-2">
-                  <Target size={18} className="text-[#E8881E]" />
+                  <img src={gole} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" />
                   Your Goal
                 </h3>
                 <ul className="space-y-1.5 pl-6">
@@ -111,13 +117,13 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
 
               <div className="space-y-2">
                 <h3 className="text-base font-extrabold text-[#E8881E] flex items-center gap-2">
-                  <Lightbulb size={18} className="text-[#E8881E]" />
+                  <img src={light} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" />
                   WHAT YOU KNOW
                 </h3>
                 <ul className="space-y-1.5 pl-6">
                   {copy.know.map((item) => (
-                    <li key={item} className="text-sm text-[#3D2E1F] flex items-center gap-2 font-medium">
-                      <span className="text-[#3D2E1F] font-bold">•</span>
+                    <li key={item} className="text-sm text-[#2e2e2e] flex items-center gap-2 font-medium">
+                      <span className="text-[#2e2e2e] font-bold">•</span>
                       {item}
                     </li>
                   ))}
@@ -128,17 +134,17 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
 
               <div className="space-y-2">
                 <h3 className="text-base font-extrabold text-[#E8881E] flex items-center gap-2">
-                  <Brain size={18} className="text-[#E8881E]" />
+                  <img src={mind} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" />
                   KEEP IN MIND
                 </h3>
-                <p className="text-sm text-[#3D2E1F] leading-relaxed pl-6 font-medium">{copy.keepInMind}</p>
+                <p className="text-sm text-[#2e2e2e] leading-relaxed pl-6 font-medium">{copy.keepInMind}</p>
               </div>
 
               {/* Impostor bias card — only ever rendered for the impostor themselves */}
               {role === 'impostor' && impostorBiasCardHtml && (
                 <>
                   <hr className="!my-4 border-t border-[#F0D5B5]" />
-                  <div className="!mt-3 bg-[#3D2E1F] rounded-xl px-4 py-3 text-white">
+                  <div className="!mt-3 bg-[#35332d] rounded-xl px-4 py-3 text-white">
                     <h3 className="text-sm font-extrabold text-[#FFC98A] mb-1.5">Your Bias Card</h3>
                     <div
                       className="text-xs leading-relaxed [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mt-1"
@@ -150,8 +156,8 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
 
               {/* Secret badge */}
               <div className="!mt-5 bg-[#F6BD77] rounded-xl px-4 py-3 flex items-center gap-2.5 border border-[#EFAC5C]">
-                <Lock size={16} className="text-[#6E5A44] shrink-0" />
-                <span className="text-sm font-bold text-[#3D2E1F]">Keep your role secret</span>
+                <img src={lock} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" />
+                <span className="text-sm font-bold text-[#35332d]">Keep your role secret</span>
               </div>
             </div>
           </div>
@@ -161,7 +167,7 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
         <div className="mt-7 flex justify-center">
           <button
             onClick={onClose}
-            className="px-20 py-3.5 rounded-full bg-[#F39E3B] hover:bg-[#E08A28] text-white font-extrabold text-base transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-[#F39E3B]/30 cursor-pointer"
+            className="px-20 py-3.5 rounded-full bg-[#f39e3a] hover:bg-[#f39e3a] text-white font-extrabold text-base transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-[#F39E3B]/30 cursor-pointer"
           >
             Okay Continue
           </button>
