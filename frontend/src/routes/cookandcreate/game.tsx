@@ -137,11 +137,15 @@ function GamePage() {
 
   // The instance transitioning to 'completed' sends everyone to the rating /
   // leaderboard flow — outside the game page entirely.
+
   useEffect(() => {
     if (gameState?.instance.status === 'completed') {
-      navigate({ to: '/cookandcreate/rating' });
+      navigate({ to: '/cookandcreate/game' });
+     // navigate({ to: '/cookandcreate/game' });
     }
   }, [gameState?.instance.status, navigate]);
+
+
 
   // Socket listeners. The server is authoritative and the group is capped at
   // 5 players, so re-fetching full state on every phase-transition event is
@@ -1299,10 +1303,25 @@ function Round3Content({
   const votable = participants.filter((p) => p.id !== myId);
 
   return (
-    <div className={`${CENTER_PANEL_CLASS} p-6 text-center space-y-5`} style={CENTER_PANEL_STYLE}>
+    <div className={`${CENTER_PANEL_CLASS} p-6 text-center space-y-5`}  style={{
+         background: `
+           radial-gradient(
+             ellipse at 50% 0%,
+             rgba(253, 227, 194, 0.55) 0%,
+             rgba(255, 250, 244, 0) 38%
+           ),
+           radial-gradient(
+             ellipse at 50% 100%,
+             rgba(246, 177, 67, 0.12) 0%,
+             rgba(255, 250, 244, 0) 42%
+           ),
+           rgb(255, 250, 244)
+         `,
+       }}
+     >
       <div>
-        <h2 className="text-lg font-black text-[#3D2E1F]">Round 3 of 3 – Imposter Voting</h2>
-        <p className="text-sm font-semibold text-[#E8881E] mt-2 leading-relaxed max-w-[400px] mx-auto">
+        <h2 className="text-lg font-black text-[#592e16]">Round 3 of 3 – Imposter Voting</h2>
+        <p className="text-sm font-semibold text-[#d96e14] mt-2 leading-relaxed max-w-[400px] mx-auto">
           Vote to eliminate one player. Who do you think is not contributing well to the dish &amp; is the impostor?
         </p>
         <p className="text-xs text-[#6E5A44] mt-2 font-medium">Vote wisely, one wrong vote can save the impostor.</p>
@@ -1316,7 +1335,7 @@ function Round3Content({
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-center gap-3 flex-wrap py-2">
+          <div className="flex items-center justify-center gap-10 flex-wrap py-2">
             {votable.map((player) => {
               const isSelected = selectedVoteId === player.id;
               return (
@@ -1339,22 +1358,24 @@ function Round3Content({
                       src={portraitForRole(player.role_label, template)}
                       alt={player.role_label}
                       className="w-full h-full object-cover"
-                      style={{ objectPosition: 'center 15%' }}
+                      style={{ objectPosition: 'center 0%' }}
                     />
                   </div>
                   <span className="text-[11px] font-bold text-[#6E5A44]">{player.name}</span>
-                  <span className="text-[10px] font-semibold text-[#8B7355]">{player.role_label}</span>
+                  <span className="text-[10px] font-semibold text-[#5c5c5c]">{player.role_label}</span>
                 </button>
               );
             })}
           </div>
-
-          <p className="text-xs text-[#6E5A44] font-medium">Your vote is anonymous.</p>
-
+          <br />
+          <br />
+          <p className="text-xs text-[#5c5c5c] font-medium">Your vote is anonymous.</p>
+            <br />
+          <br />
           <button
             onClick={onSubmitVote}
             disabled={!selectedVoteId || submitting}
-            className="w-full max-w-md mx-auto py-4 rounded-2xl bg-[#E8881E] hover:bg-[#D47815] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm sm:text-base transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-[#E8881E]/30 cursor-pointer block"
+            className="w-full max-w-md mx-auto py-4 rounded-2xl bg-[#f39e3a] hover:bg-[#f39e3a] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm sm:text-base transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-[#E8881E]/30 cursor-pointer block"
           >
             Submit Vote
           </button>
