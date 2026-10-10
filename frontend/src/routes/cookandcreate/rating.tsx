@@ -137,7 +137,7 @@ function RatingPage() {
       myGroupId={gameState.instance.group_id}
       template={gameState.template}
       doubleDownOutcome={doubleDownOutcome}
-      participantName={session?.name}
+      participantName={gameState.participants.find((p) => p.isYou)?.name ?? session?.name}
       gameEndsAt={gameState.schedule.game_ends_at}
       clockOffsetMs={clockOffset}
     />

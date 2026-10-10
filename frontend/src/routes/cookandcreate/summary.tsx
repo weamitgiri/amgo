@@ -109,7 +109,7 @@ function SummaryPage() {
 
       <div className="relative z-10 space-y-4">
         <SummaryHeader
-          participantName={session?.name}
+          participantName={gameState.participants.find((p) => p.isYou)?.name ?? session?.name}
           gameEndsAt={gameState.schedule.game_ends_at}
         />
 
