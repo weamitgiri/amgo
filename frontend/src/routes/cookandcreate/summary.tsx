@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FileText, Info } from 'lucide-react';
 import { CookCreateLayout } from './-components/CookCreateLayout';
-import { CookCreateHeader } from './-components/CookCreateHeader';
+import ccLogoImg from '../../assets/cookandcreate/Cook  and Create Logo.png';
 import { RoleRevealModal } from './-components/RoleRevealModal';
 import { cookAndCreateService } from '@/api/services/cookandcreate.service';
 import type { CCGameStateResponse } from '@/api/types/cookandcreate';
@@ -108,7 +108,7 @@ function SummaryPage() {
       `}</style>
 
       <div className="relative z-10 space-y-4">
-        <CookCreateHeader
+        <SummaryHeader
           participantName={session?.name}
           gameEndsAt={gameState.schedule.game_ends_at}
         />
@@ -268,5 +268,66 @@ function SummaryPage() {
         impostorBiasCardHtml={gameState.impostor_bias_card}
       />
     </CookCreateLayout>
+  );
+}
+
+/** Clock derived from the absolute end instant so it keeps counting correctly
+ *  across refreshes instead of restarting from a fixed duration. */
+function formatSummaryRemaining(endsAt: string, clockOffsetMs: number): string {
+  const end = new Date(endsAt).getTime();
+  if (Number.isNaN(end)) return '--:--';
+  const secs = Math.max(0, Math.round((end - (Date.now() + clockOffsetMs)) / 1000));
+  const mins = Math.floor(secs / 60);
+  return `${String(mins).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
+}
+
+/** Summary-screen header. Same look as the shared header, but the Game Time
+ *  Remaining box sits grouped next to the player's profile on the right (as in
+ *  the reference) instead of floating in the middle. Local to this page so the
+ *  shared CookCreateHeader (used by the lobby) is unaffected. */
+function SummaryHeader({
+  gameEndsAt = null,
+  clockOffsetMs = 0,
+  participantName = 'Participant',
+}: {
+  gameEndsAt?: string | null;
+  clockOffsetMs?: number;
+  participantName?: string;
+}) {
+  const initials = participantName.trim().slice(0, 2).toUpperCase() || 'P';
+
+  const [remaining, setRemaining] = useState(() =>
+    gameEndsAt ? formatSummaryRemaining(gameEndsAt, clockOffsetMs) : '--:--'
+  );
+
+  useEffect(() => {
+    if (!gameEndsAt) return;
+    setRemaining(formatSummaryRemaining(gameEndsAt, clockOffsetMs));
+    const id = setInterval(() => setRemaining(formatSummaryRemaining(gameEndsAt, clockOffsetMs)), 1000);
+    return () => clearInterval(id);
+  }, [gameEndsAt, clockOffsetMs]);
+
+  return (
+    <div className="w-full bg-white rounded-2xl px-6 py-3.5 flex items-center justify-between border border-[#F0E4D4] shadow-sm">
+      {/* Left: Logo & Title */}
+      <div className="flex items-center gap-3">
+        <img src={ccLogoImg} alt="Cook & Create" className="w-9 h-9 object-contain" />
+        <span className="text-lg font-extrabold text-[#3D2E1F]">Cook &amp; Create</span>
+      </div>
+
+      {/* Right: Game Time Remaining grouped close to the player's profile */}
+      <div className="flex items-center gap-4 sm:gap-5">
+        <div className="flex items-center gap-3 bg-[#FFF3E0] border border-[#E8881E]/15 rounded-xl px-4 py-2">
+          <span className="text-xs font-bold text-[#8B7355] tracking-wide">Game Time Remaining</span>
+          <span className="text-base font-extrabold text-[#3D2E1F] font-mono">{remaining}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-[#FF8A65] text-white font-bold text-xs flex items-center justify-center shadow-sm">
+            {initials}
+          </div>
+          <span className="text-sm font-bold text-[#3D2E1F]">{participantName}</span>
+        </div>
+      </div>
+    </div>
   );
 }
