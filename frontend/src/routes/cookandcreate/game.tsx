@@ -1299,12 +1299,14 @@ function Round3Content({
     );
   }
 
-  // round3_voting
-  const votable = participants.filter((p) => p.id !== myId);
+  // round3_voting — every player is shown (including you), as in the design.
+  const votable = participants;
 
   return (
-    <div className={`${CENTER_PANEL_CLASS} p-6 text-center space-y-5`}  style={{
-         background: `
+    <div
+      className={`${CENTER_PANEL_CLASS} p-6 sm:p-8 text-center`}
+      style={{
+        background: `
            radial-gradient(
              ellipse at 50% 0%,
              rgba(253, 227, 194, 0.55) 0%,
@@ -1317,65 +1319,65 @@ function Round3Content({
            ),
            rgb(255, 250, 244)
          `,
-       }}
-     >
+      }}
+    >
       <div>
-        <h2 className="text-lg font-black text-[#592e16]">Round 3 of 3 – Imposter Voting</h2>
-        <p className="text-sm font-semibold text-[#d96e14] mt-2 leading-relaxed max-w-[400px] mx-auto">
+        <h2 className="text-xl sm:text-2xl font-bold text-[#592e16]">Round 3 of 3 – Imposter Voting</h2>
+        <p className="text-base font-semibold text-[#d96e14] mt-3 leading-relaxed max-w-[460px] mx-auto">
           Vote to eliminate one player. Who do you think is not contributing well to the dish &amp; is the impostor?
         </p>
-        <p className="text-xs text-[#6E5A44] mt-2 font-medium">Vote wisely, one wrong vote can save the impostor.</p>
+        <p className="text-sm text-[#6E5A44] mt-3">Vote wisely, one wrong vote can save the impostor.</p>
       </div>
 
       {myVoted ? (
-        <div className="bg-[#F0FFF0] border border-[#4CAF50]/30 rounded-xl p-5">
+        <div className="mt-8 bg-[#F0FFF0] border border-[#4CAF50]/30 rounded-xl p-5">
           <span className="text-2xl block mb-1">✅</span>
-          <p className="text-xs font-bold text-[#36B37E]">Your vote has been submitted!</p>
-          <p className="text-[11px] text-[#8B7355] mt-0.5">Waiting for other players to finish voting...</p>
+          <p className="text-sm font-bold text-[#36B37E]">Your vote has been submitted!</p>
+          <p className="text-xs text-[#8B7355] mt-0.5">Waiting for other players to finish voting...</p>
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-center gap-10 flex-wrap py-2">
+          <div className="mt-8 flex items-start justify-center gap-3 sm:gap-5 flex-wrap">
             {votable.map((player) => {
               const isSelected = selectedVoteId === player.id;
               return (
                 <button
                   key={player.id}
                   onClick={() => onSelectPlayer(player.id)}
-                  className="relative flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:scale-105"
+                  className="relative flex flex-col items-center gap-2 w-[84px] sm:w-[96px] cursor-pointer transition-transform hover:scale-105"
                 >
                   {isSelected && (
-                    <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#E8881E] flex items-center justify-center shadow-md z-10">
+                    <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-[#E8881E] flex items-center justify-center shadow-md z-10">
                       <Check size={14} className="text-white" strokeWidth={3} />
                     </div>
                   )}
                   <div
-                    className={`w-16 h-20 sm:w-20 sm:h-24 rounded-2xl bg-white border-2 overflow-hidden transition-all ${
-                      isSelected ? 'border-[#E8881E] ring-2 ring-[#E8881E]/30 shadow-lg' : 'border-[#F5E2C8] shadow-xs'
+                    className={`w-[84px] h-[84px] sm:w-[96px] sm:h-[96px] rounded-2xl bg-[#FBF2E4] border-2 overflow-hidden transition-all ${
+                      isSelected ? 'border-[#E8881E] ring-2 ring-[#E8881E]/25 shadow-lg' : 'border-[#F0E0C8] shadow-sm'
                     }`}
                   >
                     <img
                       src={portraitForRole(player.role_label, template)}
                       alt={player.role_label}
-                      className="w-full h-full object-cover"
-                      style={{ objectPosition: 'center 0%' }}
+                      className="w-full h-full object-cover object-top"
                     />
                   </div>
-                  <span className="text-[11px] font-bold text-[#6E5A44]">{player.name}</span>
-                  <span className="text-[10px] font-semibold text-[#5c5c5c]">{player.role_label}</span>
+                  <span className="text-sm font-semibold text-[#d96e14] leading-tight">
+                    {player.name}
+                    {player.isYou ? ' (You)' : ''}
+                  </span>
+                  <span className="text-[13px] text-[#5c5c5c] -mt-1">{player.role_label}</span>
                 </button>
               );
             })}
           </div>
-          <br />
-          <br />
-          <p className="text-xs text-[#5c5c5c] font-medium">Your vote is anonymous.</p>
-            <br />
-          <br />
+
+          <p className="text-sm text-[#5c5c5c] mt-10">Your vote is anonymous.</p>
+
           <button
             onClick={onSubmitVote}
             disabled={!selectedVoteId || submitting}
-            className="w-full max-w-md mx-auto py-4 rounded-2xl bg-[#f39e3a] hover:bg-[#f39e3a] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm sm:text-base transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-[#E8881E]/30 cursor-pointer block"
+            className="mt-6 w-full max-w-[520px] mx-auto h-[52px] rounded-full bg-[#f39e3a] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-[17px] transition-transform hover:brightness-105 hover:scale-[1.01] active:scale-[0.99] disabled:hover:scale-100 disabled:hover:brightness-100 shadow-[0_6px_16px_rgba(243,158,58,0.35)] cursor-pointer block"
           >
             Submit Vote
           </button>
