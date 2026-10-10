@@ -1096,32 +1096,37 @@ function Round2Content({
   const myTurnHasPassed =
     turn?.current_index != null && turn.my_turn_index != null && turn.current_index > turn.my_turn_index;
   return (
-    <div className={`${CENTER_PANEL_CLASS} p-6 space-y-5`} style={CENTER_PANEL_STYLE}>
+    <div
+      className={`${CENTER_PANEL_CLASS} p-6 sm:p-8 space-y-6`}
+      style={{ background: 'linear-gradient(180deg, #FFFAF4 0%, #FFF1DF 100%)', border: '1px solid #F5D8B6', borderRadius: 24 }}
+    >
       <div className="text-center">
-        <h2 className="text-lg font-black text-[#592e16]">Round 2 of 3 — Cooking Step Submission</h2>
+        <h2 className="text-[26px] sm:text-[28px] font-bold text-[#5B301C] leading-tight max-w-[440px] mx-auto">
+          Round 2 of 3 – Cooking Step Submission
+        </h2>
       </div>
 
-      <div className="flex items-center gap-4 flex-wrap">
-        <p className="text-xs font-bold text-[#8B7355] uppercase tracking-wider">
+      <div className="flex items-center justify-center sm:justify-start gap-4 sm:gap-6 flex-wrap">
+        <p className="text-xs font-bold text-[#8B7355] uppercase tracking-wider leading-snug">
           Your top {selectedIngredients.length || 4} Final
           <br />
           Ingredients
         </p>
         <div className="flex items-center gap-3 flex-wrap">
           {selectedIngredients.map((item) => (
-            <div key={item.id} className="flex flex-col items-center gap-1.5 bg-white rounded-xl px-3 py-2 border border-[#F5E6D3] shadow-xs">
+            <div key={item.id} className="flex flex-col items-center gap-1.5 w-[84px] rounded-xl bg-[#FFF9F0] border border-[#D6D3D1] px-2 py-2.5">
               {item.image_url ? (
-                <img src={resolveMediaUrl(item.image_url) ?? item.image_url} alt={item.name} className="w-8 h-8 object-contain drop-shadow-xs" />
+                <img src={resolveMediaUrl(item.image_url) ?? item.image_url} alt={item.name} className="w-10 h-10 object-contain" />
               ) : (
-                <span className="text-xl">🥘</span>
+                <span className="text-2xl">🥘</span>
               )}
-              <span className="text-xs font-bold text-[#3D2E1F]">{item.name}</span>
+              <span className="text-[13px] font-semibold text-[#3F3A35]">{item.name}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <hr className="border-t border-[#F0D5B5]" />
+      <hr className="border-t border-[#D6D3D1]" />
 
       {phase === 'review' ? (
         <div className="text-center space-y-6 py-4">
@@ -1130,41 +1135,42 @@ function Round2Content({
           </h3>
         </div>
       ) : isMyTurn && !mySubmittedStep ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FFEAD1] border border-[#F5CE9E] text-xs font-extrabold text-[#E8881E]">
-              ✋ It's your Turn{myLetter ? ` — Step ${myLetter}` : ''}
-            </span>
-            <span className="text-xs font-bold text-[#8B7355]">
-              Time left <span className="font-mono font-black text-[#3D2E1F]">{turnTimerLabel}</span>
-            </span>
+        <div className="space-y-5 pt-1">
+          <div className="text-center">
+            <p className="text-[22px] font-bold text-[#E87512]">
+              It's your Turn{myLetter ? ` — Step ${myLetter}` : ''}
+            </p>
+            <p className="text-[17px] sm:text-[18px] font-semibold text-[#333333] mt-1.5 leading-snug max-w-[360px] mx-auto">
+              Submit one cooking step using the selected ingredients
+            </p>
+            <p className="text-xs font-semibold text-[#8B7355] mt-2">
+              Time left <span className="font-mono font-bold text-[#5B301C]">{turnTimerLabel}</span>
+            </p>
           </div>
-          <p className="text-xs text-[#3D2E1F] font-medium">Submit one cooking step using the selected ingredients.</p>
           <div>
-            <label className="block text-xs font-bold text-[#3D2E1F] mb-1.5">Enter your step (max {maxChars} characters)</label>
-            <textarea
-              value={stepText}
-              onChange={(e) => setStepText(e.target.value.slice(0, maxChars))}
-              placeholder="Write your step here... Example: Chop the vegetables into small pieces."
-              rows={4}
-              className="w-full rounded-xl border border-[#F5E2C8] focus:border-[#E8881E] focus:ring-2 focus:ring-[#E8881E]/20 outline-none p-3.5 text-xs text-[#3D2E1F] placeholder:text-[#8B7355]/60 bg-white resize-none"
-            />
-            <div className="flex items-center justify-between mt-1.5">
-              <p className="text-[11px] text-[#8B7355]">Tip: A good step is clear, simple and moves the recipe forward.</p>
-              <span className="text-[11px] font-mono font-bold text-[#8B7355]">
+            <label className="block text-[15px] font-semibold text-[#333333] mb-2">Enter your step (max {maxChars} characters)</label>
+            <div className="relative">
+              <textarea
+                value={stepText}
+                onChange={(e) => setStepText(e.target.value.slice(0, maxChars))}
+                placeholder={`Write your step here...\nExample: Chop the vegetables into small pieces.`}
+                className="w-full h-[200px] rounded-[13px] border-[1.5px] border-[#C9A98E] focus:border-[#E87512] focus:ring-2 focus:ring-[#E87512]/15 outline-none p-5 pb-9 text-[15px] text-[#333333] placeholder:text-[#9C8B79] bg-[#FFF3E2] resize-none leading-relaxed"
+              />
+              <span className="absolute bottom-3 right-4 text-xs font-mono font-semibold text-[#9C8B79]">
                 {stepText.length}/{maxChars}
               </span>
             </div>
           </div>
-          <div className="flex justify-center">
-            <button
-              onClick={onSubmitStep}
-              disabled={!stepText.trim() || submitting}
-              className="px-10 py-3 rounded-full bg-[#E8881E] hover:bg-[#D47815] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs transition-transform hover:scale-105 active:scale-95 shadow-md shadow-[#E8881E]/25 cursor-pointer"
-            >
-              Submit Step
-            </button>
-          </div>
+          <p className="text-[13px] font-semibold text-[#666666] text-center">
+            Tip: A good step is clear, simple and moves the recipe forward.
+          </p>
+          <button
+            onClick={onSubmitStep}
+            disabled={!stepText.trim() || submitting}
+            className="w-full h-[64px] rounded-full bg-[#F6A02F] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-[19px] transition-transform hover:brightness-105 hover:scale-[1.01] active:scale-[0.99] disabled:hover:scale-100 disabled:hover:brightness-100 shadow-[0_6px_16px_rgba(230,117,18,0.35)] cursor-pointer"
+          >
+            {submitting ? 'Submitting…' : 'Submit Step'}
+          </button>
         </div>
       ) : mySubmittedStep ? (
         <div className="bg-[#F0FFF0] border border-[#4CAF50]/30 rounded-xl p-5 text-center">
