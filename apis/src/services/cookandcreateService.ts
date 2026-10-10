@@ -746,10 +746,41 @@ export async function advanceRound2Turn(instanceId: number | string, groupId: nu
 // resolve twice.
 
 /**
- * Resolves every step's final keep/remove status by simple majority (a tie
- * defaults to "kept" — lenient, per the plan). Idempotent: guarded by whether
- * any step is still in 'submitted' status, so a race between the "everyone
- * voted" fast path and the review-timer expiry can't double-resolve.
+ * Stable, deterministic tie-break key for Round 2 step selection. FNV-1a hash
+ * over the instance + step ids: the same inputs always yield the same number,
+ * so a tie between steps resolves identically for every player and on every
+ * refresh, while not simply letting the lowest step id always survive.
+ */
+function round2TieKey(instanceId: number | string, stepId: number): number {
+    const s = `${instanceId}:${stepId}`;
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+}
+
+/**
+ * Resolves Round 2 review into the final recipe: keep the 4 steps with the most
+ * KEEP votes and drop the single step with the most REMOVE votes (equivalently
+ * the fewest KEEP votes — every player keeps 4 and removes 1, so each step's
+ * keep+remove total is the player count).
+ *
+ * Previously this was a per-step majority (removed only when remove > keep),
+ * which eliminated nobody whenever the removal votes were split across steps —
+ * so the results modal showed all 5 steps instead of 4.
+ *
+ * Exactly one step is dropped when 5 were submitted; with 4 or fewer steps
+ * (a player missed their Round-2 turn) nothing is dropped. The ties that matter
+ * — above all the case where all 5 players remove a different step, so every
+ * step has one remove vote — are broken by `round2TieKey`, so the result is the
+ * same for everyone and survives refreshes/reconnects without being reshuffled.
+ *
+ * Idempotent: only steps still in 'submitted' are read, so a second caller (the
+ * review-timer safety net racing the "everyone voted" fast path) finds nothing
+ * to resolve, and because the ordering is deterministic both callers that do
+ * run would write the identical result.
  */
 export async function finalizeRound2Review(instanceId: number | string, groupId: number | string): Promise<void> {
     const [stepRows] = await query<any>(
@@ -761,10 +792,26 @@ export async function finalizeRound2Review(instanceId: number | string, groupId:
     );
     if (!stepRows || stepRows.length === 0) return; // already resolved by a concurrent caller
 
-    for (const s of stepRows) {
-        const keep = Number(s.keep_votes);
-        const remove = Number(s.remove_votes);
-        const status = remove > keep ? 'removed' : 'kept'; // ties -> kept
+    const KEEP_COUNT = 4;
+    const steps = stepRows.map((s: any) => ({
+        id: Number(s.id),
+        keep: Number(s.keep_votes),
+        remove: Number(s.remove_votes),
+    }));
+
+    // Best-first: most KEEP votes, then fewest REMOVE votes, then the stable
+    // deterministic tie-break. Keep the top 4; everything after is dropped.
+    steps.sort(
+        (a: { id: number; keep: number; remove: number }, b: { id: number; keep: number; remove: number }) =>
+            b.keep - a.keep ||
+            a.remove - b.remove ||
+            round2TieKey(instanceId, a.id) - round2TieKey(instanceId, b.id)
+    );
+
+    const keepIds = new Set(steps.slice(0, KEEP_COUNT).map((s) => s.id));
+
+    for (const s of steps) {
+        const status = keepIds.has(s.id) ? 'kept' : 'removed';
         await query('UPDATE cc_round2_steps SET status = ? WHERE id = ?', [status, s.id]);
     }
 
