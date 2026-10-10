@@ -202,6 +202,16 @@ function GamePage() {
     return () => clearInterval(interval);
   }, [groupId, participantId, fetchState]);
 
+  // Ingredient Results popup (Stage 4) auto-dismisses after the admin-configured
+  // duration (template.round1_results_secs), so the group moves on even if a
+  // player never clicks "Okay Continue". Round 2 is already running server-side.
+  useEffect(() => {
+    if (!showRound1Results) return;
+    const secs = gameState?.template.round1_results_secs ?? 60;
+    const t = setTimeout(() => setShowRound1Results(false), Math.max(3, secs) * 1000);
+    return () => clearTimeout(t);
+  }, [showRound1Results, gameState?.template.round1_results_secs]);
+
   if (loading || !gameState) {
     return (
       <CookCreateLayout maxWidthClass="max-w-[1376px]">
@@ -660,6 +670,7 @@ function GamePage() {
           onSubmit={handleDishNameSubmit}
           topIngredients={topIngredientsForNameDish}
           canSubmit={canNameDish}
+          durationSecs={template.dish_naming_secs}
           waitingLabel={
             template.show_host_role_enabled
               ? 'Waiting for the Show Host to name the dish…'

@@ -27,9 +27,28 @@ const ROUNDS = [
   { num: '03', img: step4Img, title: 'Elimination', desc: 'Discuss and vote.' },
 ];
 
-/** Give players time to read their role before nudging them into Round 1,
- * which has already started server-side by the time this screen shows. */
-const AUTO_CONTINUE_SECS = 25;
+/** The brief (role reveal) auto-continues into the game after the admin-set
+ * "Secret Role / Challenge Brief" duration (template.role_brief_secs). Round 1
+ * is already running server-side by the time this screen shows, so the brief is
+ * capped to always leave this many seconds of Round 1 for the player to vote —
+ * a brief configured longer than Round 1 can't run in full without delaying the
+ * Round 1 start server-side. */
+const ROUND1_VOTE_BUFFER_SECS = 15;
+const BRIEF_FALLBACK_SECS = 25;
+
+/** Brief length to actually run: the configured duration, but never so long the
+ * player would miss Round 1 (whose clock started at round1_started_at). */
+function computeBriefSecs(
+  roleBriefSecs: number,
+  round1StartedAt: string | null | undefined,
+  round1TimerSecs: number
+): number {
+  const configured = roleBriefSecs > 0 ? roleBriefSecs : BRIEF_FALLBACK_SECS;
+  if (!round1StartedAt) return configured;
+  const elapsed = Math.floor((Date.now() - new Date(round1StartedAt).getTime()) / 1000);
+  const round1Left = Math.max(0, round1TimerSecs - elapsed);
+  return Math.max(3, Math.min(configured, round1Left - ROUND1_VOTE_BUFFER_SECS));
+}
 
 function SummaryPage() {
   const navigate = useNavigate();
@@ -37,7 +56,8 @@ function SummaryPage() {
   const [gameState, setGameState] = useState<CCGameStateResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showRoleModal, setShowRoleModal] = useState(false);
-  const [countdown, setCountdown] = useState(AUTO_CONTINUE_SECS);
+  // null until the game state (and thus the configured brief duration) loads.
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const fetchState = useCallback(async () => {
     if (!session?.groupId || !session.participantId) return;
@@ -70,13 +90,26 @@ function SummaryPage() {
     }
   }, [gameState, goToGame]);
 
+  // Seed the countdown once, from the admin-configured brief duration (capped
+  // so Round 1 is never missed). Runs only while countdown is still null.
   useEffect(() => {
-    if (!gameState) return;
+    if (!gameState || countdown !== null) return;
+    setCountdown(
+      computeBriefSecs(
+        gameState.template.role_brief_secs,
+        gameState.instance.round1_started_at,
+        gameState.template.round1_timer_secs
+      )
+    );
+  }, [gameState, countdown]);
+
+  useEffect(() => {
+    if (!gameState || countdown === null) return;
     if (countdown <= 0) {
       goToGame();
       return;
     }
-    const t = setTimeout(() => setCountdown((s) => s - 1), 1000);
+    const t = setTimeout(() => setCountdown((s) => (s === null ? null : s - 1)), 1000);
     return () => clearTimeout(t);
   }, [countdown, gameState, goToGame]);
 
@@ -88,8 +121,9 @@ function SummaryPage() {
     );
   }
 
-  const mm = String(Math.floor(countdown / 60)).padStart(2, '0');
-  const ss = String(countdown % 60).padStart(2, '0');
+  const countdownSecs = countdown ?? 0;
+  const mm = String(Math.floor(countdownSecs / 60)).padStart(2, '0');
+  const ss = String(countdownSecs % 60).padStart(2, '0');
   const role: 'chef' | 'show_host' | 'impostor' = gameState.is_impostor
     ? 'impostor'
     : gameState.is_show_host

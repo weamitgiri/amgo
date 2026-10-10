@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import step2Img from '../../../assets/cookandcreate/game-flow-step-2.png';
 import { resolveMediaUrl } from "@/utils/media";
 export type CCNameDishIngredient = {
@@ -13,10 +13,47 @@ interface NameDishModalProps {
   topIngredients: CCNameDishIngredient[];
   canSubmit: boolean;
   waitingLabel?: string | null;
+  /** Admin-configured Dish Naming duration (template.dish_naming_secs). When it
+   *  runs out the player who may name the dish auto-submits, so the game never
+   *  stalls waiting for a name. 0/undefined keeps the stage untimed. */
+  durationSecs?: number;
 }
 
-export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, waitingLabel }: NameDishModalProps) {
+/** Fallback name when the timer runs out and nothing was typed. */
+function fallbackDishName(topIngredients: CCNameDishIngredient[]): string {
+  const first = topIngredients[0]?.name?.trim();
+  return first ? `Team ${first} Special` : 'Team Dish';
+}
+
+export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, waitingLabel, durationSecs = 0 }: NameDishModalProps) {
   const [dishName, setDishName] = useState('');
+  // Countdown for the Dish Naming stage. null = untimed (no duration configured).
+  const [secsLeft, setSecsLeft] = useState<number | null>(durationSecs > 0 ? durationSecs : null);
+  const autoSubmittedRef = useRef(false);
+  const dishNameRef = useRef(dishName);
+  dishNameRef.current = dishName;
+
+  // (Re)start the countdown each time the modal opens.
+  useEffect(() => {
+    if (!isOpen) return;
+    autoSubmittedRef.current = false;
+    setSecsLeft(durationSecs > 0 ? durationSecs : null);
+  }, [isOpen, durationSecs]);
+
+  // Tick down; when it hits zero the eligible player auto-submits (typed name
+  // if any, else a sensible fallback) so Round 2 always advances to Round 3.
+  useEffect(() => {
+    if (!isOpen || secsLeft === null) return;
+    if (secsLeft <= 0) {
+      if (canSubmit && !autoSubmittedRef.current) {
+        autoSubmittedRef.current = true;
+        onSubmit(dishNameRef.current.trim() || fallbackDishName(topIngredients));
+      }
+      return;
+    }
+    const t = setTimeout(() => setSecsLeft((s) => (s === null ? null : s - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [isOpen, secsLeft, canSubmit, onSubmit, topIngredients]);
 
   if (!isOpen) return null;
 
@@ -25,6 +62,11 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
       onSubmit(dishName.trim());
     }
   };
+
+  const timerLabel =
+    secsLeft === null
+      ? null
+      : `${String(Math.floor(Math.max(0, secsLeft) / 60)).padStart(2, '0')}:${String(Math.max(0, secsLeft) % 60).padStart(2, '0')}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -54,6 +96,15 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
         <h2 className="text-xl sm:text-2xl font-black text-[#592e16] text-center">
           Give a Name to your Dish
         </h2>
+
+        {/* Dish-naming countdown (only when a duration is configured) */}
+        {timerLabel && (
+          <div className="flex justify-center mt-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#F2CD9C] bg-[#FFF3E0] px-3 py-1 text-sm font-bold text-[#592e16] tabular-nums">
+              <span className="text-[#B8863B]">⏱</span> {timerLabel}
+            </span>
+          </div>
+        )}
 
         {/* Cooking pot icon */}
         <div className="flex justify-center my-5">

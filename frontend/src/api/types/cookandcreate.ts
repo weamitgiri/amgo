@@ -21,12 +21,15 @@ export type CCTemplate = {
   round1_votes_per_player: number;
   round1_top_ingredients: number;
   round1_timer_secs: number;
+  round1_results_secs: number;
   round2_step_max_chars: number;
   round2_submit_timer_secs: number;
   round2_review_timer_secs: number;
+  dish_naming_secs: number;
   round3_discussion_timer_secs: number;
   round3_voting_timer_secs: number;
   round3_max_messages_per_player: number;
+  role_brief_secs: number;
   show_host_role_enabled: boolean;
   impostor_bias_card_text: string | null;
 };
