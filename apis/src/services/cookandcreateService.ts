@@ -535,14 +535,53 @@ export async function saveRound1Votes(instanceId: number | string, participantId
 }
 
 /**
- * Calculate round 1 results and save top N ingredients
+ * Calculate round 1 results and save the top N ingredients for the recipe.
+ *
+ * Absurd ingredients (Sand, Ice Cubes, …) are deliberately kept OUT of the
+ * final N: the dish still has to be cookable in Round 2, so we only ever pick
+ * real ingredients. The selection is: real ingredients ranked by votes (most
+ * first), ties and the zero-vote fillers broken at random — so when only two
+ * real ingredients were voted for, two more random real ones fill the recipe
+ * up to N. Absurd ingredients are used only as a last resort, if the template
+ * pool somehow has fewer than N real ingredients. The absurd picks that drew
+ * votes still surface separately in the "also received votes" callout.
  */
-export async function calculateRound1Results(instanceId: number | string, topCount: number): Promise<{ ingredientId: number; count: number }[]> {
+export async function calculateRound1Results(
+    instanceId: number | string,
+    topCount: number,
+    templateId: number | string
+): Promise<{ ingredientId: number; count: number }[]> {
     const [votes] = await query(
-        `SELECT ingredient_id, COUNT(*) as c FROM cc_round1_votes WHERE instance_id = ? GROUP BY ingredient_id ORDER BY c DESC, ingredient_id ASC`,
+        `SELECT ingredient_id, COUNT(*) as c FROM cc_round1_votes WHERE instance_id = ? GROUP BY ingredient_id`,
         [instanceId]
     );
-    const results = votes.map((v: any) => ({ ingredientId: Number(v.ingredient_id), count: Number(v.c) })).slice(0, topCount);
+    const voteCount = new Map<number, number>();
+    for (const v of votes as any[]) voteCount.set(Number(v.ingredient_id), Number(v.c));
+
+    const pool = await getCCIngredients(templateId);
+    const good = pool.filter((i) => !i.is_absurd);
+    const absurd = pool.filter((i) => i.is_absurd);
+
+    const shuffle = <T>(arr: T[]): T[] => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    };
+    // Shuffle first, then a stable sort by votes keeps equal-vote (and all the
+    // zero-vote) ingredients in random order — exactly the "pick max votes,
+    // then random good ones" behaviour.
+    const byVotesThenRandom = (list: CCIngredient[]) =>
+        shuffle(list).sort((a, b) => (voteCount.get(b.id) ?? 0) - (voteCount.get(a.id) ?? 0));
+
+    let chosen = byVotesThenRandom(good).slice(0, topCount);
+    if (chosen.length < topCount && absurd.length > 0) {
+        chosen = [...chosen, ...byVotesThenRandom(absurd).slice(0, topCount - chosen.length)];
+    }
+
+    const results = chosen.map((i) => ({ ingredientId: i.id, count: voteCount.get(i.id) ?? 0 }));
 
     // Delete existing selected ingredients for this instance
     await query(`DELETE FROM cc_round1_selected_ingredients WHERE instance_id = ?`, [instanceId]);
@@ -575,7 +614,7 @@ export async function finalizeRound1(instanceId: number | string, groupId: numbe
     );
     if (Number((claimHeader as any)?.affectedRows || 0) === 0) return;
 
-    const results = await calculateRound1Results(instanceId, template.round1_top_ingredients);
+    const results = await calculateRound1Results(instanceId, template.round1_top_ingredients, template.id);
 
     io.to(`cc-instance-${instanceId}`).emit('cc_round1_complete', { top_ingredients: results });
 
