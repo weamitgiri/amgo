@@ -35,7 +35,6 @@ import {
     startRound3DiscussionTimer,
     ensureCCTimer,
 } from '../services/cookandcreateService';
-import { shortName } from '../utils/pseudonym';
 // Read-only reuse of Mystery's schedule parser so both activities interpret a
 // booking's date/time identically. buildLobbyPayload itself is NOT used here —
 // it starts Mystery's case-summary timer as a side effect.
@@ -95,10 +94,11 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
     );
     const participants = participantRows.map((p: any) => ({
         id: Number(p.id),
-        // Everyone — including you — is shown by the same in-game alias, so the
-        // player list and activity feed never mix one real name in with aliases
-        // (the header still shows your own registered name).
-        name: shortName(p.name, Number(p.id)),
+        // Show each player's real registered name (the name they entered when
+        // they joined), mapped to their participant id, consistently across
+        // every Cook & Create screen. Falls back to 'Participant' if a name is
+        // somehow missing so the game never renders a blank label.
+        name: p.name || 'Participant',
         isYou: myParticipantId === Number(p.id),
         status: Number(p.is_online) === 1 ? 'online' : 'offline',
     }));
