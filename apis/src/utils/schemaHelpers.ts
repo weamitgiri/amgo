@@ -340,12 +340,15 @@ export async function ensureCookAndCreateSchema(): Promise<void> {
                 round1_votes_per_player INT UNSIGNED NOT NULL DEFAULT 2,
                 round1_top_ingredients INT UNSIGNED NOT NULL DEFAULT 4,
                 round1_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                round1_results_secs INT UNSIGNED NOT NULL DEFAULT 60,
                 round2_step_max_chars INT UNSIGNED NOT NULL DEFAULT 120,
                 round2_submit_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
                 round2_review_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                dish_naming_secs INT UNSIGNED NOT NULL DEFAULT 60,
                 round3_discussion_timer_secs INT UNSIGNED NOT NULL DEFAULT 60,
                 round3_voting_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
                 round3_max_messages_per_player INT UNSIGNED NOT NULL DEFAULT 2,
+                role_brief_secs INT UNSIGNED NOT NULL DEFAULT 300,
                 show_host_role_enabled TINYINT(1) NOT NULL DEFAULT 1,
                 impostor_bias_card_text TEXT,
                 status ENUM('draft','active') NOT NULL DEFAULT 'active',
@@ -675,6 +678,21 @@ export async function ensureCookAndCreateSchema(): Promise<void> {
                     ADD COLUMN chef3_image VARCHAR(255) NULL DEFAULT NULL,
                     ADD COLUMN chef4_image VARCHAR(255) NULL DEFAULT NULL,
                     ADD COLUMN show_host_image VARCHAR(255) NULL DEFAULT NULL`
+            );
+        }
+
+        // 15b. Admin-configurable durations for the stages that were previously
+        // fixed in the frontend or untimed: the Secret Role / Challenge Brief
+        // reading time, the Ingredient Selection results popup, and Dish Naming.
+        // (The other stage durations already have columns, or live on the
+        // activity for the lobby wait.) Defaults match the required spec values.
+        const [roleBriefCol] = await query<any>(`SHOW COLUMNS FROM cc_game_templates LIKE 'role_brief_secs'`);
+        if ((roleBriefCol as any).length === 0) {
+            await query(
+                `ALTER TABLE cc_game_templates
+                    ADD COLUMN round1_results_secs INT UNSIGNED NOT NULL DEFAULT 60 AFTER round1_timer_secs,
+                    ADD COLUMN dish_naming_secs INT UNSIGNED NOT NULL DEFAULT 60 AFTER round2_review_timer_secs,
+                    ADD COLUMN role_brief_secs INT UNSIGNED NOT NULL DEFAULT 300 AFTER round3_max_messages_per_player`
             );
         }
 

@@ -25,12 +25,15 @@ export type CCGameTemplate = {
     round1_votes_per_player: number;
     round1_top_ingredients: number;
     round1_timer_secs: number;
+    round1_results_secs: number;
     round2_step_max_chars: number;
     round2_submit_timer_secs: number;
     round2_review_timer_secs: number;
+    dish_naming_secs: number;
     round3_discussion_timer_secs: number;
     round3_voting_timer_secs: number;
     round3_max_messages_per_player: number;
+    role_brief_secs: number;
     show_host_role_enabled: boolean;
     impostor_bias_card_text: string | null;
 };
@@ -103,12 +106,18 @@ function mapTemplateRow(r: any): CCGameTemplate {
         round1_votes_per_player: Number(r.round1_votes_per_player),
         round1_top_ingredients: Number(r.round1_top_ingredients),
         round1_timer_secs: Number(r.round1_timer_secs),
+        // New stage durations — fall back to the required defaults if the
+        // column is somehow missing/null (e.g. before the migration runs on an
+        // environment), so the game never gets a 0-second stage.
+        round1_results_secs: Number(r.round1_results_secs) || 60,
         round2_step_max_chars: Number(r.round2_step_max_chars),
         round2_submit_timer_secs: Number(r.round2_submit_timer_secs),
         round2_review_timer_secs: Number(r.round2_review_timer_secs),
+        dish_naming_secs: Number(r.dish_naming_secs) || 60,
         round3_discussion_timer_secs: Number(r.round3_discussion_timer_secs),
         round3_voting_timer_secs: Number(r.round3_voting_timer_secs),
         round3_max_messages_per_player: Number(r.round3_max_messages_per_player),
+        role_brief_secs: Number(r.role_brief_secs) || 300,
         show_host_role_enabled: Boolean(r.show_host_role_enabled),
         impostor_bias_card_text: r.impostor_bias_card_text,
     };

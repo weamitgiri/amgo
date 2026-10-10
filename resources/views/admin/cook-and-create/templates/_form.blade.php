@@ -93,6 +93,79 @@
 </div>
 
 <hr>
+<h5 class="mb-1">⏱ Stage Durations</h5>
+<p class="text-muted small mb-3">
+    Every Cook &amp; Create stage, in seconds. These drive both the players' on-screen
+    countdowns (shown as MM:SS) and the server deadlines. New games pick up the latest
+    values; a game already in progress keeps the durations it started with.
+</p>
+<div class="form-row">
+    <div class="form-group col-md-4">
+        <label>1. Lobby wait — group formation <span class="text-danger">*</span></label>
+        <input type="number" name="lobby_wait_secs" min="60" max="3600" class="form-control @error('lobby_wait_secs') is-invalid @enderror"
+               value="{{ old('lobby_wait_secs', $lobbyWaitSecs ?? 900) }}" required>
+        <small class="form-text text-muted">Default 900 (15 min). Stored on the activity (shared group-formation setting).</small>
+        @error('lobby_wait_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="form-group col-md-4">
+        <label>2. Secret Role / Challenge Brief <span class="text-danger">*</span></label>
+        <input type="number" name="role_brief_secs" min="15" max="1800" class="form-control @error('role_brief_secs') is-invalid @enderror"
+               value="{{ old('role_brief_secs', $template->role_brief_secs ?? 300) }}" required>
+        <small class="form-text text-muted">Default 300 (5 min).</small>
+        @error('role_brief_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="form-group col-md-4">
+        <label>3. Ingredient Selection <span class="text-danger">*</span></label>
+        <input type="number" name="round1_timer_secs" min="15" max="1800" class="form-control @error('round1_timer_secs') is-invalid @enderror"
+               value="{{ old('round1_timer_secs', $template->round1_timer_secs ?? 120) }}" required>
+        <small class="form-text text-muted">Default 120 (2 min).</small>
+        @error('round1_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="form-group col-md-4">
+        <label>4. Ingredient Results popup <span class="text-danger">*</span></label>
+        <input type="number" name="round1_results_secs" min="5" max="600" class="form-control @error('round1_results_secs') is-invalid @enderror"
+               value="{{ old('round1_results_secs', $template->round1_results_secs ?? 60) }}" required>
+        <small class="form-text text-muted">Default 60 (1 min).</small>
+        @error('round1_results_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="form-group col-md-4">
+        <label>5. Cooking Step Submission <span class="text-muted">(per player)</span> <span class="text-danger">*</span></label>
+        <input type="number" name="round2_submit_timer_secs" min="15" max="1800" class="form-control @error('round2_submit_timer_secs') is-invalid @enderror"
+               value="{{ old('round2_submit_timer_secs', $template->round2_submit_timer_secs ?? 120) }}" required>
+        <small class="form-text text-muted">Default 120 (2 min). Turn-based — each player gets this long.</small>
+        @error('round2_submit_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="form-group col-md-4">
+        <label>6. Cooking Steps Results popup <span class="text-danger">*</span></label>
+        <input type="number" name="round2_review_timer_secs" min="15" max="1800" class="form-control @error('round2_review_timer_secs') is-invalid @enderror"
+               value="{{ old('round2_review_timer_secs', $template->round2_review_timer_secs ?? 120) }}" required>
+        <small class="form-text text-muted">Default 120 (2 min). Review &amp; keep/remove voting on the submitted steps.</small>
+        @error('round2_review_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="form-group col-md-4">
+        <label>7. Chat Widget <span class="text-danger">*</span></label>
+        <input type="number" name="round3_discussion_timer_secs" min="15" max="1800" class="form-control @error('round3_discussion_timer_secs') is-invalid @enderror"
+               value="{{ old('round3_discussion_timer_secs', $template->round3_discussion_timer_secs ?? 60) }}" required>
+        <small class="form-text text-muted">Default 60 (1 min).</small>
+        @error('round3_discussion_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="form-group col-md-4">
+        <label>8. Imposter Voting <span class="text-danger">*</span></label>
+        <input type="number" name="round3_voting_timer_secs" min="15" max="1800" class="form-control @error('round3_voting_timer_secs') is-invalid @enderror"
+               value="{{ old('round3_voting_timer_secs', $template->round3_voting_timer_secs ?? 120) }}" required>
+        <small class="form-text text-muted">Default 120 (2 min).</small>
+        @error('round3_voting_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="form-group col-md-4">
+        <label>9. Dish Naming <span class="text-danger">*</span></label>
+        <input type="number" name="dish_naming_secs" min="15" max="600" class="form-control @error('dish_naming_secs') is-invalid @enderror"
+               value="{{ old('dish_naming_secs', $template->dish_naming_secs ?? 60) }}" required>
+        <small class="form-text text-muted">Default 60 (1 min).</small>
+        @error('dish_naming_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+</div>
+
+<hr>
 <h5 class="mb-3">Round 1 — Ingredient Market</h5>
 <div class="form-row">
     <div class="form-group col-md-4">
@@ -107,12 +180,7 @@
                value="{{ old('round1_top_ingredients', $template->round1_top_ingredients ?? 4) }}" required>
         @error('round1_top_ingredients') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
-    <div class="form-group col-md-4">
-        <label>Voting timer (secs) <span class="text-danger">*</span></label>
-        <input type="number" name="round1_timer_secs" min="15" class="form-control @error('round1_timer_secs') is-invalid @enderror"
-               value="{{ old('round1_timer_secs', $template->round1_timer_secs ?? 120) }}" required>
-        @error('round1_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
-    </div>
+    {{-- Voting timer moved to the "Stage Durations" section above (Stage 3). --}}
 </div>
 
 <div class="form-group">
@@ -143,19 +211,7 @@
                value="{{ old('round2_step_max_chars', $template->round2_step_max_chars ?? 120) }}" required>
         @error('round2_step_max_chars') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
-    <div class="form-group col-md-3">
-        <label>Per-player turn (secs) <span class="text-danger">*</span></label>
-        <input type="number" name="round2_submit_timer_secs" min="15" class="form-control @error('round2_submit_timer_secs') is-invalid @enderror"
-               value="{{ old('round2_submit_timer_secs', $template->round2_submit_timer_secs ?? 60) }}" required>
-        <small class="form-text text-muted">Round 2 is turn-based — each player gets this long to write their step (60 = 1 minute).</small>
-        @error('round2_submit_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
-    </div>
-    <div class="form-group col-md-3">
-        <label>Review timer (secs) <span class="text-danger">*</span></label>
-        <input type="number" name="round2_review_timer_secs" min="15" class="form-control @error('round2_review_timer_secs') is-invalid @enderror"
-               value="{{ old('round2_review_timer_secs', $template->round2_review_timer_secs ?? 120) }}" required>
-        @error('round2_review_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
-    </div>
+    {{-- Per-player turn & review timers moved to the "Stage Durations" section above (Stages 5 & 6). --}}
     <div class="form-group col-md-3">
         <label class="d-block">Show Host role</label>
         <div class="form-check mt-2">
@@ -169,18 +225,7 @@
 <hr>
 <h5 class="mb-3">Round 3 — The Kitchen Talks</h5>
 <div class="form-row">
-    <div class="form-group col-md-4">
-        <label>Discussion timer (secs) <span class="text-danger">*</span></label>
-        <input type="number" name="round3_discussion_timer_secs" min="15" class="form-control @error('round3_discussion_timer_secs') is-invalid @enderror"
-               value="{{ old('round3_discussion_timer_secs', $template->round3_discussion_timer_secs ?? 60) }}" required>
-        @error('round3_discussion_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
-    </div>
-    <div class="form-group col-md-4">
-        <label>Voting timer (secs) <span class="text-danger">*</span></label>
-        <input type="number" name="round3_voting_timer_secs" min="15" class="form-control @error('round3_voting_timer_secs') is-invalid @enderror"
-               value="{{ old('round3_voting_timer_secs', $template->round3_voting_timer_secs ?? 120) }}" required>
-        @error('round3_voting_timer_secs') <div class="invalid-feedback">{{ $message }}</div> @enderror
-    </div>
+    {{-- Discussion (chat) & voting timers moved to the "Stage Durations" section above (Stages 7 & 8). --}}
     <div class="form-group col-md-4">
         <label>Max messages per player <span class="text-danger">*</span></label>
         <input type="number" name="round3_max_messages_per_player" min="1" max="20" class="form-control @error('round3_max_messages_per_player') is-invalid @enderror"

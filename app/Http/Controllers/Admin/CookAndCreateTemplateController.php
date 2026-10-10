@@ -55,7 +55,10 @@ class CookAndCreateTemplateController extends Controller
     {
         $ingredients = CcIngredient::active()->orderBy('name')->get();
         $activityGames = $this->cookAndCreateActivityGames()->with('activity')->get();
-        return view('admin.cook-and-create.templates.create', compact('ingredients', 'activityGames'));
+        // Default lobby wait for a brand-new template; on save it is written to
+        // the chosen activity. 900s = 15 min, matching the required default.
+        $lobbyWaitSecs = optional($activityGames->first()?->activity)->lobby_wait_secs ?? 900;
+        return view('admin.cook-and-create.templates.create', compact('ingredients', 'activityGames', 'lobbyWaitSecs'));
     }
 
     private function rules(): array
@@ -73,12 +76,18 @@ class CookAndCreateTemplateController extends Controller
             'show_host_image' => 'nullable|image|max:2048',
             'round1_votes_per_player' => 'required|integer|min:1|max:5',
             'round1_top_ingredients' => 'required|integer|min:2|max:10',
-            'round1_timer_secs' => 'required|integer|min:15',
+            // Stage durations, all in seconds. See the stage ↔ column mapping
+            // in the form. Bounds keep values positive and within sane limits.
+            'lobby_wait_secs' => 'required|integer|min:60|max:3600',          // Stage 1 — stored on the activity, not the template
+            'role_brief_secs' => 'required|integer|min:15|max:1800',          // Stage 2
+            'round1_timer_secs' => 'required|integer|min:15|max:1800',        // Stage 3
+            'round1_results_secs' => 'required|integer|min:5|max:600',        // Stage 4
             'round2_step_max_chars' => 'required|integer|min:20|max:500',
-            'round2_submit_timer_secs' => 'required|integer|min:15',
-            'round2_review_timer_secs' => 'required|integer|min:15',
-            'round3_discussion_timer_secs' => 'required|integer|min:15',
-            'round3_voting_timer_secs' => 'required|integer|min:15',
+            'round2_submit_timer_secs' => 'required|integer|min:15|max:1800', // Stage 5 (per player)
+            'round2_review_timer_secs' => 'required|integer|min:15|max:1800', // Stage 6 (review + results)
+            'dish_naming_secs' => 'required|integer|min:15|max:600',          // Stage 9
+            'round3_discussion_timer_secs' => 'required|integer|min:15|max:1800', // Stage 7 (chat)
+            'round3_voting_timer_secs' => 'required|integer|min:15|max:1800',     // Stage 8 (imposter voting)
             'round3_max_messages_per_player' => 'required|integer|min:1|max:20',
             'show_host_role_enabled' => 'boolean',
             'impostor_bias_card_text' => 'nullable|string',
@@ -114,10 +123,11 @@ class CookAndCreateTemplateController extends Controller
         $this->handleImageUploads($request, $validated);
 
         DB::transaction(function () use ($validated) {
-            $template = CcGameTemplate::create(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules'])->toArray());
+            $template = CcGameTemplate::create(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules', 'lobby_wait_secs'])->toArray());
             $this->syncIngredients($template, $validated['ingredient_ids']);
             $this->syncClues($template, $validated['clues'] ?? []);
             $this->syncRules($template, $validated['game_rules'] ?? []);
+            $this->updateLobbyWait($template, (int) $validated['lobby_wait_secs']);
         });
 
         return redirect()->route('admin.cook-and-create.templates.index')->with('success', 'Template created.');
@@ -125,11 +135,12 @@ class CookAndCreateTemplateController extends Controller
 
     public function edit(CcGameTemplate $template)
     {
-        $template->load(['templateIngredients', 'clues', 'rules']);
+        $template->load(['templateIngredients', 'clues', 'rules', 'activityGame.activity']);
         $ingredients = CcIngredient::active()->orderBy('name')->get();
         $activityGames = $this->cookAndCreateActivityGames()->with('activity')->get();
         $selectedIngredientIds = $template->templateIngredients->pluck('ingredient_id')->all();
-        return view('admin.cook-and-create.templates.edit', compact('template', 'ingredients', 'activityGames', 'selectedIngredientIds'));
+        $lobbyWaitSecs = optional(optional($template->activityGame)->activity)->lobby_wait_secs ?? 900;
+        return view('admin.cook-and-create.templates.edit', compact('template', 'ingredients', 'activityGames', 'selectedIngredientIds', 'lobbyWaitSecs'));
     }
 
     public function update(Request $request, CcGameTemplate $template)
@@ -139,10 +150,11 @@ class CookAndCreateTemplateController extends Controller
         $this->handleImageUploads($request, $validated);
 
         DB::transaction(function () use ($template, $validated) {
-            $template->update(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules'])->toArray());
+            $template->update(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules', 'lobby_wait_secs'])->toArray());
             $this->syncIngredients($template, $validated['ingredient_ids']);
             $this->syncClues($template, $validated['clues'] ?? []);
             $this->syncRules($template, $validated['game_rules'] ?? []);
+            $this->updateLobbyWait($template, (int) $validated['lobby_wait_secs']);
         });
 
         return redirect()->route('admin.cook-and-create.templates.index')->with('success', 'Template updated.');
@@ -158,6 +170,22 @@ class CookAndCreateTemplateController extends Controller
         });
 
         return redirect()->route('admin.cook-and-create.templates.index')->with('success', 'Template deleted.');
+    }
+
+    /**
+     * Lobby waiting time (Stage 1) lives on the activity, not the template —
+     * the same Mystery-Quest-style group-formation field the lobby already
+     * uses (activities.lobby_wait_secs). We surface it on the Cook & Create
+     * template form and write it back to this template's own activity, so it
+     * is editable in one place without duplicating the setting. Cook & Create
+     * uses its own activity, so this never touches Mystery Quest's.
+     */
+    private function updateLobbyWait(CcGameTemplate $template, int $secs): void
+    {
+        $activity = optional($template->activityGame()->with('activity')->first())->activity;
+        if ($activity) {
+            $activity->update(['lobby_wait_secs' => $secs]);
+        }
     }
 
     private function syncIngredients(CcGameTemplate $template, array $ingredientIds): void
