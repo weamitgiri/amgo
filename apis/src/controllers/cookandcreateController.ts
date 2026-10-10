@@ -65,8 +65,13 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
     }
     const group = groupRows[0];
 
-    // Get or create CC instance
-    const ccData = await getOrCreateCCInstance(group_id, group.game_id || group.booking_game_id);
+    // Resolve the Cook & Create template from the activity_game the organizer
+    // actually booked (organizer_bookings.game_id). game_groups.game_id is not
+    // reliable here — for Cook & Create groups it carries a default of 1, which
+    // is Mystery Quest's activity_game and has no CC template, so preferring it
+    // made getOrCreateCCInstance fail with "template not found". Fall back to
+    // gg.game_id only if the booking somehow has none.
+    const ccData = await getOrCreateCCInstance(group_id, group.booking_game_id || group.game_id);
     if (!ccData) {
         throw new AppError('Cook & Create game template not found', 404);
     }
