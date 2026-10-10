@@ -3,6 +3,18 @@
     @method('PUT')
 @endif
 
+@if ($errors->any())
+    <div class="alert alert-danger">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <strong><i class="fas fa-exclamation-triangle mr-1"></i> Please fix the following:</strong>
+        <ul class="mb-0 mt-1 pl-3">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
 <div class="form-group">
     <label>Name <span class="text-danger">*</span></label>
     <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
@@ -12,8 +24,15 @@
 
 <div class="form-group">
     <label>Image</label>
-    <input type="file" name="image" class="form-control-file @error('image') is-invalid @enderror" accept="image/*">
+    <input type="file" name="image" class="form-control-file @error('image') is-invalid @enderror"
+           accept="image/jpeg,image/png,image/webp">
     @error('image') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+    <small class="form-text text-muted">
+        <i class="fas fa-info-circle mr-1"></i>
+        Recommended: a <strong>square image, 256&times;256 px</strong> (up to 512&times;512 px).
+        Max size <strong>2 MB</strong> &middot; JPG, JPEG, PNG or WEBP.
+        A transparent PNG looks best — the ingredient shows on a light card in the game.
+    </small>
     @if (!empty($ingredient) && $ingredient->image_url)
         <div class="mt-2">
             <img src="{{ asset('storage/' . ltrim($ingredient->image_url, '/')) }}" alt="" style="width:64px;height:64px;object-fit:contain;">

@@ -28,9 +28,13 @@ class CookAndCreateIngredientController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
             'is_absurd' => 'boolean',
             'status' => 'required|in:active,inactive',
+        ], [
+            'image.image' => 'The ingredient image must be a valid image file.',
+            'image.mimes' => 'The ingredient image must be a JPG, JPEG, PNG or WEBP file.',
+            'image.max'   => 'The ingredient image may not be larger than 2 MB. Please upload a smaller file.',
         ]);
 
         $validated['is_absurd'] = $request->has('is_absurd');
@@ -54,9 +58,13 @@ class CookAndCreateIngredientController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
             'is_absurd' => 'boolean',
             'status' => 'required|in:active,inactive',
+        ], [
+            'image.image' => 'The ingredient image must be a valid image file.',
+            'image.mimes' => 'The ingredient image must be a JPG, JPEG, PNG or WEBP file.',
+            'image.max'   => 'The ingredient image may not be larger than 2 MB. Please upload a smaller file.',
         ]);
 
         $validated['is_absurd'] = $request->has('is_absurd');

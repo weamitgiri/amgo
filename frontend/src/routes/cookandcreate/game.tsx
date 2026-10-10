@@ -505,7 +505,10 @@ function GamePage() {
     <CookCreateLayout maxWidthClass="max-w-[1376px]">
       <div className="relative z-10">
         <GameHeader
-          participantName={session?.name}
+          /* Show the player's own game alias (e.g. "sadf60"), not the name they
+             typed at registration, so the header matches every other name on
+             the game screen. */
+          participantName={participants.find((p) => p.isYou)?.name ?? session?.name}
           gameEndsAt={gameState.schedule.game_ends_at}
           clockOffsetMs={clockOffset}
         />
