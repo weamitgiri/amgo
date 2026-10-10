@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Star } from 'lucide-react';
 import { CookCreateLayout } from './CookCreateLayout';
-import type { CCAwardEntry, CCRatingCategory, CCTemplate } from '@/api/types/cookandcreate';
+import type { CCAwardEntry, CCOtherDish, CCRatingCategory, CCTemplate } from '@/api/types/cookandcreate';
 import { clearParticipantSession } from '@/lib/participant-session';
 import { disconnectSocket } from '@/lib/socket';
 import { portraitForRole } from './portraits';
@@ -19,6 +19,13 @@ interface ReviewRatingPageProps {
   reactionCounts: Record<string, number>;
   ratingCategories: CCRatingCategory[];
   awardEntries: CCAwardEntry[];
+  /** Other teams' dishes still awaiting this player's rating. Empty = all rated
+   *  (or none to rate), which is what unlocks the protected left section. The
+   *  list is server-derived (a rated dish drops out), so it stays correct after
+   *  a refresh or reconnect. */
+  otherDishes: CCOtherDish[];
+  /** Submit a rating/nomination for another team's dish. */
+  onRate: (ratedGroupId: number, categoryId: number) => void;
   myGroupId: number;
   /** For the role portraits in the impostor reveal. */
   template: CCTemplate;
@@ -121,6 +128,8 @@ export function ReviewRatingPage({
   reactionCounts,
   ratingCategories,
   awardEntries,
+  otherDishes,
+  onRate,
   myGroupId,
   template,
   doubleDownOutcome,
@@ -129,6 +138,13 @@ export function ReviewRatingPage({
   clockOffsetMs,
 }: ReviewRatingPageProps) {
   const navigate = useNavigate();
+
+  // The protected results (recipe reveal, impostor, awards) stay hidden until
+  // this player has rated every other kitchen's dish. `otherDishes` is server-
+  // derived (a dish drops out once rated), so the gate can't be skipped and is
+  // still correct after a refresh/reconnect.
+  const dishesToRate = otherDishes.length;
+  const resultsUnlocked = dishesToRate === 0;
 
   const exitToHome = () => {
     disconnectSocket();
@@ -176,8 +192,12 @@ export function ReviewRatingPage({
         />
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1.68fr)_minmax(0,1fr)] gap-5 items-stretch">
-          {/* LEFT */}
+          {/* LEFT — protected results; revealed only after every other dish is rated */}
           <div className="flex flex-col gap-5 min-w-0">
+            {!resultsUnlocked ? (
+              <LockedResults dishesToRate={dishesToRate} />
+            ) : (
+            <>
             {/* Recipe Reveal + Ratings & Reaction */}
             <div className="rounded-[16px] border border-[#F5DFC0] p-5 sm:p-6" style={CARD_STYLE}>
               <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6">
@@ -336,10 +356,21 @@ export function ReviewRatingPage({
                 </div>
               </div>
             </div>
+            </>
+            )}
           </div>
 
-          {/* RIGHT — every kitchen's dish and the awards it picked up */}
+          {/* RIGHT — rate other kitchens (gates the left) once done, their awards */}
           <div className="rounded-[16px] border border-[#F9EAD4] p-5 sm:p-6 min-w-0" style={{ background: 'linear-gradient(180deg, #FFFEFD 0%, #FDF5E9 100%)' }}>
+            {!resultsUnlocked ? (
+              <RatingPanel
+                dish={otherDishes[0]}
+                ratingCategories={ratingCategories}
+                onRate={onRate}
+                remaining={dishesToRate}
+              />
+            ) : (
+            <>
             <h3 className="text-lg font-semibold text-center" style={{ color: HEADING }}>What Other Kitchens Cooked Up</h3>
             {kitchens.length === 0 ? (
               <p className="text-[13px] text-[#6F625A] text-center mt-5">
@@ -381,9 +412,130 @@ export function ReviewRatingPage({
                 ))}
               </div>
             )}
+            </>
+            )}
           </div>
         </div>
       </div>
     </CookCreateLayout>
+  );
+}
+
+/** Shown in the left column while the player still has dishes to rate — the
+ *  recipe reveal, impostor and awards stay hidden until the gate is cleared. */
+function LockedResults({ dishesToRate }: { dishesToRate: number }) {
+  return (
+    <div
+      className="rounded-[16px] border border-[#F4D1A5] p-8 sm:p-10 flex-1 flex flex-col items-center justify-center text-center"
+      style={PEACH_STYLE}
+    >
+      <span className="text-4xl" aria-hidden>🔒</span>
+      <h3 className="text-lg font-semibold mt-3" style={{ color: HEADING }}>
+        Your results are locked
+      </h3>
+      <p className="text-[13px] text-[#6F625A] leading-relaxed mt-2 max-w-[320px]">
+        Taste and rate the other kitchens' dishes on the right to reveal your
+        Recipe Reveal, the Imposter and the Fun Awards.
+      </p>
+      <p className="text-[13px] font-semibold mt-3" style={{ color: ORANGE }}>
+        {dishesToRate} dish{dishesToRate === 1 ? '' : 'es'} left to rate
+      </p>
+    </div>
+  );
+}
+
+/** Right-column rating panel: one other kitchen's dish at a time — its final
+ *  recipe steps and the award chips to nominate. Picking one submits the rating
+ *  and (server-side) drops the dish, so the next one takes its place. */
+function RatingPanel({
+  dish,
+  ratingCategories,
+  onRate,
+  remaining,
+}: {
+  dish: CCOtherDish | undefined;
+  ratingCategories: CCRatingCategory[];
+  onRate: (ratedGroupId: number, categoryId: number) => void;
+  remaining: number;
+}) {
+  const [picked, setPicked] = useState<number | null>(null);
+  if (!dish) return null;
+
+  const topNomination = Object.entries(dish.nomination_counts)
+    .filter(([, c]) => c > 0)
+    .sort((a, b) => b[1] - a[1])[0];
+  const topCategory = topNomination ? ratingCategories.find((c) => c.slug === topNomination[0]) : undefined;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-lg font-semibold" style={{ color: HEADING }}>What Other Kitchens Cooked Up</h3>
+        <span className="text-[11px] font-semibold text-[#9A7B59] whitespace-nowrap">{remaining} to rate</span>
+      </div>
+
+      {/* Dish header */}
+      <div className="flex items-center gap-3 rounded-xl border border-[#F1E4D6] bg-[#FFFDF9] p-2.5">
+        <div className="w-16 h-16 rounded-lg bg-[#FAF4ED] overflow-hidden shrink-0">
+          <img src={dishImageFor(dish.group_id)} alt={dish.dish_name} className="w-full h-full object-cover" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-[#6F625A]">{dish.group_name}</p>
+          <p className="text-base font-semibold text-[#2E2A26] leading-tight truncate">{dish.dish_name}</p>
+          {topCategory ? (
+            <p className="text-[13px] text-[#3F3A35] mt-1">{topCategory.emoji} {topNomination![1]} Voted {topCategory.name}</p>
+          ) : (
+            <p className="text-[13px] text-[#A99E92] mt-1">No nominations yet</p>
+          )}
+        </div>
+      </div>
+
+      {/* The dish's final recipe (its kept steps) */}
+      <div className="rounded-xl border border-[#F1E4D6] bg-[#FEFAF6] px-4 pt-3.5 pb-1">
+        <h4 className="text-[15px] font-semibold pb-2.5 border-b border-[#EFE4D6]" style={{ color: ORANGE }}>Game Step</h4>
+        {dish.steps.length === 0 ? (
+          <p className="text-[13px] text-[#A99E92] py-3">No steps recorded for this dish.</p>
+        ) : (
+          <div className="divide-y divide-[#EFE4D6]">
+            {dish.steps.map((s, i) => (
+              <div key={i} className="flex items-start gap-3 py-2.5">
+                <span className="text-[15px] font-semibold w-4 shrink-0 leading-snug" style={{ color: ORANGE }}>
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <p className="text-[13px] text-[#3F3A35] leading-snug">{s.text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Award nomination — picking one submits and moves to the next dish. */}
+      <div>
+        <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Give Rating</p>
+        <p className="text-center text-xs text-[#6F625A] mt-0.5 mb-3">Pick the award this dish deserves</p>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+          {ratingCategories.map((cat) => {
+            const isPicked = picked === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setPicked(cat.id);
+                  onRate(dish.group_id, cat.id);
+                }}
+                title={cat.description ?? cat.name}
+                className={`flex flex-col items-center justify-start gap-1.5 rounded-lg border px-1 pt-2.5 pb-2 text-center transition-colors cursor-pointer ${
+                  isPicked
+                    ? 'border-[#CB7430] bg-[#FFF6EA] shadow-[0_0_0_0.5px_#CB7430]'
+                    : 'border-[#EADCCB] bg-[#FCF5EC] hover:border-[#CB7430]/60'
+                }`}
+              >
+                <span className="text-[26px] leading-none">{cat.emoji}</span>
+                <span className="text-[11px] text-[#3F3A35] leading-tight">{cat.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }

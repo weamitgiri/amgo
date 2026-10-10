@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CookCreateLayout } from './-components/CookCreateLayout';
 import { ReviewRatingPage } from './-components/ReviewRatingPage';
-import { OtherKitchensModal } from './-components/OtherKitchensModal';
 import { clockOffsetMs } from './-components/clock';
 import { cookAndCreateService } from '@/api/services/cookandcreate.service';
 import type { CCAwardsBoard, CCGameStateResponse, CCOtherDish } from '@/api/types/cookandcreate';
@@ -22,9 +21,6 @@ function RatingPage() {
   const [loading, setLoading] = useState(true);
   // Browser-to-server clock correction for the header's Game Time.
   const [clockOffset, setClockOffset] = useState(0);
-  // The "What Other Kitchens Cooked Up" review is a first step (a modal) shown
-  // before the results/reveal screen. Flipped once the player continues past it.
-  const [reviewedOthers, setReviewedOthers] = useState(false);
 
   const groupId = session?.groupId;
   const participantId = session?.participantId;
@@ -96,22 +92,9 @@ function RatingPage() {
     );
   }
 
-  // Step 1: review the other kitchens' dishes and nominate awards. Blank when no
-  // other team has finished yet — the player can still continue to their results.
-  if (!reviewedOthers) {
-    return (
-      <CookCreateLayout maxWidthClass="max-w-[1376px]">
-        <OtherKitchensModal
-          isOpen
-          otherDishes={otherDishes}
-          ratingCategories={gameState.rating_categories}
-          onRate={handleRate}
-          onContinue={() => setReviewedOthers(true)}
-        />
-      </CookCreateLayout>
-    );
-  }
-
+  // The results page gates its own left column: the Recipe Reveal / Imposter /
+  // Fun Awards stay hidden until `otherDishes` (server-derived unrated dishes)
+  // is empty. Rating happens in the page's right column.
   const myId = participantId ? Number(participantId) : null;
   const impostor = gameState.participants.find((p) => p.id === awards?.my_group.impostor_participant_id);
   const mostVoted = gameState.participants.find((p) => p.id === awards?.my_group.most_voted_participant_id);
@@ -134,6 +117,8 @@ function RatingPage() {
       reactionCounts={awards?.my_group.reaction_counts ?? {}}
       ratingCategories={gameState.rating_categories}
       awardEntries={awards?.groups ?? []}
+      otherDishes={otherDishes}
+      onRate={handleRate}
       myGroupId={gameState.instance.group_id}
       template={gameState.template}
       doubleDownOutcome={doubleDownOutcome}
