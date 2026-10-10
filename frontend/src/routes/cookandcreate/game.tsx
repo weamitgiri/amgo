@@ -740,12 +740,6 @@ function GameHeader({
         <span className="text-[22px] font-semibold text-[#2E2A26] whitespace-nowrap">Cook &amp; Create</span>
       </div>
       <div className="flex items-center gap-4 sm:gap-8">
-        <div className="flex items-center gap-3 sm:gap-4 rounded-lg border border-[#F1E3D5] bg-[#FFF5E6] px-3 sm:px-4 py-2.5">
-          <span className="hidden sm:inline text-[15px] text-[#4A4540]">Game Time Remaining</span>
-          <span className="text-xl font-bold text-[#2E2A26] tabular-nums leading-none">
-            {formatGameRemaining(gameEndsAt, clockOffsetMs)}
-          </span>
-        </div>
         <div className="flex items-center gap-3">
           <span
             className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[13px] font-medium shrink-0"
@@ -754,6 +748,13 @@ function GameHeader({
             {initials}
           </span>
           <span className="hidden sm:inline text-base text-[#2E2A26] whitespace-nowrap">{participantName}</span>
+        </div>
+        {/* Game Time Remaining sits on the far right of the game-screen header. */}
+        <div className="flex items-center gap-3 sm:gap-4 rounded-lg border border-[#F1E3D5] bg-[#FFF5E6] px-3 sm:px-4 py-2.5">
+          <span className="hidden sm:inline text-[15px] text-[#4A4540]">Game Time Remaining</span>
+          <span className="text-xl font-bold text-[#2E2A26] tabular-nums leading-none">
+            {formatGameRemaining(gameEndsAt, clockOffsetMs)}
+          </span>
         </div>
       </div>
     </div>
