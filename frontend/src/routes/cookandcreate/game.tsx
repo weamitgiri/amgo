@@ -538,7 +538,7 @@ function GamePage() {
 
             <div className="flex items-center gap-5 rounded-lg border border-[#F2CD9C] bg-[#FDD9A9] px-4 py-2">
               <span className="text-sm leading-snug text-[#5A4A3A] text-center max-w-[150px]">
-                {currentRound === 2 ? 'Add your cooking step before times Runs Out' : 'Voting Ends in'}
+                {currentRound === 2 ? 'Add your cooking step before times Runs Out' : 'Confirm the Vote before times Runs Out'}
               </span>
               <span className="text-[34px] font-bold text-[#592e16] tabular-nums leading-none">
                 {timerMm}:{timerSs}

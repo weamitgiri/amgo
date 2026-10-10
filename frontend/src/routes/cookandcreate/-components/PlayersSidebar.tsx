@@ -47,13 +47,13 @@ export function PlayersSidebar({ players, myRoleLabel, myRoleEmoji = '🍳' }: P
                 className="w-8 h-8 rounded-full text-white font-bold text-xs flex items-center justify-center shrink-0"
                 style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
               >
-                {initials(player.name)}
+                {initials(player.name)} 
               </div>
 
               {/* Player details */}
               <div className="min-w-0">
                 <span className="text-xs font-bold text-[#3D2E1F] block truncate">
-                  {player.name}
+                  {player.name} 
                   {player.isYou ? ' (You)' : ''}
                 </span>
                 <div className="flex items-center gap-1 mt-0.5">

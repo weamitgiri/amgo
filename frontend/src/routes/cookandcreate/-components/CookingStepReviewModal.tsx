@@ -212,7 +212,7 @@ export function CookingStepReviewModal({
               : submitting
                 ? 'Submitting…'
                 : removeStepId === null
-                  ? 'Select 1 step to remove'
+                  ? 'Submit Votes'
                   : 'Submit Votes'}
         </button>
       </div>

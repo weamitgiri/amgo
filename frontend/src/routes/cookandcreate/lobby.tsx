@@ -31,12 +31,12 @@ export const Route = createFileRoute('/cookandcreate/lobby')({
 // Fallback only — used before the API responds, or if an admin hasn't set
 // any rules yet for this template (Laravel admin: Cook & Create > Templates).
 const DEFAULT_RULE_TEXTS = [
-  'Play 3 rounds: Ingredients → Steps → Elimination.',
+  'Play 3 rounds: Ingredients → Steps → Final Verdict.',
   'Select ingredients and submit one step, actions are time-bound.',
   'All actions are anonymous, observe patterns carefully.',
-  'One player is the hidden Impostor trying to mislead the group.',
-  'Use clues to identify suspicious actions.',
-  'Vote wisely to eliminate the Impostor and win.',
+  'Every choice shapes the final dish, so choose with care.',
+  'Use clues from each round to understand what your team is doing.',
+  'Make your final call in the last round and see how your team did.',
 ];
 // Custom per-rule icons (icon1–6), matching the design (cycled if an admin adds more).
 const RULE_PNG_ICONS = [ruleIcon,ruleIcon1, ruleIcon2, ruleIcon3, ruleIcon4, ruleIcon5, ruleIcon6];

@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { resolveMediaUrl } from '@/utils/media';
 import basketImg from '../../../assets/cookandcreate/game-flow-step-1.png';
+import imposterIcon from '../../../assets/cookandcreate/imposter-icon.png';
 
 export type CCTopIngredient = {
   id: number;
@@ -47,7 +48,7 @@ export function RoundResultsModal({ isOpen, onClose, topIngredients, absurdVoted
         {/* Header */}
         <div className="flex items-center gap-3">
           <span className="w-14 h-14 rounded-full bg-[#FBEED5] border border-[#F6E0C0] flex items-center justify-center shrink-0">
-            <img src={basketImg} alt="" className="w-9 h-9 object-contain" />
+            <img src={basketImg} alt="" className="object-contain" />
           </span>
           <h2 className="text-[22px] sm:text-2xl font-bold" style={{ color: HEADING }}>
             Round 1: Results
@@ -95,7 +96,7 @@ export function RoundResultsModal({ isOpen, onClose, topIngredients, absurdVoted
         {absurdVoted.length > 0 && (
           <div className="mt-6 flex items-start gap-3 rounded-xl border border-[#F2D3A3] bg-[#F9E3C4] px-4 py-3.5">
             <span className="text-2xl leading-none shrink-0" aria-hidden>
-              😈
+              <img src={imposterIcon} alt="" className="object-contain" />
             </span>
             <p className="text-sm text-[#2E2E2E] leading-relaxed">
               <span className="font-semibold">{absurdLabel}</span> also received votes.
