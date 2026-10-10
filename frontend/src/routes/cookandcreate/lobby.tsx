@@ -212,7 +212,7 @@ function LobbyPage() {
                     style={{ color: '#2e2e2e' }}
                   >
                     {/*{gameState?.template.description || 'Work together to create the best dish while finding the hidden imposter in your team.'}*/}
-                    {'Work together to create the best dish while finding the hidden imposter in your team.' || 'Work together to create the best dish while finding the hidden imposter in your team.'}
+                    {'Team up, choose your ingredients, and cook the best dish together. Every choice counts, so stay sharp.' || 'Team up, choose your ingredients, and cook the best dish together. Every choice counts, so stay sharp.'}
                   </p>
                 </div>
               </div>
