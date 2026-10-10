@@ -77,11 +77,13 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
           <X size={22} className="text-white" strokeWidth={2.5} />
         </button>
 
-        <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-stretch">
-          {/* LEFT: portrait illustration */}
-          <div className="md:w-[42%] flex items-stretch">
-            <div className="w-full rounded-2xl bg-[#F9EEE2] border border-[#F0DFC9] overflow-hidden flex items-end justify-center p-3 shadow-inner">
-              <img src={copy.image} alt={roleLabel} className="w-full object-contain drop-shadow-md" />
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+          {/* LEFT: portrait illustration — the box keeps the art's own 303×517
+              aspect and top-aligns, so the figure fills it with no empty gap
+              (it no longer stretches to the taller right column). */}
+          <div className="w-full md:w-[42%] shrink-0">
+            <div className="w-full aspect-[303/517] rounded-2xl bg-[#F9EEE2] border border-[#F0DFC9] overflow-hidden shadow-inner">
+              <img src={copy.image} alt={roleLabel} className="w-full h-full object-cover object-top" />
             </div>
           </div>
 
