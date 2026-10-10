@@ -140,8 +140,7 @@ function GamePage() {
 
   useEffect(() => {
     if (gameState?.instance.status === 'completed') {
-      navigate({ to: '/cookandcreate/game' });
-     // navigate({ to: '/cookandcreate/game' });
+      navigate({ to: '/cookandcreate/rating' });
     }
   }, [gameState?.instance.status, navigate]);
 
