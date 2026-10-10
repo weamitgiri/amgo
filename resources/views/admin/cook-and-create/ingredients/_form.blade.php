@@ -29,7 +29,7 @@
     @error('image') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
     <small class="form-text text-muted">
         <i class="fas fa-info-circle mr-1"></i>
-        Recommended: a <strong>square image, 256&times;256 px</strong> (up to 512&times;512 px).
+        Required: the image must be exactly <strong>302 &times; 253 px</strong> (width &times; height).
         Max size <strong>2 MB</strong> &middot; JPG, JPEG, PNG or WEBP.
         A transparent PNG looks best — the ingredient shows on a light card in the game.
     </small>
