@@ -26,11 +26,11 @@ const ROLE_COPY: Record<
     blurb: 'You are part of the cooking team. Work together to create the best dish.',
     goals: ['Choose useful ingredients', 'Add logical cooking steps', 'Help identify the impostor'],
     know: [
-      'One player is secretly sabotaging the dish',
+      'Every chef adds one step to the dish',
       'Not all choices will make sense',
-      'Patterns across rounds reveal the truth',
+      'Patterns across rounds show how the dish is coming together',
     ],
-    keepInMind: 'Think before you vote. One wrong decision can save the impostor.',
+    keepInMind: 'Think before you vote. Every decision counts.',
     image: chef1Img,
   },
   show_host: {
@@ -48,7 +48,7 @@ const ROLE_COPY: Record<
   impostor: {
     intro: 'You are the Impostor.',
     blurb: 'You are secretly trying to spoil the dish and mislead the team — without getting caught.',
-    goals: ['Blend in with the group', 'Nudge bad choices without being obvious', 'Avoid getting voted out'],
+    goals: ['Blend in with the group', 'Nudge bad choices without being obvious', 'Avoid getting voted out','Your goal is to spoil the dish. Pick the worst ingredients and the worst cooking step, and win the game as the Imposter.'],
     know: ['Everyone else is genuinely trying to cook well', 'Your choices need to look plausible'],
     keepInMind: 'Deflect, don’t deny too hard. Stay calm under questioning.',
     image: imposterImg,
