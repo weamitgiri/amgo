@@ -10,6 +10,12 @@ import { dishImageFor } from './dishImages';
 import imposterImg from '../../../assets/cookandcreate/imposter 1.png';
 import logoImg from '../../../assets/cookandcreate/Cook  and Create Logo.png';
 
+import a from '../../../assets/cookandcreate/rating-icon/a.png';
+import b from '../../../assets/cookandcreate/rating-icon/b.png';
+import c from '../../../assets/cookandcreate/rating-icon/c.png';
+import d from '../../../assets/cookandcreate/rating-icon/d.png';
+import e from '../../../assets/cookandcreate/rating-icon/e.png';
+
 interface ReviewRatingPageProps {
   dishName: string;
   groupWon: boolean | null;
@@ -42,6 +48,17 @@ const ORANGE = '#CB7430';
 const HEADING = '#53301B';
 const CARD_STYLE = { background: 'linear-gradient(180deg, #FFFEFD 0%, #FEF7EF 100%)' };
 const PEACH_STYLE = { background: 'linear-gradient(180deg, #F8D5B0 0%, #FAE3C6 100%)' };
+
+/* The five reaction face icons, in rating-category order (a = 1st category …
+   e = 5th). Used for both the "Reactions" grid and the "Give Rating" grid so
+   the same face always represents the same category. */
+const RATING_ICONS = [a, b, c, d, e];
+const ratingIconFor = (index: number) => RATING_ICONS[index] ?? RATING_ICONS[RATING_ICONS.length - 1];
+
+/* Short reaction labels shown under each face in the "Reactions" section (the
+   full category names are used in the "Give Rating" section), matched to the
+   categories by order. */
+const REACTION_LABELS = ['Delicious!', 'Creative!', 'Funny!', 'What is this?!', 'Yikes!'];
 
 function formatRemaining(endsAt: string | null | undefined, offsetMs: number): string {
   if (!endsAt) return '--:--';
@@ -152,16 +169,16 @@ export function ReviewRatingPage({
     navigate({ to: '/' });
   };
 
-  // Reactions this dish received. When there are none yet we still render the
-  // cards (greyed) so the section always looks like the design.
-  const withCounts = ratingCategories
-    .map((c) => ({ ...c, count: reactionCounts[c.slug] ?? 0 }))
-    .filter((c) => c.count > 0)
-    .sort((a, b) => b.count - a.count);
-  const hasReactions = withCounts.length > 0;
-  const reactionCards = hasReactions
-    ? withCounts.slice(0, 5)
-    : ratingCategories.slice(0, 5).map((c) => ({ ...c, count: 0 }));
+  // Reactions this dish received — the five categories in order, each with its
+  // face icon, short label and real received count (greyed when still 0 so the
+  // section always matches the design).
+  const reactionCards = ratingCategories.slice(0, 5).map((cat, i) => ({
+    id: cat.id,
+    icon: ratingIconFor(i),
+    label: REACTION_LABELS[i] ?? cat.name,
+    count: reactionCounts[cat.slug] ?? 0,
+  }));
+  const hasReactions = reactionCards.some((r) => r.count > 0);
 
   // Fun Awards: which group leads each category (real, from the board). Cards
   // with no winner yet render greyed so the grid always fills.
@@ -251,9 +268,9 @@ export function ReviewRatingPage({
                           r.count === 0 ? 'opacity-45' : ''
                         }`}
                       >
-                        <span className="text-[26px] leading-none">{r.emoji}</span>
+                        <img src={r.icon} alt={r.label} className="w-8 h-8 object-contain" />
                         <span className="text-[10px] text-[#3F3A35] leading-tight text-center mt-1.5 min-h-[25px] flex items-center">
-                          {r.name}
+                          {r.label}
                         </span>
                         <span className="text-base font-semibold mt-1" style={{ color: ORANGE }}>{r.count}</span>
                       </div>
@@ -513,7 +530,7 @@ function RatingPanel({
         <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Give Rating</p>
         <p className="text-center text-xs text-[#6F625A] mt-0.5 mb-3">Pick the award this dish deserves</p>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-          {ratingCategories.map((cat) => {
+          {ratingCategories.map((cat, i) => {
             const isPicked = picked === cat.id;
             return (
               <button
@@ -529,7 +546,7 @@ function RatingPanel({
                     : 'border-[#EADCCB] bg-[#FCF5EC] hover:border-[#CB7430]/60'
                 }`}
               >
-                <span className="text-[26px] leading-none">{cat.emoji}</span>
+                <img src={ratingIconFor(i)} alt={cat.name} className="w-7 h-7 object-contain" />
                 <span className="text-[11px] text-[#3F3A35] leading-tight">{cat.name}</span>
               </button>
             );
