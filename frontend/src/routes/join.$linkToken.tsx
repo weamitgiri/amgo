@@ -335,6 +335,14 @@ function JoinPage() {
       </header>
 
       <main className="relative px-4 pb-16">
+        {step === "invalid" ? (
+          // Activity not found: hide the quest-info panel and centre the error.
+          <div className="mx-auto max-w-[1240px] min-h-[70vh] flex items-center justify-center">
+            <div className="w-full max-w-md rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 p-8 shadow-elevated flex flex-col">
+              <ActivityNotFoundStep message={linkError} />
+            </div>
+          </div>
+        ) : (
         <div className="mx-auto max-w-[1240px] grid gap-8 lg:grid-cols-2">
           {/* LEFT — quest info */}
           <div className="relative rounded-[2.5rem] overflow-hidden border border-white/10 shadow-elevated flex flex-col min-h-[640px]">
@@ -422,7 +430,6 @@ function JoinPage() {
           {/* RIGHT — form / otp */}
           <div className="rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 p-8 shadow-elevated min-h-[560px] flex flex-col">
             {step === "loading" && <LoadingStep />}
-            {step === "invalid" && <ActivityNotFoundStep message={linkError} />}
             {step === "pending" && (
               <PendingStep
                 activityTitle={activityTitle}
@@ -477,6 +484,7 @@ function JoinPage() {
             </div>
           </div>
         </div>
+        )}
 
         <p className="mt-10 text-center text-xs text-white/55">
           Powered by <span className="text-white">Zoventro</span> · © 2026 zoventro.com All Rights Reserved
