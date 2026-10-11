@@ -161,6 +161,9 @@ export type CCGameStateResponse = {
   my_role_label: string | null;
   is_impostor: boolean;
   is_show_host: boolean;
+  /** True once this player has submitted a star rating AND an emoji reaction for
+   *  every other completed dish. The protected results stay locked until then. */
+  reviews_complete: boolean;
   impostor_bias_card: string | null;
   // Round 1
   all_ingredients: CCIngredient[];
@@ -201,6 +204,10 @@ export type CCOtherDish = {
   nomination_counts: Record<string, number>;
   /** The dish's final recipe — its kept Round-2 steps, in order. */
   steps: { letter: string; text: string }[];
+  /** This player's own in-progress review of the dish, for refresh-restore.
+   *  A review is complete only once both are set. */
+  my_category_id: number | null;
+  my_stars: number | null;
 };
 
 export type CCAward = {
@@ -229,5 +236,9 @@ export type CCAwardsBoard = {
     double_down_penalty_applied: boolean;
     /** How many nominations this group's dish received, per category slug. */
     reaction_counts: Record<string, number>;
+    /** Average 1–5 star rating this group's dish received (null when none yet). */
+    average_rating: number | null;
+    /** How many star ratings the average is based on. */
+    rating_count: number;
   };
 };

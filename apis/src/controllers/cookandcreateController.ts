@@ -17,6 +17,7 @@ import {
     getInstanceById,
     getOrCreateCCInstance,
     getOtherDishes as getOtherDishesService,
+    hasCompletedAllReviews,
     advanceRound2Turn,
     advanceRound3ToVoting,
     getRound2TurnParticipantId,
@@ -462,11 +463,20 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
     );
     const releasedClues = clueRows.map((r: any) => ({ id: Number(r.id), text: r.clue_text, round_number: Number(r.round_number) }));
 
+    // Has THIS player finished every required other-group review (a star rating
+    // AND an emoji reaction on each other completed dish)? The protected results
+    // stay locked until they have. Only meaningful once the game is over.
+    const reviewsComplete =
+        instance.status === 'completed' && myParticipantId != null
+            ? await hasCompletedAllReviews(instance.group_id, myParticipantId)
+            : false;
+
     // The impostor's identity is the one genuine secret in this game — never
     // send it to anyone except the impostor themselves, until the game is
-    // over and the reveal is public (finalizeRound3 already broadcasts it via
-    // cc_round3_complete at that point).
-    const revealImpostor = instance.status === 'completed' || isImpostor;
+    // over, the reveal is public (finalizeRound3 already broadcasts it via
+    // cc_round3_complete at that point) AND this player has completed their
+    // required reviews. The impostor always sees their own role.
+    const revealImpostor = isImpostor || (instance.status === 'completed' && reviewsComplete);
 
     // The Double Down offer is "secretly selected" per the game design — only
     // the chosen participant (or everyone, once the game is over) should see
@@ -495,6 +505,7 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
         my_role_label: myRoleLabel,
         is_impostor: isImpostor,
         is_show_host: isShowHost,
+        reviews_complete: reviewsComplete,
         impostor_bias_card: isImpostor ? template.impostor_bias_card_text : null,
         // Round 1
         all_ingredients: allIngredients,
@@ -901,9 +912,21 @@ export const getOtherDishes = asyncHandler(async (req: Request, res: Response) =
  * Rating: nominate another group's dish for an award category
  */
 export const submitRatingHandler = asyncHandler(async (req: Request, res: Response) => {
-    const { instance_id, participant_id, rated_group_id, category_id } = req.body;
-    if (!instance_id || !participant_id || !rated_group_id || !category_id) {
-        throw new AppError('instance_id, participant_id, rated_group_id, and category_id are required', 400);
+    const { instance_id, participant_id, rated_group_id, category_id, stars } = req.body;
+    if (!instance_id || !participant_id || !rated_group_id) {
+        throw new AppError('instance_id, participant_id, and rated_group_id are required', 400);
+    }
+    const hasCategory = category_id !== undefined && category_id !== null && category_id !== '';
+    const hasStars = stars !== undefined && stars !== null && stars !== '';
+    if (!hasCategory && !hasStars) {
+        throw new AppError('Provide a star rating and/or an emoji reaction', 400);
+    }
+    let starsVal: number | null = null;
+    if (hasStars) {
+        starsVal = Number(stars);
+        if (!Number.isInteger(starsVal) || starsVal < 1 || starsVal > 5) {
+            throw new AppError('Star rating must be a whole number from 1 to 5', 400);
+        }
     }
 
     const data = await getInstanceById(instance_id);
@@ -911,11 +934,19 @@ export const submitRatingHandler = asyncHandler(async (req: Request, res: Respon
     if (data.instance.status !== 'completed') {
         throw new AppError('You can rate other kitchens once your own game has finished', 400);
     }
+    // Membership: the rater must belong to the instance's group.
+    const [memberRows] = await query<any>(
+        'SELECT 1 FROM game_participants WHERE id = ? AND group_id = ? LIMIT 1',
+        [participant_id, data.instance.group_id]
+    );
+    if (!memberRows || memberRows.length === 0) {
+        throw new AppError('You are not a member of this group', 403);
+    }
     if (Number(rated_group_id) === data.instance.group_id) {
         throw new AppError('You cannot rate your own group', 400);
     }
 
-    await submitRating(instance_id, participant_id, rated_group_id, category_id);
+    await submitRating(instance_id, participant_id, rated_group_id, hasCategory ? category_id : null, starsVal);
     return successResponse(res, 'Rating submitted', {});
 });
 
@@ -924,6 +955,24 @@ export const submitRatingHandler = asyncHandler(async (req: Request, res: Respon
  */
 export const getAwardsHandler = asyncHandler(async (req: Request, res: Response) => {
     const { group_id } = req.params;
+    const participantId = (req.query.participant_id as string | undefined) || undefined;
+    if (!participantId) {
+        throw new AppError('participant_id is required', 400);
+    }
+    // Backend-enforced gate — never trust a frontend flag. The requester must
+    // belong to this group AND have submitted a star rating + emoji reaction for
+    // every other completed dish before the protected results board is returned.
+    const [memberRows] = await query<any>(
+        'SELECT 1 FROM game_participants WHERE id = ? AND group_id = ? LIMIT 1',
+        [participantId, group_id]
+    );
+    if (!memberRows || memberRows.length === 0) {
+        throw new AppError('You are not a member of this group', 403);
+    }
+    const complete = await hasCompletedAllReviews(group_id, participantId);
+    if (!complete) {
+        throw new AppError('Rate and react to every other dish to unlock the results', 403);
+    }
     const board = await getAwards(group_id);
     if (!board) throw new AppError('Group not found', 404);
     return successResponse(res, 'Awards loaded', board);

@@ -1108,6 +1108,10 @@ export type CCOtherDish = {
     nomination_counts: Record<string, number>;
     /** The dish's final recipe — its kept Round-2 steps, in order. */
     steps: { letter: string; text: string }[];
+    /** This participant's own in-progress review of the dish (for refresh-restore).
+     *  A review is complete only once both are set. */
+    my_category_id: number | null;
+    my_stars: number | null;
 };
 
 /**
@@ -1126,10 +1130,20 @@ export async function getOtherDishes(groupId: number | string, participantId: nu
          JOIN cc_game_instances ci ON ci.group_id = gg.id
          WHERE gg.booking_id = ? AND gg.id != ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL
            AND gg.id NOT IN (
-             SELECT rated_group_id FROM cc_ratings WHERE voting_participant_id = ? AND rated_group_id IS NOT NULL
+             SELECT rated_group_id FROM cc_ratings
+             WHERE voting_participant_id = ? AND rated_group_id IS NOT NULL
+               AND category_id IS NOT NULL AND stars IS NOT NULL
            )
-         ORDER BY RAND() LIMIT 3`,
-        [bookingId, groupId, participantId]
+         ORDER BY
+           -- A dish this player has already half-reviewed (one of star/emoji) comes
+           -- first, so a refreshed in-progress selection is the one on screen.
+           (gg.id IN (
+             SELECT rated_group_id FROM cc_ratings
+             WHERE voting_participant_id = ? AND rated_group_id IS NOT NULL
+           )) DESC,
+           gg.id ASC
+         LIMIT 3`,
+        [bookingId, groupId, participantId, participantId]
     );
     if (!rows || rows.length === 0) return [];
 
@@ -1163,13 +1177,33 @@ export async function getOtherDishes(groupId: number | string, participantId: nu
         stepsByInstance.get(iid)!.push({ letter: s.step_letter, text: s.step_text });
     }
 
-    return rows.map((r: any) => ({
-        group_id: Number(r.group_id),
-        group_name: r.group_name,
-        dish_name: r.dish_name,
-        nomination_counts: countsByGroup.get(Number(r.group_id)) || {},
-        steps: stepsByInstance.get(Number(r.instance_id)) || [],
-    }));
+    // This participant's own in-progress review of each dish (so a partial
+    // star/emoji selection is restored after a refresh).
+    const [myRows] = await query<any>(
+        `SELECT rated_group_id, category_id, stars FROM cc_ratings
+         WHERE voting_participant_id = ? AND rated_group_id IN (?)`,
+        [participantId, groupIds]
+    );
+    const myReviewByGroup = new Map<number, { category_id: number | null; stars: number | null }>();
+    for (const m of myRows || []) {
+        myReviewByGroup.set(Number(m.rated_group_id), {
+            category_id: m.category_id != null ? Number(m.category_id) : null,
+            stars: m.stars != null ? Number(m.stars) : null,
+        });
+    }
+
+    return rows.map((r: any) => {
+        const mine = myReviewByGroup.get(Number(r.group_id));
+        return {
+            group_id: Number(r.group_id),
+            group_name: r.group_name,
+            dish_name: r.dish_name,
+            nomination_counts: countsByGroup.get(Number(r.group_id)) || {},
+            steps: stepsByInstance.get(Number(r.instance_id)) || [],
+            my_category_id: mine?.category_id ?? null,
+            my_stars: mine?.stars ?? null,
+        };
+    });
 }
 
 /**
@@ -1178,17 +1212,53 @@ export async function getOtherDishes(groupId: number | string, participantId: nu
  * same category for the same group is a harmless idempotent no-op via the
  * unique key added in schemaHelpers.ts.
  */
+/**
+ * Records one participant's review of another group's dish. A review lives in a
+ * single cc_ratings row per (participant, rated group) that carries BOTH the
+ * emoji reaction (category_id) and the 1–5 star rating (stars). Either part can
+ * be saved on its own — the review completes once both are present — and either
+ * can be re-submitted to edit it. COALESCE keeps the part that isn't being
+ * updated, and the unique (participant, group) key makes this an upsert.
+ */
 export async function submitRating(
     instanceId: number | string,
     participantId: number | string,
     ratedGroupId: number | string,
-    categoryId: number | string
+    categoryId: number | string | null,
+    stars: number | null
 ): Promise<void> {
     await query(
-        `INSERT INTO cc_ratings (instance_id, category_id, voting_participant_id, rated_group_id, created_at)
-         VALUES (?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE created_at = created_at`,
-        [instanceId, categoryId, participantId, ratedGroupId]
+        `INSERT INTO cc_ratings (instance_id, category_id, stars, voting_participant_id, rated_group_id, created_at)
+         VALUES (?, ?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE
+            category_id = COALESCE(VALUES(category_id), category_id),
+            stars       = COALESCE(VALUES(stars), stars)`,
+        [instanceId, categoryId ?? null, stars ?? null, participantId, ratedGroupId]
     );
+}
+
+/**
+ * Backend source of truth for the rating-gated results: true only when, for
+ * every OTHER completed dish in this group's booking, the participant has a
+ * review row with BOTH a star rating and an emoji reaction. When there are no
+ * other dishes to review it is trivially complete.
+ */
+export async function hasCompletedAllReviews(groupId: number | string, participantId: number | string): Promise<boolean> {
+    const [groupRows] = await query<any>('SELECT booking_id FROM game_groups WHERE id = ?', [groupId]);
+    if (!groupRows || groupRows.length === 0) return false;
+    const bookingId = groupRows[0].booking_id;
+    const [rows] = await query<any>(
+        `SELECT COUNT(*) AS pending
+         FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
+         WHERE gg.booking_id = ? AND gg.id != ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL
+           AND gg.id NOT IN (
+             SELECT rated_group_id FROM cc_ratings
+             WHERE voting_participant_id = ? AND rated_group_id IS NOT NULL
+               AND category_id IS NOT NULL AND stars IS NOT NULL
+           )`,
+        [bookingId, groupId, participantId]
+    );
+    return Number(rows?.[0]?.pending || 0) === 0;
 }
 
 export type CCAwardEntry = {
@@ -1210,6 +1280,10 @@ export type CCAwardsBoard = {
         double_down_penalty_applied: boolean;
         /** How many nominations this group's dish received, per category slug. */
         reaction_counts: Record<string, number>;
+        /** Average 1–5 star rating received (null when none yet). */
+        average_rating: number | null;
+        /** How many star ratings the average is based on. */
+        rating_count: number;
     };
 };
 
@@ -1332,6 +1406,19 @@ export async function getAwards(groupId: number | string): Promise<CCAwardsBoard
         for (const row of reactionRows || []) reactionCounts[row.slug] = Number(row.c);
     }
 
+    // Average 1–5 star rating this group's dish received from other players
+    // (from the persisted `stars`, independent of the emoji reactions).
+    let averageRating: number | null = null;
+    let ratingCount = 0;
+    {
+        const [avgRows] = await query<any>(
+            `SELECT AVG(stars) AS avg_stars, COUNT(stars) AS n FROM cc_ratings WHERE rated_group_id = ? AND stars IS NOT NULL`,
+            [groupId]
+        );
+        ratingCount = Number(avgRows?.[0]?.n || 0);
+        averageRating = ratingCount > 0 ? Math.round(Number(avgRows[0].avg_stars) * 10) / 10 : null;
+    }
+
     return {
         groups,
         my_group: {
@@ -1343,6 +1430,8 @@ export async function getAwards(groupId: number | string): Promise<CCAwardsBoard
             double_down_used: doubleDownAccepted,
             double_down_penalty_applied: doubleDownAccepted && doubleDownWasWrong,
             reaction_counts: reactionCounts,
+            average_rating: averageRating,
+            rating_count: ratingCount,
         },
     };
 }

@@ -525,10 +525,12 @@ export async function ensureCookAndCreateSchema(): Promise<void> {
             `CREATE TABLE IF NOT EXISTS cc_ratings (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 instance_id BIGINT UNSIGNED NOT NULL,
-                category_id BIGINT UNSIGNED NOT NULL,
+                category_id BIGINT UNSIGNED NULL,
+                stars TINYINT UNSIGNED NULL,
                 voting_participant_id BIGINT UNSIGNED NOT NULL,
                 rated_group_id BIGINT UNSIGNED DEFAULT NULL,
                 created_at TIMESTAMP NULL DEFAULT NULL,
+                UNIQUE KEY unique_review (voting_participant_id, rated_group_id),
                 KEY instance_id (instance_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         ];
@@ -634,15 +636,29 @@ export async function ensureCookAndCreateSchema(): Promise<void> {
             );
         }
 
-        // 12. One nomination per (voter, rated group, category) — lets rating
-        // submission use ON DUPLICATE KEY UPDATE to stay idempotent on re-taps.
-        const [ratingKeyRows] = await query<any>(
+        // 12. Results review = one row per (voter, rated group) holding BOTH the
+        // emoji reaction (category_id, now nullable) and the 1–5 star rating
+        // (stars). The unique key is per (voter, rated group) so there is exactly
+        // one review per other group.
+        const [starsCol] = await query<any>(`SHOW COLUMNS FROM cc_ratings LIKE 'stars'`);
+        if ((starsCol as any).length === 0) {
+            await query(`ALTER TABLE cc_ratings ADD COLUMN stars TINYINT UNSIGNED NULL AFTER category_id`);
+        }
+        // category_id nullable so a star can be saved before an emoji (either order).
+        try {
+            await query(`ALTER TABLE cc_ratings MODIFY COLUMN category_id BIGINT UNSIGNED NULL`);
+        } catch (_e) { /* already nullable */ }
+        const [oldRatingKey] = await query<any>(
             `SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cc_ratings' AND INDEX_NAME = 'unique_vote_per_category'`
         );
-        if ((ratingKeyRows as any).length === 0) {
-            await query(
-                `ALTER TABLE cc_ratings ADD UNIQUE KEY unique_vote_per_category (voting_participant_id, rated_group_id, category_id)`
-            );
+        if ((oldRatingKey as any).length > 0) {
+            await query(`ALTER TABLE cc_ratings DROP INDEX unique_vote_per_category`);
+        }
+        const [newRatingKey] = await query<any>(
+            `SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cc_ratings' AND INDEX_NAME = 'unique_review'`
+        );
+        if ((newRatingKey as any).length === 0) {
+            await query(`ALTER TABLE cc_ratings ADD UNIQUE KEY unique_review (voting_participant_id, rated_group_id)`);
         }
 
         // 13. Admin-uploadable background image for the Challenge Brief (pre-

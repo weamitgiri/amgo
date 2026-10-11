@@ -38,7 +38,9 @@ function RatingPage() {
       const [state, dishes, board] = await Promise.all([
         cookAndCreateService.getGameState(groupId, participantId),
         cookAndCreateService.getOtherDishes(groupId, participantId).catch(() => ({ dishes: [] })),
-        cookAndCreateService.getAwards(groupId).catch(() => null),
+        // The awards board is gated server-side (403 until every review is done),
+        // so this stays null until the player has unlocked it.
+        cookAndCreateService.getAwards(groupId, participantId).catch(() => null),
       ]);
       setGameState(state);
       setClockOffset(clockOffsetMs(state.schedule, Date.now()));
@@ -66,29 +68,47 @@ function RatingPage() {
     }
   }, [gameState, navigate]);
 
+  // A review for one other dish is two parts — a 1–5 star rating and an emoji
+  // reaction — saved independently as the player sets them (so a partial choice
+  // survives a refresh). A dish only drops out, and the results only unlock,
+  // once BOTH parts exist, so we just update local state for a partial save and
+  // re-pull the server-derived pool / gate / tallies when the review completes.
   const handleRate = useCallback(
-    async (ratedGroupId: number, categoryId: number) => {
+    async (ratedGroupId: number, review: { categoryId?: number; stars?: number }) => {
       if (!gameState || !participantId) return;
+      const current = otherDishes.find((dd) => dd.group_id === ratedGroupId);
+      const willHaveCategory = (review.categoryId ?? current?.my_category_id ?? null) != null;
+      const willHaveStars = (review.stars ?? current?.my_stars ?? null) != null;
+      const willBeComplete = willHaveCategory && willHaveStars;
       try {
         await cookAndCreateService.submitRating({
           instance_id: gameState.instance.id,
           participant_id: participantId,
           rated_group_id: ratedGroupId,
-          category_id: categoryId,
+          category_id: review.categoryId ?? null,
+          stars: review.stars ?? null,
         });
-        // The rated group drops out of rotation server-side — refresh both
-        // the pool and the live award tallies.
-        const [dishes, board] = await Promise.all([
-          cookAndCreateService.getOtherDishes(groupId!, participantId).catch(() => ({ dishes: [] })),
-          cookAndCreateService.getAwards(groupId!).catch(() => null),
-        ]);
-        setOtherDishes(dishes.dishes);
-        setAwards(board);
+        if (willBeComplete) {
+          await loadAll();
+        } else {
+          // Keep the half-finished selection on screen without reshuffling the pool.
+          setOtherDishes((prev) =>
+            prev.map((dd) =>
+              dd.group_id === ratedGroupId
+                ? {
+                    ...dd,
+                    my_category_id: review.categoryId ?? dd.my_category_id,
+                    my_stars: review.stars ?? dd.my_stars,
+                  }
+                : dd
+            )
+          );
+        }
       } catch (err) {
         toastError(err instanceof Error ? err.message : 'Could not submit that rating.');
       }
     },
-    [gameState, participantId, groupId]
+    [gameState, participantId, otherDishes, loadAll]
   );
 
   if (loading || !gameState) {
@@ -122,9 +142,12 @@ function RatingPage() {
       impostor={impostor ? { name: impostor.isYou ? 'You' : impostor.name, roleLabel: impostor.role_label } : null}
       mostVoted={mostVoted ? { name: mostVoted.isYou ? 'You' : mostVoted.name, roleLabel: mostVoted.role_label } : null}
       reactionCounts={awards?.my_group.reaction_counts ?? {}}
+      averageRating={awards?.my_group.average_rating ?? null}
+      ratingCount={awards?.my_group.rating_count ?? 0}
       ratingCategories={gameState.rating_categories}
       awardEntries={awards?.groups ?? []}
       otherDishes={otherDishes}
+      reviewsComplete={gameState.reviews_complete}
       onRate={handleRate}
       myGroupId={gameState.instance.group_id}
       template={gameState.template}

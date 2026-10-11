@@ -23,15 +23,22 @@ interface ReviewRatingPageProps {
   mostVoted: { name: string; roleLabel: string } | null;
   /** This group's own received reactions, per category slug. */
   reactionCounts: Record<string, number>;
+  /** This group's average 1–5 star rating received (null when none yet). */
+  averageRating: number | null;
+  /** How many star ratings the average is based on. */
+  ratingCount: number;
   ratingCategories: CCRatingCategory[];
   awardEntries: CCAwardEntry[];
-  /** Other teams' dishes still awaiting this player's rating. Empty = all rated
-   *  (or none to rate), which is what unlocks the protected left section. The
-   *  list is server-derived (a rated dish drops out), so it stays correct after
-   *  a refresh or reconnect. */
+  /** Other teams' dishes still awaiting this player's review. The list is
+   *  server-derived (a dish drops out once it has BOTH a star rating and an
+   *  emoji reaction), so it stays correct after a refresh or reconnect. */
   otherDishes: CCOtherDish[];
-  /** Submit a rating/nomination for another team's dish. */
-  onRate: (ratedGroupId: number, categoryId: number) => void;
+  /** Backend truth: has this player finished every required review? This — not
+   *  the local pool — is what unlocks the protected left section. */
+  reviewsComplete: boolean;
+  /** Submit part of a review for another team's dish: a 1–5 star rating and/or
+   *  an emoji reaction. Either part may be sent on its own. */
+  onRate: (ratedGroupId: number, review: { categoryId?: number; stars?: number }) => void;
   myGroupId: number;
   /** For the role portraits in the impostor reveal. */
   template: CCTemplate;
@@ -146,9 +153,12 @@ export function ReviewRatingPage({
   impostor,
   mostVoted,
   reactionCounts,
+  averageRating,
+  ratingCount,
   ratingCategories,
   awardEntries,
   otherDishes,
+  reviewsComplete,
   onRate,
   myGroupId,
   template,
@@ -160,11 +170,12 @@ export function ReviewRatingPage({
   const navigate = useNavigate();
 
   // The protected results (recipe reveal, impostor, awards) stay hidden until
-  // this player has rated every other kitchen's dish. `otherDishes` is server-
-  // derived (a dish drops out once rated), so the gate can't be skipped and is
+  // this player has reviewed every other kitchen's dish — a star rating AND an
+  // emoji reaction on each. `reviewsComplete` is the backend's own verdict (the
+  // same gate it enforces on the data), so the lock can't be skipped and is
   // still correct after a refresh/reconnect.
   const dishesToRate = otherDishes.length;
-  const resultsUnlocked = dishesToRate === 0;
+  const resultsUnlocked = reviewsComplete;
 
   const exitToHome = () => {
     disconnectSocket();
@@ -254,16 +265,31 @@ export function ReviewRatingPage({
                     The verdict is in. Other teams have tasted your creation.
                   </p>
 
-                  {/* Average rating (no star data yet → shown disabled) */}
+                  {/* Average 1–5 star rating this dish received from other teams */}
                   <p className="text-[13px] text-[#4A4540] mt-4">Average Rating Received Dish</p>
                   <div className="flex items-center justify-center gap-1.5 mt-2">
-                    {[0, 1, 2, 3, 4].map((i) => (
-                      <Star key={i} size={30} className="text-[#E3D7C7]" fill="#EFE6DA" strokeWidth={1.25} />
-                    ))}
-                    <span className="ml-2 text-lg font-semibold text-[#B8A898]">
-                      —<span className="text-xs font-normal">/5</span>
+                    {[1, 2, 3, 4, 5].map((n) => {
+                      const filled = averageRating != null && n <= Math.round(averageRating);
+                      return (
+                        <Star
+                          key={n}
+                          size={30}
+                          className={filled ? 'text-[#E7A24F]' : 'text-[#E3D7C7]'}
+                          fill={filled ? '#F2B45E' : '#EFE6DA'}
+                          strokeWidth={1.25}
+                        />
+                      );
+                    })}
+                    <span className={`ml-2 text-lg font-semibold ${averageRating != null ? 'text-[#CB7430]' : 'text-[#B8A898]'}`}>
+                      {averageRating != null ? averageRating.toFixed(1) : '—'}
+                      <span className="text-xs font-normal">/5</span>
                     </span>
                   </div>
+                  {averageRating != null && (
+                    <p className="text-[11px] text-[#A99E92] mt-1">
+                      from {ratingCount} {ratingCount === 1 ? 'rating' : 'ratings'}
+                    </p>
+                  )}
 
                   {/* Reactions */}
                   <p className="text-[13px] text-[#4A4540] mt-6 mb-2">Reactions</p>
@@ -388,6 +414,7 @@ export function ReviewRatingPage({
           <div className="rounded-[16px] border border-[#F9EAD4] p-5 sm:p-6 min-w-0" style={{ background: 'linear-gradient(180deg, #FFFEFD 0%, #FDF5E9 100%)' }}>
             {!resultsUnlocked ? (
               <RatingPanel
+                key={otherDishes[0]?.group_id ?? 'none'}
                 dish={otherDishes[0]}
                 ratingCategories={ratingCategories}
                 onRate={onRate}
@@ -469,8 +496,9 @@ function LockedResults({ dishesToRate }: { dishesToRate: number }) {
 }
 
 /** Right-column rating panel: one other kitchen's dish at a time — its final
- *  recipe steps and the award chips to nominate. Picking one submits the rating
- *  and (server-side) drops the dish, so the next one takes its place. */
+ *  recipe steps, a 1–5 star rating and the emoji reaction chips. A dish needs
+ *  BOTH a star rating and a reaction; once both are set it drops out
+ *  (server-side) and the next one takes its place. */
 function RatingPanel({
   dish,
   ratingCategories,
@@ -479,11 +507,19 @@ function RatingPanel({
 }: {
   dish: CCOtherDish | undefined;
   ratingCategories: CCRatingCategory[];
-  onRate: (ratedGroupId: number, categoryId: number) => void;
+  onRate: (ratedGroupId: number, review: { categoryId?: number; stars?: number }) => void;
   remaining: number;
 }) {
-  const [picked, setPicked] = useState<number | null>(null);
+  // Optimistic overlay on top of the persisted selection, so a tap shows at once
+  // and a refresh restores from the server (dish.my_stars / dish.my_category_id).
+  const [pendingStars, setPendingStars] = useState<number | null>(null);
+  const [pendingCategory, setPendingCategory] = useState<number | null>(null);
   if (!dish) return null;
+
+  const selectedStars = pendingStars ?? dish.my_stars ?? null;
+  const selectedCategory = pendingCategory ?? dish.my_category_id ?? null;
+  const hasStars = selectedStars != null;
+  const hasCategory = selectedCategory != null;
 
   const topNomination = Object.entries(dish.nomination_counts)
     .filter(([, c]) => c > 0)
@@ -532,19 +568,49 @@ function RatingPanel({
         )}
       </div>
 
-      {/* Award nomination — picking one submits and moves to the next dish. */}
+      {/* Star rating — tapping the Nth star rates the dish N out of 5. */}
+      <div>
+        <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Your Rating</p>
+        <p className="text-center text-xs text-[#6F625A] mt-0.5 mb-2">Tap a star — 1 (poor) to 5 (amazing)</p>
+        <div className="flex items-center justify-center gap-1.5">
+          {[1, 2, 3, 4, 5].map((n) => {
+            const on = selectedStars != null && n <= selectedStars;
+            return (
+              <button
+                key={n}
+                type="button"
+                aria-label={`Rate ${n} out of 5`}
+                onClick={() => {
+                  setPendingStars(n);
+                  onRate(dish.group_id, { stars: n });
+                }}
+                className="p-0.5 cursor-pointer transition-transform hover:scale-110"
+              >
+                <Star
+                  size={32}
+                  className={on ? 'text-[#E7A24F]' : 'text-[#E3D7C7]'}
+                  fill={on ? '#F2B45E' : '#EFE6DA'}
+                  strokeWidth={1.25}
+                />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Emoji reaction — pick the award this dish deserves. */}
       <div>
         <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Give Rating</p>
         <p className="text-center text-xs text-[#6F625A] mt-0.5 mb-3">Pick the award this dish deserves</p>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {ratingCategories.map((cat, i) => {
-            const isPicked = picked === cat.id;
+            const isPicked = selectedCategory === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => {
-                  setPicked(cat.id);
-                  onRate(dish.group_id, cat.id);
+                  setPendingCategory(cat.id);
+                  onRate(dish.group_id, { categoryId: cat.id });
                 }}
                 title={cat.description ?? cat.name}
                 className={`flex flex-col items-center justify-start gap-1.5 rounded-lg border px-1 pt-2.5 pb-2 text-center transition-colors cursor-pointer ${
@@ -560,6 +626,20 @@ function RatingPanel({
           })}
         </div>
       </div>
+
+      {/* Both parts are required before a dish counts as reviewed. */}
+      <p
+        className="text-center text-[12px] font-medium"
+        style={{ color: hasStars && hasCategory ? '#1E8449' : '#B07A3A' }}
+      >
+        {hasStars && hasCategory
+          ? 'Saved — bringing up the next dish…'
+          : !hasStars && !hasCategory
+            ? 'Give a star rating and pick a reaction to continue.'
+            : !hasStars
+              ? 'Add a star rating to finish this dish.'
+              : 'Pick a reaction to finish this dish.'}
+      </p>
     </div>
   );
 }

@@ -135,7 +135,10 @@ export const cookAndCreateService = {
     instance_id: number | string;
     participant_id: number | string;
     rated_group_id: number | string;
-    category_id: number | string;
+    // A review carries BOTH a 1–5 star rating and an emoji reaction. Either part
+    // may be sent on its own; the review completes once both have been saved.
+    category_id?: number | string | null;
+    stars?: number | null;
   }) =>
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.rate,
@@ -143,8 +146,11 @@ export const cookAndCreateService = {
       noAuth
     ),
 
-  getAwards: (groupId: number | string) =>
-    apiClient.get<CCAwardsBoard>(API_ENDPOINTS.cookandcreate.awards(groupId), noAuth),
+  getAwards: (groupId: number | string, participantId: number | string) =>
+    apiClient.get<CCAwardsBoard>(
+      `${API_ENDPOINTS.cookandcreate.awards(groupId)}?participant_id=${encodeURIComponent(String(participantId))}`,
+      noAuth
+    ),
 
   listTemplates: () =>
     apiClient.get<{ templates: CCTemplate[] }>(

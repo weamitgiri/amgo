@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { body, param } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import * as cookandcreateController from '../../controllers/cookandcreateController';
 import { validateRequest } from '../../middlewares/validateRequest';
 import { authMiddleware } from '../../middlewares/authMiddleware';
@@ -144,24 +144,30 @@ router.get(
     cookandcreateController.getOtherDishes
 );
 
-// Rating: nominate another group's dish for an award category
+// Rating: review another group's dish — a 1–5 star rating and/or an emoji
+// reaction. Either part may be sent on its own (the controller requires at
+// least one and completes the review once both are persisted).
 router.post(
     '/rate',
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
         body('rated_group_id').isNumeric().withMessage('rated_group_id is required'),
-        body('category_id').isNumeric().withMessage('category_id is required'),
+        body('category_id').optional({ nullable: true }).isNumeric().withMessage('category_id must be numeric'),
+        body('stars').optional({ nullable: true }).isInt({ min: 1, max: 5 }).withMessage('stars must be a whole number from 1 to 5'),
     ],
     validateRequest,
     cookandcreateController.submitRatingHandler
 );
 
-// Final Results / Leaderboard: award board + this group's impostor reveal
+// Final Results / Leaderboard: award board + this group's impostor reveal.
+// Gated — the requester must pass their participant_id and have completed every
+// required review (enforced in the handler).
 router.get(
     '/:group_id/awards',
     [
         param('group_id').isNumeric().withMessage('group_id must be numeric'),
+        query('participant_id').isNumeric().withMessage('participant_id is required'),
     ],
     validateRequest,
     cookandcreateController.getAwardsHandler
