@@ -119,13 +119,35 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
         instance.show_host_participant_id = roles.showHostId;
         instance.status = 'round1';
 
+        // Round 1 play begins only AFTER the role-reveal / Challenge Brief
+        // period. The brief is shown on the summary screen for role_brief_secs,
+        // and Round 1 starts on group-full server-side, so previously the brief
+        // overlapped Round 1 — with a 5-min brief and a 2-min round the brief
+        // swallowed the whole round and players were dropped straight into
+        // Round 2. Push round1_started_at forward by the brief length (so the
+        // in-game countdown shows the FULL Round-1 time once the brief ends) and
+        // size the Round-1 timer to span brief + round1 so it only auto-advances
+        // after players have actually had their Ingredient Selection time.
+        const briefSecs = Math.max(0, Number(template.role_brief_secs) || 0);
+        if (briefSecs > 0) {
+            await query(
+                `UPDATE cc_game_instances SET round1_started_at = DATE_ADD(NOW(), INTERVAL ? SECOND) WHERE id = ?`,
+                [briefSecs, instance.id]
+            );
+            const [r1Row] = await query<any>(
+                `SELECT round1_started_at FROM cc_game_instances WHERE id = ?`,
+                [instance.id]
+            );
+            instance.round1_started_at = r1Row?.[0]?.round1_started_at ?? instance.round1_started_at;
+        }
+
         try {
             const { io } = require('../server');
             if (io) io.to(`cc-instance-${instance.id}`).emit('cc_round1_started', {});
         } catch (_e) {
             /* ignore */
         }
-        await ensureCCTimer(group_id, instance.id, 'cc_round1', template.round1_timer_secs);
+        await ensureCCTimer(group_id, instance.id, 'cc_round1', briefSecs + template.round1_timer_secs);
     }
 
     // Heal a Round 2 that began before turn-based submission existed: without
@@ -407,11 +429,14 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
             myRoleLabel = 'Show Host';
         } else {
             myRole = 'chef';
-            // Assign a Chef number based on participant order
-            const chefIndex = participants
-                .filter((p) => p.id !== instance.impostor_participant_id && p.id !== instance.show_host_participant_id)
-                .findIndex((p) => p.id === myParticipantId);
-            myRoleLabel = chefIndex >= 0 ? `Chef ${chefIndex + 1}` : 'Chef';
+            // Use the SAME public "Chef N" label the Key People list shows for
+            // this player, so the role modal, the "Your Role" panel and the
+            // player list always agree. The public list numbers every
+            // non-Show-Host player — the hidden impostor included — so numbering
+            // here with the impostor filtered out was off by one for any chef
+            // after the impostor (e.g. list "Chef 4 (You)" but modal "Chef 3").
+            const mine = participantsWithRoles.find((p) => p.id === myParticipantId);
+            myRoleLabel = mine?.role_label ?? 'Chef';
         }
     }
 

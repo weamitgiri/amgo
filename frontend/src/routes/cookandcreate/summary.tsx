@@ -27,27 +27,16 @@ const ROUNDS = [
   { num: '03', img: step4Img, title: 'Elimination', desc: 'Discuss and vote.' },
 ];
 
-/** The brief (role reveal) auto-continues into the game after the admin-set
- * "Secret Role / Challenge Brief" duration (template.role_brief_secs). Round 1
- * is already running server-side by the time this screen shows, so the brief is
- * capped to always leave this many seconds of Round 1 for the player to vote —
- * a brief configured longer than Round 1 can't run in full without delaying the
- * Round 1 start server-side. */
-const ROUND1_VOTE_BUFFER_SECS = 15;
 const BRIEF_FALLBACK_SECS = 25;
 
-/** Brief length to actually run: the configured duration, but never so long the
- * player would miss Round 1 (whose clock started at round1_started_at). */
-function computeBriefSecs(
-  roleBriefSecs: number,
-  round1StartedAt: string | null | undefined,
-  round1TimerSecs: number
-): number {
-  const configured = roleBriefSecs > 0 ? roleBriefSecs : BRIEF_FALLBACK_SECS;
-  if (!round1StartedAt) return configured;
-  const elapsed = Math.floor((Date.now() - new Date(round1StartedAt).getTime()) / 1000);
-  const round1Left = Math.max(0, round1TimerSecs - elapsed);
-  return Math.max(3, Math.min(configured, round1Left - ROUND1_VOTE_BUFFER_SECS));
+/** Seconds until Round 1 actually starts. Round 1's clock (round1_started_at)
+ * is pushed past the role-reveal / Challenge Brief period server-side, so the
+ * brief simply counts down to that moment and then auto-continues into
+ * Ingredient Selection with the full configured Round-1 time still ahead.
+ * Falls back to a short fixed countdown if the start instant isn't known. */
+function briefSecondsRemaining(round1StartedAt: string | null | undefined, fallbackSecs: number): number {
+  if (!round1StartedAt) return fallbackSecs;
+  return Math.max(0, Math.ceil((new Date(round1StartedAt).getTime() - Date.now()) / 1000));
 }
 
 function SummaryPage() {
@@ -90,28 +79,24 @@ function SummaryPage() {
     }
   }, [gameState, goToGame]);
 
-  // Seed the countdown once, from the admin-configured brief duration (capped
-  // so Round 1 is never missed). Runs only while countdown is still null.
+  // Count down to the real Round 1 start each second (recomputed from
+  // round1_started_at, so it stays correct no matter when this screen loads),
+  // then auto-continue into the game.
   useEffect(() => {
-    if (!gameState || countdown !== null) return;
-    setCountdown(
-      computeBriefSecs(
-        gameState.template.role_brief_secs,
+    if (!gameState) return;
+    const compute = () =>
+      briefSecondsRemaining(
         gameState.instance.round1_started_at,
-        gameState.template.round1_timer_secs
-      )
-    );
-  }, [gameState, countdown]);
-
-  useEffect(() => {
-    if (!gameState || countdown === null) return;
-    if (countdown <= 0) {
-      goToGame();
-      return;
-    }
-    const t = setTimeout(() => setCountdown((s) => (s === null ? null : s - 1)), 1000);
-    return () => clearTimeout(t);
-  }, [countdown, gameState, goToGame]);
+        gameState.template.role_brief_secs > 0 ? gameState.template.role_brief_secs : BRIEF_FALLBACK_SECS
+      );
+    setCountdown(compute());
+    const id = setInterval(() => {
+      const left = compute();
+      setCountdown(left);
+      if (left <= 0) goToGame();
+    }, 1000);
+    return () => clearInterval(id);
+  }, [gameState, goToGame]);
 
   if (loading || !gameState) {
     return (
