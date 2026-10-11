@@ -24,7 +24,7 @@ const ROLE_COPY: Record<
   chef: {
     intro: 'You are the Chef.',
     blurb: 'You are part of the cooking team. Work together to create the best dish.',
-    goals: ['Choose useful ingredients', 'Add logical cooking steps', 'Help identify the impostor'],
+    goals: ['Choose useful ingredients', 'Add logical cooking steps'],
     know: [
       'Every chef adds one step to the dish',
       'Not all choices will make sense',
@@ -38,7 +38,6 @@ const ROLE_COPY: Record<
     blurb: 'You lead the kitchen — same team as everyone else, plus the final say on the dish name.',
     goals: ['Choose useful ingredients', 'Add logical cooking steps', 'Name the team’s dish once steps are finalized'],
     know: [
-      'One player is secretly sabotaging the dish',
       'You alone can submit the final dish name',
       'Patterns across rounds reveal the truth',
     ],
