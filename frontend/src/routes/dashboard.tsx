@@ -60,15 +60,24 @@ function DashboardPage() {
   const eventStatusMeta = eventStats?.event_status ?? null;
   const bookingStatus = booking?.booking_status?.toLowerCase() ?? "active";
 
-  // An organizer who verified her email but hasn't paid can now log in (see
-  // backend verifyLoginOtp). When she lands here unpaid, prompt her to complete
-  // payment and activate her package. Guard on payment_status being present so an
-  // older backend that omits it never shows a false prompt.
+  // An organizer who verified her email but hasn't activated a package can now
+  // log in (see backend verifyLoginOtp). When she lands here not yet activated,
+  // prompt her to choose a package and complete the order. Guard on
+  // payment_status being present so an older backend that omits it never shows a
+  // false prompt.
+  //
+  // Cash-on-Delivery is settled on delivery, so a COD order activates the
+  // account right away (backend activateBooking sets account_status = "active")
+  // while payment_status stays "pending" for the admin to reconcile later. That
+  // organizer is fully active and must see the dashboard, so an active account
+  // is treated as already paid for access — only a not-yet-activated account
+  // (account_status !== "active") is gated.
   const paymentPending =
     !isLoading &&
     !isError &&
     !!organizer?.payment_status &&
-    organizer.payment_status !== "paid";
+    organizer.payment_status !== "paid" &&
+    organizer.account_status !== "active";
 
   const toNumber = (value: unknown, fallback = 0) => {
     const n = typeof value === "string" ? Number(value) : value;
