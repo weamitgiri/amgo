@@ -226,21 +226,25 @@ export function ReviewRatingPage({
                   <h3 className="text-lg font-semibold" style={{ color: HEADING }}>Recipe Reveal</h3>
                   <p className="text-[13px] text-[#4A4540] mt-5">Your group cooked up...</p>
                   <p className="text-[15px] font-semibold mt-1" style={{ color: ORANGE }}>{dishName}</p>
-                  <div className="relative mt-4 rounded-xl border border-[#F1E4D3] bg-[#FAF4ED] px-4 pt-8 pb-4">
-                    {CONFETTI.map((c, i) => (
-                      <span
-                        key={i}
-                        aria-hidden
-                        className="absolute w-1.5 h-1.5 rounded-[1px]"
-                        style={{ left: c.left, top: c.top, background: c.color, transform: `rotate(${c.rot}deg)` }}
-                      />
-                    ))}
-                    <img
-                      src={dishImageFor(myGroupId)}
-                      alt={dishName}
-                      className="relative mx-auto w-full max-w-[260px] max-h-[170px] object-contain drop-shadow-md"
-                    />
-                  </div>
+
+                        <div className="hidden relative mt-4 rounded-xl border border-[#F1E4D3] bg-[#FAF4ED] px-4 pt-8 pb-4">
+                          {CONFETTI.map((c, i) => (
+                            <span
+                              key={i}
+                              aria-hidden
+                              className="absolute w-1.5 h-1.5 rounded-[1px]"
+                              style={{ left: c.left, top: c.top, background: c.color, transform: `rotate(${c.rot}deg)` }}
+                            />
+                          ))}
+                          <img
+                            src={dishImageFor(myGroupId)}
+                            alt={dishName}
+                            className="relative mx-auto w-full max-w-[260px] max-h-[170px] object-contain drop-shadow-md"
+                          />
+                        </div>
+
+
+
                 </div>
 
                 {/* Ratings & Reaction */}
