@@ -329,9 +329,13 @@ function LobbyPage() {
               >
                 <Info size={20} className="shrink-0 mt-0.5" style={{ color: CC.primary }} />
                 <p className="text-xs leading-relaxed" style={{ color: CC.textMuted }}>
-                  Your group requires exactly {groupCapacity} participants. The game will start automatically once
-                  all players have joined at the scheduled time. Please contact your organizer to
-                  complete your group.
+                  {remaining === 0 ? (
+                    <>Your group is complete! Get ready — the session will begin shortly. Review the case summary carefully once it appears.</>
+                  ) : (
+                    <>Your group requires exactly {groupCapacity} participants. The game will start automatically once
+                      all players have joined at the scheduled time. Please contact your organizer to
+                      complete your group.</>
+                  )}
                 </p>
               </div>
 
