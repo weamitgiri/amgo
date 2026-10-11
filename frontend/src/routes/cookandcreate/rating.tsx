@@ -8,6 +8,13 @@ import type { CCAwardsBoard, CCGameStateResponse, CCOtherDish } from '@/api/type
 import { getParticipantSession } from '@/lib/participant-session';
 import { toastError } from '@/lib/toast';
 
+import a from '../../assets/cookandcreate/rating-icon/a.png';
+import b from '../../assets/cookandcreate/rating-icon/b.png';
+import c from '../../assets/cookandcreate/rating-icon/c.png';
+import d from '../../assets/cookandcreate/rating-icon/d.png';
+import e from '../../assets/cookandcreate/rating-icon/e.png';
+
+
 export const Route = createFileRoute('/cookandcreate/rating')({
   component: RatingPage,
 });
