@@ -498,8 +498,8 @@ export async function ensureCCParticipantSessions(groupId: number | string): Pro
 /**
  * Assign random roles (impostor, show host, chefs) to participants
  */
-export async function assignCCRoles(instanceId: number | string, participantIds: number[]): Promise<{ impostorId: number | null; showHostId: number | null }> {
-    if (participantIds.length === 0) return { impostorId: null, showHostId: null };
+export async function assignCCRoles(instanceId: number | string, participantIds: number[]): Promise<{ impostorId: number | null; showHostId: number | null; claimed: boolean }> {
+    if (participantIds.length === 0) return { impostorId: null, showHostId: null, claimed: false };
 
     // Shuffle array
     const shuffled = [...participantIds].sort(() => Math.random() - 0.5);
@@ -518,12 +518,18 @@ export async function assignCCRoles(instanceId: number | string, participantIds:
         showHostId = shuffled[1];
     }
 
-    await query(
-        `UPDATE cc_game_instances SET impostor_participant_id = ?, show_host_participant_id = ?, status = 'round1', round1_started_at = ?, updated_at = NOW() WHERE id = ?`,
+    // Atomic claim: only the first caller whose UPDATE actually flips the
+    // instance out of 'waiting' assigns the roles and starts the game. A
+    // concurrent request (two players hitting the expired lobby at once, or a
+    // retried poll) gets affectedRows = 0 and must NOT re-roll roles or start a
+    // second time — it re-reads the already-started instance instead.
+    const [claimHeader] = await query<any>(
+        `UPDATE cc_game_instances SET impostor_participant_id = ?, show_host_participant_id = ?, status = 'round1', round1_started_at = ?, updated_at = NOW() WHERE id = ? AND status = 'waiting'`,
         [impostorId, showHostId, moment().format('YYYY-MM-DD HH:mm:ss'), instanceId]
     );
+    const claimed = Number((claimHeader as any)?.affectedRows || 0) > 0;
 
-    return { impostorId, showHostId };
+    return { impostorId, showHostId, claimed };
 }
 
 /**

@@ -113,41 +113,58 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
     // capacity Mystery Quest enforces, NOT round1_top_ingredients, which is an
     // unrelated Round-1 tuning value).
     const groupCapacity = Number(group.group_size) || 5;
-    if (instance.status === 'waiting' && participants.length >= groupCapacity) {
+
+    // Authoritative lobby window — the single source of truth for when play may
+    // begin. It is the booking's scheduled start plus the configured lobby wait
+    // (default 15 min), derived identically on every request, so a refresh,
+    // extra tab or reconnect keeps the same countdown and no client can start
+    // the game early. The game must NOT start until this instant passes, even if
+    // the group filled early.
+    const scheduleStart = parseBookingSchedule(group.scheduled_date, group.scheduled_time);
+    const lobbyWaitSecs = Number(group.lobby_wait_secs) || 900;
+    const gameDurationSecs = Number(group.game_duration_secs) || 1500;
+    const gameStartsAt = scheduleStart ? scheduleStart.clone().add(lobbyWaitSecs, 'seconds') : null;
+    const lobbyExpired = !gameStartsAt || Date.now() >= gameStartsAt.valueOf();
+
+    if (instance.status === 'waiting' && participants.length >= groupCapacity && lobbyExpired) {
         const roles = await assignCCRoles(instance.id, participantIds);
-        instance.impostor_participant_id = roles.impostorId;
-        instance.show_host_participant_id = roles.showHostId;
-        instance.status = 'round1';
+        if (roles.claimed) {
+            instance.impostor_participant_id = roles.impostorId;
+            instance.show_host_participant_id = roles.showHostId;
+            instance.status = 'round1';
 
-        // Round 1 play begins only AFTER the role-reveal / Challenge Brief
-        // period. The brief is shown on the summary screen for role_brief_secs,
-        // and Round 1 starts on group-full server-side, so previously the brief
-        // overlapped Round 1 — with a 5-min brief and a 2-min round the brief
-        // swallowed the whole round and players were dropped straight into
-        // Round 2. Push round1_started_at forward by the brief length (so the
-        // in-game countdown shows the FULL Round-1 time once the brief ends) and
-        // size the Round-1 timer to span brief + round1 so it only auto-advances
-        // after players have actually had their Ingredient Selection time.
-        const briefSecs = Math.max(0, Number(template.role_brief_secs) || 0);
-        if (briefSecs > 0) {
-            await query(
-                `UPDATE cc_game_instances SET round1_started_at = DATE_ADD(NOW(), INTERVAL ? SECOND) WHERE id = ?`,
-                [briefSecs, instance.id]
-            );
-            const [r1Row] = await query<any>(
-                `SELECT round1_started_at FROM cc_game_instances WHERE id = ?`,
-                [instance.id]
-            );
-            instance.round1_started_at = r1Row?.[0]?.round1_started_at ?? instance.round1_started_at;
-        }
+            // Round 1 play begins only AFTER the role-reveal / Challenge Brief
+            // period. The brief is shown on the summary screen for
+            // role_brief_secs, so push round1_started_at forward by the brief
+            // length (the in-game countdown then shows the FULL Round-1 time once
+            // the brief ends) and size the Round-1 timer to span brief + round1.
+            const briefSecs = Math.max(0, Number(template.role_brief_secs) || 0);
+            if (briefSecs > 0) {
+                await query(
+                    `UPDATE cc_game_instances SET round1_started_at = DATE_ADD(NOW(), INTERVAL ? SECOND) WHERE id = ?`,
+                    [briefSecs, instance.id]
+                );
+                const [r1Row] = await query<any>(
+                    `SELECT round1_started_at FROM cc_game_instances WHERE id = ?`,
+                    [instance.id]
+                );
+                instance.round1_started_at = r1Row?.[0]?.round1_started_at ?? instance.round1_started_at;
+            }
 
-        try {
-            const { io } = require('../server');
-            if (io) io.to(`cc-instance-${instance.id}`).emit('cc_round1_started', {});
-        } catch (_e) {
-            /* ignore */
+            try {
+                const { io } = require('../server');
+                if (io) io.to(`cc-instance-${instance.id}`).emit('cc_round1_started', {});
+            } catch (_e) {
+                /* ignore */
+            }
+            await ensureCCTimer(group_id, instance.id, 'cc_round1', briefSecs + template.round1_timer_secs);
+        } else {
+            // A concurrent request already started the game — re-read the
+            // instance so this response reflects the started state instead of a
+            // stale 'waiting'.
+            const fresh = await getInstanceById(instance.id);
+            if (fresh) Object.assign(instance, fresh.instance);
         }
-        await ensureCCTimer(group_id, instance.id, 'cc_round1', briefSecs + template.round1_timer_secs);
     }
 
     // Heal a Round 2 that began before turn-based submission existed: without
@@ -393,10 +410,8 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
     // is exactly why the lobby countdown reset to 2:00 on each refresh. Anchored
     // to a fixed point in time, a refresh just recomputes the same remainder.
     // server_time lets the client cancel out any clock skew between the two.
-    const scheduleStart = parseBookingSchedule(group.scheduled_date, group.scheduled_time);
-    const lobbyWaitSecs = Number(group.lobby_wait_secs) || 120;
-    const gameDurationSecs = Number(group.game_duration_secs) || 1500;
-    const gameStartsAt = scheduleStart ? scheduleStart.clone().add(lobbyWaitSecs, 'seconds') : null;
+    // scheduleStart / lobbyWaitSecs / gameDurationSecs / gameStartsAt are the
+    // same values computed above for the lobby-expiry gate.
     const schedule = {
         scheduled_start_at: scheduleStart ? scheduleStart.toISOString() : null,
         // When the lobby's entry window closes and play begins.
