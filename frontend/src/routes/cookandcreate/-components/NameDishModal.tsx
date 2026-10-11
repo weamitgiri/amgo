@@ -30,8 +30,17 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
   // Countdown for the Dish Naming stage. null = untimed (no duration configured).
   const [secsLeft, setSecsLeft] = useState<number | null>(durationSecs > 0 ? durationSecs : null);
   const autoSubmittedRef = useRef(false);
+  // Keep the latest callback / props in refs so the tick effect below does NOT
+  // depend on them. The game screen re-renders every second (its own clock) and
+  // passes a fresh onSubmit/topIngredients each time; if those were effect deps,
+  // the 1-second timeout would be cleared and recreated every render and the
+  // countdown would never advance (it stuck at the start).
   const dishNameRef = useRef(dishName);
   dishNameRef.current = dishName;
+  const onSubmitRef = useRef(onSubmit);
+  onSubmitRef.current = onSubmit;
+  const topIngredientsRef = useRef(topIngredients);
+  topIngredientsRef.current = topIngredients;
 
   // (Re)start the countdown each time the modal opens.
   useEffect(() => {
@@ -47,13 +56,13 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
     if (secsLeft <= 0) {
       if (canSubmit && !autoSubmittedRef.current) {
         autoSubmittedRef.current = true;
-        onSubmit(dishNameRef.current.trim() || fallbackDishName(topIngredients));
+        onSubmitRef.current(dishNameRef.current.trim() || fallbackDishName(topIngredientsRef.current));
       }
       return;
     }
     const t = setTimeout(() => setSecsLeft((s) => (s === null ? null : s - 1)), 1000);
     return () => clearTimeout(t);
-  }, [isOpen, secsLeft, canSubmit, onSubmit, topIngredients]);
+  }, [isOpen, secsLeft, canSubmit]);
 
   if (!isOpen) return null;
 
