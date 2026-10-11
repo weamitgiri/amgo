@@ -53,7 +53,10 @@ const PEACH_STYLE = { background: 'linear-gradient(180deg, #F8D5B0 0%, #FAE3C6 1
    e = 5th). Used for both the "Reactions" grid and the "Give Rating" grid so
    the same face always represents the same category. */
 const RATING_ICONS = [a, b, c, d, e];
-const ratingIconFor = (index: number) => RATING_ICONS[index] ?? RATING_ICONS[RATING_ICONS.length - 1];
+// Cycle through the five faces by position, so with more than five rating
+// categories the extra cards keep getting varied faces (a, b, c, d, e, a, …)
+// instead of all falling back to the last icon.
+const ratingIconFor = (index: number) => RATING_ICONS[((index % RATING_ICONS.length) + RATING_ICONS.length) % RATING_ICONS.length];
 
 /* Short reaction labels shown under each face in the "Reactions" section (the
    full category names are used in the "Give Rating" section), matched to the
