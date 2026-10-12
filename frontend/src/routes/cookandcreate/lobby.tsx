@@ -24,9 +24,12 @@ import { toastError } from '@/lib/toast';
 import { getSocket } from '@/lib/socket';
 import { clockOffsetMs } from './-components/clock';
 
+
 export const Route = createFileRoute('/cookandcreate/lobby')({
   component: LobbyPage,
 });
+
+
 
 // Fallback only — used before the API responds, or if an admin hasn't set
 // any rules yet for this template (Laravel admin: Cook & Create > Templates).

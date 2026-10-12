@@ -21,6 +21,7 @@ export const Route = createFileRoute('/cookandcreate/summary')({
   component: SummaryPage,
 });
 
+
 const ROUNDS = [
   { num: '01', img: step1Img, title: 'Ingredient Selection', desc: 'Choose the best ingredients for your dish.' },
   { num: '02', img: step2Img, title: 'Cooking Steps', desc: 'Submit one step to help create the dish.' },
