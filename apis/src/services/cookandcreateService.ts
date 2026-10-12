@@ -1115,9 +1115,10 @@ export type CCOtherDish = {
 };
 
 /**
- * Up to 3 random *other* completed groups in the same booking, excluding any
- * group this participant has already nominated in any category — so the pool
- * naturally shrinks to unseen groups as the participant keeps rating.
+ * EVERY other completed group's dish in the same booking (stable order). Rated
+ * dishes are intentionally kept in the list — each row carries this participant's
+ * own saved star/reaction (my_stars / my_category_id) so the UI can show an
+ * already-rated dish in a read-only state instead of removing its card.
  */
 export async function getOtherDishes(groupId: number | string, participantId: number | string): Promise<CCOtherDish[]> {
     const [groupRows] = await query<any>('SELECT booking_id FROM game_groups WHERE id = ?', [groupId]);
@@ -1129,21 +1130,8 @@ export async function getOtherDishes(groupId: number | string, participantId: nu
          FROM game_groups gg
          JOIN cc_game_instances ci ON ci.group_id = gg.id
          WHERE gg.booking_id = ? AND gg.id != ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL
-           AND gg.id NOT IN (
-             SELECT rated_group_id FROM cc_ratings
-             WHERE voting_participant_id = ? AND rated_group_id IS NOT NULL
-               AND category_id IS NOT NULL AND stars IS NOT NULL
-           )
-         ORDER BY
-           -- A dish this player has already half-reviewed (one of star/emoji) comes
-           -- first, so a refreshed in-progress selection is the one on screen.
-           (gg.id IN (
-             SELECT rated_group_id FROM cc_ratings
-             WHERE voting_participant_id = ? AND rated_group_id IS NOT NULL
-           )) DESC,
-           gg.id ASC
-         LIMIT 3`,
-        [bookingId, groupId, participantId, participantId]
+         ORDER BY gg.id ASC`,
+        [bookingId, groupId]
     );
     if (!rows || rows.length === 0) return [];
 
@@ -1207,33 +1195,50 @@ export async function getOtherDishes(groupId: number | string, participantId: nu
 }
 
 /**
- * Records one participant's award nomination for another group's dish.
- * One nomination per (participant, rated group, category) — re-tapping the
- * same category for the same group is a harmless idempotent no-op via the
- * unique key added in schemaHelpers.ts.
+ * True once this participant has a COMPLETE review (both the emoji reaction and
+ * the 1–5 star rating) for this other group's dish — i.e. they've already rated
+ * it and must not submit again.
  */
+export async function hasReviewedGroup(
+    participantId: number | string,
+    ratedGroupId: number | string
+): Promise<boolean> {
+    const [rows] = await query<any>(
+        `SELECT 1 FROM cc_ratings
+         WHERE voting_participant_id = ? AND rated_group_id = ?
+           AND category_id IS NOT NULL AND stars IS NOT NULL
+         LIMIT 1`,
+        [participantId, ratedGroupId]
+    );
+    return (rows as any).length > 0;
+}
+
 /**
- * Records one participant's review of another group's dish. A review lives in a
- * single cc_ratings row per (participant, rated group) that carries BOTH the
- * emoji reaction (category_id) and the 1–5 star rating (stars). Either part can
- * be saved on its own — the review completes once both are present — and either
- * can be re-submitted to edit it. COALESCE keeps the part that isn't being
- * updated, and the unique (participant, group) key makes this an upsert.
+ * Records one participant's review of another group's dish: a single cc_ratings
+ * row per (participant, rated group) carrying BOTH the emoji reaction
+ * (category_id) and the 1–5 star rating (stars), submitted together.
+ *
+ * Rating is once-only: the ON DUPLICATE KEY guard writes the two values only
+ * when the existing row is NOT already complete, so an already-rated dish can
+ * never be overwritten — even under a double-click race. Callers should still
+ * pre-check hasReviewedGroup() to return a friendly "already rated" response.
+ * The unique (participant, group) key makes this an upsert, which also completes
+ * a legacy emoji-only row (stars NULL) left by the previous flow.
  */
 export async function submitRating(
     instanceId: number | string,
     participantId: number | string,
     ratedGroupId: number | string,
-    categoryId: number | string | null,
-    stars: number | null
+    categoryId: number | string,
+    stars: number
 ): Promise<void> {
     await query(
         `INSERT INTO cc_ratings (instance_id, category_id, stars, voting_participant_id, rated_group_id, created_at)
          VALUES (?, ?, ?, ?, ?, NOW())
          ON DUPLICATE KEY UPDATE
-            category_id = COALESCE(VALUES(category_id), category_id),
-            stars       = COALESCE(VALUES(stars), stars)`,
-        [instanceId, categoryId ?? null, stars ?? null, participantId, ratedGroupId]
+            category_id = IF(cc_ratings.category_id IS NOT NULL AND cc_ratings.stars IS NOT NULL, cc_ratings.category_id, VALUES(category_id)),
+            stars       = IF(cc_ratings.category_id IS NOT NULL AND cc_ratings.stars IS NOT NULL, cc_ratings.stars, VALUES(stars))`,
+        [instanceId, categoryId, stars, participantId, ratedGroupId]
     );
 }
 

@@ -144,17 +144,16 @@ router.get(
     cookandcreateController.getOtherDishes
 );
 
-// Rating: review another group's dish — a 1–5 star rating and/or an emoji
-// reaction. Either part may be sent on its own (the controller requires at
-// least one and completes the review once both are persisted).
+// Rating: review another group's dish — ONE atomic submission carrying both a
+// 1–5 star rating and an emoji reaction (both required); once-only per dish.
 router.post(
     '/rate',
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
         body('rated_group_id').isNumeric().withMessage('rated_group_id is required'),
-        body('category_id').optional({ nullable: true }).isNumeric().withMessage('category_id must be numeric'),
-        body('stars').optional({ nullable: true }).isInt({ min: 1, max: 5 }).withMessage('stars must be a whole number from 1 to 5'),
+        body('category_id').isNumeric().withMessage('category_id is required'),
+        body('stars').isInt({ min: 1, max: 5 }).withMessage('stars must be a whole number from 1 to 5'),
     ],
     validateRequest,
     cookandcreateController.submitRatingHandler

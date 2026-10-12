@@ -135,10 +135,10 @@ export const cookAndCreateService = {
     instance_id: number | string;
     participant_id: number | string;
     rated_group_id: number | string;
-    // A review carries BOTH a 1–5 star rating and an emoji reaction. Either part
-    // may be sent on its own; the review completes once both have been saved.
-    category_id?: number | string | null;
-    stars?: number | null;
+    // A review is one atomic submission carrying BOTH a 1–5 star rating and an
+    // emoji reaction; both are required and it can only be submitted once.
+    category_id: number | string;
+    stars: number;
   }) =>
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.rate,

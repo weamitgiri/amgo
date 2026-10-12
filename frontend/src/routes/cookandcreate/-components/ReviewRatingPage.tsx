@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Star } from 'lucide-react';
+import { Star, Check } from 'lucide-react';
 import { CookCreateLayout } from './CookCreateLayout';
 import type { CCAwardEntry, CCOtherDish, CCRatingCategory, CCTemplate } from '@/api/types/cookandcreate';
 import { clearParticipantSession } from '@/lib/participant-session';
@@ -36,9 +36,9 @@ interface ReviewRatingPageProps {
   /** Backend truth: has this player finished every required review? This — not
    *  the local pool — is what unlocks the protected left section. */
   reviewsComplete: boolean;
-  /** Submit part of a review for another team's dish: a 1–5 star rating and/or
-   *  an emoji reaction. Either part may be sent on its own. */
-  onRate: (ratedGroupId: number, review: { categoryId?: number; stars?: number }) => void;
+  /** Submit a complete review for another team's dish: a 1–5 star rating AND an
+   *  emoji reaction, together, once. */
+  onRate: (ratedGroupId: number, review: { categoryId: number; stars: number }) => void | Promise<void>;
   myGroupId: number;
   /** For the role portraits in the impostor reveal. */
   template: CCTemplate;
@@ -174,8 +174,10 @@ export function ReviewRatingPage({
   // emoji reaction on each. `reviewsComplete` is the backend's own verdict (the
   // same gate it enforces on the data), so the lock can't be skipped and is
   // still correct after a refresh/reconnect.
-  const dishesToRate = otherDishes.length;
   const resultsUnlocked = reviewsComplete;
+  // Progress across every other kitchen's dish (right-column counter).
+  const totalOther = otherDishes.length;
+  const ratedCount = otherDishes.filter((d) => d.my_stars != null && d.my_category_id != null).length;
 
   const exitToHome = () => {
     disconnectSocket();
@@ -207,11 +209,6 @@ export function ReviewRatingPage({
     winner: winnerBySlug[c.slug] ?? null,
   }));
 
-  // Every team's dish and awards — other kitchens first, yours last.
-  const kitchens = [...awardEntries].sort(
-    (a, b) => Number(a.group_id === myGroupId) - Number(b.group_id === myGroupId)
-  );
-
   return (
     <CookCreateLayout maxWidthClass="max-w-[1376px]">
       <div className="relative z-10">
@@ -225,42 +222,44 @@ export function ReviewRatingPage({
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1.68fr)_minmax(0,1fr)] gap-5 items-stretch">
           {/* LEFT — protected results; revealed only after every other dish is rated */}
           <div className="flex flex-col gap-5 min-w-0">
-            {!resultsUnlocked ? (
-              <LockedResults dishesToRate={dishesToRate} />
-            ) : (
-            <>
-            {/* Recipe Reveal + Ratings & Reaction */}
+            {/* Recipe Reveal + Ratings & Reaction (headings stay; the protected
+                content is masked until every other dish is rated) */}
             <div className="rounded-[16px] border border-[#F5DFC0] p-5 sm:p-6" style={CARD_STYLE}>
               <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6">
                 {/* Recipe Reveal — dish name + a plate illustration (keyed to the group) */}
                 <div className="text-center">
                   <h3 className="text-lg font-semibold" style={{ color: HEADING }}>Recipe Reveal</h3>
-                  <p className="text-[13px] text-[#4A4540] mt-5">Your group cooked up...</p>
-                  <p className="text-[15px] font-semibold mt-1" style={{ color: ORANGE }}>{dishName}</p>
+                  {resultsUnlocked ? (
+                    <>
+                      <p className="text-[13px] text-[#4A4540] mt-5">Your group cooked up...</p>
+                      <p className="text-[15px] font-semibold mt-1" style={{ color: ORANGE }}>{dishName}</p>
 
-                        <div className="hidden relative mt-4 rounded-xl border border-[#F1E4D3] bg-[#FAF4ED] px-4 pt-8 pb-4">
-                          {CONFETTI.map((c, i) => (
-                            <span
-                              key={i}
-                              aria-hidden
-                              className="absolute w-1.5 h-1.5 rounded-[1px]"
-                              style={{ left: c.left, top: c.top, background: c.color, transform: `rotate(${c.rot}deg)` }}
-                            />
-                          ))}
-                          <img
-                            src={dishImageFor(myGroupId)}
-                            alt={dishName}
-                            className="relative mx-auto w-full max-w-[260px] max-h-[170px] object-contain drop-shadow-md"
+                      <div className="hidden relative mt-4 rounded-xl border border-[#F1E4D3] bg-[#FAF4ED] px-4 pt-8 pb-4">
+                        {CONFETTI.map((c, i) => (
+                          <span
+                            key={i}
+                            aria-hidden
+                            className="absolute w-1.5 h-1.5 rounded-[1px]"
+                            style={{ left: c.left, top: c.top, background: c.color, transform: `rotate(${c.rot}deg)` }}
                           />
-                        </div>
-
-
-
+                        ))}
+                        <img
+                          src={dishImageFor(myGroupId)}
+                          alt={dishName}
+                          className="relative mx-auto w-full max-w-[260px] max-h-[170px] object-contain drop-shadow-md"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <MaskedContent note="Rate all other kitchens to reveal your dish" />
+                  )}
                 </div>
 
                 {/* Ratings & Reaction */}
                 <div className="text-center flex flex-col">
                   <h3 className="text-lg font-semibold" style={{ color: HEADING }}>Ratings &amp; Reaction</h3>
+                  {resultsUnlocked ? (
+                  <>
                   <p className="text-[13px] text-[#4A4540] leading-relaxed mt-5 max-w-[230px] mx-auto">
                     The verdict is in. Other teams have tasted your creation.
                   </p>
@@ -327,6 +326,10 @@ export function ReviewRatingPage({
                       </p>
                     </div>
                   )}
+                  </>
+                  ) : (
+                  <MaskedContent note="Revealed once you've rated every dish" />
+                  )}
                 </div>
               </div>
             </div>
@@ -338,6 +341,8 @@ export function ReviewRatingPage({
                 <h3 className="text-lg font-semibold text-center" style={{ color: HEADING }}>
                   The Impostor has been unmarked
                 </h3>
+                {resultsUnlocked ? (
+                <>
                 <p className="text-center text-[13px] font-medium mt-1" style={{ color: ORANGE }}>
                   {groupWon === true
                     ? '🎉 You caught the impostor!'
@@ -386,11 +391,16 @@ export function ReviewRatingPage({
                     The impostor was <span className="font-semibold" style={{ color: ORANGE }}>{impostor.name}</span>
                   </p>
                 )}
+                </>
+                ) : (
+                <MaskedContent note="Finish rating to reveal the impostor" />
+                )}
               </div>
 
               {/* Fun Awards — real category winners; empty slots render greyed */}
               <div className="rounded-[16px] border border-[#F4D1A5] p-5" style={PEACH_STYLE}>
                 <h3 className="text-lg font-semibold text-center" style={{ color: HEADING }}>Fun Awards</h3>
+                {resultsUnlocked ? (
                 <div className="grid grid-cols-2 gap-2.5 mt-4">
                   {funAwards.map((a, i) => (
                     <div
@@ -404,66 +414,39 @@ export function ReviewRatingPage({
                     </div>
                   ))}
                 </div>
+                ) : (
+                <MaskedContent note="Finish rating to reveal the awards" />
+                )}
               </div>
             </div>
-            </>
-            )}
           </div>
 
-          {/* RIGHT — rate other kitchens (gates the left) once done, their awards */}
+          {/* RIGHT — What Other Kitchens Cooked Up: always visible. Every other
+              kitchen's dish + steps, rated once (star + reaction) then shown
+              read-only. The cards are never hidden by the rating gate. */}
           <div className="rounded-[16px] border border-[#F9EAD4] p-5 sm:p-6 min-w-0" style={{ background: 'linear-gradient(180deg, #FFFEFD 0%, #FDF5E9 100%)' }}>
-            {!resultsUnlocked ? (
-              <RatingPanel
-                key={otherDishes[0]?.group_id ?? 'none'}
-                dish={otherDishes[0]}
-                ratingCategories={ratingCategories}
-                onRate={onRate}
-                remaining={dishesToRate}
-              />
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-lg font-semibold" style={{ color: HEADING }}>What Other Kitchens Cooked Up</h3>
+              {totalOther > 0 && (
+                <span className="text-[11px] font-semibold text-[#9A7B59] whitespace-nowrap">{ratedCount}/{totalOther} rated</span>
+              )}
+            </div>
+            {totalOther === 0 ? (
+              <div className="mt-6 rounded-xl border border-dashed border-[#E7D4BB] bg-[#FBF4EA] px-4 py-10 text-center">
+                <span className="text-3xl" aria-hidden>🍽️</span>
+                <p className="text-[13px] text-[#6F625A] mt-2">No other kitchens' dishes are available to rate yet.</p>
+              </div>
             ) : (
-            <>
-            <h3 className="text-lg font-semibold text-center" style={{ color: HEADING }}>What Other Kitchens Cooked Up</h3>
-            {kitchens.length === 0 ? (
-              <p className="text-[13px] text-[#6F625A] text-center mt-5">
-                Awards will appear here as more teams finish and cast their nominations.
-              </p>
-            ) : (
-              <div className="space-y-3 mt-5">
-                {kitchens.map((g) => (
-                  <div
-                    key={g.group_id}
-                    className="flex items-center gap-3 rounded-xl border border-[#F1E4D6] bg-[#FFFDF9] p-2.5"
-                  >
-                    <div className="w-16 h-16 rounded-lg bg-[#FAF4ED] overflow-hidden shrink-0">
-                      <img src={dishImageFor(g.group_id)} alt={g.dish_name ?? g.group_name} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-[#6F625A]">
-                        {g.group_name}
-                        {g.group_id === myGroupId ? ' (You)' : ''}
-                      </p>
-                      <p className="text-[15px] font-semibold text-[#2E2A26] truncate">{g.dish_name}</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {g.awards.length === 0 ? (
-                          <span className="text-[11px] text-[#A99E92]">No awards yet</span>
-                        ) : (
-                          g.awards.map((a) => (
-                            <span
-                              key={a.category_id}
-                              title={a.category_name}
-                              className="text-[11px] bg-[#FBEBD6] border border-[#F1D6B4] rounded-full px-2 py-0.5"
-                            >
-                              {a.emoji}
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
+              <div className="space-y-3 mt-4">
+                {otherDishes.map((dish) => (
+                  <DishRatingCard
+                    key={dish.group_id}
+                    dish={dish}
+                    ratingCategories={ratingCategories}
+                    onRate={onRate}
+                  />
                 ))}
               </div>
-            )}
-            </>
             )}
           </div>
         </div>
@@ -472,174 +455,185 @@ export function ReviewRatingPage({
   );
 }
 
-/** Shown in the left column while the player still has dishes to rate — the
- *  recipe reveal, impostor and awards stay hidden until the gate is cleared. */
-function LockedResults({ dishesToRate }: { dishesToRate: number }) {
+/** Compact inline placeholder shown inside a protected left-column card while
+ *  the player still has dishes to rate — keeps the section's heading and layout
+ *  in place instead of replacing the whole column with one big lock panel. */
+function MaskedContent({ note }: { note?: string }) {
   return (
-    <div
-      className="rounded-[16px] border border-[#F4D1A5] p-8 sm:p-10 flex-1 flex flex-col items-center justify-center text-center"
-      style={PEACH_STYLE}
-    >
-      <span className="text-4xl" aria-hidden>🔒</span>
-      <h3 className="text-lg font-semibold mt-3" style={{ color: HEADING }}>
-        Your results are locked
-      </h3>
-      <p className="text-[13px] text-[#6F625A] leading-relaxed mt-2 max-w-[320px]">
-        Taste and rate the other kitchens' dishes on the right to reveal your
-        Recipe Reveal, the Imposter and the Fun Awards.
-      </p>
-      <p className="text-[13px] font-semibold mt-3" style={{ color: ORANGE }}>
-        {dishesToRate} dish{dishesToRate === 1 ? '' : 'es'} left to rate
+    <div className="mt-5 rounded-xl border border-dashed border-[#E7D4BB] bg-[#FBF4EA] px-4 py-6 text-center">
+      <span className="text-2xl" aria-hidden>🔒</span>
+      <p className="text-[12px] text-[#9A7B59] mt-1.5 leading-snug">
+        {note ?? 'Rate all other kitchens to reveal'}
       </p>
     </div>
   );
 }
 
-/** Right-column rating panel: one other kitchen's dish at a time — its final
- *  recipe steps, a 1–5 star rating and the emoji reaction chips. A dish needs
- *  BOTH a star rating and a reaction; once both are set it drops out
- *  (server-side) and the next one takes its place. */
-function RatingPanel({
+/** One other kitchen's dish card in the always-visible right column: its name,
+ *  image and final recipe steps, plus a 1–5 star rating and an emoji reaction.
+ *  Both are required and submitted together, once — after that the card shows a
+ *  read-only summary of the saved rating. The card is never removed. */
+function DishRatingCard({
   dish,
   ratingCategories,
   onRate,
-  remaining,
 }: {
-  dish: CCOtherDish | undefined;
+  dish: CCOtherDish;
   ratingCategories: CCRatingCategory[];
-  onRate: (ratedGroupId: number, review: { categoryId?: number; stars?: number }) => void;
-  remaining: number;
+  onRate: (ratedGroupId: number, review: { categoryId: number; stars: number }) => void | Promise<void>;
 }) {
-  // Optimistic overlay on top of the persisted selection, so a tap shows at once
-  // and a refresh restores from the server (dish.my_stars / dish.my_category_id).
-  const [pendingStars, setPendingStars] = useState<number | null>(null);
-  const [pendingCategory, setPendingCategory] = useState<number | null>(null);
-  if (!dish) return null;
+  // A dish is already reviewed once BOTH parts are persisted — then it's locked.
+  const alreadyRated = dish.my_stars != null && dish.my_category_id != null;
+  const [stars, setStars] = useState<number | null>(dish.my_stars ?? null);
+  const [category, setCategory] = useState<number | null>(dish.my_category_id ?? null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const selectedStars = pendingStars ?? dish.my_stars ?? null;
-  const selectedCategory = pendingCategory ?? dish.my_category_id ?? null;
-  const hasStars = selectedStars != null;
-  const hasCategory = selectedCategory != null;
+  const savedCategory = ratingCategories.find((c) => c.id === dish.my_category_id);
+  const savedCategoryIndex = ratingCategories.findIndex((c) => c.id === dish.my_category_id);
+  const canSubmit = !alreadyRated && stars != null && category != null && !submitting;
 
-  const topNomination = Object.entries(dish.nomination_counts)
-    .filter(([, c]) => c > 0)
-    .sort((a, b) => b[1] - a[1])[0];
-  const topCategory = topNomination ? ratingCategories.find((c) => c.slug === topNomination[0]) : undefined;
+  const submit = async () => {
+    if (stars == null || category == null || submitting) return;
+    setSubmitting(true);
+    try {
+      await onRate(dish.group_id, { categoryId: category, stars });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold" style={{ color: HEADING }}>What Other Kitchens Cooked Up</h3>
-        <span className="text-[11px] font-semibold text-[#9A7B59] whitespace-nowrap">{remaining} to rate</span>
-      </div>
-
+    <div className="rounded-xl border border-[#F1E4D6] bg-[#FFFDF9] p-3">
       {/* Dish header */}
-      <div className="flex items-center gap-3 rounded-xl border border-[#F1E4D6] bg-[#FFFDF9] p-2.5">
-        <div className="w-16 h-16 rounded-lg bg-[#FAF4ED] overflow-hidden shrink-0">
+      <div className="flex items-center gap-3">
+        <div className="w-14 h-14 rounded-lg bg-[#FAF4ED] overflow-hidden shrink-0">
           <img src={dishImageFor(dish.group_id)} alt={dish.dish_name} className="w-full h-full object-cover" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-xs text-[#6F625A]">{dish.group_name}</p>
-          <p className="text-base font-semibold text-[#2E2A26] leading-tight truncate">{dish.dish_name}</p>
-          {topCategory ? (
-            <p className="text-[13px] text-[#3F3A35] mt-1">{topCategory.emoji} {topNomination![1]} Voted {topCategory.name}</p>
-          ) : (
-            <p className="text-[13px] text-[#A99E92] mt-1">No nominations yet</p>
-          )}
+          <p className="text-[15px] font-semibold text-[#2E2A26] leading-tight truncate">{dish.dish_name}</p>
         </div>
+        {alreadyRated && (
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-2 py-0.5 text-[11px] font-bold">
+            <Check className="h-3 w-3" /> Rated
+          </span>
+        )}
       </div>
 
       {/* The dish's final recipe (its kept steps) */}
-      <div className="rounded-xl border border-[#F1E4D6] bg-[#FEFAF6] px-4 pt-3.5 pb-1">
-        <h4 className="text-[15px] font-semibold pb-2.5 border-b border-[#EFE4D6]" style={{ color: ORANGE }}>Game Step</h4>
+      <div className="mt-3 rounded-lg border border-[#F1E4D6] bg-[#FEFAF6] px-3.5 pt-2.5 pb-1">
+        <h4 className="text-[13px] font-semibold pb-2 border-b border-[#EFE4D6]" style={{ color: ORANGE }}>Game Steps</h4>
         {dish.steps.length === 0 ? (
-          <p className="text-[13px] text-[#A99E92] py-3">No steps recorded for this dish.</p>
+          <p className="text-[12px] text-[#A99E92] py-2.5">No steps recorded for this dish.</p>
         ) : (
           <div className="divide-y divide-[#EFE4D6]">
             {dish.steps.map((s, i) => (
-              <div key={i} className="flex items-start gap-3 py-2.5">
-                <span className="text-[15px] font-semibold w-4 shrink-0 leading-snug" style={{ color: ORANGE }}>
+              <div key={i} className="flex items-start gap-2.5 py-2">
+                <span className="text-[13px] font-semibold w-4 shrink-0 leading-snug" style={{ color: ORANGE }}>
                   {String.fromCharCode(65 + i)}
                 </span>
-                <p className="text-[13px] text-[#3F3A35] leading-snug">{s.text}</p>
+                <p className="text-[12px] text-[#3F3A35] leading-snug">{s.text}</p>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Star rating — tapping the Nth star rates the dish N out of 5. */}
-      <div>
-        <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Your Rating</p>
-        <p className="text-center text-xs text-[#6F625A] mt-0.5 mb-2">Tap a star — 1 (poor) to 5 (amazing)</p>
-        <div className="flex items-center justify-center gap-1.5">
-          {[1, 2, 3, 4, 5].map((n) => {
-            const on = selectedStars != null && n <= selectedStars;
-            return (
-              <button
-                key={n}
-                type="button"
-                aria-label={`Rate ${n} out of 5`}
-                onClick={() => {
-                  setPendingStars(n);
-                  onRate(dish.group_id, { stars: n });
-                }}
-                className="p-0.5 cursor-pointer transition-transform hover:scale-110"
-              >
+      {alreadyRated ? (
+        /* Read-only summary of this player's saved rating + reaction. */
+        <div className="mt-3 rounded-lg border border-[#EADCCB] bg-[#FCF5EC] px-3 py-2.5">
+          <div className="flex items-center justify-center gap-1">
+            {[1, 2, 3, 4, 5].map((n) => {
+              const on = n <= (dish.my_stars ?? 0);
+              return (
                 <Star
-                  size={32}
+                  key={n}
+                  size={20}
                   className={on ? 'text-[#E7A24F]' : 'text-[#E3D7C7]'}
                   fill={on ? '#F2B45E' : '#EFE6DA'}
                   strokeWidth={1.25}
                 />
-              </button>
-            );
-          })}
+              );
+            })}
+            <span className="ml-1.5 text-sm font-semibold text-[#CB7430]">{dish.my_stars}/5</span>
+          </div>
+          {savedCategory && (
+            <p className="text-center text-[12px] text-[#6F625A] mt-1.5 inline-flex items-center justify-center gap-1 w-full">
+              Your reaction:
+              {savedCategoryIndex >= 0 && (
+                <img src={ratingIconFor(savedCategoryIndex)} alt={savedCategory.name} className="w-4 h-4 object-contain" />
+              )}
+              <span className="font-semibold text-[#3F2B20]">{savedCategory.name}</span>
+            </p>
+          )}
+          <p className="text-center text-[11px] text-emerald-600 font-medium mt-1">Submitted — thanks for rating!</p>
         </div>
-      </div>
+      ) : (
+        /* Interactive controls — pick a star AND a reaction, then submit once. */
+        <div className="mt-3">
+          <p className="text-center text-[13px] font-semibold text-[#2E2A26]">Your Rating</p>
+          <p className="text-center text-[11px] text-[#6F625A] mt-0.5 mb-1.5">Tap a star — 1 (poor) to 5 (amazing)</p>
+          <div className="flex items-center justify-center gap-1">
+            {[1, 2, 3, 4, 5].map((n) => {
+              const on = stars != null && n <= stars;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  aria-label={`Rate ${n} out of 5`}
+                  onClick={() => setStars(n)}
+                  className="p-0.5 cursor-pointer transition-transform hover:scale-110"
+                >
+                  <Star
+                    size={28}
+                    className={on ? 'text-[#E7A24F]' : 'text-[#E3D7C7]'}
+                    fill={on ? '#F2B45E' : '#EFE6DA'}
+                    strokeWidth={1.25}
+                  />
+                </button>
+              );
+            })}
+          </div>
 
-      {/* Emoji reaction — pick the award this dish deserves. */}
-      <div>
-        <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Give Rating</p>
-        <p className="text-center text-xs text-[#6F625A] mt-0.5 mb-3">Pick the award this dish deserves</p>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-          {ratingCategories.map((cat, i) => {
-            const isPicked = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setPendingCategory(cat.id);
-                  onRate(dish.group_id, { categoryId: cat.id });
-                }}
-                title={cat.description ?? cat.name}
-                className={`flex flex-col items-center justify-start gap-1.5 rounded-lg border px-1 pt-2.5 pb-2 text-center transition-colors cursor-pointer ${
-                  isPicked
-                    ? 'border-[#CB7430] bg-[#FFF6EA] shadow-[0_0_0_0.5px_#CB7430]'
-                    : 'border-[#EADCCB] bg-[#FCF5EC] hover:border-[#CB7430]/60'
-                }`}
-              >
-                <img src={ratingIconFor(i)} alt={cat.name} className="w-7 h-7 object-contain" />
-                <span className="text-[11px] text-[#3F3A35] leading-tight">{cat.name}</span>
-              </button>
-            );
-          })}
+          <p className="text-center text-[13px] font-semibold text-[#2E2A26] mt-3">Pick a Reaction</p>
+          <div className="grid grid-cols-5 gap-1.5 mt-1.5">
+            {ratingCategories.map((cat, i) => {
+              const isPicked = category === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategory(cat.id)}
+                  title={cat.description ?? cat.name}
+                  className={`flex flex-col items-center justify-start gap-1 rounded-lg border px-1 pt-2 pb-1.5 text-center transition-colors cursor-pointer ${
+                    isPicked
+                      ? 'border-[#CB7430] bg-[#FFF6EA] shadow-[0_0_0_0.5px_#CB7430]'
+                      : 'border-[#EADCCB] bg-[#FCF5EC] hover:border-[#CB7430]/60'
+                  }`}
+                >
+                  <img src={ratingIconFor(i)} alt={cat.name} className="w-6 h-6 object-contain" />
+                  <span className="text-[10px] text-[#3F3A35] leading-tight">{cat.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={submit}
+            className="mt-3 w-full rounded-full py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: 'linear-gradient(90deg, #4AA3E6 0%, #7C5CE6 100%)' }}
+          >
+            {submitting ? 'Submitting…' : 'Submit Rating'}
+          </button>
+          <p className="text-center text-[11px] text-[#9A7B59] mt-1.5">
+            {stars == null || category == null
+              ? 'Select a star rating and a reaction to submit.'
+              : 'You can submit once — this cannot be changed later.'}
+          </p>
         </div>
-      </div>
-
-      {/* Both parts are required before a dish counts as reviewed. */}
-      <p
-        className="text-center text-[12px] font-medium"
-        style={{ color: hasStars && hasCategory ? '#1E8449' : '#B07A3A' }}
-      >
-        {hasStars && hasCategory
-          ? 'Saved — bringing up the next dish…'
-          : !hasStars && !hasCategory
-            ? 'Give a star rating and pick a reaction to continue.'
-            : !hasStars
-              ? 'Add a star rating to finish this dish.'
-              : 'Pick a reaction to finish this dish.'}
-      </p>
+      )}
     </div>
   );
 }

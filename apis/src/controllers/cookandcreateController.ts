@@ -18,6 +18,7 @@ import {
     getOrCreateCCInstance,
     getOtherDishes as getOtherDishesService,
     hasCompletedAllReviews,
+    hasReviewedGroup,
     advanceRound2Turn,
     advanceRound3ToVoting,
     getRound2TurnParticipantId,
@@ -913,20 +914,14 @@ export const getOtherDishes = asyncHandler(async (req: Request, res: Response) =
  */
 export const submitRatingHandler = asyncHandler(async (req: Request, res: Response) => {
     const { instance_id, participant_id, rated_group_id, category_id, stars } = req.body;
-    if (!instance_id || !participant_id || !rated_group_id) {
-        throw new AppError('instance_id, participant_id, and rated_group_id are required', 400);
+    // A review is one atomic submission carrying BOTH a star rating and an emoji
+    // reaction — both are required.
+    if (!instance_id || !participant_id || !rated_group_id || category_id === undefined || category_id === null || category_id === '') {
+        throw new AppError('instance_id, participant_id, rated_group_id, and category_id are required', 400);
     }
-    const hasCategory = category_id !== undefined && category_id !== null && category_id !== '';
-    const hasStars = stars !== undefined && stars !== null && stars !== '';
-    if (!hasCategory && !hasStars) {
-        throw new AppError('Provide a star rating and/or an emoji reaction', 400);
-    }
-    let starsVal: number | null = null;
-    if (hasStars) {
-        starsVal = Number(stars);
-        if (!Number.isInteger(starsVal) || starsVal < 1 || starsVal > 5) {
-            throw new AppError('Star rating must be a whole number from 1 to 5', 400);
-        }
+    const starsVal = Number(stars);
+    if (!Number.isInteger(starsVal) || starsVal < 1 || starsVal > 5) {
+        throw new AppError('A star rating from 1 to 5 is required', 400);
     }
 
     const data = await getInstanceById(instance_id);
@@ -945,8 +940,24 @@ export const submitRatingHandler = asyncHandler(async (req: Request, res: Respon
     if (Number(rated_group_id) === data.instance.group_id) {
         throw new AppError('You cannot rate your own group', 400);
     }
+    // The rated group must be another completed dish in the same booking (guards
+    // direct API calls against arbitrary group ids).
+    const [ratableRows] = await query<any>(
+        `SELECT 1 FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
+         WHERE gg.id = ? AND gg.booking_id = (SELECT booking_id FROM game_groups WHERE id = ?)
+           AND ci.status = 'completed' AND ci.dish_name IS NOT NULL LIMIT 1`,
+        [rated_group_id, data.instance.group_id]
+    );
+    if (!ratableRows || ratableRows.length === 0) {
+        throw new AppError("That dish isn't available to rate", 400);
+    }
+    // Once-only: a dish already fully reviewed by this player cannot be rated
+    // again (refresh, revisit, repeated clicks or a direct API call).
+    if (await hasReviewedGroup(participant_id, rated_group_id)) {
+        throw new AppError('You have already rated this dish', 409);
+    }
 
-    await submitRating(instance_id, participant_id, rated_group_id, hasCategory ? category_id : null, starsVal);
+    await submitRating(instance_id, participant_id, rated_group_id, category_id, starsVal);
     return successResponse(res, 'Rating submitted', {});
 });
 

@@ -68,47 +68,30 @@ function RatingPage() {
     }
   }, [gameState, navigate]);
 
-  // A review for one other dish is two parts — a 1–5 star rating and an emoji
-  // reaction — saved independently as the player sets them (so a partial choice
-  // survives a refresh). A dish only drops out, and the results only unlock,
-  // once BOTH parts exist, so we just update local state for a partial save and
-  // re-pull the server-derived pool / gate / tallies when the review completes.
+  // A review is one atomic submission — a 1–5 star rating AND an emoji reaction,
+  // sent together, once per dish. After it saves we re-pull everything so the
+  // dish card flips to its read-only state and, if this was the last required
+  // dish, the protected left results unlock. The dish is never removed.
   const handleRate = useCallback(
-    async (ratedGroupId: number, review: { categoryId?: number; stars?: number }) => {
+    async (ratedGroupId: number, review: { categoryId: number; stars: number }) => {
       if (!gameState || !participantId) return;
-      const current = otherDishes.find((dd) => dd.group_id === ratedGroupId);
-      const willHaveCategory = (review.categoryId ?? current?.my_category_id ?? null) != null;
-      const willHaveStars = (review.stars ?? current?.my_stars ?? null) != null;
-      const willBeComplete = willHaveCategory && willHaveStars;
       try {
         await cookAndCreateService.submitRating({
           instance_id: gameState.instance.id,
           participant_id: participantId,
           rated_group_id: ratedGroupId,
-          category_id: review.categoryId ?? null,
-          stars: review.stars ?? null,
+          category_id: review.categoryId,
+          stars: review.stars,
         });
-        if (willBeComplete) {
-          await loadAll();
-        } else {
-          // Keep the half-finished selection on screen without reshuffling the pool.
-          setOtherDishes((prev) =>
-            prev.map((dd) =>
-              dd.group_id === ratedGroupId
-                ? {
-                    ...dd,
-                    my_category_id: review.categoryId ?? dd.my_category_id,
-                    my_stars: review.stars ?? dd.my_stars,
-                  }
-                : dd
-            )
-          );
-        }
+        await loadAll();
       } catch (err) {
         toastError(err instanceof Error ? err.message : 'Could not submit that rating.');
+        // Re-sync in case the dish was already rated elsewhere (e.g. another tab),
+        // so the card settles into its correct read-only state.
+        await loadAll();
       }
     },
-    [gameState, participantId, otherDishes, loadAll]
+    [gameState, participantId, loadAll]
   );
 
   if (loading || !gameState) {
@@ -119,9 +102,9 @@ function RatingPage() {
     );
   }
 
-  // The results page gates its own left column: the Recipe Reveal / Imposter /
-  // Fun Awards stay hidden until `otherDishes` (server-derived unrated dishes)
-  // is empty. Rating happens in the page's right column.
+  // The left column's protected results (Recipe Reveal / Imposter / Fun Awards)
+  // are masked until `reviews_complete` (the backend's own verdict). Rating of
+  // every other kitchen happens in the always-visible right column.
   const myId = participantId ? Number(participantId) : null;
   const impostor = gameState.participants.find((p) => p.id === awards?.my_group.impostor_participant_id);
   const mostVoted = gameState.participants.find((p) => p.id === awards?.my_group.most_voted_participant_id);
