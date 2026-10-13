@@ -144,7 +144,7 @@ function PaymentsPage() {
               View all your transactions and download GST invoices.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+         {/* <div className="flex items-center gap-2">
             <Button onClick={handleExportCSV} variant="outline" className="gap-2" disabled={loading}>
               <Download className="h-4 w-4" />
               Export CSV
@@ -153,7 +153,7 @@ function PaymentsPage() {
               <FileText className="h-4 w-4" />
               Print
             </Button>
-          </div>
+          </div>*/}
         </div>
       </section>
 

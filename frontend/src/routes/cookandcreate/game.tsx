@@ -1179,7 +1179,7 @@ function Round2Content({
             </div>
           </div>
           <p className="text-[13px] font-semibold text-[#666666] text-center">
-            Tip: A good step is clear, simple and moves the recipe forward.
+            Your Open Kitchen : Gas, water, oil, ghee, salt and basic spices are always available. Use them in any step.
           </p>
           <button
             onClick={onSubmitStep}

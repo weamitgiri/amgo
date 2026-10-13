@@ -126,14 +126,14 @@ function ParticipantsPage() {
             >
               <Filter className="h-3.5 w-3.5" /> Filter
             </button>
-            <button
+           {/* <button
               type="button"
               onClick={exportCsv}
               disabled={filtered.length === 0}
               className="inline-flex items-center gap-1.5 rounded-full bg-gradient-primary text-white px-4 py-2 text-xs font-medium shadow-glow disabled:opacity-50"
             >
               <Download className="h-3.5 w-3.5" /> Export
-            </button>
+            </button>*/}
           </div>
         </div>
 
