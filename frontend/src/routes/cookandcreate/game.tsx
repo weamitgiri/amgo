@@ -1132,12 +1132,14 @@ function Round2Content({
         <div className="flex items-center gap-3 flex-wrap">
           {selectedIngredients.map((item) => (
             <div key={item.id} className="flex flex-col items-center gap-1.5 w-[84px] rounded-xl bg-[#FFF9F0] border border-[#D6D3D1] px-2 py-2.5">
-              {item.image_url ? (
-                <img src={resolveMediaUrl(item.image_url) ?? item.image_url} alt={item.name} className="w-10 h-10 object-contain" />
-              ) : (
-                <span className="text-2xl">🥘</span>
-              )}
-              <span className="text-[13px] font-semibold text-[#3F3A35]">{item.name}</span>
+              <div className="w-10 h-10 flex items-center justify-center shrink-0">
+                {item.image_url ? (
+                  <img src={resolveMediaUrl(item.image_url) ?? item.image_url} alt={item.name} className="max-w-full max-h-full object-contain" />
+                ) : (
+                  <span className="text-2xl leading-none">🥘</span>
+                )}
+              </div>
+              <span className="text-[11px] font-semibold text-[#3F3A35] text-center leading-tight line-clamp-2 min-h-[26px]">{item.name}</span>
             </div>
           ))}
         </div>

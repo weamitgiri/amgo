@@ -85,7 +85,7 @@ export function RoundResultsModal({ isOpen, onClose, topIngredients, absurdVoted
                   <span className="text-4xl select-none">🥘</span>
                 )}
               </div>
-              <span className="text-sm font-medium text-center mt-2" style={{ color: HEADING }}>
+              <span className="text-sm font-medium text-center mt-2 leading-tight line-clamp-2" style={{ color: HEADING }}>
                 {item.name}
               </span>
             </div>

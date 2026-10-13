@@ -136,14 +136,16 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
             {topIngredients.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-col items-center gap-1.5 bg-[#fdf8f0] rounded-xl px-3 py-2 border border-[#fbd7a9] shadow-xs"
+                className="flex flex-col items-center gap-1.5 w-[78px] bg-[#fdf8f0] rounded-xl px-2 py-2 border border-[#fbd7a9] shadow-xs"
               >
-                {item.image_url ? (
-                  <img src={resolveMediaUrl(item.image_url) ?? step2Img} alt={item.name} className="object-contain drop-shadow-xs" />
-                ) : (
-                  <span className="text-xl">🥘</span>
-                )}
-                <span className="text-xs font-bold text-[#3D2E1F]">
+                <div className="w-9 h-9 flex items-center justify-center shrink-0">
+                  {item.image_url ? (
+                    <img src={resolveMediaUrl(item.image_url) ?? step2Img} alt={item.name} className="max-w-full max-h-full object-contain drop-shadow-xs" />
+                  ) : (
+                    <span className="text-xl">🥘</span>
+                  )}
+                </div>
+                <span className="text-[11px] font-bold text-[#3D2E1F] text-center leading-tight line-clamp-2 min-h-[26px]">
                   {item.name}
                 </span>
               </div>
