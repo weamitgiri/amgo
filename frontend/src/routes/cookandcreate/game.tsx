@@ -21,6 +21,7 @@ import { getParticipantSession } from '@/lib/participant-session';
 import { getSocket } from '@/lib/socket';
 import { toastError } from '@/lib/toast';
 import imposterImg from '../../assets/cookandcreate/imposter 1.png';
+import imposterIcon from '../../assets/cookandcreate/imposter-icon.png';
 import { resolveMediaUrl } from '@/utils/media';
 
 export const Route = createFileRoute('/cookandcreate/game')({
