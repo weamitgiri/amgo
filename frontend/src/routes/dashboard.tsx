@@ -329,7 +329,15 @@ function DashboardPage() {
                 <span className="text-xs text-muted-foreground">Package ID: {booking?.booking_id ?? '—'}</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2 max-w-md">
-                A story-driven team challenge where employees collaborate, question, and compete to solve the case.
+               {activityName !== "Cook & Create" ? (
+                 <p>
+                   A story-driven team challenge where employees collaborate,
+                   question, and compete to solve the case.
+                 </p>
+               ) : (
+                 <p>A fast-paced creative challenge where teams collaborate to build something unique under constraints.</p>
+               )}
+
               </p>
               <div className="mt-5 grid grid-cols-3 gap-4 text-sm">
                 <Field label="Package" value={packageName} />
