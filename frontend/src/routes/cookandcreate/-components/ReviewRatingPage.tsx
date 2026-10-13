@@ -197,12 +197,13 @@ export function ReviewRatingPage({
   }));
   const hasReactions = reactionCards.some((r) => r.count > 0);
 
-  // Fun Awards: which group leads each category (real, from the board). Cards
-  // with no winner yet render greyed so the grid always fills.
+  // Fun Awards: which group won each category (real, from the board — ranked by
+  // average received star rating on the backend). Always show the actual group
+  // name, including your own; cards with no winner yet render greyed.
   const winnerBySlug: Record<string, string> = {};
   for (const g of awardEntries) {
     for (const a of g.awards) {
-      if (!winnerBySlug[a.slug]) winnerBySlug[a.slug] = g.group_id === myGroupId ? 'Your team' : g.group_name;
+      if (!winnerBySlug[a.slug]) winnerBySlug[a.slug] = g.group_name;
     }
   }
   const funAwards = ratingCategories.slice(0, 5).map((c) => ({
@@ -449,22 +450,33 @@ function DishRatingCard({
 }) {
   // A dish is already reviewed once BOTH parts are persisted — then it's locked.
   const alreadyRated = dish.my_stars != null && dish.my_category_id != null;
-  const [stars, setStars] = useState<number | null>(dish.my_stars ?? null);
-  const [category, setCategory] = useState<number | null>(dish.my_category_id ?? null);
+
+  // Exactly five reaction options (in their configured order); the star row is
+  // always five stars. ONE shared value (1–5) drives both controls so a star
+  // and a reaction can never disagree: reaction at position i maps to value i+1.
+  const reactions = ratingCategories.slice(0, 5);
+
+  // Restore a saved/in-progress selection: prefer the saved star value, else
+  // derive it from a saved reaction's position (a legacy emoji-only row).
+  const savedReactionIndex = reactions.findIndex((c) => c.id === dish.my_category_id);
+  const initialValue =
+    dish.my_stars != null ? dish.my_stars : savedReactionIndex >= 0 ? savedReactionIndex + 1 : null;
+
+  const [value, setValue] = useState<number | null>(initialValue);
   const [submitting, setSubmitting] = useState(false);
 
-  // Exactly five reaction options (matches the five award categories); the star
-  // row is always five stars. Once rated, the saved values drive the highlight.
-  const reactions = ratingCategories.slice(0, 5);
-  const selectedStars = alreadyRated ? (dish.my_stars ?? null) : stars;
-  const selectedCategory = alreadyRated ? (dish.my_category_id ?? null) : category;
-  const canSubmit = !alreadyRated && stars != null && category != null && !submitting;
+  // Once rated, the saved star value is the single source of truth for both
+  // highlights (stars and the matching reaction).
+  const selectedValue = alreadyRated ? dish.my_stars : value;
+  const canSubmit = !alreadyRated && selectedValue != null && !submitting;
 
   const submit = async () => {
-    if (stars == null || category == null || submitting) return;
+    if (value == null || submitting) return;
+    const reaction = reactions[value - 1];
+    if (!reaction) return;
     setSubmitting(true);
     try {
-      await onRate(dish.group_id, { categoryId: category, stars });
+      await onRate(dish.group_id, { categoryId: reaction.id, stars: value });
     } finally {
       setSubmitting(false);
     }
@@ -507,9 +519,9 @@ function DishRatingCard({
         )}
       </div>
 
-      {/* Rating + reaction controls — the exact same five stars and five
-          reaction cards in both states. After submission they stay visible and
-          highlighted but become read-only; no second submission is allowed. */}
+      {/* Rating + reaction controls, driven by one shared value (1–5): tapping a
+          star or a reaction selects the matching value in BOTH. After submission
+          they stay visible and highlighted but become read-only; no re-submit. */}
       <div className="mt-3">
         <p className="text-center text-[13px] font-semibold text-[#2E2A26]">Your Rating</p>
         <p className="text-center text-[11px] text-[#6F625A] mt-0.5 mb-1.5">
@@ -517,14 +529,14 @@ function DishRatingCard({
         </p>
         <div className="flex items-center justify-center gap-1">
           {[1, 2, 3, 4, 5].map((n) => {
-            const on = selectedStars != null && n <= selectedStars;
+            const on = selectedValue != null && n <= selectedValue;
             return (
               <button
                 key={n}
                 type="button"
                 disabled={alreadyRated}
                 aria-label={`Rate ${n} out of 5`}
-                onClick={() => setStars(n)}
+                onClick={() => setValue(n)}
                 className={`p-0.5 ${alreadyRated ? 'cursor-default' : 'cursor-pointer transition-transform hover:scale-110'}`}
               >
                 <Star
@@ -536,21 +548,21 @@ function DishRatingCard({
               </button>
             );
           })}
-          {alreadyRated && selectedStars != null && (
-            <span className="ml-1.5 text-sm font-semibold text-[#CB7430]">{selectedStars}/5</span>
+          {alreadyRated && selectedValue != null && (
+            <span className="ml-1.5 text-sm font-semibold text-[#CB7430]">{selectedValue}/5</span>
           )}
         </div>
 
         <p className="text-center text-[13px] font-semibold text-[#2E2A26] mt-3">Pick a Reaction</p>
         <div className="grid grid-cols-5 gap-1.5 mt-1.5">
           {reactions.map((cat, i) => {
-            const isPicked = selectedCategory === cat.id;
+            const isPicked = selectedValue === i + 1;
             return (
               <button
                 key={cat.id}
                 type="button"
                 disabled={alreadyRated}
-                onClick={() => setCategory(cat.id)}
+                onClick={() => setValue(i + 1)}
                 title={cat.description ?? cat.name}
                 className={`flex flex-col items-center justify-start gap-1 rounded-lg border px-1 pt-2 pb-1.5 text-center transition-colors ${
                   isPicked
@@ -581,8 +593,8 @@ function DishRatingCard({
               {submitting ? 'Submitting…' : 'Submit Rating'}
             </button>
             <p className="text-center text-[11px] text-[#9A7B59] mt-1.5">
-              {stars == null || category == null
-                ? 'Select a star rating and a reaction to submit.'
+              {selectedValue == null
+                ? 'Tap a star or a reaction to rate.'
                 : 'You can submit once — this cannot be changed later.'}
             </p>
           </>

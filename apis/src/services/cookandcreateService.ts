@@ -1294,9 +1294,10 @@ export type CCAwardsBoard = {
 
 /**
  * The Final Results / Leaderboard board: every completed group in this
- * group's booking, plus whichever award category each one leads (most
- * nominations wins; earliest cc_game_instances.finished_at breaks ties),
- * plus this group's own impostor reveal.
+ * group's booking, plus the Fun Award each one earned (groups are ranked by
+ * their average received star rating, highest first, and mapped onto the five
+ * award categories in order; earliest cc_game_instances.finished_at then lower
+ * group id breaks ties), plus this group's own impostor reveal.
  */
 export async function getAwards(groupId: number | string): Promise<CCAwardsBoard | null> {
     const [groupRows] = await query<any>('SELECT booking_id FROM game_groups WHERE id = ?', [groupId]);
@@ -1312,44 +1313,43 @@ export async function getAwards(groupId: number | string): Promise<CCAwardsBoard
 
     const categories = await getCCRatingCategories();
 
-    const [tallyRows] = await query<any>(
-        `SELECT r.category_id, r.rated_group_id, COUNT(*) as c
-         FROM cc_ratings r
-         JOIN game_groups gg ON gg.id = r.rated_group_id
-         WHERE gg.booking_id = ?
-         GROUP BY r.category_id, r.rated_group_id`,
-        [bookingId]
-    );
-
     const finishedAtByGroup = new Map<number, number>();
     for (const g of groupsRows || []) {
         finishedAtByGroup.set(Number(g.group_id), g.finished_at ? Date.parse(g.finished_at) : Number.MAX_SAFE_INTEGER);
     }
 
-    const byCategory = new Map<number, Map<number, number>>();
-    for (const t of tallyRows || []) {
-        const catId = Number(t.category_id);
-        if (!byCategory.has(catId)) byCategory.set(catId, new Map());
-        byCategory.get(catId)!.set(Number(t.rated_group_id), Number(t.c));
-    }
+    // Fun Awards are ranked by each group's AVERAGE received star rating: the
+    // highest-rated group takes the first award (Master Chef), the next the
+    // second (Picasso of the Kitchen), and so on through the five categories in
+    // their configured order. Only groups that have received at least one saved
+    // star rating are eligible; ties break deterministically (earlier finish,
+    // then lower group id) so a refresh never reshuffles the winners.
+    const [avgRows] = await query<any>(
+        `SELECT r.rated_group_id, AVG(r.stars) AS avg_stars, COUNT(r.stars) AS n
+         FROM cc_ratings r
+         JOIN game_groups gg ON gg.id = r.rated_group_id
+         WHERE gg.booking_id = ? AND r.stars IS NOT NULL
+         GROUP BY r.rated_group_id`,
+        [bookingId]
+    );
 
+    const completedGroupIds = new Set<number>((groupsRows || []).map((g: any) => Number(g.group_id)));
+    const eligible = (avgRows || [])
+        .map((r: any) => ({ groupId: Number(r.rated_group_id), avg: Number(r.avg_stars), n: Number(r.n) }))
+        .filter((e: { groupId: number; avg: number; n: number }) => e.n > 0 && completedGroupIds.has(e.groupId))
+        .sort((a: { groupId: number; avg: number }, b: { groupId: number; avg: number }) => {
+            if (b.avg !== a.avg) return b.avg - a.avg; // highest average first
+            const fa = finishedAtByGroup.get(a.groupId) ?? Number.MAX_SAFE_INTEGER;
+            const fb = finishedAtByGroup.get(b.groupId) ?? Number.MAX_SAFE_INTEGER;
+            if (fa !== fb) return fa - fb;             // earlier finish breaks ties
+            return a.groupId - b.groupId;              // then lower group id
+        });
+
+    // Category i (in configured order) → the i-th ranked group, if one exists.
     const awardWinnerByCategory = new Map<number, number>();
-    for (const cat of categories) {
-        const tally = byCategory.get(cat.id);
-        if (!tally || tally.size === 0) continue;
-        let bestGroupId: number | null = null;
-        let bestCount = -1;
-        let bestFinishedAt = Number.MAX_SAFE_INTEGER;
-        for (const [gid, count] of tally.entries()) {
-            const finishedAt = finishedAtByGroup.get(gid) ?? Number.MAX_SAFE_INTEGER;
-            if (count > bestCount || (count === bestCount && finishedAt < bestFinishedAt)) {
-                bestCount = count;
-                bestGroupId = gid;
-                bestFinishedAt = finishedAt;
-            }
-        }
-        if (bestGroupId != null) awardWinnerByCategory.set(cat.id, bestGroupId);
-    }
+    categories.forEach((cat, i) => {
+        if (i < eligible.length) awardWinnerByCategory.set(cat.id, eligible[i].groupId);
+    });
 
     const groups: CCAwardEntry[] = (groupsRows || []).map((g: any) => {
         const gid = Number(g.group_id);
