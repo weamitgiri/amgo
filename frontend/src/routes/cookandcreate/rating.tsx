@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CookCreateLayout } from './-components/CookCreateLayout';
 import { ReviewRatingPage } from './-components/ReviewRatingPage';
 import { clockOffsetMs } from './-components/clock';
@@ -60,6 +60,38 @@ function RatingPage() {
     }
     loadAll();
   }, [groupId, participantId, navigate, loadAll]);
+
+  // The results page is a live waiting room: other groups may still be finishing
+  // (so new dishes become available to rate), and this player's own rating
+  // progress unlocks the gated awards/impostor the moment their reviews complete.
+  // Nothing here is socket-driven, so without this the page would keep showing
+  // stale data until a hard refresh. Re-pull the snapshot on an interval and
+  // whenever the tab regains focus, reusing loadAll; a ref guard prevents
+  // overlapping refetches and we skip polling while the tab is hidden.
+  const refreshingRef = useRef(false);
+  useEffect(() => {
+    if (!groupId || !participantId) return;
+    const refresh = async () => {
+      if (refreshingRef.current || document.visibilityState === 'hidden') return;
+      refreshingRef.current = true;
+      try {
+        await loadAll();
+      } finally {
+        refreshingRef.current = false;
+      }
+    };
+    const interval = setInterval(refresh, 12000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [groupId, participantId, loadAll]);
 
   // A game still in progress shouldn't be here — send them back to it.
   useEffect(() => {
