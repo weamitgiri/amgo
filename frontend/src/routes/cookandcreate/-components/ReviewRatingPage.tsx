@@ -335,17 +335,26 @@ export function ReviewRatingPage({
 
                 {/* The ACTUAL impostor — the player assigned the Impostor role
                     when the Secret Box was opened. Shown as soon as the completed
-                    game's state loads (before any rating), with their real name
-                    and their own portrait; a short placeholder covers the brief
-                    load so the section is never blank. Distinct from the group's
-                    most-suspected guess shown below. */}
+                    game's state loads (before any rating). Left: the reveal text,
+                    their real name and the red-devil icon. Right: the hooded
+                    impostor overlapping the player's own chef portrait, with their
+                    name and role. A short placeholder covers the brief load so the
+                    section is never blank. */}
                 {impostor ? (
-                  <div className="mt-5 flex flex-col items-center text-center">
-                    <p className="text-[15px] font-semibold leading-snug" style={{ color: ORANGE }}>
-                      The impostor all along was
-                    </p>
-                    <p className="text-[15px] font-semibold text-[#3F2B20] mt-0.5">{impostor.name}</p>
-                    <div className="mt-3 flex items-end">
+                  <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+                    {/* Left — reveal text, impostor's name, red-devil icon */}
+                    <div className="text-center">
+                      <p className="text-[15px] font-semibold leading-snug" style={{ color: ORANGE }}>
+                        The mask is off.
+                        <br />
+                        The impostor all along was
+                      </p>
+                      <p className="text-[15px] font-semibold text-[#3F2B20] mt-0.5">{impostor.name}</p>
+                      <img src={imposterIcon} alt="" aria-hidden className="w-12 h-12 object-contain mt-4 mx-auto" />
+                    </div>
+
+                    {/* Right — hooded impostor overlapping the player's chef portrait */}
+                    <div className="flex items-end">
                       <img
                         src={imposterImg}
                         alt="Impostor"
@@ -367,16 +376,6 @@ export function ReviewRatingPage({
                   </div>
                 ) : (
                   <p className="mt-5 text-center text-[13px] text-[#A99E92]">Revealing the impostor…</p>
-                )}
-
-                {/* The group's own guess from the Round 3 vote (most-suspected
-                    player) — unchanged voting logic; appears once the results
-                    board is unlocked. A different thing from the real impostor. */}
-                {mostVoted && (
-                  <p className="mt-4 pt-4 border-t border-[#F1DCC0] text-center text-[13px]" style={{ color: HEADING }}>
-                    The group's most suspected player was{' '}
-                    <span className="font-semibold" style={{ color: ORANGE }}>{mostVoted.name}</span>
-                  </p>
                 )}
               </div>
 
