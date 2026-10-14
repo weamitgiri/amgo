@@ -1115,23 +1115,45 @@ export type CCOtherDish = {
 };
 
 /**
- * EVERY other completed group's dish in the same booking (stable order). Rated
- * dishes are intentionally kept in the list — each row carries this participant's
- * own saved star/reaction (my_stars / my_category_id) so the UI can show an
- * already-rated dish in a read-only state instead of removing its card.
+ * The ONE group this group is tasked with rating: the NEXT group in display
+ * order. Groups in a booking are created in order and ordered by id ASC, which
+ * matches their "Group N" numbering — so Group 1 → Group 2, Group 2 → Group 3,
+ * and so on. This is purely positional (never id + 1), so it is correct even
+ * when group ids are non-consecutive. Returns null when this group is the last
+ * one (no next group) or isn't found in the booking.
+ */
+async function getNextGroupIdInBooking(bookingId: number | string, groupId: number | string): Promise<number | null> {
+    const [rows] = await query<any>(
+        'SELECT id FROM game_groups WHERE booking_id = ? ORDER BY id ASC',
+        [bookingId]
+    );
+    const ids = (rows || []).map((r: any) => Number(r.id));
+    const idx = ids.indexOf(Number(groupId));
+    if (idx === -1 || idx + 1 >= ids.length) return null;
+    return ids[idx + 1];
+}
+
+/**
+ * The single dish this group may rate: the NEXT group's finished dish (see
+ * getNextGroupIdInBooking). Returns exactly one dish when that next group has a
+ * completed recipe, otherwise an empty list (the UI then shows its empty state).
+ * The row carries this participant's own saved star/reaction (my_stars /
+ * my_category_id) so an already-rated dish renders read-only, never removed.
  */
 export async function getOtherDishes(groupId: number | string, participantId: number | string): Promise<CCOtherDish[]> {
     const [groupRows] = await query<any>('SELECT booking_id FROM game_groups WHERE id = ?', [groupId]);
     if (!groupRows || groupRows.length === 0) return [];
     const bookingId = groupRows[0].booking_id;
 
+    const nextGroupId = await getNextGroupIdInBooking(bookingId, groupId);
+    if (nextGroupId == null) return [];
+
     const [rows] = await query<any>(
         `SELECT gg.id as group_id, gg.group_name, ci.id AS instance_id, ci.dish_name
          FROM game_groups gg
          JOIN cc_game_instances ci ON ci.group_id = gg.id
-         WHERE gg.booking_id = ? AND gg.id != ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL
-         ORDER BY gg.id ASC`,
-        [bookingId, groupId]
+         WHERE gg.id = ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL`,
+        [nextGroupId]
     );
     if (!rows || rows.length === 0) return [];
 
@@ -1243,25 +1265,30 @@ export async function submitRating(
 }
 
 /**
- * Backend source of truth for the rating-gated results: true only when, for
- * every OTHER completed dish in this group's booking, the participant has a
- * review row with BOTH a star rating and an emoji reaction. When there are no
- * other dishes to review it is trivially complete.
+ * Backend source of truth for the rating-gated results. Each group rates exactly
+ * ONE dish — the next group's (see getNextGroupIdInBooking) — so this is true
+ * when the participant has a complete review (BOTH a star rating AND an emoji
+ * reaction) for that one designated dish. It is trivially true when there is no
+ * next group, or that group hasn't finished a dish yet (nothing to rate).
  */
 export async function hasCompletedAllReviews(groupId: number | string, participantId: number | string): Promise<boolean> {
     const [groupRows] = await query<any>('SELECT booking_id FROM game_groups WHERE id = ?', [groupId]);
     if (!groupRows || groupRows.length === 0) return false;
     const bookingId = groupRows[0].booking_id;
+
+    const nextGroupId = await getNextGroupIdInBooking(bookingId, groupId);
+    if (nextGroupId == null) return true;
+
     const [rows] = await query<any>(
         `SELECT COUNT(*) AS pending
-         FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
-         WHERE gg.booking_id = ? AND gg.id != ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL
-           AND gg.id NOT IN (
+         FROM cc_game_instances ci
+         WHERE ci.group_id = ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL
+           AND ci.group_id NOT IN (
              SELECT rated_group_id FROM cc_ratings
              WHERE voting_participant_id = ? AND rated_group_id IS NOT NULL
                AND category_id IS NOT NULL AND stars IS NOT NULL
            )`,
-        [bookingId, groupId, participantId]
+        [nextGroupId, participantId]
     );
     return Number(rows?.[0]?.pending || 0) === 0;
 }
