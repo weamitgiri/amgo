@@ -134,11 +134,13 @@ function RatingPage() {
     );
   }
 
-  // The left column's protected results (Recipe Reveal / Imposter / Fun Awards)
-  // are masked until `reviews_complete` (the backend's own verdict). Rating of
-  // every other kitchen happens in the always-visible right column.
   const myId = participantId ? Number(participantId) : null;
-  const impostor = gameState.participants.find((p) => p.id === awards?.my_group.impostor_participant_id);
+  // The ACTUAL impostor — the player assigned the Impostor role when the Secret
+  // Box was opened — is revealed on the completed game's own state immediately,
+  // NOT gated behind rating completion. It is distinct from the group's
+  // most-suspected guess (the vote result, which still comes from the awards
+  // board and keeps its existing behaviour).
+  const impostor = gameState.participants.find((p) => p.id === gameState.instance.impostor_participant_id);
   const mostVoted = gameState.participants.find((p) => p.id === awards?.my_group.most_voted_participant_id);
 
   // Only surfaced to the one participant who was actually offered Double Down

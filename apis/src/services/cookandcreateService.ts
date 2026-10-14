@@ -1116,15 +1116,21 @@ export type CCOtherDish = {
 
 /**
  * The ONE group this group is tasked with rating: the NEXT group in display
- * order. Groups in a booking are created in order and ordered by id ASC, which
- * matches their "Group N" numbering — so Group 1 → Group 2, Group 2 → Group 3,
- * and so on. This is purely positional (never id + 1), so it is correct even
- * when group ids are non-consecutive. Returns null when this group is the last
- * one (no next group) or isn't found in the booking.
+ * order, among the groups that ACTUALLY PARTICIPATED in Cook & Create (i.e. have
+ * a game instance). Groups that were created but never joined are skipped
+ * entirely, so a never-joined group between two real ones can't become a phantom
+ * target. Participating groups are ordered by id ASC, which matches their
+ * "Group N" numbering (Group 1 → Group 2, Group 2 → Group 3, …). The mapping is
+ * purely positional (never id + 1), so it is correct when ids are
+ * non-consecutive. Returns null when this group is the last participating one or
+ * isn't itself a participating group.
  */
 async function getNextGroupIdInBooking(bookingId: number | string, groupId: number | string): Promise<number | null> {
     const [rows] = await query<any>(
-        'SELECT id FROM game_groups WHERE booking_id = ? ORDER BY id ASC',
+        `SELECT DISTINCT gg.id
+         FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
+         WHERE gg.booking_id = ?
+         ORDER BY gg.id ASC`,
         [bookingId]
     );
     const ids = (rows || []).map((r: any) => Number(r.id));

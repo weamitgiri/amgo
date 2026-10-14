@@ -333,49 +333,49 @@ export function ReviewRatingPage({
                 </h3>
                 
 
-                {mostVoted && (
-                  <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-                    <div className="text-center">
-                      <p className="text-[15px] font-semibold leading-snug" style={{ color: ORANGE }}>
-                        The group has spoken.
-                        <br />
-                        The most suspected player is
-                      </p>
-                      <p className="text-[15px] font-semibold text-[#3F2B20] mt-0.5">{mostVoted.name}</p>
-                      <span className="text-3xl leading-none block mt-4" aria-hidden>
-                          <img
-                          className="w-10 h-10"
-                          src={imposterIcon}
-                          alt="Imposter"
-                          style={{ marginLeft: '78px' }}
-                          />
-                      </span>
-                    </div>
-                    <div className="flex items-end">
+                {/* The ACTUAL impostor — the player assigned the Impostor role
+                    when the Secret Box was opened. Shown as soon as the completed
+                    game's state loads (before any rating), with their real name
+                    and their own portrait; a short placeholder covers the brief
+                    load so the section is never blank. Distinct from the group's
+                    most-suspected guess shown below. */}
+                {impostor ? (
+                  <div className="mt-5 flex flex-col items-center text-center">
+                    <p className="text-[15px] font-semibold leading-snug" style={{ color: ORANGE }}>
+                      The impostor all along was
+                    </p>
+                    <p className="text-[15px] font-semibold text-[#3F2B20] mt-0.5">{impostor.name}</p>
+                    <div className="mt-3 flex items-end">
                       <img
                         src={imposterImg}
-                        alt="Suspected"
+                        alt="Impostor"
                         className="relative z-10 -mr-5 w-[84px] h-[100px] object-contain drop-shadow"
-                      /> 
-                      
+                      />
                       <div className="text-center">
                         <div className="w-[80px] h-[100px] rounded-[10px] border border-[#F1DCC0] bg-[#FFF6EA]/80 overflow-hidden">
                           <img
-                            src={portraitForRole(mostVoted.roleLabel, template)}
-                            alt={mostVoted.name}
+                            src={portraitForRole(impostor.roleLabel, template)}
+                            alt={impostor.name}
                             className="w-full h-full object-cover"
                             style={{ objectPosition: 'center 12%' }}
                           />
                         </div>
-                        <p className="text-xs font-medium mt-1" style={{ color: ORANGE }}>{mostVoted.name}</p>
-                        <p className="text-[11px] text-[#3F3A35]">{mostVoted.roleLabel}</p>
+                        <p className="text-xs font-medium mt-1" style={{ color: ORANGE }}>{impostor.name}</p>
+                        <p className="text-[11px] text-[#3F3A35]">{impostor.roleLabel}</p>
                       </div>
                     </div>
                   </div>
+                ) : (
+                  <p className="mt-5 text-center text-[13px] text-[#A99E92]">Revealing the impostor…</p>
                 )}
 
-                {impostor && (
-                  <p className="mt-5 text-center text-[13px] text-[#53301B]">
+                {/* The group's own guess from the Round 3 vote (most-suspected
+                    player) — unchanged voting logic; appears once the results
+                    board is unlocked. A different thing from the real impostor. */}
+                {mostVoted && (
+                  <p className="mt-4 pt-4 border-t border-[#F1DCC0] text-center text-[13px]" style={{ color: HEADING }}>
+                    The group's most suspected player was{' '}
+                    <span className="font-semibold" style={{ color: ORANGE }}>{mostVoted.name}</span>
                   </p>
                 )}
               </div>

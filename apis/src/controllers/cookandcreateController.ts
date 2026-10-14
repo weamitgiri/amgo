@@ -472,12 +472,12 @@ export const getCCGameState = asyncHandler(async (req: Request, res: Response) =
             ? await hasCompletedAllReviews(instance.group_id, myParticipantId)
             : false;
 
-    // The impostor's identity is the one genuine secret in this game — never
-    // send it to anyone except the impostor themselves, until the game is
-    // over, the reveal is public (finalizeRound3 already broadcasts it via
-    // cc_round3_complete at that point) AND this player has completed their
-    // required reviews. The impostor always sees their own role.
-    const revealImpostor = isImpostor || (instance.status === 'completed' && reviewsComplete);
+    // The impostor's identity is the one genuine secret DURING play — never send
+    // it to anyone but the impostor themselves while the game is running. Once
+    // the game is completed the reveal is public (this is the "Impostor has been
+    // unmarked" results section), shown immediately and independent of whether
+    // this player has finished rating other kitchens.
+    const revealImpostor = isImpostor || instance.status === 'completed';
 
     // The Double Down offer is "secretly selected" per the game design — only
     // the chosen participant (or everyone, once the game is over) should see
