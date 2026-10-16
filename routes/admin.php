@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\DatabaseExportController;
 use App\Http\Controllers\Admin\CmsPageController;
 use App\Http\Controllers\Admin\EmailTemplateController;
 use App\Http\Controllers\Admin\PackageManagementController;
@@ -74,6 +75,8 @@ Route::group(
         Route::post("settings/otp", [SettingController::class, "otpUpdate"])->name("settings.otpUpdate");
         Route::post("settings/payment", [SettingController::class, "paymentUpdate"])->name("settings.paymentUpdate");
         Route::post("settings/invoice", [SettingController::class, "invoiceUpdate"])->name("settings.invoiceUpdate");
+        // Full database export (all tables + data) as a .sql download — full admins only (checked in the controller).
+        Route::post("settings/database-export", [DatabaseExportController::class, "export"])->name("database.export");
 
         // CMS Pages Management
         Route::prefix('cms')->group(function () {

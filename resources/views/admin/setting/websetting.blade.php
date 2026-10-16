@@ -66,6 +66,9 @@
                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#tab-payment" role="tab">Payment</a></li>
                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#tab-invoice" role="tab">Invoice / GST</a></li>
                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#tab-social" role="tab">Social Media</a></li>
+               @if(\App\Models\MenuPermission::checkRoutePermissions('admin.database.export'))
+               <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#tab-database" role="tab">Database Backup</a></li>
+               @endif
             </ul>
          </div>
          <div class="card-body">
@@ -78,6 +81,9 @@
                <div class="tab-pane fade" id="tab-payment" role="tabpanel">@include('admin.setting.payment')</div>
                <div class="tab-pane fade" id="tab-invoice" role="tabpanel">@include('admin.setting.invoice')</div>
                <div class="tab-pane fade" id="tab-social" role="tabpanel">@include('admin.setting.social-links')</div>
+               @if(\App\Models\MenuPermission::checkRoutePermissions('admin.database.export'))
+               <div class="tab-pane fade" id="tab-database" role="tabpanel">@include('admin.setting.database')</div>
+               @endif
             </div>
          </div>
       </div>
