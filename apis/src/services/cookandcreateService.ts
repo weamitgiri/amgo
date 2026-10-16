@@ -144,6 +144,42 @@ export async function getCCTemplateById(templateId: number | string): Promise<CC
     return mapTemplateRow(rows[0]);
 }
 
+/**
+ * Which template a NEW group's game uses, so different groups in the same
+ * booking get different ingredient pools instead of all sharing the first one.
+ *
+ * Eligible templates = the admin's active templates for this activity game that
+ * have at least one active ingredient, ordered by id. Groups are ordered by id
+ * within their booking (the "Group N" order), and group N gets eligible template
+ * (N - 1) mod count — Group 1 → 1st template, Group 2 → 2nd, …, wrapping around
+ * when there are more groups than templates (one template ⇒ everyone shares
+ * it). The result is stored on the instance, so it never changes mid-game.
+ * Falls back to the previous single-template lookup if nothing is eligible.
+ */
+async function pickTemplateForGroup(activityGameId: number | string, groupId: number | string): Promise<CCGameTemplate | null> {
+    const [templates] = await query(
+        `SELECT t.* FROM cc_game_templates t
+         WHERE t.activity_game_id = ? AND t.status = 'active'
+           AND EXISTS (
+             SELECT 1 FROM cc_game_template_ingredients ti
+             JOIN cc_ingredients i ON i.id = ti.ingredient_id
+             WHERE ti.template_id = t.id AND i.status = 'active'
+           )
+         ORDER BY t.id ASC`,
+        [activityGameId]
+    );
+    if (templates.length === 0) return getCCTemplateByGameId(activityGameId);
+
+    const [groups] = await query(
+        `SELECT id FROM game_groups
+         WHERE booking_id = (SELECT booking_id FROM game_groups WHERE id = ?)
+         ORDER BY id ASC`,
+        [groupId]
+    );
+    const position = Math.max(0, groups.findIndex((g: any) => Number(g.id) === Number(groupId)));
+    return mapTemplateRow(templates[position % templates.length]);
+}
+
 function mapInstanceRow(r: any): CCGameInstance {
     return {
         id: Number(r.id),
@@ -434,11 +470,22 @@ export async function getOrCreateCCInstance(groupId: number | string, activityGa
         resolvedActivityGameId = agRows[0].id;
     }
 
-    const template = await getCCTemplateByGameId(resolvedActivityGameId as number | string);
-    if (!template) return null;
-
     let [rows] = await query(`SELECT * FROM cc_game_instances WHERE group_id = ?`, [groupId]);
-    if (rows.length === 0) {
+
+    let template: CCGameTemplate | null;
+    if (rows.length > 0) {
+        // An existing game keeps the template it was created with, so its
+        // ingredients (and everything else) stay the same across refreshes and
+        // round transitions — the same template every round/vote/timer function
+        // already reads via getInstanceById.
+        template =
+            (await getCCTemplateById(rows[0].template_id)) ??
+            (await getCCTemplateByGameId(resolvedActivityGameId as number | string));
+        if (!template) return null;
+    } else {
+        // New game: give this group its own template (see pickTemplateForGroup).
+        template = await pickTemplateForGroup(resolvedActivityGameId as number | string, groupId);
+        if (!template) return null;
         await query(
             `INSERT INTO cc_game_instances (group_id, template_id, activity_id, status, created_at, updated_at) VALUES (?, ?, 2, 'waiting', NOW(), NOW())`,
             [groupId, template.id]
