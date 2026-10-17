@@ -43,7 +43,7 @@
                     <input type="file" name="roles[{{ $i }}][role_icon]" accept="image/*" class="custom-file-input @error("roles.$i.role_icon") is-invalid @enderror">
                     <label class="custom-file-label">Choose role icon</label>
                 </div>
-                <small class="form-text text-muted">60&times;60 px (square) &middot; Max 1 MB &middot; PNG (transparent), JPG, WEBP or JPEG. Shown as the badge on the player's "Your Role" card.</small>
+                <small class="form-text text-muted">60&times;60 px (square) &middot; Max 100 KB &middot; PNG (transparent), JPG, WEBP or JPEG. Shown as the badge on the player's "Your Role" card.</small>
                 @error("roles.$i.role_icon")
                     <div class="text-danger small">{{ $message }}</div>
                 @enderror

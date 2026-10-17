@@ -813,6 +813,26 @@
             });
         });
 
+        // Game Roles: reject any role image/icon over 100 KB as soon as it is selected.
+        const ROLE_IMAGE_MAX_BYTES = 100 * 1024;
+        $(document).on('change', '#roles-container input[type="file"]', function() {
+            const $input = $(this);
+            const $group = $input.closest('.form-group');
+            $group.find('.role-image-size-error').remove();
+            $input.removeClass('is-invalid');
+
+            const file = this.files && this.files[0];
+            if (file && file.size > ROLE_IMAGE_MAX_BYTES) {
+                const sizeKb = Math.ceil(file.size / 1024);
+                this.value = '';
+                $input.addClass('is-invalid');
+                $input.closest('.custom-file').after(
+                    $('<div class="text-danger small role-image-size-error"></div>')
+                        .text(`"${file.name}" is ${sizeKb} KB. Images must be 100 KB or smaller. Please choose a smaller image.`)
+                );
+            }
+        });
+
         updateRoleCount();
     });
 </script>
