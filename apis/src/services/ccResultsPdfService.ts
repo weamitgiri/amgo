@@ -3,6 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import PDFDocument from 'pdfkit';
 import { query } from '../config/db';
+import { getAwards, getCCRatingCategories } from './cookandcreateService';
 
 /**
  * Auto-generated Cook & Create awards results PDF.
@@ -15,10 +16,11 @@ import { query } from '../config/db';
  * purge only touches results_pdf_path / the results-pdfs folder, so these are
  * never auto-deleted.
  *
- * Award winners come from each group's AVERAGE received star rating, which only
- * exists after players rate dishes post-game, so the PDF is generated lazily
- * once winners are available (and as a final safety net before the privacy
- * purge anonymises member names/emails) — never with empty awards.
+ * Award winners come from the live results board (getAwards), which ranks groups
+ * by the star ratings players give after the game, so the PDF is generated
+ * lazily once winners exist, kept in step with the results if more ratings
+ * arrive (and captured a final time before the privacy purge anonymises member
+ * names/emails) — never with empty awards.
  */
 const STORAGE_DIR = path.join(__dirname, '..', '..', 'storage', 'cc-results-pdfs');
 
@@ -49,62 +51,35 @@ type BookingInfo = {
 /** Per-booking lock so a double completion/refresh can't race two generations. */
 const generating = new Set<number>();
 
+/** Bump when the PDF layout changes, so stored PDFs are rebuilt in the new layout. */
+const PDF_LAYOUT_VERSION = 2;
+
 /**
- * Compute the award winners for a booking, reusing the EXACT ranking the live
- * results use (getAwards): each group's average received star rating, highest
- * first; ties break by earlier finish then lower group id; category i (in
- * configured order) → the i-th ranked group. Returns one section per active
- * award category, with the winning group's members (name + email).
+ * The five Fun Awards and their winners for a booking, taken from the live
+ * results board (getAwards) — the same winners players see — so the PDF can
+ * never disagree with the game. The categories are the first five active ones
+ * in configured order, exactly what the results screen displays. Only groups
+ * that won an award appear, each with its members (name + email); a group that
+ * won several awards appears under each one; an award without a winner has none.
  */
 async function computeBookingAwards(bookingId: number): Promise<AwardSection[]> {
-    // The Fun Awards are the first configured categories (the results screen
-    // shows the top five, in order) — match that so the PDF mirrors the game's
-    // award display exactly. Names come straight from the admin configuration.
     const AWARD_COUNT = 5;
-    const [allCategories] = await query<any>(
-        `SELECT id, name FROM cc_rating_categories WHERE status = 'active' ORDER BY \`order\` ASC, id ASC`
-    );
-    const categories = (allCategories as any[]).slice(0, AWARD_COUNT);
+    const categories = (await getCCRatingCategories()).slice(0, AWARD_COUNT);
 
-    // Completed groups in this booking that produced a dish (eligible to win).
-    const [groupsRows] = await query<any>(
-        `SELECT gg.id AS group_id, gg.group_name, ci.finished_at
-         FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
-         WHERE gg.booking_id = ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL`,
+    // getAwards ranks the whole booking, so any of its completed groups works.
+    const [anyGroup] = await query<any>(
+        `SELECT gg.id FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
+         WHERE gg.booking_id = ? AND ci.status = 'completed' ORDER BY gg.id ASC LIMIT 1`,
         [bookingId]
     );
-    const completedGroupIds = new Set<number>((groupsRows || []).map((g: any) => Number(g.group_id)));
-    const labelByGroup = new Map<number, string>();
-    const finishedAtByGroup = new Map<number, number>();
-    for (const g of groupsRows || []) {
-        labelByGroup.set(Number(g.group_id), g.group_name);
-        finishedAtByGroup.set(
-            Number(g.group_id),
-            g.finished_at ? Date.parse(g.finished_at) : Number.MAX_SAFE_INTEGER
-        );
-    }
-
-    const [avgRows] = await query<any>(
-        `SELECT r.rated_group_id, AVG(r.stars) AS avg_stars, COUNT(r.stars) AS n
-         FROM cc_ratings r JOIN game_groups gg ON gg.id = r.rated_group_id
-         WHERE gg.booking_id = ? AND r.stars IS NOT NULL
-         GROUP BY r.rated_group_id`,
-        [bookingId]
-    );
-    const eligible = (avgRows || [])
-        .map((r: any) => ({ groupId: Number(r.rated_group_id), avg: Number(r.avg_stars), n: Number(r.n) }))
-        .filter((e: { groupId: number; n: number }) => e.n > 0 && completedGroupIds.has(e.groupId))
-        .sort((a: { groupId: number; avg: number }, b: { groupId: number; avg: number }) => {
-            if (b.avg !== a.avg) return b.avg - a.avg;
-            const fa = finishedAtByGroup.get(a.groupId) ?? Number.MAX_SAFE_INTEGER;
-            const fb = finishedAtByGroup.get(b.groupId) ?? Number.MAX_SAFE_INTEGER;
-            if (fa !== fb) return fa - fb;
-            return a.groupId - b.groupId;
-        });
+    if (!anyGroup?.[0]) return [];
+    const board = await getAwards(anyGroup[0].id);
+    if (!board) return [];
 
     const sections: AwardSection[] = [];
-    for (let i = 0; i < categories.length; i++) {
-        const winnerGroupId = i < eligible.length ? eligible[i].groupId : null;
+    for (const cat of categories) {
+        const winner = board.groups.find((g) => g.awards.some((a) => a.category_id === cat.id)) ?? null;
+        const winnerGroupId = winner ? winner.group_id : null;
         let members: { name: string; email: string }[] = [];
         if (winnerGroupId != null) {
             const [memberRows] = await query<any>(
@@ -119,9 +94,9 @@ async function computeBookingAwards(bookingId: number): Promise<AwardSection[]> 
             }));
         }
         sections.push({
-            categoryName: categories[i].name,
+            categoryName: cat.name,
             winnerGroupId,
-            winnerGroupLabel: winnerGroupId != null ? labelByGroup.get(winnerGroupId) ?? `Group ${winnerGroupId}` : null,
+            winnerGroupLabel: winner ? (winner.group_name || '').trim() || `Group ${winner.group_id}` : null,
             members,
         });
     }
@@ -165,10 +140,9 @@ async function getBookingInfo(bookingId: number): Promise<BookingInfo | null> {
     };
 }
 
-/** Renders the PDF to a new file and returns its filename (not full path). */
-async function renderPdf(info: BookingInfo, sections: AwardSection[]): Promise<string> {
+/** Renders the PDF into the storage folder under the given filename. */
+async function renderPdf(info: BookingInfo, sections: AwardSection[], filename: string): Promise<void> {
     ensureStorageDir();
-    const filename = `cc-booking-${info.bookingId}-${crypto.randomBytes(12).toString('hex')}.pdf`;
     const filePath = path.join(STORAGE_DIR, filename);
 
     await new Promise<void>((resolve, reject) => {
@@ -215,8 +189,8 @@ async function renderPdf(info: BookingInfo, sections: AwardSection[]): Promise<s
         doc.y = boxTop + boxH + 18;
 
         // ---- One section per award ----
-        const colGroupW = 90;
-        const colEmailW = 190;
+        const colGroupW = 72;
+        const colEmailW = 222;
         const colNameW = WIDTH - colGroupW - colEmailW;
 
         const drawTableHeader = () => {
@@ -235,7 +209,7 @@ async function renderPdf(info: BookingInfo, sections: AwardSection[]): Promise<s
             doc.fillColor(ORANGE).font('Helvetica-Bold').fontSize(14)
                 .text(`${i + 1}. ${s.categoryName}`, LEFT, doc.y, { width: WIDTH });
             doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11)
-                .text(s.winnerGroupLabel ? `Winning ${s.winnerGroupLabel}` : 'Not awarded (no ratings received)', LEFT, doc.y + 2, { width: WIDTH });
+                .text(`Winning Group: ${s.winnerGroupLabel ?? 'No winner'}`, LEFT, doc.y + 2, { width: WIDTH });
             doc.moveDown(0.6);
 
             if (!s.winnerGroupLabel || s.members.length === 0) {
@@ -287,37 +261,66 @@ async function renderPdf(info: BookingInfo, sections: AwardSection[]): Promise<s
         stream.on('finish', () => resolve());
         stream.on('error', reject);
     });
+}
 
-    return filename;
+/** The booking's stored awards PDF filename whose file still exists, if any. */
+async function getStoredPdfFilename(bookingId: number): Promise<string | null> {
+    const [rows] = await query<any>(
+        `SELECT DISTINCT cc_results_pdf_path AS p FROM game_groups
+         WHERE booking_id = ? AND cc_results_pdf_path IS NOT NULL`,
+        [bookingId]
+    );
+    for (const row of rows || []) {
+        if (fs.existsSync(resolveCCPdfPath(row.p))) return row.p;
+    }
+    return null;
 }
 
 /**
- * Generate (or regenerate) the awards PDF for a booking and store its path on
- * every completed CC group of that booking. Returns the filename, or null when
- * there are no award winners yet (nothing worth generating). Deletes a previous
- * file for the booking so files don't accumulate. Guarded against concurrency.
+ * Ensure the booking's single awards PDF exists and matches the current results,
+ * storing its filename on every completed CC group of the booking. Returns the
+ * filename, or null when there are no award winners yet (nothing to download).
+ *
+ * The filename is derived from the results it contains, so repeated calls (list
+ * refreshes, downloads, completion events) reuse the same file and it is only
+ * rebuilt when the winners or their members actually change; the superseded file
+ * is then deleted. Once the privacy purge has started on any group of the
+ * booking, the PDF captured before it is kept as-is and never rebuilt.
  */
 export async function generateCCResultsPdfForBooking(bookingId: number): Promise<string | null> {
     const id = Number(bookingId);
-    if (generating.has(id)) return null;
+    const stored = await getStoredPdfFilename(id);
+    if (generating.has(id)) return stored;
     generating.add(id);
     try {
+        const [purged] = await query<any>(
+            'SELECT 1 FROM game_groups WHERE booking_id = ? AND purged_at IS NOT NULL LIMIT 1',
+            [id]
+        );
+        if (purged.length > 0) return stored;
+
         const sections = await computeBookingAwards(id);
-        if (!sections.some((s) => s.winnerGroupId != null)) return null; // no winners → skip
+        if (!sections.some((s) => s.winnerGroupId != null)) return stored; // no winners yet
 
         const info = await getBookingInfo(id);
-        if (!info) return null;
+        if (!info) return stored;
 
-        // Previous file(s) for this booking's completed CC groups — remove after
-        // a successful regenerate so storage doesn't grow unbounded.
+        const signature = crypto
+            .createHash('sha256')
+            .update(JSON.stringify({ layout: PDF_LAYOUT_VERSION, info, sections }))
+            .digest('hex')
+            .slice(0, 32);
+        const filename = `cc-booking-${id}-${signature}.pdf`;
+        if (stored === filename) return filename;
+
+        // Previous file(s) for this booking — removed after the new one is stored.
         const [existing] = await query<any>(
-            `SELECT DISTINCT gg.cc_results_pdf_path AS p
-             FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
-             WHERE gg.booking_id = ? AND gg.cc_results_pdf_path IS NOT NULL`,
+            `SELECT DISTINCT cc_results_pdf_path AS p FROM game_groups
+             WHERE booking_id = ? AND cc_results_pdf_path IS NOT NULL`,
             [id]
         );
 
-        const filename = await renderPdf(info, sections);
+        await renderPdf(info, sections, filename);
 
         await query(
             `UPDATE game_groups gg
@@ -335,7 +338,7 @@ export async function generateCCResultsPdfForBooking(bookingId: number): Promise
         return filename;
     } catch (err: any) {
         console.error('[ccResultsPdfService] generate failed for booking', bookingId, err?.message || err);
-        return null; // leave path unset so a later request retries
+        return stored; // keep serving the previous file; a later request retries
     } finally {
         generating.delete(id);
     }

@@ -44,7 +44,11 @@ function HrResultsPage() {
   const downloadPdf = async (r: OrganizerGameResult) => {
     try {
       const token = apiClient.getToken();
-      const res = await fetch(`${ENV.API_BASE_URL}/v1/results/${r.group_id}/pdf`, {
+      // Cook & Create: one consolidated awards PDF per game session (booking).
+      const pdfUrl = r.is_cook_and_create
+        ? `${ENV.API_BASE_URL}/v1/organizer/results/cook-and-create/${r.booking_id}/pdf`
+        : `${ENV.API_BASE_URL}/v1/results/${r.group_id}/pdf`;
+      const res = await fetch(pdfUrl, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error("The results PDF is no longer available.");
@@ -52,8 +56,9 @@ function HrResultsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const prefix = r.is_cook_and_create ? "cook-and-create-results" : "mystery-quest-results";
-      a.download = `${prefix}-${r.group_name.toLowerCase().replace(/\s+/g, "-")}.pdf`;
+      a.download = r.is_cook_and_create
+        ? `cook-and-create-results-session-${r.booking_id}.pdf`
+        : `mystery-quest-results-${r.group_name.toLowerCase().replace(/\s+/g, "-")}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -136,7 +141,10 @@ function HrResultsPage() {
                         </button>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" /> Expired (auto-deleted)
+                          <Clock className="h-3.5 w-3.5" />{" "}
+                          {r.is_cook_and_create
+                            ? r.status === "incomplete" ? "No award results" : "Awaiting ratings"
+                            : "Expired (auto-deleted)"}
                         </span>
                       )}
                     </td>

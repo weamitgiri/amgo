@@ -111,7 +111,8 @@ export type OrganizerGameResult = {
   completed_at: string | null;
   pdf_available: boolean;
   pdf_expires_at: string | null;
-  /** Cook & Create results PDFs are kept permanently (no 1-hour expiry). */
+  /** Cook & Create: one row per game session (booking) with a single, permanent
+   *  awards PDF downloaded by booking_id; group_name summarises its groups. */
   is_cook_and_create?: boolean;
 };
 

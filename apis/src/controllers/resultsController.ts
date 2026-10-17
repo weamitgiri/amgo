@@ -179,7 +179,9 @@ export const downloadResultsPdf = asyncHandler(async (req: Request, res: Respons
 
     let authorized = false;
 
-    if (participantId) {
+    // The Cook & Create PDF lists every winning group's members and emails, so
+    // only the organizer (HR) may download it — never a participant.
+    if (participantId && !ccPdfPath) {
         const [memberRows] = await query<any>(
             'SELECT id FROM game_participants WHERE group_id = ? AND id = ? LIMIT 1',
             [group_id, participantId]
