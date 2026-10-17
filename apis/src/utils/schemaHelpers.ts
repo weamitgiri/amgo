@@ -1,5 +1,6 @@
 import { query } from '../config/db';
 import { purgeStaleGroupRowsOnBoot } from '../services/groupDataCleanup';
+import { CC_GAME_DURATION_FIELDS } from '../services/ccStageDurations';
 
 export async function ensureOrganizerStatusColumns(): Promise<void> {
     try {
@@ -762,6 +763,69 @@ export async function ensureCookAndCreateSchema(): Promise<void> {
     }
 }
 
+/**
+ * Global Cook & Create stage durations (cc_stage_durations, single row id = 1)
+ * and the per-game snapshot column (cc_game_instances.stage_durations) — see
+ * services/ccStageDurations.ts. Existing games are backfilled from their own
+ * template BEFORE the global values are first applied to every template, so a
+ * game already running keeps its durations. Same steps, same order, as the
+ * Laravel migration 2026_10_18_000001; whichever runs first wins.
+ */
+export async function ensureCCStageDurations(): Promise<void> {
+    try {
+        const [col] = await query<any>(`SHOW COLUMNS FROM cc_game_instances LIKE 'stage_durations'`);
+        if ((col as any).length === 0) {
+            await query(`ALTER TABLE cc_game_instances ADD COLUMN stage_durations JSON NULL DEFAULT NULL AFTER template_id`);
+        }
+        const snapshot = `JSON_OBJECT(${CC_GAME_DURATION_FIELDS.map((f) => `'${f}', t.${f}`).join(', ')})`;
+        await query(
+            `UPDATE cc_game_instances ci JOIN cc_game_templates t ON t.id = ci.template_id
+             SET ci.stage_durations = ${snapshot} WHERE ci.stage_durations IS NULL`
+        );
+
+        const [table] = await query<any>(`SHOW TABLES LIKE 'cc_stage_durations'`);
+        if ((table as any).length > 0) return;
+        await query(
+            `CREATE TABLE cc_stage_durations (
+                id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+                lobby_wait_secs INT UNSIGNED NOT NULL DEFAULT 900,
+                role_brief_secs INT UNSIGNED NOT NULL DEFAULT 300,
+                round1_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                round1_results_secs INT UNSIGNED NOT NULL DEFAULT 60,
+                round2_submit_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                round2_review_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                round3_discussion_timer_secs INT UNSIGNED NOT NULL DEFAULT 60,
+                round3_voting_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                dish_naming_secs INT UNSIGNED NOT NULL DEFAULT 60,
+                created_at TIMESTAMP NULL DEFAULT NULL,
+                updated_at TIMESTAMP NULL DEFAULT NULL
+            )`
+        );
+
+        // Start from the most recently saved template (the admin's latest intent).
+        const [latest] = await query<any>(
+            `SELECT ${CC_GAME_DURATION_FIELDS.map((f) => `t.${f}`).join(', ')}, a.lobby_wait_secs
+             FROM cc_game_templates t
+             LEFT JOIN activity_games g ON g.id = t.activity_game_id
+             LEFT JOIN activities a ON a.id = g.activity_id
+             ORDER BY t.updated_at DESC, t.id DESC LIMIT 1`
+        );
+        const seed = Object.fromEntries(Object.entries(latest?.[0] ?? {}).filter(([, v]) => v !== null));
+        await query(`INSERT INTO cc_stage_durations SET ?`, [{ id: 1, created_at: new Date(), updated_at: new Date(), ...seed }]);
+
+        await query(
+            `UPDATE cc_game_templates t JOIN cc_stage_durations d ON d.id = 1
+             SET ${CC_GAME_DURATION_FIELDS.map((f) => `t.${f} = d.${f}`).join(', ')}`
+        );
+        await query(
+            `UPDATE activities a JOIN cc_stage_durations d ON d.id = 1
+             SET a.lobby_wait_secs = d.lobby_wait_secs WHERE a.slug LIKE 'cook%'`
+        );
+    } catch (err: any) {
+        console.warn('[schemaHelpers] Could not ensure Cook & Create stage durations:', err.message || err);
+    }
+}
+
 export async function ensureGameSchemaUpdates(): Promise<void> {
     await ensureGameGroupRetentionColumns();
     await ensureGameGroupsGameId();
@@ -777,6 +841,7 @@ export async function ensureGameSchemaUpdates(): Promise<void> {
     await ensureEqualChanceScoringColumns();
     await ensureGameDurationDefault();
     await ensureCookAndCreateSchema();
+    await ensureCCStageDurations();
     // Last: clear rows left behind by deleted groups whose ids were later reused.
     await purgeStaleGroupRowsOnBoot();
 }

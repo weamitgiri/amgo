@@ -1,6 +1,7 @@
 import { query, withTransaction } from '../config/db';
 import moment from 'moment';
 import { io } from '../server';
+import { CC_GAME_DURATION_FIELDS, CCGameDurations, withGameDurations } from './ccStageDurations';
 
 export type CCIngredient = {
     id: number;
@@ -228,6 +229,18 @@ async function orderTemplatesForVariety(templates: any[]): Promise<any[]> {
     return ordered;
 }
 
+/** The current global in-game stage durations, or null if the table isn't there yet. */
+async function getGlobalGameDurations(): Promise<CCGameDurations | null> {
+    try {
+        const [rows] = await query<any>(`SELECT * FROM cc_stage_durations WHERE id = 1 LIMIT 1`);
+        const row = rows?.[0];
+        if (!row) return null;
+        return Object.fromEntries(CC_GAME_DURATION_FIELDS.map((f) => [f, Number(row[f])])) as CCGameDurations;
+    } catch {
+        return null;
+    }
+}
+
 function mapInstanceRow(r: any): CCGameInstance {
     return {
         id: Number(r.id),
@@ -263,7 +276,7 @@ export async function getInstanceById(instanceId: number | string): Promise<{ in
     const instance = mapInstanceRow(rows[0]);
     const template = await getCCTemplateById(instance.template_id);
     if (!template) return null;
-    return { instance, template };
+    return { instance, template: withGameDurations(template, rows[0]) };
 }
 
 /**
@@ -537,12 +550,17 @@ export async function getOrCreateCCInstance(groupId: number | string, activityGa
             [rows] = await query(`SELECT * FROM cc_game_instances WHERE group_id = ?`, [groupId]);
         }
     } else {
-        // New game: give this group its own template (see pickTemplateForGroup).
+        // New game: give this group its own template (see pickTemplateForGroup),
+        // and fix its stage durations now from the global settings, so later
+        // admin changes don't affect it (see ccStageDurations).
         template = await pickTemplateForGroup(resolvedActivityGameId as number | string, groupId);
         if (!template) return null;
+        const durations =
+            (await getGlobalGameDurations()) ??
+            Object.fromEntries(CC_GAME_DURATION_FIELDS.map((f) => [f, (template as CCGameTemplate)[f]]));
         await query(
-            `INSERT INTO cc_game_instances (group_id, template_id, activity_id, status, created_at, updated_at) VALUES (?, ?, 2, 'waiting', NOW(), NOW())`,
-            [groupId, template.id]
+            `INSERT INTO cc_game_instances (group_id, template_id, stage_durations, activity_id, status, created_at, updated_at) VALUES (?, ?, ?, 2, 'waiting', NOW(), NOW())`,
+            [groupId, template.id, JSON.stringify(durations)]
         );
         [rows] = await query(`SELECT * FROM cc_game_instances WHERE group_id = ?`, [groupId]);
     }
@@ -556,7 +574,7 @@ export async function getOrCreateCCInstance(groupId: number | string, activityGa
 
     return {
         instance: mapInstanceRow(rows[0]),
-        template,
+        template: withGameDurations(template, rows[0]),
     };
 }
 

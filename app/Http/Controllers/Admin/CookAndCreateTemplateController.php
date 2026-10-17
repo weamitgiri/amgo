@@ -9,6 +9,7 @@ use App\Models\CcGameRule;
 use App\Models\CcGameTemplate;
 use App\Models\CcGameTemplateIngredient;
 use App\Models\CcIngredient;
+use App\Models\CcStageDurations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -55,10 +56,8 @@ class CookAndCreateTemplateController extends Controller
     {
         $ingredients = CcIngredient::active()->orderBy('name')->get();
         $activityGames = $this->cookAndCreateActivityGames()->with('activity')->get();
-        // Default lobby wait for a brand-new template; on save it is written to
-        // the chosen activity. 900s = 15 min, matching the required default.
-        $lobbyWaitSecs = optional($activityGames->first()?->activity)->lobby_wait_secs ?? 900;
-        return view('admin.cook-and-create.templates.create', compact('ingredients', 'activityGames', 'lobbyWaitSecs'));
+        $stageDurations = CcStageDurations::current();
+        return view('admin.cook-and-create.templates.create', compact('ingredients', 'activityGames', 'stageDurations'));
     }
 
     private function rules(): array
@@ -76,9 +75,9 @@ class CookAndCreateTemplateController extends Controller
             'show_host_image' => 'nullable|image|max:2048',
             'round1_votes_per_player' => 'required|integer|min:1|max:5',
             'round1_top_ingredients' => 'required|integer|min:2|max:10',
-            // Stage durations, all in seconds. See the stage ↔ column mapping
-            // in the form. Bounds keep values positive and within sane limits.
-            'lobby_wait_secs' => 'required|integer|min:60|max:3600',          // Stage 1 — stored on the activity, not the template
+            // Stage durations, all in seconds, shared by every template (see
+            // CcStageDurations). Bounds keep values positive and within sane limits.
+            'lobby_wait_secs' => 'required|integer|min:60|max:3600',          // Stage 1
             'role_brief_secs' => 'required|integer|min:15|max:1800',          // Stage 2
             'round1_timer_secs' => 'required|integer|min:15|max:1800',        // Stage 3
             'round1_results_secs' => 'required|integer|min:5|max:600',        // Stage 4
@@ -123,11 +122,11 @@ class CookAndCreateTemplateController extends Controller
         $this->handleImageUploads($request, $validated);
 
         DB::transaction(function () use ($validated) {
-            $template = CcGameTemplate::create(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules', 'lobby_wait_secs'])->toArray());
+            $template = CcGameTemplate::create(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules', ...CcStageDurations::FIELDS])->toArray());
             $this->syncIngredients($template, $validated['ingredient_ids']);
             $this->syncClues($template, $validated['clues'] ?? []);
             $this->syncRules($template, $validated['game_rules'] ?? []);
-            $this->updateLobbyWait($template, (int) $validated['lobby_wait_secs']);
+            CcStageDurations::applyGlobally($validated);
         });
 
         return redirect()->route('admin.cook-and-create.templates.index')->with('success', 'Template created.');
@@ -139,8 +138,8 @@ class CookAndCreateTemplateController extends Controller
         $ingredients = CcIngredient::active()->orderBy('name')->get();
         $activityGames = $this->cookAndCreateActivityGames()->with('activity')->get();
         $selectedIngredientIds = $template->templateIngredients->pluck('ingredient_id')->all();
-        $lobbyWaitSecs = optional(optional($template->activityGame)->activity)->lobby_wait_secs ?? 900;
-        return view('admin.cook-and-create.templates.edit', compact('template', 'ingredients', 'activityGames', 'selectedIngredientIds', 'lobbyWaitSecs'));
+        $stageDurations = CcStageDurations::current();
+        return view('admin.cook-and-create.templates.edit', compact('template', 'ingredients', 'activityGames', 'selectedIngredientIds', 'stageDurations'));
     }
 
     public function update(Request $request, CcGameTemplate $template)
@@ -150,11 +149,11 @@ class CookAndCreateTemplateController extends Controller
         $this->handleImageUploads($request, $validated);
 
         DB::transaction(function () use ($template, $validated) {
-            $template->update(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules', 'lobby_wait_secs'])->toArray());
+            $template->update(collect($validated)->except(['ingredient_ids', 'clues', 'game_rules', ...CcStageDurations::FIELDS])->toArray());
             $this->syncIngredients($template, $validated['ingredient_ids']);
             $this->syncClues($template, $validated['clues'] ?? []);
             $this->syncRules($template, $validated['game_rules'] ?? []);
-            $this->updateLobbyWait($template, (int) $validated['lobby_wait_secs']);
+            CcStageDurations::applyGlobally($validated);
         });
 
         return redirect()->route('admin.cook-and-create.templates.index')->with('success', 'Template updated.');
@@ -170,22 +169,6 @@ class CookAndCreateTemplateController extends Controller
         });
 
         return redirect()->route('admin.cook-and-create.templates.index')->with('success', 'Template deleted.');
-    }
-
-    /**
-     * Lobby waiting time (Stage 1) lives on the activity, not the template —
-     * the same Mystery-Quest-style group-formation field the lobby already
-     * uses (activities.lobby_wait_secs). We surface it on the Cook & Create
-     * template form and write it back to this template's own activity, so it
-     * is editable in one place without duplicating the setting. Cook & Create
-     * uses its own activity, so this never touches Mystery Quest's.
-     */
-    private function updateLobbyWait(CcGameTemplate $template, int $secs): void
-    {
-        $activity = optional($template->activityGame()->with('activity')->first())->activity;
-        if ($activity) {
-            $activity->update(['lobby_wait_secs' => $secs]);
-        }
     }
 
     private function syncIngredients(CcGameTemplate $template, array $ingredientIds): void

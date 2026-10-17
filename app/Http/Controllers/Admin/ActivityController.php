@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Activity;
+use App\Models\CcStageDurations;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -87,7 +88,7 @@ class ActivityController extends Controller
 
             $validated['lie_detector_enabled'] = $request->has('lie_detector_enabled');
 
-            Activity::create($validated);
+            $this->syncCookAndCreateLobbyWait(Activity::create($validated));
 
             return redirect()->route('admin.activities.index')->with('success', 'Activity created successfully.');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -153,12 +154,26 @@ class ActivityController extends Controller
             $validated['lie_detector_enabled'] = $request->has('lie_detector_enabled');
 
             $activity->update($validated);
+            $this->syncCookAndCreateLobbyWait($activity);
 
             return redirect()->route('admin.activities.index')->with('success', 'Activity updated successfully.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Cook & Create's lobby wait is one global value shared by all its
+     * activities and templates (CcStageDurations), so a lobby wait saved on any
+     * Cook & Create activity applies to all of them. Other activities keep
+     * their own value.
+     */
+    private function syncCookAndCreateLobbyWait(Activity $activity): void
+    {
+        if (str_starts_with(strtolower(trim((string) $activity->slug)), 'cook')) {
+            CcStageDurations::applyGlobally(['lobby_wait_secs' => (int) $activity->lobby_wait_secs]);
         }
     }
 
