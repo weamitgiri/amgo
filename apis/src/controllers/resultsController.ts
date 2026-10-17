@@ -7,6 +7,7 @@ import { AppError } from '../utils/AppError';
 import { query } from '../config/db';
 import { serializeData } from '../utils/serializer';
 import { resolvePdfPath } from '../services/resultsPdfService';
+import { resolveCCPdfPath } from '../services/ccResultsPdfService';
 import { isCulpritRole } from '../services/verdictScoringService';
 import { getJwtSecret } from '../utils/jwtSecret';
 
@@ -166,12 +167,13 @@ export const downloadResultsPdf = asyncHandler(async (req: Request, res: Respons
 
     const [groupRows] = await query<any>('SELECT * FROM game_groups WHERE id = ? LIMIT 1', [group_id]);
     const group = groupRows?.[0];
-    if (
-        !group ||
-        !group.results_pdf_path ||
-        !group.results_pdf_expires_at ||
-        new Date(group.results_pdf_expires_at) <= new Date()
-    ) {
+    // Cook & Create awards PDF is kept permanently (no expiry). Mystery Quest's
+    // results_pdf_path keeps its existing 1-hour availability window.
+    const ccPdfPath: string | null = group?.cc_results_pdf_path || null;
+    const mysteryAvailable = Boolean(
+        group?.results_pdf_path && group.results_pdf_expires_at && new Date(group.results_pdf_expires_at) > new Date()
+    );
+    if (!group || (!ccPdfPath && !mysteryAvailable)) {
         throw new AppError('Results PDF not available', 404);
     }
 
@@ -203,6 +205,12 @@ export const downloadResultsPdf = asyncHandler(async (req: Request, res: Respons
     }
 
     if (!authorized) throw new AppError('Results PDF not available', 404);
+
+    if (ccPdfPath) {
+        const ccFile = resolveCCPdfPath(ccPdfPath);
+        if (!fs.existsSync(ccFile)) throw new AppError('Results PDF not available', 404);
+        return res.download(ccFile, 'cook-and-create-results.pdf');
+    }
 
     const filePath = resolvePdfPath(group.results_pdf_path);
     if (!fs.existsSync(filePath)) throw new AppError('Results PDF not available', 404);

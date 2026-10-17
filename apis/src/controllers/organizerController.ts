@@ -714,8 +714,9 @@ export const getOrganizerResults = asyncHandler(async (req: Request, res: Respon
     const organizerId = (req as any).user.id;
 
     const [rows] = await query(
-        `SELECT gg.id AS group_id, gg.group_name, gg.status, gg.completed_at,
-                gg.results_pdf_path, gg.results_pdf_expires_at,
+        `SELECT gg.id AS group_id, gg.group_name, gg.status, gg.completed_at, gg.purged_at,
+                gg.results_pdf_path, gg.results_pdf_expires_at, gg.cc_results_pdf_path,
+                EXISTS(SELECT 1 FROM cc_game_instances ci WHERE ci.group_id = gg.id) AS is_cc,
                 ob.id AS booking_id, ob.scheduled_date, ob.scheduled_time,
                 a.title AS activity_name
          FROM game_groups gg
@@ -726,21 +727,51 @@ export const getOrganizerResults = asyncHandler(async (req: Request, res: Respon
         [organizerId]
     );
 
+    // Cook & Create awards PDF is generated lazily: the first time a completed CC
+    // booking is viewed and its award winners exist (players have rated), build
+    // it once. A final authoritative version is also captured by the retention
+    // sweep before member data is purged. Generation is best-effort and never
+    // blocks the list — on failure the next load retries (path stays unset).
+    const ccBookingsNeedingPdf = new Set<number>();
+    for (const r of rows as any[]) {
+        if (Number(r.is_cc) === 1 && r.status === 'completed' && !r.purged_at && !r.cc_results_pdf_path) {
+            ccBookingsNeedingPdf.add(Number(r.booking_id));
+        }
+    }
+    const generatedForBooking = new Map<number, boolean>();
+    if (ccBookingsNeedingPdf.size > 0) {
+        const { generateCCResultsPdfForBooking } = await import('../services/ccResultsPdfService');
+        for (const bookingId of ccBookingsNeedingPdf) {
+            try {
+                const filename = await generateCCResultsPdfForBooking(bookingId);
+                if (filename) generatedForBooking.set(bookingId, true);
+            } catch {
+                /* non-fatal: list still returns, retried next load */
+            }
+        }
+    }
+
     const now = new Date();
-    const results = (rows as any[]).map((r) => ({
-        group_id: Number(r.group_id),
-        group_name: r.group_name,
-        booking_id: Number(r.booking_id),
-        activity_name: r.activity_name,
-        scheduled_date: r.scheduled_date,
-        scheduled_time: r.scheduled_time,
-        status: r.status,
-        completed_at: r.completed_at,
-        pdf_available: Boolean(
-            r.results_pdf_path && r.results_pdf_expires_at && new Date(r.results_pdf_expires_at) > now
-        ),
-        pdf_expires_at: r.results_pdf_expires_at,
-    }));
+    const results = (rows as any[]).map((r) => {
+        const isCc = Number(r.is_cc) === 1;
+        const ccPdfReady = isCc && (Boolean(r.cc_results_pdf_path) || generatedForBooking.get(Number(r.booking_id)) === true);
+        return {
+            group_id: Number(r.group_id),
+            group_name: r.group_name,
+            booking_id: Number(r.booking_id),
+            activity_name: r.activity_name,
+            scheduled_date: r.scheduled_date,
+            scheduled_time: r.scheduled_time,
+            status: r.status,
+            completed_at: r.completed_at,
+            is_cook_and_create: isCc,
+            pdf_available: isCc
+                ? ccPdfReady
+                : Boolean(r.results_pdf_path && r.results_pdf_expires_at && new Date(r.results_pdf_expires_at) > now),
+            // CC awards PDF never expires; Mystery keeps its 1-hour window.
+            pdf_expires_at: isCc ? null : r.results_pdf_expires_at,
+        };
+    });
 
     return successResponse(res, 'Results retrieved.', { results });
 });

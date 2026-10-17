@@ -52,7 +52,8 @@ function HrResultsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `mystery-quest-results-${r.group_name.toLowerCase().replace(/\s+/g, "-")}.pdf`;
+      const prefix = r.is_cook_and_create ? "cook-and-create-results" : "mystery-quest-results";
+      a.download = `${prefix}-${r.group_name.toLowerCase().replace(/\s+/g, "-")}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {

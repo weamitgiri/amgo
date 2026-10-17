@@ -13,6 +13,27 @@ export async function purgeGroupParticipantData(groupId: number | string): Promi
     const group = groupRows?.[0];
     if (!group || group.purged_at) return;
 
+    // Cook & Create: capture the final awards PDF (kept permanently) while this
+    // booking's member names/emails AND received star ratings are still intact.
+    // Only on the FIRST group of the booking to be purged — once any sibling is
+    // purged its given ratings are gone, which would skew the award winners. A
+    // no-op for Mystery groups (no cc_game_instances row). Best-effort.
+    try {
+        const [ccInst] = await query<any>('SELECT 1 FROM cc_game_instances WHERE group_id = ? LIMIT 1', [groupId]);
+        if ((ccInst as any).length > 0) {
+            const [sib] = await query<any>(
+                'SELECT COUNT(*) AS purged FROM game_groups WHERE booking_id = ? AND id <> ? AND purged_at IS NOT NULL',
+                [group.booking_id, groupId]
+            );
+            if (Number(sib?.[0]?.purged || 0) === 0) {
+                const { generateCCResultsPdfForBooking } = await import('./ccResultsPdfService');
+                await generateCCResultsPdfForBooking(Number(group.booking_id));
+            }
+        }
+    } catch (err) {
+        console.error('[retentionService] CC results PDF capture before purge failed:', err);
+    }
+
     await withTransaction(async (conn) => {
         await conn.query('UPDATE game_participants SET name = NULL, email = NULL, otp = NULL, otp_expires_at = NULL WHERE group_id = ?', [groupId]);
 

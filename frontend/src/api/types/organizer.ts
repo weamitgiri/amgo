@@ -111,6 +111,8 @@ export type OrganizerGameResult = {
   completed_at: string | null;
   pdf_available: boolean;
   pdf_expires_at: string | null;
+  /** Cook & Create results PDFs are kept permanently (no 1-hour expiry). */
+  is_cook_and_create?: boolean;
 };
 
 export interface OrganizerDashboardResponse {

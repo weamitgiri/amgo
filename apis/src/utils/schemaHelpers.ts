@@ -45,6 +45,9 @@ export async function ensureGameGroupRetentionColumns(): Promise<void> {
             { name: 'purged_at', ddl: 'ADD COLUMN purged_at TIMESTAMP NULL DEFAULT NULL' },
             { name: 'results_pdf_path', ddl: 'ADD COLUMN results_pdf_path VARCHAR(255) NULL DEFAULT NULL' },
             { name: 'results_pdf_expires_at', ddl: 'ADD COLUMN results_pdf_expires_at TIMESTAMP NULL DEFAULT NULL' },
+            // Cook & Create awards PDF — kept permanently (not subject to the
+            // 1-hour retention purge above), stored in its own folder.
+            { name: 'cc_results_pdf_path', ddl: 'ADD COLUMN cc_results_pdf_path VARCHAR(255) NULL DEFAULT NULL' },
         ];
 
         const missing: string[] = [];
