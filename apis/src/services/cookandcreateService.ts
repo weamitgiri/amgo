@@ -150,10 +150,12 @@ export async function getCCTemplateById(templateId: number | string): Promise<CC
  *
  * Eligible templates = the admin's active templates for this activity game that
  * have at least one active ingredient, ordered by id. Groups are ordered by id
- * within their booking (the "Group N" order), and group N gets eligible template
- * (N - 1) mod count — Group 1 → 1st template, Group 2 → 2nd, …, wrapping around
- * when there are more groups than templates (one template ⇒ everyone shares
- * it). The result is stored on the instance, so it never changes mid-game.
+ * within their booking (the "Group N" order) and take templates in the
+ * most-different-first order from orderTemplatesForVariety, so Group 1 and
+ * Group 2 get clearly different pools rather than adjacent templates whose
+ * pools often overlap heavily. Every template is used once before any repeats
+ * (one template ⇒ everyone shares it). The result is stored on the instance,
+ * so it never changes mid-game.
  * Falls back to the previous single-template lookup if nothing is eligible.
  */
 async function pickTemplateForGroup(activityGameId: number | string, groupId: number | string): Promise<CCGameTemplate | null> {
@@ -177,7 +179,53 @@ async function pickTemplateForGroup(activityGameId: number | string, groupId: nu
         [groupId]
     );
     const position = Math.max(0, groups.findIndex((g: any) => Number(g.id) === Number(groupId)));
-    return mapTemplateRow(templates[position % templates.length]);
+    const ordered = await orderTemplatesForVariety(templates);
+    return mapTemplateRow(ordered[position % ordered.length]);
+}
+
+/**
+ * Orders templates so each one shares as few ingredients as possible with those
+ * before it: start from the lowest-id template, then repeatedly take the
+ * remaining template whose worst-case overlap with the already-ordered ones is
+ * smallest (ties: smaller total overlap, then lower id). Group N takes entry
+ * (N - 1) mod count, so even a two-group booking gets visibly different pools,
+ * and every template is used once before any repeats. Depends only on the
+ * template data, so every group in the booking computes the same order.
+ */
+async function orderTemplatesForVariety(templates: any[]): Promise<any[]> {
+    if (templates.length <= 2) return templates;
+
+    const [rows] = await query(
+        `SELECT ti.template_id, LOWER(TRIM(i.name)) AS name
+         FROM cc_game_template_ingredients ti
+         JOIN cc_ingredients i ON i.id = ti.ingredient_id
+         WHERE i.status = 'active' AND ti.template_id IN (?)`,
+        [templates.map((t) => Number(t.id))]
+    );
+    const pools = new Map<number, Set<string>>(templates.map((t) => [Number(t.id), new Set<string>()]));
+    for (const r of rows) pools.get(Number(r.template_id))?.add(r.name);
+    const overlap = (a: any, b: any) => {
+        const other = pools.get(Number(b.id))!;
+        let n = 0;
+        for (const name of pools.get(Number(a.id))!) if (other.has(name)) n++;
+        return n;
+    };
+
+    const remaining = [...templates];
+    const ordered = [remaining.shift()!];
+    while (remaining.length > 0) {
+        let best = 0, bestMax = Infinity, bestSum = Infinity;
+        remaining.forEach((cand, i) => {
+            const counts = ordered.map((t) => overlap(cand, t));
+            const max = Math.max(...counts);
+            const sum = counts.reduce((a, b) => a + b, 0);
+            if (max < bestMax || (max === bestMax && sum < bestSum)) {
+                best = i; bestMax = max; bestSum = sum;
+            }
+        });
+        ordered.push(remaining.splice(best, 1)[0]);
+    }
+    return ordered;
 }
 
 function mapInstanceRow(r: any): CCGameInstance {
@@ -478,10 +526,16 @@ export async function getOrCreateCCInstance(groupId: number | string, activityGa
         // ingredients (and everything else) stay the same across refreshes and
         // round transitions — the same template every round/vote/timer function
         // already reads via getInstanceById.
-        template =
-            (await getCCTemplateById(rows[0].template_id)) ??
-            (await getCCTemplateByGameId(resolvedActivityGameId as number | string));
-        if (!template) return null;
+        template = await getCCTemplateById(rows[0].template_id);
+        if (!template) {
+            // Its template was deleted in the admin: re-pick this group's own
+            // template (not the shared first one, which would give every such
+            // group the same pool) and store it so getInstanceById agrees.
+            template = await pickTemplateForGroup(resolvedActivityGameId as number | string, groupId);
+            if (!template) return null;
+            await query(`UPDATE cc_game_instances SET template_id = ?, updated_at = NOW() WHERE id = ?`, [template.id, rows[0].id]);
+            [rows] = await query(`SELECT * FROM cc_game_instances WHERE group_id = ?`, [groupId]);
+        }
     } else {
         // New game: give this group its own template (see pickTemplateForGroup).
         template = await pickTemplateForGroup(resolvedActivityGameId as number | string, groupId);
