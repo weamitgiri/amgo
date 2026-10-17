@@ -7,6 +7,7 @@ import { apiClient } from "@/api/client";
 import { useOrganizerEventLive } from "@/hooks/useOrganizerEventLive";
 import { formatJoinedAt } from "@/lib/format-datetime";
 import { avatarTone } from "@/lib/avatar-tones";
+import { useIsEventCompleted } from "@/lib/event-status";
 import type { BookingParticipant } from "@/api/types/organizer";
 
 export const Route = createFileRoute("/participants")({
@@ -33,7 +34,9 @@ function ParticipantsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const { organizer, eventStats, isLoading, isError } = useOrganizerEventLive();
+  const { organizer, booking, eventStats, isLoading, isError } = useOrganizerEventLive();
+  // Once the event is Completed, no participant rows are shown.
+  const eventCompleted = useIsEventCompleted(booking);
 
   useEffect(() => {
     if (!isOrganizerAuthenticated()) {
@@ -58,14 +61,16 @@ function ParticipantsPage() {
     setPage(1);
   }, [search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const visibleParticipants = eventCompleted ? [] : filtered;
+
+  const totalPages = Math.max(1, Math.ceil(visibleParticipants.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageItems = visibleParticipants.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const exportCsv = () => {
     const rows = [
       ["Name", "Email", "Group", "Joined At"],
-      ...filtered.map((p) => [
+      ...visibleParticipants.map((p) => [
         p.name ?? "",
         p.email ?? "",
         p.group_name ?? "",
@@ -129,7 +134,7 @@ function ParticipantsPage() {
            {/* <button
               type="button"
               onClick={exportCsv}
-              disabled={filtered.length === 0}
+              disabled={visibleParticipants.length === 0}
               className="inline-flex items-center gap-1.5 rounded-full bg-gradient-primary text-white px-4 py-2 text-xs font-medium shadow-glow disabled:opacity-50"
             >
               <Download className="h-3.5 w-3.5" /> Export
@@ -141,6 +146,8 @@ function ParticipantsPage() {
           <p className="mt-8 text-center text-sm text-muted-foreground">Loading participants…</p>
         ) : isError ? (
           <p className="mt-8 text-center text-sm text-destructive">Unable to load participants.</p>
+        ) : eventCompleted ? (
+          <p className="mt-8 text-center text-sm text-muted-foreground">No data found</p>
         ) : pageItems.length === 0 ? (
           <p className="mt-8 text-center text-sm text-muted-foreground">
             {search ? "No participants match your search." : "No verified participants yet."}
@@ -169,9 +176,9 @@ function ParticipantsPage() {
 
         <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
           <span>
-            {filtered.length === 0
+            {visibleParticipants.length === 0
               ? "No participants"
-              : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filtered.length)} of ${filtered.length} participants`}
+              : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, visibleParticipants.length)} of ${visibleParticipants.length} participants`}
           </span>
           <div className="flex items-center gap-2">
             <button

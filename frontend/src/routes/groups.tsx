@@ -7,6 +7,7 @@ import { apiClient } from "@/api/client";
 import { useOrganizerEventLive } from "@/hooks/useOrganizerEventLive";
 import { formatTimeShort } from "@/lib/format-datetime";
 import { MEMBER_AVATAR_COLORS } from "@/lib/avatar-tones";
+import { useIsEventCompleted } from "@/lib/event-status";
 import type { BookingGroup } from "@/api/types/organizer";
 
 export const Route = createFileRoute("/groups")({
@@ -25,7 +26,9 @@ const statusTone = (s: BookingGroup["status"]) =>
 function GroupsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const { organizer, eventStats, isLoading, isError } = useOrganizerEventLive();
+  const { organizer, booking, eventStats, isLoading, isError } = useOrganizerEventLive();
+  // Once the event is Completed, no group rows are shown.
+  const eventCompleted = useIsEventCompleted(booking);
 
   useEffect(() => {
     if (!isOrganizerAuthenticated()) {
@@ -46,10 +49,12 @@ function GroupsPage() {
     );
   }, [allGroups, search]);
 
+  const visibleGroups = eventCompleted ? [] : filtered;
+
   const exportCsv = () => {
     const rows = [
       ["Group", "Team Lead", "Members", "Status", "Last Updated"],
-      ...filtered.map((g) => [
+      ...visibleGroups.map((g) => [
         g.name,
         g.team_lead ?? "",
         `${g.member_count}/${g.capacity}`,
@@ -116,7 +121,7 @@ function GroupsPage() {
            {/* <button
               type="button"
               onClick={exportCsv}
-              disabled={filtered.length === 0}
+              disabled={visibleGroups.length === 0}
               className="inline-flex items-center gap-1.5 rounded-full bg-gradient-primary text-white px-4 py-2 text-xs font-medium shadow-glow disabled:opacity-50"
             >
               <Download className="h-3.5 w-3.5" /> Export
@@ -128,6 +133,8 @@ function GroupsPage() {
           <p className="mt-8 text-center text-sm text-muted-foreground">Loading groups…</p>
         ) : isError ? (
           <p className="mt-8 text-center text-sm text-destructive">Unable to load groups.</p>
+        ) : eventCompleted ? (
+          <p className="mt-8 text-center text-sm text-muted-foreground">No data found</p>
         ) : filtered.length === 0 ? (
           <p className="mt-8 text-center text-sm text-muted-foreground">
             {search ? "No groups match your search." : "No groups formed yet. Groups appear when participants verify and join."}
@@ -147,7 +154,7 @@ function GroupsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r) => (
+                {visibleGroups.map((r) => (
                   <tr key={r.id} className="border-t border-border/60 hover:bg-muted/30">
                     <td className="py-3 px-4 font-semibold">{r.name}</td>
                     <td className="py-3 px-4">{r.team_lead ?? "—"}</td>
@@ -197,9 +204,9 @@ function GroupsPage() {
 
         <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
           <span>
-            {filtered.length === 0
+            {visibleGroups.length === 0
               ? "No groups"
-              : `Showing ${filtered.length} of ${eventStats?.event_progress.max_groups ?? filtered.length} allowed groups`}
+              : `Showing ${visibleGroups.length} of ${eventStats?.event_progress.max_groups ?? visibleGroups.length} allowed groups`}
           </span>
         </div>
       </section>
