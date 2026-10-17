@@ -1223,8 +1223,9 @@ export type CCOtherDish = {
  * target. Participating groups are ordered by id ASC, which matches their
  * "Group N" numbering (Group 1 → Group 2, Group 2 → Group 3, …). The mapping is
  * purely positional (never id + 1), so it is correct when ids are
- * non-consecutive. Returns null when this group is the last participating one or
- * isn't itself a participating group.
+ * non-consecutive. With exactly two participating groups they rate each other
+ * (Group 2 → Group 1 as well). Otherwise returns null when this group is the
+ * last participating one; also null when it isn't itself a participating group.
  */
 async function getNextGroupIdInBooking(bookingId: number | string, groupId: number | string): Promise<number | null> {
     const [rows] = await query<any>(
@@ -1236,7 +1237,9 @@ async function getNextGroupIdInBooking(bookingId: number | string, groupId: numb
     );
     const ids = (rows || []).map((r: any) => Number(r.id));
     const idx = ids.indexOf(Number(groupId));
-    if (idx === -1 || idx + 1 >= ids.length) return null;
+    if (idx === -1) return null;
+    if (ids.length === 2) return ids[1 - idx];
+    if (idx + 1 >= ids.length) return null;
     return ids[idx + 1];
 }
 
