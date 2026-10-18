@@ -298,7 +298,7 @@ function ResultsPage() {
           <h1 className="text-xl font-bold tracking-wide">Results & Role Revealed</h1>
         </div>
         <div className="flex items-center gap-2 print:hidden">
-          {/*{results.pdf_available && (
+          {results.pdf_available && (
             <button
               onClick={handleDownloadPdf}
               className="rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2"
@@ -306,7 +306,7 @@ function ResultsPage() {
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Download Results PDF</span>
             </button>
-          )}*/}
+          )}
          {/*  <button
             onClick={handleExportCSV}
             className="rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2"
