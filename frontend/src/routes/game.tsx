@@ -2185,6 +2185,75 @@ function ModalShell({ children, onClose, max = "max-w-lg" }: { children: React.R
   );
 }
 
+// Leading list marker Word types into a "fake" bullet paragraph: •, ·, §, o, -, 1., a) …
+const WORD_LIST_MARKER = /^[\s\u00a0]*(?:[•·▪◦§o*\-–]|\(?\d+[.)]|\(?[a-zA-Z][.)])(?=[\s\u00a0]|$)/;
+
+/**
+ * Text pasted from MS Word into the admin editor arrives as Word markup: bullets
+ * are separate <p class="MsoListParagraph"> with a typed "•", an &nbsp; spacer and
+ * a negative text-indent (so the bullet hangs outside the text), plus empty
+ * &nbsp; paragraphs and inline Word styles. Turn that into plain <ul>/<ol>/<p> so
+ * it renders with the modal's own typography. Non-Word HTML is returned untouched.
+ */
+function cleanWordHtml(html: string): string {
+  if (typeof DOMParser === "undefined" || !/class="?Mso|mso-/i.test(html)) return html;
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
+  const root = doc.body.firstElementChild as HTMLElement;
+
+  // Conditional comments (<!--[if !supportLists]-->) and Word's <o:p> placeholders.
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+  const comments: Node[] = [];
+  while (walker.nextNode()) comments.push(walker.currentNode);
+  comments.forEach((c) => c.parentNode?.removeChild(c));
+  root.querySelectorAll("*").forEach((el) => {
+    if (el.tagName.toLowerCase() === "o:p") el.replaceWith(...Array.from(el.childNodes));
+  });
+
+  const isBlank = (el: Element) => !el.querySelector("img") && (el.textContent ?? "").replace(/[\s\u00a0]/g, "") === "";
+  const isWordListItem = (el: Element) =>
+    el.tagName === "P" && (/MsoListParagraph/i.test(el.className) || /mso-list/i.test(el.getAttribute("style") ?? ""));
+
+  let currentList: HTMLElement | null = null;
+  Array.from(root.children).forEach((el) => {
+    if (isBlank(el)) {
+      el.remove();
+      return;
+    }
+    if (!isWordListItem(el)) {
+      currentList = null;
+      return;
+    }
+    // Drop the typed marker, then the &nbsp; spacer (text or <span>) after it.
+    let ordered = false;
+    const first = el.firstChild;
+    const marker = first?.nodeType === Node.TEXT_NODE ? (first.textContent ?? "").match(WORD_LIST_MARKER) : null;
+    if (first && marker) {
+      ordered = /\d/.test(marker[0]);
+      first.textContent = (first.textContent ?? "").slice(marker[0].length);
+      while (el.firstChild && /^[\s\u00a0]*$/.test(el.firstChild.textContent ?? "")) el.removeChild(el.firstChild);
+      if (el.firstChild?.nodeType === Node.TEXT_NODE) {
+        el.firstChild.textContent = (el.firstChild.textContent ?? "").replace(/^[\s\u00a0]+/, "");
+      }
+    }
+    const tag = ordered ? "OL" : "UL";
+    if (!currentList || currentList.tagName !== tag) {
+      currentList = doc.createElement(tag);
+      el.before(currentList);
+    }
+    const li = doc.createElement("li");
+    li.append(...Array.from(el.childNodes));
+    currentList.append(li);
+    el.remove();
+  });
+
+  root.querySelectorAll("[style], [class], [lang]").forEach((el) => {
+    el.removeAttribute("style");
+    el.removeAttribute("class");
+    el.removeAttribute("lang");
+  });
+  return root.innerHTML;
+}
+
 /** Admin rich-text (summernote) renders as HTML; older plain text keeps its line breaks. */
 function RichText({ text, className = "" }: { text: string; className?: string }) {
   const looksHtml = /<\/?[a-z][\s\S]*>/i.test(text);
@@ -2192,7 +2261,7 @@ function RichText({ text, className = "" }: { text: string; className?: string }
     return (
       <div
         className={`${className} [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mt-1 [&_p]:mt-2 [&_strong]:text-white [&_b]:text-white [&_a]:text-emerald-300 [&_a]:underline`}
-        dangerouslySetInnerHTML={{ __html: text }}
+        dangerouslySetInnerHTML={{ __html: cleanWordHtml(text) }}
       />
     );
   }
