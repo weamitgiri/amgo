@@ -10,6 +10,7 @@ import {
 import { useEffect } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
+import { GameMusicPlayer } from "@/components/GameMusicPlayer";
 import { restoreAuthToken } from "@/lib/auth";
 import appCss from "../styles.css?url";
 
@@ -125,6 +126,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <GameMusicPlayer />
       <Toaster position="bottom-right" />
     </QueryClientProvider>
   );

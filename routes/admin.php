@@ -140,6 +140,11 @@ Route::group(
             });
         });
 
+        // Music Manager (background music per game activity)
+        Route::post('music/toggle-status', [\App\Http\Controllers\Admin\ActivityMusicController::class, 'toggleStatus'])->name('music.toggleStatus');
+        Route::resource('music', \App\Http\Controllers\Admin\ActivityMusicController::class)
+            ->except(['show'])->names('music')->parameters(['music' => 'music']);
+
         // Organizer Management
         Route::prefix('organizers')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\OrganizerController::class, 'index'])->name('organizers.index');

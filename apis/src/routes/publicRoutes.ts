@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as publicController from '../controllers/publicController';
 import * as paymentController from '../controllers/paymentController';
+import * as activityMusicController from '../controllers/activityMusicController';
 
 const router = Router();
 
@@ -21,5 +22,9 @@ router.get('/payment-methods', paymentController.getPaymentMethods);
 // Games/Activities API
 router.get('/games', publicController.getGames);
 router.get('/games/:id', publicController.getGameDetails);
+
+// Background music (admin Music Manager): the activity's active track, or null.
+router.get('/activities/:activity/music', activityMusicController.getActivityMusic);
+router.get('/groups/:group_id/music', activityMusicController.getGroupMusic);
 
 export default router;

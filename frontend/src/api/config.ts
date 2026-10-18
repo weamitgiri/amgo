@@ -7,6 +7,8 @@ export const API_ENDPOINTS = {
     paymentMethods: "/v1/public/payment-methods",
     games: "/v1/public/games",
     gameById: (id: number | string) => `/v1/public/games/${id}`,
+    activityMusic: (activity: number | string) => `/v1/public/activities/${encodeURIComponent(String(activity))}/music`,
+    groupMusic: (groupId: number | string) => `/v1/public/groups/${groupId}/music`,
   },
   participant: {
     joinLink: (linkToken: string) => `/v1/participant/join-links/${linkToken}`,

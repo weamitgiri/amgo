@@ -31,6 +31,16 @@ export interface ApiSubGame {
   status: string;
 }
 
+/** Background music for a game activity (admin Music Manager). */
+export interface ApiActivityMusic {
+  id: number;
+  activity_id: number;
+  title: string;
+  /** Path on the Laravel public disk — resolve with resolveMediaUrl(). */
+  file_path: string;
+  mime_type: string | null;
+}
+
 export interface ApiGameDetails extends ApiActivity {
   sub_games: ApiSubGame[];
 }

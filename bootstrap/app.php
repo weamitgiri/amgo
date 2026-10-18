@@ -41,6 +41,23 @@ return Application::configure(basePath: dirname(__DIR__))
             ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // Music Manager upload bigger than PHP's post_max_size: PHP drops the whole
+        // request before Laravel sees it (no session, no CSRF token), so send the
+        // admin back to the form with a flag the form turns into a clear message.
+        // Registered first so the generic HttpException handler below doesn't take it.
+        $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, Request $request) {
+            if ($request->is('admin/music', 'admin/music/*')) {
+                $back = (string) $request->headers->get('referer');
+                if (parse_url($back, PHP_URL_HOST) !== $request->getHost()) {
+                    $back = url('admin/music/create');
+                }
+                $back = preg_replace('/([?&])upload_error=[^&]*&?/', '$1', $back);
+                $back = rtrim($back, '?&');
+
+                return redirect($back . (str_contains($back, '?') ? '&' : '?') . 'upload_error=too_large');
+            }
+        });
+
         $exceptions->render(function (\Throwable $e, $request) {
             if ($request->is('api/*')) {
                 $status = 400;

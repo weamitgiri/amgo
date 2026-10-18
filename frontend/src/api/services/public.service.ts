@@ -1,6 +1,6 @@
 import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../config";
-import type { ApiActivity, ApiCmsPage, ApiGameDetails, ApiPackage, SiteSettings } from "../types/public";
+import type { ApiActivity, ApiActivityMusic, ApiCmsPage, ApiGameDetails, ApiPackage, SiteSettings } from "../types/public";
 import type { PaymentMethodsResponse } from "../types/organizer";
 
 export const publicService = {
@@ -12,6 +12,14 @@ export const publicService = {
 
   getGameById: (id: number | string) =>
     apiClient.get<ApiGameDetails>(API_ENDPOINTS.public.gameById(id), { auth: "none" }),
+
+  /** The activity's active background track, or null when it has none. */
+  getActivityMusic: (activity: number | string) =>
+    apiClient.get<ApiActivityMusic | null>(API_ENDPOINTS.public.activityMusic(activity), { auth: "none" }),
+
+  /** The active background track of the activity a participant group is playing, or null. */
+  getGroupMusic: (groupId: number | string) =>
+    apiClient.get<ApiActivityMusic | null>(API_ENDPOINTS.public.groupMusic(groupId), { auth: "none" }),
 
   getSettings: () =>
     apiClient.get<SiteSettings>(API_ENDPOINTS.public.settings, { auth: "none" }),
