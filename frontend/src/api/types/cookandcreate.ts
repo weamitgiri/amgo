@@ -202,6 +202,10 @@ export type CCOtherDish = {
   group_name: string;
   dish_name: string;
   nomination_counts: Record<string, number>;
+  /** Average 1–5 stars this dish has received so far (null when none yet). */
+  average_rating?: number | null;
+  /** How many star ratings the average is based on. */
+  rating_count?: number;
   /** The dish's final recipe — its kept Round-2 steps, in order. */
   steps: { letter: string; text: string }[];
   /** This player's own in-progress review of the dish, for refresh-restore.

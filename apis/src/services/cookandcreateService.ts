@@ -1225,6 +1225,10 @@ export type CCOtherDish = {
     group_name: string;
     dish_name: string;
     nomination_counts: Record<string, number>;
+    /** Average 1–5 stars this dish has received so far (null when none yet). */
+    average_rating: number | null;
+    /** How many star ratings the average is based on. */
+    rating_count: number;
     /** The dish's final recipe — its kept Round-2 steps, in order. */
     steps: { letter: string; text: string }[];
     /** This participant's own in-progress review of the dish (for refresh-restore).
@@ -1299,6 +1303,19 @@ export async function getOtherDishes(groupId: number | string, participantId: nu
         countsByGroup.get(gid)![c.slug] = Number(c.c);
     }
 
+    // Average received stars per dish — same rule as the awards board (saved
+    // star ratings only, rounded to one decimal).
+    const [avgRows] = await query<any>(
+        `SELECT rated_group_id, AVG(stars) AS avg_stars, COUNT(stars) AS n
+         FROM cc_ratings WHERE rated_group_id IN (?) AND stars IS NOT NULL
+         GROUP BY rated_group_id`,
+        [groupIds]
+    );
+    const avgByGroup = new Map<number, { avg: number; n: number }>();
+    for (const a of avgRows || []) {
+        avgByGroup.set(Number(a.rated_group_id), { avg: Math.round(Number(a.avg_stars) * 10) / 10, n: Number(a.n) });
+    }
+
     // Each dish's final recipe = its kept Round-2 steps, in letter order. Removed
     // steps are excluded (they aren't part of the finished dish).
     const instanceIds = rows.map((r: any) => Number(r.instance_id));
@@ -1332,11 +1349,14 @@ export async function getOtherDishes(groupId: number | string, participantId: nu
 
     return rows.map((r: any) => {
         const mine = myReviewByGroup.get(Number(r.group_id));
+        const avg = avgByGroup.get(Number(r.group_id));
         return {
             group_id: Number(r.group_id),
             group_name: r.group_name,
             dish_name: r.dish_name,
             nomination_counts: countsByGroup.get(Number(r.group_id)) || {},
+            average_rating: avg && avg.n > 0 ? avg.avg : null,
+            rating_count: avg?.n ?? 0,
             steps: stepsByInstance.get(Number(r.instance_id)) || [],
             my_category_id: mine?.category_id ?? null,
             my_stars: mine?.stars ?? null,

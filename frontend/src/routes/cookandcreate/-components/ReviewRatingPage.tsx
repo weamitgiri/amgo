@@ -73,6 +73,10 @@ const ratingIconFor = (index: number) => RATING_ICONS[((index % RATING_ICONS.len
    categories by order. */
 const REACTION_LABELS = ['Delicious!', 'Creative!', 'Funny!', 'What is this?!', 'Yikes!'];
 
+/* "N Voted …" wording for a dish's most-picked reaction, matched to the
+   categories by order (e.g. "8 Voted Most Delicious"). */
+const MOST_VOTED_LABELS = ['Most Delicious', 'Most Creative', 'Funniest', 'Most Confusing', 'Biggest Yikes'];
+
 /* Fixed labels under the five faces in each dish's "Give Rating" grid (from the
    design), matched to the categories by order. */
 const GIVE_RATING_LABELS = [
@@ -440,6 +444,16 @@ function DishRatingCard({
   // independent inputs — picking one NEVER selects or changes the other.
   const reactions = ratingCategories.slice(0, 5);
 
+  // The dish's most-picked reaction so far (first in category order on a tie).
+  let topReaction: { icon: string; label: string; count: number } | null = null;
+  for (const [i, cat] of reactions.entries()) {
+    const count = dish.nomination_counts[cat.slug] ?? 0;
+    if (count > 0 && (!topReaction || count > topReaction.count)) {
+      topReaction = { icon: ratingIconFor(i), label: MOST_VOTED_LABELS[i] ?? cat.name, count };
+    }
+  }
+  const averageRating = dish.average_rating ?? null;
+
   const [stars, setStars] = useState<number | null>(dish.my_stars ?? null);
   const [category, setCategory] = useState<number | null>(dish.my_category_id ?? null);
   const [submitting, setSubmitting] = useState(false);
@@ -469,6 +483,26 @@ function DishRatingCard({
         <div className="min-w-0 flex-1">
           <p className="text-[15px] text-[#6F625A]">{dish.group_name}</p>
           <p className="mt-1.5 text-[18px] font-semibold text-[#2E2A26] leading-tight break-words">{dish.dish_name}</p>
+          {/* Received rating + top reaction — shown only after this player has
+              submitted their own review, so it can't sway their vote. */}
+          {alreadyRated && (averageRating != null || topReaction) && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-6 gap-y-1.5">
+              {averageRating != null && (
+                <span className="inline-flex items-center gap-2">
+                  <Star size={24} className="text-[#F5B82E]" fill="#F7C044" strokeWidth={1} />
+                  <span className="text-[15px] font-semibold text-[#3F3A35] tabular-nums">{averageRating.toFixed(1)} / 5</span>
+                </span>
+              )}
+              {topReaction && (
+                <span className="inline-flex items-center gap-2">
+                  <img src={topReaction.icon} alt="" aria-hidden className="w-6 h-6 object-contain" />
+                  <span className="text-[15px] text-[#3F3A35]">
+                    {topReaction.count} Voted {topReaction.label}
+                  </span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
         {alreadyRated && (
           <span className="shrink-0 self-start inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-2 py-0.5 text-[11px] font-bold">
