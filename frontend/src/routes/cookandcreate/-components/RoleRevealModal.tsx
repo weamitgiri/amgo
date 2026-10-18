@@ -102,7 +102,7 @@ export function RoleRevealModal({ isOpen, onClose, role, roleLabel, impostorBias
               <div className="space-y-2">
                 <h3 className="text-base font-extrabold text-[#E8881E] flex items-center gap-2">
                   <img src={gole} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" />
-                  Your Goal
+                  YOUR GOAL
                 </h3>
                 <ul className="space-y-1.5 pl-6">
                   {copy.goals.map((item) => (
