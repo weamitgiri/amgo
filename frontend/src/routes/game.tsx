@@ -1560,7 +1560,7 @@ function SummaryView(props: {
               <div className="relative flex items-start justify-center">
                 {/* Pre-composed evidence collage (pinned photos + compass + quick-facts note) */}
                 <img
-                  src={caseCollage}
+                  src={resolveMediaUrl(gameData.game.case_summary_image) ?? caseCollage}
                   alt="Investigation evidence — crime scene photos and quick facts"
                   className="w-full max-w-[440px] h-auto object-contain drop-shadow-2xl"
                 />
@@ -2864,7 +2864,7 @@ function CaseSummaryModal({ gameData, onClose }: { gameData: GameSummaryResponse
               <div className="relative flex items-start justify-center">
                 {/* Pre-composed evidence collage (pinned photos + compass + quick-facts note) */}
                 <img
-                  src={caseCollage}
+                  src={resolveMediaUrl(gameData.game.case_summary_image) ?? caseCollage}
                   alt="Investigation evidence — crime scene photos and quick facts"
                   className="w-full max-w-[440px] h-auto object-contain drop-shadow-2xl"
                 />

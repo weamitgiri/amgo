@@ -147,6 +147,7 @@ export type GameSummaryResponse = {
     tagline: string | null;
     case_summary_html: string | null;
     bg_image: string | null;
+    case_summary_image?: string | null;
     timeline: { time: string; event: string }[];
     quick_facts: { label: string; value: string; icon: string }[];
     victim_name: string | null;

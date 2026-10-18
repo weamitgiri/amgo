@@ -119,6 +119,19 @@
                                     @error('bg_image')<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                 </div>
                             </div>
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="case_summary_image">Case Summary Image</label>
+                                    @if(!empty($game?->case_summary_image))
+                                        <div class="mb-2">
+                                            <img src="{{ asset('storage/' . $game->case_summary_image) }}" alt="Current case summary image" class="img-thumbnail" style="height:90px;">
+                                        </div>
+                                    @endif
+                                    <input type="file" name="case_summary_image" id="case_summary_image" accept="image/*" class="form-control-file @error('case_summary_image') is-invalid @enderror">
+                                    <small class="form-text text-muted">Shown beside the case plot on the game's case summary. Leave empty to keep the current image (the default collage if none is uploaded). Max 4MB.</small>
+                                    @error('case_summary_image')<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

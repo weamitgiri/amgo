@@ -30,6 +30,7 @@ class StoreActivityGameRequest extends FormRequest
             'case_summary' => 'required|string',
             'tagline' => 'nullable|string|max:255',
             'bg_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:4096',
+            'case_summary_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:4096',
             'culprit_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
             'status' => 'required|in:draft,active',
 
@@ -107,6 +108,10 @@ class StoreActivityGameRequest extends FormRequest
             'bg_image.mimes' => 'The case background must be a JPG, PNG, WEBP or JPEG file.',
             'bg_image.max'   => 'The case background image may not be larger than 4 MB.',
             'bg_image.uploaded' => 'The case background image failed to upload — it is probably larger than the server allows. Please choose a smaller image.',
+            'case_summary_image.image' => 'The case summary image must be a valid image file.',
+            'case_summary_image.mimes' => 'The case summary image must be a JPG, PNG, WEBP or JPEG file.',
+            'case_summary_image.max'   => 'The case summary image may not be larger than 4 MB.',
+            'case_summary_image.uploaded' => 'The case summary image failed to upload — it is probably larger than the server allows. Please choose a smaller image.',
 
             'culprit_image.image' => 'The culprit reveal image must be a valid image file.',
             'culprit_image.mimes' => 'The culprit reveal image must be a JPG, PNG, WEBP or JPEG file.',

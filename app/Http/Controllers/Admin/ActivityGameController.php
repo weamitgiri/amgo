@@ -50,6 +50,12 @@ class ActivityGameController extends Controller
                     $game->save();
                 }
 
+                // Case summary image (shown beside the case plot in the game)
+                if ($request->hasFile('case_summary_image')) {
+                    $game->case_summary_image = $this->storePublicImageOrFail($request->file('case_summary_image'), 'games');
+                    $game->save();
+                }
+
                 // Hidden Culprit reveal image (shown on the results screen)
                 if ($request->hasFile('culprit_image')) {
                     $game->culprit_image = $this->storePublicImageOrFail($request->file('culprit_image'), 'culprit');
@@ -175,6 +181,14 @@ class ActivityGameController extends Controller
                 if ($request->hasFile('bg_image')) {
                     $old = $game->bg_image;
                     $game->bg_image = $this->storePublicImageOrFail($request->file('bg_image'), 'games');
+                    $game->save();
+                    $this->deletePublicPathQuietly($old);
+                }
+
+                // Case summary image — same replace-on-upload behaviour.
+                if ($request->hasFile('case_summary_image')) {
+                    $old = $game->case_summary_image;
+                    $game->case_summary_image = $this->storePublicImageOrFail($request->file('case_summary_image'), 'games');
                     $game->save();
                     $this->deletePublicPathQuietly($old);
                 }

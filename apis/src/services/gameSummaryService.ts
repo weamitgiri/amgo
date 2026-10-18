@@ -182,6 +182,7 @@ export type GameSummaryPayload = {
         tagline: string | null;
         case_summary_html: string | null;
         bg_image: string | null;
+        case_summary_image: string | null;
         timeline: { time: string; event: string }[];
         quick_facts: { label: string; value: string; icon: string }[];
         victim_name: string | null;
@@ -231,7 +232,7 @@ export async function buildGameSummaryPayload(
             a.lie_detector_enabled, a.lie_detector_max_questions, a.lie_detector_timer_secs,
             a.no_response_penalty,
             ag.id AS game_row_id, ag.title AS case_title, ag.tagline, ag.case_summary,
-            ag.bg_image, ag.timeline, ag.quick_facts, ag.victim_name
+            ag.bg_image, ag.case_summary_image, ag.timeline, ag.quick_facts, ag.victim_name
          FROM game_groups gg
          JOIN organizer_bookings ob ON gg.booking_id = ob.id
          JOIN activities a ON ob.activity_id = a.id
@@ -479,6 +480,7 @@ export async function buildGameSummaryPayload(
             tagline: row.tagline,
             case_summary_html: row.case_summary,
             bg_image: row.bg_image ?? null,
+            case_summary_image: row.case_summary_image ?? null,
             timeline: parseTimeline(row.timeline),
             quick_facts: parseQuickFacts(row.quick_facts),
             victim_name: row.victim_name || null,
