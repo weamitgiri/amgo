@@ -246,7 +246,9 @@ export function ReviewRatingPage({
                 <div className="text-center flex flex-col">
                   <h3 className="text-lg font-semibold" style={{ color: HEADING }}>Ratings &amp; Reaction</h3>
                   <p className="text-[13px] text-[#4A4540] leading-relaxed mt-5 max-w-[230px] mx-auto">
-                    The verdict is in. Other teams have tasted your creation.
+                    {/*The verdict is in. Other teams have tasted your creation.*/}
+                    Your ratings are ready! <br />
+                    Rate another group's dish in the right side section to reveal how others rated yours.
                   </p>
 
                   {/* Average 1–5 star rating this dish received from other teams */}
@@ -535,7 +537,7 @@ function DishRatingCard({
           never changes the reaction and vice versa; both are required to submit.
           After submission they stay highlighted but read-only; no re-submit. */}
       <div className="mt-5">
-        <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Give Rating</p>
+        <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Rate this group  recipe  to unlock your results</p>
         <div className="mt-2 flex items-center justify-center gap-1">
           {[1, 2, 3, 4, 5].map((n) => {
             const on = selectedStars != null && n <= selectedStars;
