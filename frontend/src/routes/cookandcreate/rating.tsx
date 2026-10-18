@@ -156,7 +156,7 @@ function RatingPage() {
     <ReviewRatingPage
       dishName={gameState.instance.dish_name || awards?.my_group.dish_name || 'Your dish'}
       groupWon={awards?.my_group.group_won ?? gameState.instance.group_won}
-      impostor={impostor ? { name: impostor.isYou ? 'You' : impostor.name, roleLabel: impostor.role_label } : null}
+      impostor={impostor ? { name: impostor.name, roleLabel: impostor.role_label } : null}
       mostVoted={mostVoted ? { name: mostVoted.isYou ? 'You' : mostVoted.name, roleLabel: mostVoted.role_label } : null}
       reactionCounts={awards?.my_group.reaction_counts ?? {}}
       averageRating={awards?.my_group.average_rating ?? null}
