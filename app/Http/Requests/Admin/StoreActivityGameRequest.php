@@ -64,11 +64,12 @@ class StoreActivityGameRequest extends FormRequest
             'roles.*.what_you_know.*' => 'nullable|string|max:255',
             'roles.*.keep_in_mind' => 'nullable|array',
             'roles.*.keep_in_mind.*' => 'nullable|string|max:255',
-            'roles.*.strategy_cards' => 'nullable|array|max:4',
-            'roles.*.strategy_cards.*.card_number' => 'required_with:roles.*.strategy_cards|integer|min:1|max:4',
-            'roles.*.strategy_cards.*.heading' => 'nullable|string|max:150',
-            'roles.*.strategy_cards.*.heading_color' => 'nullable|string|max:20',
-            'roles.*.strategy_cards.*.body_content' => 'nullable|string',
+            // Role Strategy Cards (Step 3) are hidden for now, so they aren't validated.
+            // 'roles.*.strategy_cards' => 'nullable|array|max:4',
+            // 'roles.*.strategy_cards.*.card_number' => 'required_with:roles.*.strategy_cards|integer|min:1|max:4',
+            // 'roles.*.strategy_cards.*.heading' => 'nullable|string|max:150',
+            // 'roles.*.strategy_cards.*.heading_color' => 'nullable|string|max:20',
+            // 'roles.*.strategy_cards.*.body_content' => 'nullable|string',
 
             'investigator_cards' => 'nullable|array|max:4',
             'investigator_cards.*.card_number' => 'required|integer|min:1|max:4',

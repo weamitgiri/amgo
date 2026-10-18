@@ -444,7 +444,32 @@ export async function buildGameSummaryPayload(
         details: [r.rule_text],
     }));
 
-    const strategy_slides = cardRows.map((c: any) => ({
+    // Investigator Cards (admin Step 4). The Investigator receives every card; any
+    // other role receives ONLY the card for its own character, matched by name
+    // ("Kartar Sah (Farmer Leader)" ↔ "Suspect 1: Kartar Sah"), so no player can
+    // see another suspect's card.
+    const normName = (v: unknown) =>
+        String(v ?? '')
+            .replace(/\([^)]*\)/g, '')
+            .replace(/^\s*suspect\s*\d+\s*:\s*/i, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+    const myCharacter = normName(myRole?.character_name);
+    const ownCardRows = (): any[] => {
+        if (myCharacter === '') return [];
+        const labelled = (cardRows as any[]).map((c: any) => ({ c, label: normName(c.suspect_label) }));
+        const exact = labelled.filter((x) => x.label === myCharacter);
+        if (exact.length > 0) return exact.map((x) => x.c);
+        // Looser fallback for labels that add or drop a word ("Raju" ↔ "Raju Kumar").
+        return labelled
+            .filter((x) => x.label !== '' && (x.label.includes(myCharacter) || myCharacter.includes(x.label)))
+            .slice(0, 1)
+            .map((x) => x.c);
+    };
+    const visibleCardRows = requesterIsInvestigator ? (cardRows as any[]) : ownCardRows();
+
+    const strategy_slides = visibleCardRows.map((c: any) => ({
         title: c.suspect_label || c.tag || 'Strategy Tip',
         description: c.profile_text || '',
         details: [
@@ -507,7 +532,7 @@ export async function buildGameSummaryPayload(
         })),
         all_role_strategy_slides: allRoleStrategySlides,
         strategy_slides:
-            strategy_slides.length > 0
+            strategy_slides.length > 0 || !requesterIsInvestigator
                 ? strategy_slides
                 : [
                       {

@@ -112,8 +112,9 @@
         </div>
     </div>
 
-    <!-- Nested Strategy Cards -->
-    <div class="card card-outline card-info mt-4">
+    <!-- Nested Strategy Cards — hidden for now: players' Strategy Guide shows the
+         Step 4 Investigator Cards instead. Saved cards still post unchanged. -->
+    <div class="card card-outline card-info mt-4 d-none">
         <div class="card-header py-2">
             <h3 class="card-title text-sm"><i class="fas fa-lightbulb mr-1"></i> Strategy Cards (Max 4)</h3>
             <div class="card-tools">
