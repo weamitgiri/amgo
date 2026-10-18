@@ -110,12 +110,14 @@
                                     </button>
                                 @endif
                                 <div class="d-flex mt-2">
-                                    <a href="{{ route('admin.organizers.index') }}" class="btn btn-outline-secondary flex-fill mr-2">
+                                    <a href="{{ route('admin.organizers.index') }}" class="btn btn-outline-secondary flex-fill">
                                         <i class="fas fa-arrow-left mr-1"></i> Back
                                     </a>
+                                    {{-- Edit — hidden for now.
                                     <a href="{{ route('admin.organizers.edit', $organizer->id) }}" class="btn btn-primary flex-fill">
                                         <i class="fas fa-edit mr-1"></i> Edit
                                     </a>
+                                    --}}
                                 </div>
                             </div>
                         </div>

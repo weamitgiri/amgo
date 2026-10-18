@@ -46,9 +46,11 @@
                                 </div>
                             </div>
                         </form>
+                        {{-- Add New Organizer — hidden for now (organizers register themselves).
                         <a href="{{ route('admin.organizers.create') }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-plus"></i> Add New Organizer
                         </a>
+                        --}}
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -113,9 +115,11 @@
                                         <a href="{{ route('admin.organizers.show', $organizer->id) }}" class="btn btn-info btn-sm" title="View">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        {{-- Edit — hidden for now.
                                         <a href="{{ route('admin.organizers.edit', $organizer->id) }}" class="btn btn-primary btn-sm" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        --}}
                                         @if($billing)
                                             <a href="{{ route('admin.organizers.invoice', $organizer->id) }}" class="btn btn-success btn-sm" title="Download Invoice PDF">
                                                 <i class="fas fa-file-pdf"></i> Invoice

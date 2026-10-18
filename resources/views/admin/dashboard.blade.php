@@ -134,16 +134,22 @@
                                         CMS Pages
                                     </a>
                                 </div>
-                                <div class="col-6">
+                                <div class="col-6 mb-3">
                                     <a href="{{ route('admin.blogs.index') }}" class="quick-action-btn">
                                         <i class="fas fa-blog text-info"></i>
                                         Blogs
                                     </a>
                                 </div>
-                                <div class="col-6">
+                                <div class="col-6 mb-3">
                                     <a href="{{ route('admin.setting') }}" class="quick-action-btn">
                                         <i class="fas fa-cogs text-secondary"></i>
                                         Settings
+                                    </a>
+                                </div>
+                                <div class="col-12">
+                                    <a href="{{ route('admin.organizers.index') }}" class="quick-action-btn">
+                                        <i class="fas fa-user-tie text-danger"></i>
+                                        Organizers
                                     </a>
                                 </div>
                             </div>
