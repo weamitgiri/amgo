@@ -491,7 +491,7 @@ function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Groups + Participants */}
+      {/* Recent Groups + Participants (no rows once the event is Completed) */}
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
           <div className="flex items-center justify-between">
@@ -499,7 +499,9 @@ function DashboardPage() {
             <a className="text-sm text-primary font-medium">View All Groups</a>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-4">
-            {recentGroups.length > 0 ? (
+            {isEventCompleted ? (
+              <div className="col-span-3 text-sm text-muted-foreground">No data found</div>
+            ) : recentGroups.length > 0 ? (
               recentGroups.map((g) => {
                 const groupMembers = recentParticipants.filter(
                   (p) => p.group_id === g.id || p.group_name === g.name
@@ -527,7 +529,9 @@ function DashboardPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-1">Ensure all the participants have joined and groups are complete</p>
           <div className="mt-4 max-h-[280px] overflow-y-auto pr-2 divide-y divide-border/60 scrollbar-thin">
-            {recentParticipants.length > 0 ? (
+            {isEventCompleted ? (
+              <div className="text-sm text-muted-foreground">No data found</div>
+            ) : recentParticipants.length > 0 ? (
               recentParticipants.map((p) => {
                 const safeName = p.name || "?";
                 const initials = safeName.split(" ").map((s: string) => s[0] || "").slice(0, 2).join("").toUpperCase();
