@@ -6,7 +6,8 @@ import type { CCAwardEntry, CCOtherDish, CCRatingCategory, CCTemplate } from '@/
 import { clearParticipantSession } from '@/lib/participant-session';
 import { disconnectSocket } from '@/lib/socket';
 import { portraitForRole } from './portraits';
-import { dishImageFor } from './dishImages';
+import masterchefTeamImg from '../../../assets/cookandcreate/great_job_masterchef_team.jpg';
+import otherKitchenDishImg from '../../../assets/cookandcreate/left-comman.png';
 import imposterImg from '../../../assets/cookandcreate/imposter 1.png';
 import imposterIcon from '../../../assets/cookandcreate/imposter-icon.png';
 
@@ -137,18 +138,6 @@ function ResultsHeader({
   );
 }
 
-/** A few warm confetti specks around the plate, as in the design. Purely decorative. */
-const CONFETTI = [
-  { left: '18%', top: '10%', color: '#E8913A', rot: 20 },
-  { left: '30%', top: '4%', color: '#7FB24A', rot: -15 },
-  { left: '44%', top: '9%', color: '#F2C14E', rot: 35 },
-  { left: '57%', top: '3%', color: '#E2614B', rot: 10 },
-  { left: '70%', top: '11%', color: '#7FB24A', rot: -30 },
-  { left: '82%', top: '6%', color: '#E8913A', rot: 45 },
-  { left: '10%', top: '30%', color: '#F2C14E', rot: -20 },
-  { left: '88%', top: '28%', color: '#E2614B', rot: 25 },
-];
-
 export function ReviewRatingPage({
   dishName,
   groupWon,
@@ -162,7 +151,6 @@ export function ReviewRatingPage({
   otherDishes,
   reviewsComplete,
   onRate,
-  myGroupId,
   template,
   doubleDownOutcome,
   participantName,
@@ -228,27 +216,16 @@ export function ReviewRatingPage({
                 content is masked until every other dish is rated) */}
             <div className="rounded-[16px] border border-[#F5DFC0] p-5 sm:p-6" style={CARD_STYLE}>
               <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6">
-                {/* Recipe Reveal — dish name + a plate illustration (keyed to the group) */}
+                {/* Recipe Reveal — dish name + a fixed-size static celebration image */}
                 <div className="text-center">
                   <h3 className="text-lg font-semibold" style={{ color: HEADING }}>Recipe Reveal</h3>
-                      <p className="text-[13px] text-[#4A4540] mt-5">Your group cooked up...</p>
-                      <p className="text-[15px] font-semibold mt-1" style={{ color: ORANGE }}>{dishName}</p>
-
-                      <div className="hidden relative mt-4 rounded-xl border border-[#F1E4D3] bg-[#FAF4ED] px-4 pt-8 pb-4">
-                        {CONFETTI.map((c, i) => (
-                          <span
-                            key={i}
-                            aria-hidden
-                            className="absolute w-1.5 h-1.5 rounded-[1px]"
-                            style={{ left: c.left, top: c.top, background: c.color, transform: `rotate(${c.rot}deg)` }}
-                          />
-                        ))}
-                        <img
-                          src={dishImageFor(myGroupId)}
-                          alt={dishName}
-                          className="relative mx-auto w-full max-w-[260px] max-h-[170px] object-contain drop-shadow-md"
-                        />
-                      </div>
+                  <p className="text-[13px] text-[#4A4540] mt-5">Your group cooked up...</p>
+                  <p className="text-[15px] font-semibold mt-1" style={{ color: ORANGE }}>{dishName}</p>
+                  <img
+                    src={masterchefTeamImg}
+                    alt="Great job, MasterChef team!"
+                    className="mt-4 mx-auto w-[290px] max-w-full h-[233px] rounded-xl object-cover"
+                  />
                 </div>
 
                 {/* Ratings & Reaction */}
@@ -403,10 +380,10 @@ export function ReviewRatingPage({
               kitchen's dish + steps, rated once (star + reaction) then shown
               read-only. The cards are never hidden by the rating gate. */}
           <div className="rounded-[16px] border border-[#F9EAD4] p-5 sm:p-6 min-w-0" style={{ background: 'linear-gradient(180deg, #FFFEFD 0%, #FDF5E9 100%)' }}>
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold" style={{ color: HEADING }}>What Other Kitchens Cooked Up</h3>
+            <div className="text-center">
+              <h3 className="text-[22px] font-bold leading-tight" style={{ color: HEADING }}>What Other Kitchens Cooked Up</h3>
               {totalOther > 0 && (
-                <span className="text-[11px] font-semibold text-[#9A7B59] whitespace-nowrap">{ratedCount}/{totalOther} rated</span>
+                <span className="mt-1 inline-block text-[11px] font-semibold text-[#9A7B59]">{ratedCount}/{totalOther} rated</span>
               )}
             </div>
             {totalOther === 0 ? (
@@ -415,7 +392,7 @@ export function ReviewRatingPage({
                 <p className="text-[13px] text-[#6F625A] mt-2">No other kitchens' dishes are available to rate yet.</p>
               </div>
             ) : (
-              <div className="space-y-3 mt-4">
+              <div className="mt-4 divide-y divide-[#F1E2CF]">
                 {otherDishes.map((dish) => (
                   <DishRatingCard
                     key={dish.group_id}
@@ -475,36 +452,36 @@ function DishRatingCard({
   };
 
   return (
-    <div className="rounded-xl border border-[#F1E4D6] bg-[#FFFDF9] p-3">
-      {/* Dish header */}
-      <div className="flex items-center gap-3">
-        <div className="w-14 h-14 rounded-lg bg-[#FAF4ED] overflow-hidden shrink-0">
-          <img src={dishImageFor(dish.group_id)} alt={dish.dish_name} className="w-full h-full object-cover" />
+    <div className="py-5 first:pt-0 last:pb-0">
+      {/* Dish header — static dish image, group and dish name */}
+      <div className="flex items-center gap-4 rounded-xl border border-[#F5E6D3] bg-[#FFFCF8] p-3">
+        <div className="w-[120px] h-[105px] rounded-[10px] bg-[#FAF1E6] overflow-hidden shrink-0">
+          <img src={otherKitchenDishImg} alt={dish.dish_name} className="w-full h-full object-cover" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-[#6F625A]">{dish.group_name}</p>
-          <p className="text-[15px] font-semibold text-[#2E2A26] leading-tight truncate">{dish.dish_name}</p>
+          <p className="text-[15px] text-[#6F625A]">{dish.group_name}</p>
+          <p className="mt-1.5 text-[18px] font-semibold text-[#2E2A26] leading-tight break-words">{dish.dish_name}</p>
         </div>
         {alreadyRated && (
-          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-2 py-0.5 text-[11px] font-bold">
+          <span className="shrink-0 self-start inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-2 py-0.5 text-[11px] font-bold">
             <Check className="h-3 w-3" /> Rated
           </span>
         )}
       </div>
 
       {/* The dish's final recipe (its kept steps) */}
-      <div className="mt-3 rounded-lg border border-[#F1E4D6] bg-[#FEFAF6] px-3.5 pt-2.5 pb-1">
-        <h4 className="text-[13px] font-semibold pb-2 border-b border-[#EFE4D6]" style={{ color: ORANGE }}>Game Steps</h4>
+      <div className="mt-4 rounded-xl border border-[#F5E6D3] bg-[#FFFCF8] px-4 pt-4 pb-1">
+        <h4 className="text-[17px] font-semibold pb-3 border-b border-[#F1E4D6]" style={{ color: ORANGE }}>Game Step</h4>
         {dish.steps.length === 0 ? (
-          <p className="text-[12px] text-[#A99E92] py-2.5">No steps recorded for this dish.</p>
+          <p className="text-[13px] text-[#A99E92] py-3">No steps recorded for this dish.</p>
         ) : (
-          <div className="divide-y divide-[#EFE4D6]">
+          <div className="divide-y divide-[#F1E4D6]">
             {dish.steps.map((s, i) => (
-              <div key={i} className="flex items-start gap-2.5 py-2">
-                <span className="text-[13px] font-semibold w-4 shrink-0 leading-snug" style={{ color: ORANGE }}>
+              <div key={i} className="flex items-center gap-4 py-3">
+                <span className="text-[17px] font-semibold w-5 shrink-0 text-center" style={{ color: ORANGE }}>
                   {String.fromCharCode(65 + i)}
                 </span>
-                <p className="text-[12px] text-[#3F3A35] leading-snug">{s.text}</p>
+                <p className="text-[13px] text-[#3F3A35] leading-[1.45]">{s.text}</p>
               </div>
             ))}
           </div>
@@ -514,12 +491,9 @@ function DishRatingCard({
       {/* Rating + reaction controls — two independent selections. Picking a star
           never changes the reaction and vice versa; both are required to submit.
           After submission they stay highlighted but read-only; no re-submit. */}
-      <div className="mt-3">
-        <p className="text-center text-[13px] font-semibold text-[#2E2A26]">Your Rating</p>
-        <p className="text-center text-[11px] text-[#6F625A] mt-0.5 mb-1.5">
-          {alreadyRated ? 'Your submitted rating' : 'Tap a star — 1 (poor) to 5 (amazing)'}
-        </p>
-        <div className="flex items-center justify-center gap-1">
+      <div className="mt-5">
+        <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Give Rating</p>
+        <div className="mt-2 flex items-center justify-center gap-1">
           {[1, 2, 3, 4, 5].map((n) => {
             const on = selectedStars != null && n <= selectedStars;
             return (
@@ -532,21 +506,20 @@ function DishRatingCard({
                 className={`p-0.5 ${alreadyRated ? 'cursor-default' : 'cursor-pointer transition-transform hover:scale-110'}`}
               >
                 <Star
-                  size={28}
-                  className={on ? 'text-[#E7A24F]' : 'text-[#E3D7C7]'}
-                  fill={on ? '#F2B45E' : '#EFE6DA'}
-                  strokeWidth={1.25}
+                  size={34}
+                  className={on ? 'text-[#F5B82E]' : 'text-[#D6D3CE]'}
+                  fill={on ? '#F7C044' : '#DCD9D4'}
+                  strokeWidth={1}
                 />
               </button>
             );
           })}
-          {alreadyRated && selectedStars != null && (
-            <span className="ml-1.5 text-sm font-semibold text-[#CB7430]">{selectedStars}/5</span>
-          )}
+          <span className="ml-3 text-[18px] font-semibold text-[#3F3A35] tabular-nums">
+            {selectedStars ?? 0} / 5
+          </span>
         </div>
 
-        <p className="text-center text-[13px] font-semibold text-[#2E2A26] mt-3">Pick a Reaction</p>
-        <div className="grid grid-cols-5 gap-1.5 mt-1.5">
+        <div className="grid grid-cols-5 gap-2 mt-5">
           {reactions.map((cat, i) => {
             const isPicked = selectedCategory === cat.id;
             return (
@@ -556,14 +529,12 @@ function DishRatingCard({
                 disabled={alreadyRated}
                 onClick={() => setCategory(cat.id)}
                 title={cat.description ?? cat.name}
-                className={`flex flex-col items-center justify-start gap-1 rounded-lg border px-1 pt-2 pb-1.5 text-center transition-colors ${
-                  isPicked
-                    ? 'border-[#CB7430] bg-[#FFF6EA] shadow-[0_0_0_0.5px_#CB7430]'
-                    : 'border-[#EADCCB] bg-[#FCF5EC]'
+                className={`flex flex-col items-center justify-start gap-2 rounded-[10px] border-[1.5px] bg-[#FCF3E8] px-1 pt-3 pb-2.5 text-center transition-colors ${
+                  isPicked ? 'border-[#CB7430]' : 'border-[#F3E3CF]'
                 } ${alreadyRated ? 'cursor-default' : 'cursor-pointer hover:border-[#CB7430]/60'}`}
               >
-                <img src={ratingIconFor(i)} alt={cat.name} className="w-6 h-6 object-contain" />
-                <span className="text-[10px] text-[#3F3A35] leading-tight">{cat.name}</span>
+                <img src={ratingIconFor(i)} alt={cat.name} className="w-11 h-11 object-contain" />
+                <span className="text-[12px] text-[#3F3A35] leading-tight">{cat.name}</span>
               </button>
             );
           })}
@@ -579,8 +550,8 @@ function DishRatingCard({
               type="button"
               disabled={!canSubmit}
               onClick={submit}
-              className="mt-3 w-full rounded-full py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: 'linear-gradient(90deg, #4AA3E6 0%, #7C5CE6 100%)' }}
+              className="mt-4 w-full rounded-full py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_12px_rgba(231,162,79,0.35)]"
+              style={{ background: 'linear-gradient(180deg, #EDAA5C 0%, #E39A44 100%)' }}
             >
               {submitting ? 'Submitting…' : 'Submit Rating'}
             </button>
