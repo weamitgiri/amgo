@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "akaunting/setting": "^1.2",
+        "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^11.31",
         "laravel/tinker": "^2.9",
         "yajra/laravel-datatables": "^11.0"

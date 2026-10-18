@@ -30,6 +30,12 @@
             <small class="form-text text-muted">The name exactly as registered under GST, if it differs from the trading name.</small>
         </div>
         <div class="col-md-6 form-group">
+            <label>Proprietor name</label>
+            <input name="invoice_seller_proprietor" type="text" class="form-control"
+                   value="{{ old('invoice_seller_proprietor', setting('invoice_seller_proprietor')) }}">
+            <small class="form-text text-muted">Printed as "Proprietor: ..." under the supplier name. Leave blank to omit.</small>
+        </div>
+        <div class="col-md-6 form-group">
             <label>GSTIN</label>
             <input name="invoice_seller_gstin" type="text" class="form-control text-uppercase" maxlength="15"
                    placeholder="06AABCZ1234A1Z5"

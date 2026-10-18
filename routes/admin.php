@@ -146,6 +146,7 @@ Route::group(
             Route::get('/create', [\App\Http\Controllers\Admin\OrganizerController::class, 'create'])->name('organizers.create');
             Route::post('/', [\App\Http\Controllers\Admin\OrganizerController::class, 'store'])->name('organizers.store');
             Route::get('/{organizer}', [\App\Http\Controllers\Admin\OrganizerController::class, 'show'])->name('organizers.show');
+            Route::get('/{organizer}/invoice', [\App\Http\Controllers\Admin\OrganizerController::class, 'invoice'])->name('organizers.invoice');
             Route::get('/{organizer}/edit', [\App\Http\Controllers\Admin\OrganizerController::class, 'edit'])->name('organizers.edit');
             Route::put('/{organizer}', [\App\Http\Controllers\Admin\OrganizerController::class, 'update'])->name('organizers.update');
             Route::delete('/{organizer}', [\App\Http\Controllers\Admin\OrganizerController::class, 'destroy'])->name('organizers.destroy');

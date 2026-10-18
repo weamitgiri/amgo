@@ -368,6 +368,7 @@ class SettingController extends Controller {
         $validated = $request->validate([
             'invoice_seller_name' => 'nullable|string|max:150',
             'invoice_seller_legal_name' => 'nullable|string|max:150',
+            'invoice_seller_proprietor' => 'nullable|string|max:150',
             'invoice_seller_gstin' => 'nullable|string|regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
             'invoice_seller_address' => 'nullable|string|max:500',
             'invoice_seller_city' => 'nullable|string|max:100',

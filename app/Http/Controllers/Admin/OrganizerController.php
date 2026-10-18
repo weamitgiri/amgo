@@ -8,6 +8,9 @@ use App\Models\OrganizerBilling;
 use App\Models\Activity;
 use App\Models\ActivityGame;
 use App\Models\Package;
+use App\Models\Payment;
+use App\Services\OrganizerInvoiceService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,10 +19,26 @@ use Exception;
 
 class OrganizerController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $organizers = Organizer::with(['bookings.activity.games', 'bookings.package'])->latest()->get();
-        return view('admin.organizers.index', compact('organizers'));
+        $search = trim((string) $request->query('search', ''));
+
+        // Paginated on the server (newest first) instead of loading every
+        // organizer into a client-side DataTable.
+        $organizers = Organizer::with(['bookings' => fn ($q) => $q->latest('id'), 'bookings.activity', 'bookings.package', 'bookings.billing'])
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('company_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('admin.organizers.index', compact('organizers', 'search'));
     }
 
     public function create()
@@ -113,8 +132,41 @@ class OrganizerController extends Controller
 
     public function show(Organizer $organizer)
     {
-        $organizer->load(['bookings.activity.games', 'bookings.package', 'bookings.billing']);
-        return view('admin.organizers.show', compact('organizer'));
+        $organizer->load([
+            'bookings' => fn ($q) => $q->latest('id'),
+            'bookings.activity.games',
+            'bookings.game',
+            'bookings.package',
+            'bookings.billing',
+        ]);
+        $payments = Payment::where('organizer_id', $organizer->id)->latest('id')->get()->groupBy('booking_id');
+
+        return view('admin.organizers.show', compact('organizer', 'payments'));
+    }
+
+    /**
+     * GST invoice PDF for one of the organizer's bookings (?booking=ID), or
+     * their latest billed booking. CGST+SGST when the billing state matches the
+     * seller's state in Admin > Settings > Invoice, IGST otherwise.
+     */
+    public function invoice(Request $request, Organizer $organizer, OrganizerInvoiceService $invoices)
+    {
+        $booking = $organizer->bookings()
+            ->whereHas('billing')
+            ->when($request->filled('booking'), fn ($q) => $q->whereKey($request->query('booking')))
+            ->latest('id')
+            ->first();
+
+        $invoice = $booking ? $invoices->forBooking($booking) : null;
+        if (!$invoice) {
+            return redirect()->back()->with('error', 'No billing details found for this organizer, so there is no invoice to download.');
+        }
+
+        $filename = 'invoice-' . str_replace('/', '-', $invoice['invoice_no']) . '.pdf';
+
+        return Pdf::loadView('admin.organizers.invoice-pdf', compact('invoice'))
+            ->setPaper('a4')
+            ->download($filename);
     }
 
     public function edit(Organizer $organizer)
