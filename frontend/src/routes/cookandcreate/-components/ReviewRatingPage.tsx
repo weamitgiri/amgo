@@ -340,7 +340,7 @@ export function ReviewRatingPage({
                         <br />
                         The impostor all along was
                       </p>
-                      <p className="text-[18px] font-semibold text-[#3F2B20] mt-0.5">{impostor.name}</p>
+                      <p className="text-[18px] font-semibold text-[#3F2B20] mt-0.5 break-words">{impostor.name}</p>
                       <img src={imposterIcon} alt="" aria-hidden className="w-14 h-14 object-contain mt-5 mx-auto" />
                     </div>
 
@@ -349,7 +349,7 @@ export function ReviewRatingPage({
                       <div className="relative z-10 -mr-2.5 w-[130px] h-[160px] rounded-[10px] border border-[#F1DCC0] bg-[#F7EDE2] overflow-hidden shadow-[0_2px_8px_rgba(80,50,20,0.12)]">
                         <img src={imposterImg} alt="Impostor" className="w-full h-full object-cover object-top" />
                       </div>
-                      <div className="text-center pb-6">
+                      <div className="w-[133px] shrink-0 text-center pb-6">
                         <div className="w-[133px] h-[160px] rounded-[10px] border border-[#F1DCC0] bg-[#FFF6EA]/80 overflow-hidden">
                           <img
                             src={portraitForRole(impostor.roleLabel, template)}
@@ -358,8 +358,9 @@ export function ReviewRatingPage({
                             style={{ objectPosition: 'center 12%' }}
                           />
                         </div>
-                        <p className="text-[15px] font-medium mt-2" style={{ color: ORANGE }}>{impostor.name}</p>
-                        <p className="text-[14px] text-[#3F3A35] mt-0.5">{impostor.roleLabel}</p>
+                        {/* pl-3 keeps the text clear of the hooded figure, which overlaps this column; long names wrap. */}
+                        <p className="pl-3 text-[15px] font-medium leading-snug mt-2 break-words" style={{ color: ORANGE }}>{impostor.name}</p>
+                        <p className="pl-3 text-[14px] text-[#3F3A35] mt-0.5 break-words">{impostor.roleLabel}</p>
                       </div>
                     </div>
                   </div>
