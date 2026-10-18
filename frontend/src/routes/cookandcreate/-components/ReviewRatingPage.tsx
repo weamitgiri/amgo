@@ -73,6 +73,16 @@ const ratingIconFor = (index: number) => RATING_ICONS[((index % RATING_ICONS.len
    categories by order. */
 const REACTION_LABELS = ['Delicious!', 'Creative!', 'Funny!', 'What is this?!', 'Yikes!'];
 
+/* Fixed labels under the five faces in each dish's "Give Rating" grid (from the
+   design), matched to the categories by order. */
+const GIVE_RATING_LABELS = [
+  'Would Actually Eat This',
+  'Smartest Ingredient Use',
+  'Too Spicy to Handle',
+  'Taste Buds Destroyer',
+  'Science Experiment Gone Wrong',
+];
+
 function formatRemaining(endsAt: string | null | undefined, offsetMs: number): string {
   if (!endsAt) return '--:--';
   const end = new Date(endsAt).getTime();
@@ -304,7 +314,7 @@ export function ReviewRatingPage({
             {/* Impostor reveal + Fun Awards */}
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-5 flex-1">
               {/* The Impostor has been unmarked */}
-              <div className="rounded-[16px] border border-[#F4D1A5] p-5 sm:p-6" style={PEACH_STYLE}>
+              <div className="flex flex-col rounded-[16px] border border-[#F4D1A5] p-5 sm:p-6" style={PEACH_STYLE}>
                 <h3 className="text-lg font-semibold text-center" style={{ color: HEADING }}>
                   The Impostor has been unmarked
                 </h3>
@@ -318,27 +328,25 @@ export function ReviewRatingPage({
                     name and role. A short placeholder covers the brief load so the
                     section is never blank. */}
                 {impostor ? (
-                  <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+                  <div className="flex-1 mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
                     {/* Left — reveal text, impostor's name, red-devil icon */}
                     <div className="text-center">
-                      <p className="text-[15px] font-semibold leading-snug" style={{ color: ORANGE }}>
+                      <p className="text-[18px] font-semibold leading-snug" style={{ color: ORANGE }}>
                         The mask is off.
                         <br />
                         The impostor all along was
                       </p>
-                      <p className="text-[15px] font-semibold text-[#3F2B20] mt-0.5">{impostor.name}</p>
-                      <img src={imposterIcon} alt="" aria-hidden className="w-12 h-12 object-contain mt-4 mx-auto" />
+                      <p className="text-[18px] font-semibold text-[#3F2B20] mt-0.5">{impostor.name}</p>
+                      <img src={imposterIcon} alt="" aria-hidden className="w-14 h-14 object-contain mt-5 mx-auto" />
                     </div>
 
                     {/* Right — hooded impostor overlapping the player's chef portrait */}
                     <div className="flex items-end">
-                      <img
-                        src={imposterImg}
-                        alt="Impostor"
-                        className="relative z-10 -mr-5 w-[84px] h-[100px] object-contain drop-shadow"
-                      />
-                      <div className="text-center">
-                        <div className="w-[80px] h-[100px] rounded-[10px] border border-[#F1DCC0] bg-[#FFF6EA]/80 overflow-hidden">
+                      <div className="relative z-10 -mr-2.5 w-[130px] h-[160px] rounded-[10px] border border-[#F1DCC0] bg-[#F7EDE2] overflow-hidden shadow-[0_2px_8px_rgba(80,50,20,0.12)]">
+                        <img src={imposterImg} alt="Impostor" className="w-full h-full object-cover object-top" />
+                      </div>
+                      <div className="text-center pb-6">
+                        <div className="w-[133px] h-[160px] rounded-[10px] border border-[#F1DCC0] bg-[#FFF6EA]/80 overflow-hidden">
                           <img
                             src={portraitForRole(impostor.roleLabel, template)}
                             alt={impostor.name}
@@ -346,8 +354,8 @@ export function ReviewRatingPage({
                             style={{ objectPosition: 'center 12%' }}
                           />
                         </div>
-                        <p className="text-xs font-medium mt-1" style={{ color: ORANGE }}>{impostor.name}</p>
-                        <p className="text-[11px] text-[#3F3A35]">{impostor.roleLabel}</p>
+                        <p className="text-[15px] font-medium mt-2" style={{ color: ORANGE }}>{impostor.name}</p>
+                        <p className="text-[14px] text-[#3F3A35] mt-0.5">{impostor.roleLabel}</p>
                       </div>
                     </div>
                   </div>
@@ -534,7 +542,7 @@ function DishRatingCard({
                 } ${alreadyRated ? 'cursor-default' : 'cursor-pointer hover:border-[#CB7430]/60'}`}
               >
                 <img src={ratingIconFor(i)} alt={cat.name} className="w-11 h-11 object-contain" />
-                <span className="text-[12px] text-[#3F3A35] leading-tight">{cat.name}</span>
+                <span className="text-[12px] text-[#3F3A35] leading-tight">{GIVE_RATING_LABELS[i] ?? cat.name}</span>
               </button>
             );
           })}
