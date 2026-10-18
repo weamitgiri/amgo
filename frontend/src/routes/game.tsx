@@ -2230,9 +2230,27 @@ function cleanWordHtml(html: string): string {
     if (first && marker) {
       ordered = /\d/.test(marker[0]);
       first.textContent = (first.textContent ?? "").slice(marker[0].length);
-      while (el.firstChild && /^[\s\u00a0]*$/.test(el.firstChild.textContent ?? "")) el.removeChild(el.firstChild);
-      if (el.firstChild?.nodeType === Node.TEXT_NODE) {
-        el.firstChild.textContent = (el.firstChild.textContent ?? "").replace(/^[\s\u00a0]+/, "");
+    }
+    // Leading spacing \u2014 the spacer after a marker, or &nbsp;s typed in place of one,
+    // possibly nested inside the first <span> \u2014 would indent the item's first line.
+    let lead: ChildNode | null = el.firstChild;
+    while (lead) {
+      const next: ChildNode | null = lead.nextSibling;
+      const parent = lead.parentNode;
+      if (lead.nodeType === Node.TEXT_NODE) {
+        lead.textContent = (lead.textContent ?? "").replace(/^[\s\u00a0]+/, "");
+        if (lead.textContent) break;
+        parent?.removeChild(lead);
+        lead = next;
+      } else if (lead.nodeType === Node.ELEMENT_NODE && !(lead as Element).querySelector("img") && (lead as Element).tagName !== "IMG") {
+        if (/^[\s\u00a0]*$/.test(lead.textContent ?? "")) {
+          parent?.removeChild(lead);
+          lead = next;
+        } else {
+          lead = lead.firstChild;
+        }
+      } else {
+        break;
       }
     }
     const tag = ordered ? "OL" : "UL";
