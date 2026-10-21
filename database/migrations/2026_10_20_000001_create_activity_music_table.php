@@ -42,7 +42,7 @@ return new class extends Migration
                 'link' => 'admin/music',
                 'parent_id' => 0,
                 'icon' => 'fas fa-music',
-                'status' => 'Active',
+                'status' => 'Inactive',
                 'order' => 8,
                 'permission_type' => 2,
                 'created_at' => now(),
