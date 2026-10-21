@@ -246,9 +246,7 @@ export function ReviewRatingPage({
                 <div className="text-center flex flex-col">
                   <h3 className="text-lg font-semibold" style={{ color: HEADING }}>Ratings &amp; Reaction</h3>
                   <p className="text-[13px] text-[#4A4540] leading-relaxed mt-5 max-w-[230px] mx-auto">
-                    {/*The verdict is in. Other teams have tasted your creation.*/}
-                    Your ratings are ready! <br />
-                    Rate another group's dish in the right side section to reveal how others rated yours.
+                    The verdict is in. Other teams have tasted your creation.
                   </p>
 
                   {/* Average 1–5 star rating this dish received from other teams */}
@@ -342,7 +340,7 @@ export function ReviewRatingPage({
                         <br />
                         The impostor all along was
                       </p>
-                      <p className="text-[18px] font-semibold text-[#3F2B20] mt-0.5 break-words">{impostor.name}</p>
+                      <p className="text-[18px] font-semibold text-[#3F2B20] mt-0.5">{impostor.name}</p>
                       <img src={imposterIcon} alt="" aria-hidden className="w-14 h-14 object-contain mt-5 mx-auto" />
                     </div>
 
@@ -351,7 +349,7 @@ export function ReviewRatingPage({
                       <div className="relative z-10 -mr-2.5 w-[130px] h-[160px] rounded-[10px] border border-[#F1DCC0] bg-[#F7EDE2] overflow-hidden shadow-[0_2px_8px_rgba(80,50,20,0.12)]">
                         <img src={imposterImg} alt="Impostor" className="w-full h-full object-cover object-top" />
                       </div>
-                      <div className="w-[133px] shrink-0 text-center pb-6">
+                      <div className="text-center pb-6">
                         <div className="w-[133px] h-[160px] rounded-[10px] border border-[#F1DCC0] bg-[#FFF6EA]/80 overflow-hidden">
                           <img
                             src={portraitForRole(impostor.roleLabel, template)}
@@ -360,9 +358,8 @@ export function ReviewRatingPage({
                             style={{ objectPosition: 'center 12%' }}
                           />
                         </div>
-                        {/* pl-3 keeps the text clear of the hooded figure, which overlaps this column; long names wrap. */}
-                        <p className="pl-3 text-[15px] font-medium leading-snug mt-2 break-words" style={{ color: ORANGE }}>{impostor.name}</p>
-                        <p className="pl-3 text-[14px] text-[#3F3A35] mt-0.5 break-words">{impostor.roleLabel}</p>
+                        <p className="text-[15px] font-medium mt-2" style={{ color: ORANGE }}>{impostor.name}</p>
+                        <p className="text-[14px] text-[#3F3A35] mt-0.5">{impostor.roleLabel}</p>
                       </div>
                     </div>
                   </div>
@@ -537,7 +534,7 @@ function DishRatingCard({
           never changes the reaction and vice versa; both are required to submit.
           After submission they stay highlighted but read-only; no re-submit. */}
       <div className="mt-5">
-        <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Rate this group  recipe  to unlock your results</p>
+        <p className="text-center text-[15px] font-semibold text-[#2E2A26]">Give Rating</p>
         <div className="mt-2 flex items-center justify-center gap-1">
           {[1, 2, 3, 4, 5].map((n) => {
             const on = selectedStars != null && n <= selectedStars;

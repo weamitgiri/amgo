@@ -357,22 +357,26 @@ function GamePage() {
   // false, which let the culprit see and use the Final Accusation UI.
   const isCulprit = (yourPerson?.role_type ?? "").toLowerCase().includes("culprit");
 
-  // Strategy guide content: the Step 4 Investigator Cards (strategy_slides). The
-  // Investigator gets every card (header "Strategy Cards" button); any other role
-  // gets only its own character's card from the API (Case Summary "Strategy
-  // Guide" button). The per-role Step 3 Strategy Cards (role_strategy_slides) are hidden
-  // for now. The timing (appears/closes) only drives the Investigator's forced
-  // pop-ups, not these buttons. Game Rules stay available to everyone.
+  // Strategy guide content, per role:
+  //  • Non-investigator roles → their OWN strategy cards (role_strategy_slides),
+  //    opened from the Case Summary "Strategy Guide" button.
+  //  • Investigator → the header "Strategy Cards" button opens ALL the suspect
+  //    Investigator Cards (same source as the timed pop-ups, strategy_slides), one
+  //    per slide, so the Investigator can review every suspect's profile on demand.
+  //    The timing (appears/closes) only drives the forced pop-ups, not this button.
+  // Game Rules stay available to everyone.
   const guideSlides = useMemo(
     () => ({
-      strategy: (gameData?.strategy_slides ?? []).map((s) => ({
-        title: s.title,
-        description: s.description,
-        details: s.details,
-      })),
+      strategy: isInvestigator
+        ? (gameData?.strategy_slides ?? []).map((s) => ({
+            title: s.title,
+            description: s.description,
+            details: s.details,
+          }))
+        : gameData?.role_strategy_slides ?? [],
       rules: gameData?.rules ?? [],
     }),
-    [gameData]
+    [gameData, isInvestigator]
   );
 
   // Investigator-only TIMED suspect cards (strategy_slides / investigator_cards).
@@ -1006,11 +1010,10 @@ function GamePage() {
   // Strategy Guide is for every role EXCEPT the Investigator, and can be opened
   // from its button at any time with no limit. On top of that, force it open once,
   // two minutes into the Case Summary, so non-investigators are nudged to read it.
-  // Uses the player's OWN Investigator Card (strategy_slides — the API sends a
-  // non-investigator only their own role's card), matching the button.
+  // Uses the player's OWN role cards (role_strategy_slides), matching the button.
   useEffect(() => {
     if (isInvestigator || phase !== "summary" || !gameData) return;
-    if ((gameData.strategy_slides?.length ?? 0) === 0) return;
+    if ((gameData.role_strategy_slides?.length ?? 0) === 0) return;
     if (!session?.groupId || !session.participantId) return;
     const total = gameData.settings.case_summary_view_secs || 300;
     // secsCase counts DOWN from `total`; two minutes have passed once it reaches
@@ -1510,7 +1513,7 @@ function SummaryView(props: {
               opened at any time, with no limit. The Investigator sees Game Rules only.
               Also require the player to actually have their own role strategy cards, so
               a role with none doesn't get a button that opens an empty modal. */}
-          {!isInvestigator && (gameData.strategy_slides?.length ?? 0) > 0 && (
+          {!isInvestigator && (gameData.role_strategy_slides?.length ?? 0) > 0 && (
             <button onClick={() => onOpenInfoModal("strategy")} className="inline-flex items-center gap-2 rounded-full bg-[#3ca9f9] px-6 py-2.5 text-[15px] font-bold text-white hover:opacity-90 transition-opacity">
               <Lightbulb className="h-5 w-5" /> Strategy Guide
             </button>
@@ -2301,9 +2304,6 @@ function InfoSliderModal({
   onSelectSlide: (index: number) => void;
 }) {
   const slide = slides[slideIndex];
-  // A single card (e.g. a player's own Strategy Guide card) has nothing to page
-  // through, so the counter, dots and Previous/Next are left out.
-  const paged = slides.length > 1;
   return (
     <ModalShell onClose={onClose} max="max-w-3xl">
       <div className="p-7">
@@ -2315,13 +2315,11 @@ function InfoSliderModal({
               <RichText text={slide.description} className="mt-3 max-w-2xl text-sm leading-6 text-white/70" />
             )}
           </div>
-          {paged && (
-            <div className="flex items-center gap-2 rounded-full bg-white/5 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-white/70">
-              <span>{slideIndex + 1}</span>
-              <span>/</span>
-              <span>{slides.length}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 rounded-full bg-white/5 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-white/70">
+            <span>{slideIndex + 1}</span>
+            <span>/</span>
+            <span>{slides.length}</span>
+          </div>
         </div>
 
         {slide.details.length > 0 && (
@@ -2336,7 +2334,6 @@ function InfoSliderModal({
           </div>
         )}
 
-        {paged && (
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex justify-center gap-2">
             {slides.map((_, index) => (
@@ -2357,7 +2354,6 @@ function InfoSliderModal({
             </button>
           </div>
         </div>
-        )}
       </div>
     </ModalShell>
   );
