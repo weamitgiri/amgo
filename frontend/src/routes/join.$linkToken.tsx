@@ -596,7 +596,7 @@ function PendingStep({
           </div>
 
         <div className="mt-5 rounded-2xl bg-white/5 p-4 text-sm text-white/80">
-          The game is not scheduled today. Please join at the right date and time. Please contact the organiser.
+          Please join at the right date and time or please join on the scheduled date and time.
         </div>
       </div>
 

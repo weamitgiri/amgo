@@ -1224,7 +1224,7 @@ function GamePage() {
         </div>
         <div className="flex items-center gap-5">
           {/* DEV / TESTING ONLY — skip the current timer. Remove before production. */}
-          <button
+          {/*<button
             type="button"
             onClick={handleDevNext}
             disabled={devSkipping}
@@ -1232,7 +1232,7 @@ function GamePage() {
             className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
           >
             {devSkipping ? "Skipping…" : "Next ⏭"}
-          </button>
+          </button>*/}
           <div className="rounded-lg border border-[#2c1b44] px-4 py-2 text-sm text-[#b8b8b8]">
             Game Time Remaining <span className="ml-2 font-bold text-white tabular-nums">{fmt(secsHdr)}</span>
           </div>
