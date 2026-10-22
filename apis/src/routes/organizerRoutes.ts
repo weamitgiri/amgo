@@ -235,6 +235,7 @@ router.post(
 // Results tab — completed/incomplete groups with results-PDF availability
 router.get('/results', authMiddleware, organizerController.getOrganizerResults);
 router.get('/results/cook-and-create/:booking_id/pdf', authMiddleware, organizerController.downloadCCResultsPdf);
+router.get('/results/mystery-quest/:booking_id/pdf', authMiddleware, organizerController.downloadMQResultsPdf);
 
 // Payment history + GST invoice download (both scoped to the caller's own bookings)
 router.get('/invoices', authMiddleware, invoiceController.getInvoices);

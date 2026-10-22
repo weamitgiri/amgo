@@ -44,10 +44,12 @@ function HrResultsPage() {
   const downloadPdf = async (r: OrganizerGameResult) => {
     try {
       const token = apiClient.getToken();
-      // Cook & Create: one consolidated awards PDF per game session (booking).
+      // Cook & Create and Mystery Quest: one consolidated PDF per game session (booking).
       const pdfUrl = r.is_cook_and_create
         ? `${ENV.API_BASE_URL}/v1/organizer/results/cook-and-create/${r.booking_id}/pdf`
-        : `${ENV.API_BASE_URL}/v1/results/${r.group_id}/pdf`;
+        : r.is_mystery_session
+          ? `${ENV.API_BASE_URL}/v1/organizer/results/mystery-quest/${r.booking_id}/pdf`
+          : `${ENV.API_BASE_URL}/v1/results/${r.group_id}/pdf`;
       const res = await fetch(pdfUrl, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -58,7 +60,9 @@ function HrResultsPage() {
       a.href = url;
       a.download = r.is_cook_and_create
         ? `cook-and-create-results-session-${r.booking_id}.pdf`
-        : `mystery-quest-results-${r.group_name.toLowerCase().replace(/\s+/g, "-")}.pdf`;
+        : r.is_mystery_session
+          ? `mystery-quest-results-session-${r.booking_id}.pdf`
+          : `mystery-quest-results-${r.group_name.toLowerCase().replace(/\s+/g, "-")}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {

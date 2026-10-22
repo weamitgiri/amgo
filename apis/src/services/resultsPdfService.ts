@@ -12,20 +12,18 @@ function ensureStorageDir() {
     }
 }
 
-export async function generateResultsPdf(groupId: number | string): Promise<{ path: string; expiresAt: Date }> {
-    ensureStorageDir();
+/** One participant row of a group's results table. */
+export type ResultRow = { name: string; email: string; role: string; score: string; status: string };
 
-    const [groupRows] = await query<any>(
-        `SELECT gg.*, ob.scheduled_date, ob.scheduled_time, ag.title AS case_title
-         FROM game_groups gg
-         JOIN organizer_bookings ob ON ob.id = gg.booking_id
-         LEFT JOIN activity_games ag ON ag.id = COALESCE(gg.game_id, ob.game_id)
-         WHERE gg.id = ? LIMIT 1`,
-        [groupId]
-    );
-    const group = groupRows?.[0];
-    if (!group) throw new Error('Group not found for PDF generation');
+const STATUS_LABELS: Record<string, string> = {
+    winner: 'WINNER',
+    correct: 'CORRECT — identified the killer',
+    loser: 'LOSER — wrong guess',
+    killer_wins: 'KILLER WINS — escaped!',
+};
 
+/** A group's saved result row plus one table row per participant, winners/losers resolved. */
+export async function loadGroupResults(groupId: number | string): Promise<{ result: any; rows: ResultRow[] }> {
     const [results] = await query<any>('SELECT * FROM results WHERE group_id = ? ORDER BY id DESC LIMIT 1', [groupId]);
     const result = results?.[0];
 
@@ -54,12 +52,127 @@ export async function generateResultsPdf(groupId: number | string): Promise<{ pa
     const statusBySession = new Map<string, string>(
         perRoleResults.map((r: any) => [String(r.session_id), r.status])
     );
-    const STATUS_LABELS: Record<string, string> = {
-        winner: 'WINNER',
-        correct: 'CORRECT — identified the killer',
-        loser: 'LOSER — wrong guess',
-        killer_wins: 'KILLER WINS — escaped!',
+
+    const rows: ResultRow[] = (sessions as any[]).map((s: any) => ({
+        name: s.participant_name || 'Unknown',
+        email: s.participant_email || 'no email',
+        role: s.role_type || 'unassigned',
+        score: String(s.total_score ?? 0),
+        status: statusBySession.get(String(s.id)) ?? (winnerSet.has(String(s.id)) ? 'winner' : 'loser'),
+    }));
+    return { result, rows };
+}
+
+/** Draws the "# / Participant / Role / Score / Result" table at doc.y, paging as needed. */
+export function drawParticipantsTable(doc: PDFKit.PDFDocument, rows: ResultRow[]): void {
+    const LEFT = doc.page.margins.left;
+    const RIGHT = doc.page.width - doc.page.margins.right;
+    const PAD = 6;
+
+    // Column layout: widths sum to (RIGHT-LEFT) = 512.
+    const cols = {
+        idx: { x: LEFT, w: 26 },
+        name: { x: LEFT + 26, w: 196 },
+        role: { x: LEFT + 222, w: 96 },
+        score: { x: LEFT + 318, w: 52 },
+        result: { x: LEFT + 370, w: 142 },
     };
+    const seps = [cols.idx.x, cols.name.x, cols.role.x, cols.score.x, cols.result.x, RIGHT];
+    const bottomLimit = doc.page.height - doc.page.margins.bottom;
+
+    const measure = (text: unknown, w: number, font: string, size: number): number => {
+        doc.font(font).fontSize(size);
+        return doc.heightOfString(String(text ?? ''), { width: w - PAD * 2 });
+    };
+
+    const drawHeaderRow = () => {
+        const heads: [{ x: number; w: number }, string][] = [
+            [cols.idx, '#'],
+            [cols.name, 'Participant'],
+            [cols.role, 'Role'],
+            [cols.score, 'Score'],
+            [cols.result, 'Result'],
+        ];
+        const y = doc.y;
+        let h = 0;
+        for (const [c, t] of heads) h = Math.max(h, measure(t, c.w, 'Helvetica-Bold', 10));
+        h += PAD * 2;
+        doc.rect(LEFT, y, RIGHT - LEFT, h).fill('#2a1348');
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
+        for (const [c, t] of heads) doc.text(t, c.x + PAD, y + PAD, { width: c.w - PAD * 2 });
+        doc.strokeColor('#999999').lineWidth(0.5);
+        doc.moveTo(LEFT, y + h).lineTo(RIGHT, y + h).stroke();
+        for (const x of seps) doc.moveTo(x, y).lineTo(x, y + h).stroke();
+        doc.moveTo(LEFT, y).lineTo(RIGHT, y).stroke();
+        doc.y = y + h;
+    };
+
+    drawHeaderRow();
+
+    let rowIndex = 0;
+    for (const { name, email, role, score, status } of rows) {
+        rowIndex += 1;
+        const resultLabel = STATUS_LABELS[status] ?? String(status).toUpperCase();
+
+        const nameH = measure(name, cols.name.w, 'Helvetica-Bold', 10) + measure(email, cols.name.w, 'Helvetica', 8);
+        const h =
+            Math.max(
+                measure(rowIndex, cols.idx.w, 'Helvetica', 10),
+                nameH,
+                measure(role, cols.role.w, 'Helvetica', 10),
+                measure(score, cols.score.w, 'Helvetica-Bold', 10),
+                measure(resultLabel, cols.result.w, 'Helvetica-Bold', 9)
+            ) +
+            PAD * 2;
+
+        if (doc.y + h > bottomLimit) {
+            doc.addPage();
+            drawHeaderRow();
+        }
+        const y = doc.y;
+
+        // Zebra striping for readability.
+        if (rowIndex % 2 === 0) doc.rect(LEFT, y, RIGHT - LEFT, h).fill('#f6f2fb');
+
+        doc.font('Helvetica').fontSize(10).fillColor('#555555')
+            .text(String(rowIndex), cols.idx.x + PAD, y + PAD, { width: cols.idx.w - PAD * 2 });
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#111111')
+            .text(name, cols.name.x + PAD, y + PAD, { width: cols.name.w - PAD * 2 });
+        doc.font('Helvetica').fontSize(8).fillColor('#888888')
+            .text(email, cols.name.x + PAD, y + PAD + measure(name, cols.name.w, 'Helvetica-Bold', 10), {
+                width: cols.name.w - PAD * 2,
+            });
+        doc.font('Helvetica').fontSize(10).fillColor('#111111')
+            .text(role, cols.role.x + PAD, y + PAD, { width: cols.role.w - PAD * 2 });
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#111111')
+            .text(score, cols.score.x + PAD, y + PAD, { width: cols.score.w - PAD * 2 });
+        const resultColor = status === 'loser' ? '#c0392b' : status === 'killer_wins' ? '#b8860b' : '#1f8a4c';
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(resultColor)
+            .text(resultLabel, cols.result.x + PAD, y + PAD, { width: cols.result.w - PAD * 2 });
+
+        doc.strokeColor('#d9d0e8').lineWidth(0.5);
+        doc.moveTo(LEFT, y + h).lineTo(RIGHT, y + h).stroke();
+        for (const x of seps) doc.moveTo(x, y).lineTo(x, y + h).stroke();
+        doc.y = y + h;
+    }
+    doc.fillColor('#000000');
+}
+
+export async function generateResultsPdf(groupId: number | string): Promise<{ path: string; expiresAt: Date }> {
+    ensureStorageDir();
+
+    const [groupRows] = await query<any>(
+        `SELECT gg.*, ob.scheduled_date, ob.scheduled_time, ag.title AS case_title
+         FROM game_groups gg
+         JOIN organizer_bookings ob ON ob.id = gg.booking_id
+         LEFT JOIN activity_games ag ON ag.id = COALESCE(gg.game_id, ob.game_id)
+         WHERE gg.id = ? LIMIT 1`,
+        [groupId]
+    );
+    const group = groupRows?.[0];
+    if (!group) throw new Error('Group not found for PDF generation');
+
+    const { result, rows } = await loadGroupResults(groupId);
 
     const filename = `group-${groupId}-${crypto.randomBytes(12).toString('hex')}.pdf`;
     const filePath = path.join(STORAGE_DIR, filename);
@@ -72,7 +185,6 @@ export async function generateResultsPdf(groupId: number | string): Promise<{ pa
         // Page geometry (Letter, 50pt margins → content spans x:50..562).
         const LEFT = doc.page.margins.left;
         const RIGHT = doc.page.width - doc.page.margins.right;
-        const PAD = 6;
 
         // ---------- Title ----------
         doc.font('Helvetica-Bold').fontSize(20).fillColor('#1a1a2e')
@@ -114,98 +226,7 @@ export async function generateResultsPdf(groupId: number | string): Promise<{ pa
         doc.font('Helvetica-Bold').fontSize(14).fillColor('#1a1a2e').text('Participants', LEFT, doc.y);
         doc.moveDown(0.4);
 
-        // Column layout: widths sum to (RIGHT-LEFT) = 512.
-        const cols = {
-            idx: { x: LEFT, w: 26 },
-            name: { x: LEFT + 26, w: 196 },
-            role: { x: LEFT + 222, w: 96 },
-            score: { x: LEFT + 318, w: 52 },
-            result: { x: LEFT + 370, w: 142 },
-        };
-        const seps = [cols.idx.x, cols.name.x, cols.role.x, cols.score.x, cols.result.x, RIGHT];
-        const bottomLimit = doc.page.height - doc.page.margins.bottom;
-
-        const measure = (text: unknown, w: number, font: string, size: number): number => {
-            doc.font(font).fontSize(size);
-            return doc.heightOfString(String(text ?? ''), { width: w - PAD * 2 });
-        };
-
-        const drawHeaderRow = () => {
-            const heads: [{ x: number; w: number }, string][] = [
-                [cols.idx, '#'],
-                [cols.name, 'Participant'],
-                [cols.role, 'Role'],
-                [cols.score, 'Score'],
-                [cols.result, 'Result'],
-            ];
-            const y = doc.y;
-            let h = 0;
-            for (const [c, t] of heads) h = Math.max(h, measure(t, c.w, 'Helvetica-Bold', 10));
-            h += PAD * 2;
-            doc.rect(LEFT, y, RIGHT - LEFT, h).fill('#2a1348');
-            doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
-            for (const [c, t] of heads) doc.text(t, c.x + PAD, y + PAD, { width: c.w - PAD * 2 });
-            doc.strokeColor('#999999').lineWidth(0.5);
-            doc.moveTo(LEFT, y + h).lineTo(RIGHT, y + h).stroke();
-            for (const x of seps) doc.moveTo(x, y).lineTo(x, y + h).stroke();
-            doc.moveTo(LEFT, y).lineTo(RIGHT, y).stroke();
-            doc.y = y + h;
-        };
-
-        drawHeaderRow();
-
-        let rowIndex = 0;
-        for (const s of sessions) {
-            rowIndex += 1;
-            const status = statusBySession.get(String(s.id)) ?? (winnerSet.has(String(s.id)) ? 'winner' : 'loser');
-            const resultLabel = STATUS_LABELS[status] ?? String(status).toUpperCase();
-            const name = s.participant_name || 'Unknown';
-            const email = s.participant_email || 'no email';
-            const role = s.role_type || 'unassigned';
-            const score = String(s.total_score ?? 0);
-
-            const nameH = measure(name, cols.name.w, 'Helvetica-Bold', 10) + measure(email, cols.name.w, 'Helvetica', 8);
-            const h =
-                Math.max(
-                    measure(rowIndex, cols.idx.w, 'Helvetica', 10),
-                    nameH,
-                    measure(role, cols.role.w, 'Helvetica', 10),
-                    measure(score, cols.score.w, 'Helvetica-Bold', 10),
-                    measure(resultLabel, cols.result.w, 'Helvetica-Bold', 9)
-                ) +
-                PAD * 2;
-
-            if (doc.y + h > bottomLimit) {
-                doc.addPage();
-                drawHeaderRow();
-            }
-            const y = doc.y;
-
-            // Zebra striping for readability.
-            if (rowIndex % 2 === 0) doc.rect(LEFT, y, RIGHT - LEFT, h).fill('#f6f2fb');
-
-            doc.font('Helvetica').fontSize(10).fillColor('#555555')
-                .text(String(rowIndex), cols.idx.x + PAD, y + PAD, { width: cols.idx.w - PAD * 2 });
-            doc.font('Helvetica-Bold').fontSize(10).fillColor('#111111')
-                .text(name, cols.name.x + PAD, y + PAD, { width: cols.name.w - PAD * 2 });
-            doc.font('Helvetica').fontSize(8).fillColor('#888888')
-                .text(email, cols.name.x + PAD, y + PAD + measure(name, cols.name.w, 'Helvetica-Bold', 10), {
-                    width: cols.name.w - PAD * 2,
-                });
-            doc.font('Helvetica').fontSize(10).fillColor('#111111')
-                .text(role, cols.role.x + PAD, y + PAD, { width: cols.role.w - PAD * 2 });
-            doc.font('Helvetica-Bold').fontSize(10).fillColor('#111111')
-                .text(score, cols.score.x + PAD, y + PAD, { width: cols.score.w - PAD * 2 });
-            const resultColor = status === 'loser' ? '#c0392b' : status === 'killer_wins' ? '#b8860b' : '#1f8a4c';
-            doc.font('Helvetica-Bold').fontSize(9).fillColor(resultColor)
-                .text(resultLabel, cols.result.x + PAD, y + PAD, { width: cols.result.w - PAD * 2 });
-
-            doc.strokeColor('#d9d0e8').lineWidth(0.5);
-            doc.moveTo(LEFT, y + h).lineTo(RIGHT, y + h).stroke();
-            for (const x of seps) doc.moveTo(x, y).lineTo(x, y + h).stroke();
-            doc.y = y + h;
-        }
-        doc.fillColor('#000000');
+        drawParticipantsTable(doc, rows);
 
         doc.end();
         stream.on('finish', () => resolve());

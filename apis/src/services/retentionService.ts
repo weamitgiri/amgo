@@ -34,6 +34,28 @@ export async function purgeGroupParticipantData(groupId: number | string): Promi
         console.error('[retentionService] CC results PDF capture before purge failed:', err);
     }
 
+    // Mystery Quest: capture the session's single HR results PDF while every
+    // group's results are still intact — only before the booking's first purge.
+    // Kept until the last group is purged (below). A no-op for Cook & Create
+    // bookings. Best-effort.
+    let mqBookingId: number | null = null;
+    try {
+        const [ccInst] = await query<any>('SELECT 1 FROM cc_game_instances WHERE group_id = ? LIMIT 1', [groupId]);
+        if ((ccInst as any).length === 0) {
+            mqBookingId = Number(group.booking_id);
+            const [sib] = await query<any>(
+                'SELECT COUNT(*) AS purged FROM game_groups WHERE booking_id = ? AND id <> ? AND purged_at IS NOT NULL',
+                [group.booking_id, groupId]
+            );
+            if (Number(sib?.[0]?.purged || 0) === 0) {
+                const { generateMQResultsPdfForBooking } = await import('./mqSessionResultsPdfService');
+                await generateMQResultsPdfForBooking(mqBookingId);
+            }
+        }
+    } catch (err) {
+        console.error('[retentionService] Mystery Quest session PDF capture before purge failed:', err);
+    }
+
     await withTransaction(async (conn) => {
         await conn.query('UPDATE game_participants SET name = NULL, email = NULL, otp = NULL, otp_expires_at = NULL WHERE group_id = ?', [groupId]);
 
@@ -106,6 +128,17 @@ export async function purgeGroupParticipantData(groupId: number | string): Promi
             console.error('[retentionService] Failed to delete results PDF file:', err);
         }
         await query('UPDATE game_groups SET results_pdf_path = NULL, results_pdf_expires_at = NULL WHERE id = ?', [groupId]);
+    }
+
+    // Mystery Quest: once this was the session's last group to be purged, the
+    // session PDF goes too (generate… deletes it when every group is purged).
+    if (mqBookingId != null) {
+        try {
+            const { generateMQResultsPdfForBooking } = await import('./mqSessionResultsPdfService');
+            await generateMQResultsPdfForBooking(mqBookingId);
+        } catch (err) {
+            console.error('[retentionService] Mystery Quest session PDF cleanup failed:', err);
+        }
     }
 }
 

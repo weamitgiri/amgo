@@ -729,29 +729,47 @@ export const getOrganizerResults = asyncHandler(async (req: Request, res: Respon
         [organizerId]
     );
 
-    const now = new Date();
     const results: any[] = [];
     const ccGroupsByBooking = new Map<number, any[]>();
+    const mqGroupsByBooking = new Map<number, any[]>();
     for (const r of rows as any[]) {
-        if (Number(r.is_cc) === 1) {
-            const bookingId = Number(r.booking_id);
-            if (!ccGroupsByBooking.has(bookingId)) ccGroupsByBooking.set(bookingId, []);
-            ccGroupsByBooking.get(bookingId)!.push(r);
-            continue;
+        const byBooking = Number(r.is_cc) === 1 ? ccGroupsByBooking : mqGroupsByBooking;
+        const bookingId = Number(r.booking_id);
+        if (!byBooking.has(bookingId)) byBooking.set(bookingId, []);
+        byBooking.get(bookingId)!.push(r);
+    }
+
+    // Mystery Quest: one results PDF per game session (booking) listing every
+    // group and its players, so each session is a single row with a single
+    // download. Available until the last group's data is purged (1 hour after
+    // it finishes). Best-effort — on failure the row shows no download.
+    if (mqGroupsByBooking.size > 0) {
+        const { generateMQResultsPdfForBooking } = await import('../services/mqSessionResultsPdfService');
+        for (const [bookingId, groups] of mqGroupsByBooking) {
+            let filename: string | null = null;
+            try {
+                filename = await generateMQResultsPdfForBooking(bookingId);
+            } catch {
+                /* non-fatal: list still returns, retried next load */
+            }
+            const completedTimes = groups
+                .map((g) => (g.completed_at ? new Date(g.completed_at).getTime() : NaN))
+                .filter((t) => !isNaN(t));
+            results.push({
+                group_id: Math.min(...groups.map((g) => Number(g.group_id))),
+                group_name: groups.length === 1 ? groups[0].group_name : `All groups (${groups.length})`,
+                booking_id: bookingId,
+                activity_name: groups[0].activity_name,
+                scheduled_date: groups[0].scheduled_date,
+                scheduled_time: groups[0].scheduled_time,
+                status: groups.some((g) => g.status === 'completed') ? 'completed' : 'incomplete',
+                completed_at: completedTimes.length > 0 ? new Date(Math.max(...completedTimes)) : null,
+                is_cook_and_create: false,
+                is_mystery_session: true,
+                pdf_available: Boolean(filename),
+                pdf_expires_at: null,
+            });
         }
-        results.push({
-            group_id: Number(r.group_id),
-            group_name: r.group_name,
-            booking_id: Number(r.booking_id),
-            activity_name: r.activity_name,
-            scheduled_date: r.scheduled_date,
-            scheduled_time: r.scheduled_time,
-            status: r.status,
-            completed_at: r.completed_at,
-            is_cook_and_create: false,
-            pdf_available: Boolean(r.results_pdf_path && r.results_pdf_expires_at && new Date(r.results_pdf_expires_at) > now),
-            pdf_expires_at: r.results_pdf_expires_at,
-        });
     }
 
     // Cook & Create: one consolidated Fun Awards PDF per game session (booking),
@@ -788,12 +806,36 @@ export const getOrganizerResults = asyncHandler(async (req: Request, res: Respon
                 pdf_expires_at: null,
             });
         }
-        // Keep the list newest-first (as the query orders it), sessions included.
-        const time = (r: any) => (r.completed_at ? new Date(r.completed_at).getTime() : -Infinity);
-        results.sort((a, b) => time(b) - time(a) || b.group_id - a.group_id);
     }
 
+    // Newest first, sessions included.
+    const time = (r: any) => (r.completed_at ? new Date(r.completed_at).getTime() : -Infinity);
+    results.sort((a, b) => time(b) - time(a) || b.group_id - a.group_id);
+
     return successResponse(res, 'Results retrieved.', { results });
+});
+
+/**
+ * Results tab — download a Mystery Quest session's single results PDF (every
+ * group and its players). Only the organizer who owns the booking can download
+ * it; it is generated (or brought up to date) on demand.
+ */
+export const downloadMQResultsPdf = asyncHandler(async (req: Request, res: Response) => {
+    const organizerId = (req as any).user.id;
+    const bookingId = Number(req.params.booking_id);
+
+    const [rows] = await query<any>('SELECT id FROM organizer_bookings WHERE id = ? AND organizer_id = ? LIMIT 1', [
+        bookingId,
+        organizerId,
+    ]);
+    if (!rows?.[0]) throw new AppError('Results PDF not available', 404);
+
+    const { generateMQResultsPdfForBooking, resolveMQSessionPdfPath } = await import('../services/mqSessionResultsPdfService');
+    const filename = await generateMQResultsPdfForBooking(bookingId);
+    const filePath = filename ? resolveMQSessionPdfPath(filename) : null;
+    if (!filePath || !fs.existsSync(filePath)) throw new AppError('Results PDF not available', 404);
+
+    return res.download(filePath, `mystery-quest-results-session-${bookingId}.pdf`);
 });
 
 /**

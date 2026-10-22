@@ -114,6 +114,9 @@ export type OrganizerGameResult = {
   /** Cook & Create: one row per game session (booking) with a single, permanent
    *  awards PDF downloaded by booking_id; group_name summarises its groups. */
   is_cook_and_create?: boolean;
+  /** Mystery Quest: one row per game session (booking) with a single results
+   *  PDF of every group, downloaded by booking_id. */
+  is_mystery_session?: boolean;
 };
 
 export interface OrganizerDashboardResponse {
