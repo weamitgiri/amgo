@@ -11,7 +11,10 @@ import { useEffect } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { GameMusicPlayer } from "@/components/GameMusicPlayer";
-import { restoreAuthToken } from "@/lib/auth";
+import { requireOrganizerAuth, restoreAuthToken } from "@/lib/auth";
+import { AUTH_CHANGED_EVENT } from "@/api/client";
+import { ENV } from "@/config/environment";
+import { disconnectSocket } from "@/lib/socket";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -119,9 +122,39 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  const router = useRouter();
+
   useEffect(() => {
     restoreAuthToken();
   }, []);
+
+  // One organizer per browser: whenever the stored token changes (logout, a
+  // different login, a session the API rejected) drop the cached queries and the
+  // organizer socket so nothing from the previous user is ever rendered.
+  useEffect(() => {
+    const onAuthChanged = () => {
+      queryClient.clear();
+      disconnectSocket();
+      // Re-run route guards: a private page with no token redirects to login.
+      router.invalidate();
+    };
+    // Another tab logged out or in as someone else. Mounted queries keep their
+    // old data after clear(), so a tab showing a private page reloads.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== null && e.key !== ENV.AUTH_TOKEN_KEY) return;
+      queryClient.clear();
+      const onPrivatePage = router.state.matches.some(
+        (m) => router.looseRoutesById[m.routeId]?.options.beforeLoad === requireOrganizerAuth
+      );
+      if (onPrivatePage) window.location.reload();
+    };
+    window.addEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [queryClient, router]);
 
   return (
     <QueryClientProvider client={queryClient}>

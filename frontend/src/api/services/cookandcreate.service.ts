@@ -1,4 +1,5 @@
 import { apiClient } from "../client";
+import { getParticipantToken } from "@/lib/participant-session";
 import { API_ENDPOINTS } from "../config";
 import type {
   CCGameStateResponse,
@@ -10,6 +11,13 @@ import type {
 
 const noAuth = { auth: "none" as const };
 
+/** Attaches this tab's participant join token so the Cook & Create game APIs can
+ *  reject a forged participant_id. See participant.service.ts's pAuth. */
+const pAuth = () => {
+  const token = getParticipantToken();
+  return token ? { ...noAuth, headers: { "X-Participant-Token": token } } : noAuth;
+};
+
 export const cookAndCreateService = {
   getGameState: (groupId: number | string, participantId?: number | string) => {
     const base = API_ENDPOINTS.cookandcreate.state(groupId);
@@ -17,7 +25,7 @@ export const cookAndCreateService = {
       participantId != null
         ? `?participant_id=${encodeURIComponent(String(participantId))}`
         : "";
-    return apiClient.get<CCGameStateResponse>(`${base}${qs}`, noAuth);
+    return apiClient.get<CCGameStateResponse>(`${base}${qs}`, pAuth());
   },
 
   // NOTE: every write endpoint below is validated server-side (see
@@ -32,14 +40,14 @@ export const cookAndCreateService = {
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round1Vote,
       payload,
-      noAuth
+      pAuth()
     ),
 
   finalizeRound1: (payload: { instance_id: number | string }) =>
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round1Finalize,
       payload,
-      noAuth
+      pAuth()
     ),
 
   // step_letter is assigned server-side from the submitter's Round-2 turn.
@@ -51,7 +59,7 @@ export const cookAndCreateService = {
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round2SubmitStep,
       payload,
-      noAuth
+      pAuth()
     ),
 
   submitRound2StepVote: (payload: {
@@ -63,7 +71,7 @@ export const cookAndCreateService = {
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round2VoteStep,
       payload,
-      noAuth
+      pAuth()
     ),
 
   submitDishName: (payload: {
@@ -74,7 +82,7 @@ export const cookAndCreateService = {
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round2SubmitDishName,
       payload,
-      noAuth
+      pAuth()
     ),
 
   submitRound3Message: (payload: {
@@ -86,14 +94,14 @@ export const cookAndCreateService = {
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round3SendMessage,
       payload,
-      noAuth
+      pAuth()
     ),
 
   startRound3Voting: (payload: { instance_id: number | string }) =>
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round3StartVoting,
       payload,
-      noAuth
+      pAuth()
     ),
 
   respondToDoubleDown: (payload: {
@@ -104,7 +112,7 @@ export const cookAndCreateService = {
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round3DoubleDown,
       payload,
-      noAuth
+      pAuth()
     ),
 
   submitRound3ImpostorVote: (payload: {
@@ -115,20 +123,20 @@ export const cookAndCreateService = {
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round3VoteImpostor,
       payload,
-      noAuth
+      pAuth()
     ),
 
   finalizeRound3: (payload: { instance_id: number | string }) =>
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.round3Finalize,
       payload,
-      noAuth
+      pAuth()
     ),
 
   getOtherDishes: (groupId: number | string, participantId: number | string) =>
     apiClient.get<{ dishes: CCOtherDish[] }>(
       `${API_ENDPOINTS.cookandcreate.otherDishes(groupId)}?participant_id=${encodeURIComponent(String(participantId))}`,
-      noAuth
+      pAuth()
     ),
 
   submitRating: (payload: {
@@ -143,13 +151,13 @@ export const cookAndCreateService = {
     apiClient.post<{ message: string }>(
       API_ENDPOINTS.cookandcreate.rate,
       payload,
-      noAuth
+      pAuth()
     ),
 
   getAwards: (groupId: number | string, participantId: number | string) =>
     apiClient.get<CCAwardsBoard>(
       `${API_ENDPOINTS.cookandcreate.awards(groupId)}?participant_id=${encodeURIComponent(String(participantId))}`,
-      noAuth
+      pAuth()
     ),
 
   listTemplates: () =>

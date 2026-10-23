@@ -16,6 +16,9 @@ export interface ApiEnvelope<T = unknown> {
   statusCode: number;
 }
 
+/** Fired on window whenever the stored organizer token changes in this tab. */
+export const AUTH_CHANGED_EVENT = "zv:auth-changed";
+
 interface RequestConfig extends RequestInit {
   timeout?: number;
   auth?: "organizer" | "none";
@@ -53,10 +56,18 @@ class ApiClient {
    */
   setToken(token: string | null): void {
     if (typeof window === "undefined") return;
+    const previous = localStorage.getItem(ENV.AUTH_TOKEN_KEY);
     if (token) {
       localStorage.setItem(ENV.AUTH_TOKEN_KEY, token);
     } else {
       localStorage.removeItem(ENV.AUTH_TOKEN_KEY);
+      localStorage.removeItem(ENV.REFRESH_TOKEN_KEY);
+    }
+    // Logout, login as someone else, or a rejected session: the root route
+    // listens for this and drops every cached query so the next user never
+    // sees the previous user's data.
+    if (previous !== token) {
+      window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
     }
   }
 
@@ -104,6 +115,11 @@ class ApiClient {
         "data" in body;
 
       if (!response.ok || (isEnvelope && (body as ApiEnvelope<T>).success === false)) {
+        // The organizer session is expired or invalidated server-side — drop it
+        // so the route guard sends the user back to login.
+        if (response.status === 401 && auth !== "none" && this.getToken()) {
+          this.setToken(null);
+        }
         const envelope = isEnvelope ? (body as ApiEnvelope<T>) : null;
         const error = new Error(
           envelope?.message || `HTTP Error ${response.status}`

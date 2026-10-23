@@ -18,10 +18,10 @@ import lobbyBg from '../../assets/cookandcreate/game-2-lobby-bg.jpg';
 import lobbyLogo from '../../assets/cookandcreate/Cook  and Create Logo.png';
 import { cookAndCreateService } from '@/api/services/cookandcreate.service';
 import type { CCGameStateResponse } from '@/api/types/cookandcreate';
-import { getParticipantSession } from '@/lib/participant-session';
+import { clearParticipantSession, getParticipantSession } from '@/lib/participant-session';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toastError } from '@/lib/toast';
-import { getSocket } from '@/lib/socket';
+import { disconnectSocket, getSocket } from '@/lib/socket';
 import { clockOffsetMs } from './-components/clock';
 
 
@@ -362,7 +362,11 @@ function LobbyPage() {
                 background: '#f39e3a',
                 boxShadow: '0 4px 16px rgba(243,158,58,0.35)',
               }}
-              onClick={() => navigate({ to: '/' })}
+              onClick={() => {
+                disconnectSocket();
+                clearParticipantSession();
+                navigate({ to: '/' });
+              }}
             >
               <img src={gameW} alt="" className="w-[22px] h-[22px] object-contain shrink-0 mt-0.5" /> Leave Lobby
             </button>

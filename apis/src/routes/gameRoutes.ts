@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import * as gameEngineController from '../controllers/gameEngineController';
 import { validateRequest } from '../middlewares/validateRequest';
+import { participantAuth } from '../middlewares/participantAuth';
 
 const router = Router();
 
@@ -10,7 +11,7 @@ const router = Router();
 // an auth middleware.
 
 // Get game state
-router.get('/state/:group_id', gameEngineController.getGameState);
+router.get('/state/:group_id', participantAuth, gameEngineController.getGameState);
 
 // DEV / TESTING ONLY — skip the current phase timer (remove before production).
 router.post('/dev/advance/:group_id', gameEngineController.devAdvance);
@@ -18,6 +19,7 @@ router.post('/dev/advance/:group_id', gameEngineController.devAdvance);
 // Case Summary Reopen
 router.post(
     '/reopen-case-summary',
+    participantAuth,
     [
         body('group_id').notEmpty().withMessage('Group ID is required'),
         body('participant_id').notEmpty().withMessage('participant_id is required'),
@@ -29,6 +31,7 @@ router.post(
 // Questioning
 router.post(
     '/ask-question',
+    participantAuth,
     [
         body('group_id').notEmpty().withMessage('Group ID is required'),
         body('participant_id').notEmpty().withMessage('participant_id is required'),
@@ -41,6 +44,7 @@ router.post(
 
 router.post(
     '/answer-question',
+    participantAuth,
     [
         body('question_id').notEmpty().withMessage('Question ID is required'),
         body('participant_id').notEmpty().withMessage('participant_id is required'),
@@ -53,6 +57,7 @@ router.post(
 // Lie Detector
 router.post(
     '/start-lie-detector',
+    participantAuth,
     [
         body('group_id').notEmpty().withMessage('Group ID is required'),
         body('participant_id').notEmpty().withMessage('participant_id is required'),
@@ -64,6 +69,7 @@ router.post(
 
 router.post(
     '/vote-lie-detector',
+    participantAuth,
     [
         body('group_id').notEmpty().withMessage('Group ID is required'),
         body('participant_id').notEmpty().withMessage('participant_id is required'),
@@ -75,10 +81,11 @@ router.post(
     gameEngineController.voteLieDetector
 );
 
-router.get('/lie-detector/:round_id/tally', gameEngineController.getLieDetectorTally);
+router.get('/lie-detector/:round_id/tally', participantAuth, gameEngineController.getLieDetectorTally);
 
 router.post(
     '/end-lie-detector',
+    participantAuth,
     [
         body('group_id').notEmpty().withMessage('Group ID is required'),
         body('participant_id').notEmpty().withMessage('participant_id is required'),
@@ -91,6 +98,7 @@ router.post(
 // Witness Passcard
 router.post(
     '/use-passcard',
+    participantAuth,
     [
         body('group_id').notEmpty().withMessage('Group ID is required'),
         body('participant_id').notEmpty().withMessage('participant_id is required'),
@@ -102,6 +110,7 @@ router.post(
 // Final Accusation (every player, culprit included — see verdictScoringService.ts)
 router.post(
     '/submit-accusation',
+    participantAuth,
     [
         body('group_id').notEmpty().withMessage('Group ID is required'),
         body('participant_id').notEmpty().withMessage('participant_id is required'),

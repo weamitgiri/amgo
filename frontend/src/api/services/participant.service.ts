@@ -1,6 +1,7 @@
 import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../config";
 import { ENV } from "@/config/environment";
+import { getParticipantToken } from "@/lib/participant-session";
 import type {
   GameAnswer,
   GameQuestion,
@@ -17,6 +18,18 @@ import type {
 } from "../types/participant";
 
 const noAuth = { auth: "none" as const };
+
+/**
+ * Request config for the participant game APIs. There is no JWT — the browser
+ * sends its participant join token in X-Participant-Token so the backend can
+ * both enforce one participant per browser (join / verify-otp) and reject a
+ * forged participant_id on every game action. Falls back to no header before a
+ * session exists (the first join).
+ */
+const pAuth = () => {
+  const token = getParticipantToken();
+  return token ? { ...noAuth, headers: { "X-Participant-Token": token } } : noAuth;
+};
 
 export type GameStateSession = {
   id: number;
@@ -64,7 +77,7 @@ export const participantService = {
     apiClient.post<{ email: string; dev_otp?: string }>(
       API_ENDPOINTS.participant.join,
       payload,
-      noAuth
+      pAuth()
     ),
 
   /** Step 3: Verify OTP and assign group */
@@ -72,7 +85,7 @@ export const participantService = {
     apiClient.post<ParticipantVerifyOtpResponse>(
       API_ENDPOINTS.participant.verifyOtp,
       payload,
-      noAuth
+      pAuth()
     ),
 
   /** Step 4: Lobby session for assigned group */
@@ -82,7 +95,7 @@ export const participantService = {
       participantId != null
         ? `?participant_id=${encodeURIComponent(String(participantId))}`
         : "";
-    return apiClient.get<LobbySessionResponse>(`${base}${qs}`, noAuth);
+    return apiClient.get<LobbySessionResponse>(`${base}${qs}`, pAuth());
   },
 
   getGameSummary: (groupId: number | string, participantId?: number | string) => {
@@ -91,14 +104,14 @@ export const participantService = {
       participantId != null
         ? `?participant_id=${encodeURIComponent(String(participantId))}`
         : "";
-    return apiClient.get<GameSummaryResponse>(`${base}${qs}`, noAuth);
+    return apiClient.get<GameSummaryResponse>(`${base}${qs}`, pAuth());
   },
 
   getGameState: (groupId: number | string, participantId: number | string) => {
     const base = API_ENDPOINTS.game.state(groupId);
     return apiClient.get<GameStateResponse>(
       `${base}?participant_id=${encodeURIComponent(String(participantId))}`,
-      noAuth
+      pAuth()
     );
   },
 
@@ -111,19 +124,19 @@ export const participantService = {
     participant_id: number | string;
     asked_to_session_id: number;
     question_text: string;
-  }) => apiClient.post<GameQuestion>(API_ENDPOINTS.game.askQuestion, payload, noAuth),
+  }) => apiClient.post<GameQuestion>(API_ENDPOINTS.game.askQuestion, payload, pAuth()),
 
   answerQuestion: (payload: {
     question_id: number;
     participant_id: number | string;
     answer_text: string;
-  }) => apiClient.post<GameAnswer>(API_ENDPOINTS.game.answerQuestion, payload, noAuth),
+  }) => apiClient.post<GameAnswer>(API_ENDPOINTS.game.answerQuestion, payload, pAuth()),
 
   startLieDetector: (payload: {
     group_id: number | string;
     participant_id: number | string;
     suspect_session_id: number;
-  }) => apiClient.post<LieDetectorRound>(API_ENDPOINTS.game.startLieDetector, payload, noAuth),
+  }) => apiClient.post<LieDetectorRound>(API_ENDPOINTS.game.startLieDetector, payload, pAuth()),
 
   voteLieDetector: (payload: {
     group_id: number | string;
@@ -132,33 +145,33 @@ export const participantService = {
     /** The specific lie-detector question/answer being voted on — tallies are per-answer, not per-round. */
     question_id: number;
     vote_value: "believable" | "suspicious";
-  }) => apiClient.post<LieDetectorTally>(API_ENDPOINTS.game.voteLieDetector, payload, noAuth),
+  }) => apiClient.post<LieDetectorTally>(API_ENDPOINTS.game.voteLieDetector, payload, pAuth()),
 
   getLieDetectorTally: (roundId: number | string) =>
-    apiClient.get<LieDetectorTally>(API_ENDPOINTS.game.lieDetectorTally(roundId), noAuth),
+    apiClient.get<LieDetectorTally>(API_ENDPOINTS.game.lieDetectorTally(roundId), pAuth()),
 
   endLieDetector: (payload: { group_id: number | string; participant_id: number | string; round_id: number }) =>
-    apiClient.post<null>(API_ENDPOINTS.game.endLieDetector, payload, noAuth),
+    apiClient.post<null>(API_ENDPOINTS.game.endLieDetector, payload, pAuth()),
 
   usePasscard: (payload: { group_id: number | string; participant_id: number | string }) =>
-    apiClient.post<null>(API_ENDPOINTS.game.usePasscard, payload, noAuth),
+    apiClient.post<null>(API_ENDPOINTS.game.usePasscard, payload, pAuth()),
 
   reopenCaseSummary: (payload: { group_id: number | string; participant_id: number | string }) =>
-    apiClient.post<null>(API_ENDPOINTS.game.reopenCaseSummary, payload, noAuth),
+    apiClient.post<null>(API_ENDPOINTS.game.reopenCaseSummary, payload, pAuth()),
 
   submitAccusation: (payload: {
     group_id: number | string;
     participant_id: number | string;
     accused_session_id: number;
     reasoning: string;
-  }) => apiClient.post<SubmitAccusationResponse>(API_ENDPOINTS.game.submitAccusation, payload, noAuth),
+  }) => apiClient.post<SubmitAccusationResponse>(API_ENDPOINTS.game.submitAccusation, payload, pAuth()),
 
   getGameResults: (groupId: number | string, participantId?: number | string) =>
     apiClient.get<GameResultsResponse>(
       `${API_ENDPOINTS.results.get(groupId)}${
         participantId != null ? `?participant_id=${encodeURIComponent(String(participantId))}` : ""
       }`,
-      noAuth
+      pAuth()
     ),
 
   getResultsPdfUrl: (groupId: number | string, participantId: number | string) =>

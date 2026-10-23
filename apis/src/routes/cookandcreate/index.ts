@@ -3,6 +3,7 @@ import { body, param, query } from 'express-validator';
 import * as cookandcreateController from '../../controllers/cookandcreateController';
 import { validateRequest } from '../../middlewares/validateRequest';
 import { authMiddleware } from '../../middlewares/authMiddleware';
+import { participantAuth } from '../../middlewares/participantAuth';
 
 const router = Router();
 
@@ -11,6 +12,7 @@ const router = Router();
 // Get Cook & Create game state (lobby, rounds, everything) for a group
 router.get(
     '/state/:group_id',
+    participantAuth,
     [
         param('group_id').isNumeric().withMessage('group_id must be numeric'),
     ],
@@ -21,6 +23,7 @@ router.get(
 // Round 1: Submit ingredient votes
 router.post(
     '/round1/vote',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
@@ -33,6 +36,7 @@ router.post(
 // Round 1: Finalize results (timer or all voted)
 router.post(
     '/round1/finalize',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
     ],
@@ -43,6 +47,7 @@ router.post(
 // Round 2: Submit cooking step
 router.post(
     '/round2/submit-step',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
@@ -57,6 +62,7 @@ router.post(
 // Round 2: Vote to keep/remove a step
 router.post(
     '/round2/vote-step',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
@@ -70,6 +76,7 @@ router.post(
 // Round 2: Submit dish name
 router.post(
     '/round2/submit-dish-name',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('dish_name').notEmpty().withMessage('dish_name is required'),
@@ -81,6 +88,7 @@ router.post(
 // Round 3: Send chat message
 router.post(
     '/round3/send-message',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
@@ -93,6 +101,7 @@ router.post(
 // Round 3: Start voting phase (after discussion)
 router.post(
     '/round3/start-voting',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
     ],
@@ -103,6 +112,7 @@ router.post(
 // Round 3: Submit impostor vote
 router.post(
     '/round3/vote-impostor',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
@@ -115,6 +125,7 @@ router.post(
 // Round 3: respond to the private Double Down offer
 router.post(
     '/round3/double-down',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
@@ -127,6 +138,7 @@ router.post(
 // Round 3: Finalize reveal
 router.post(
     '/round3/finalize',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
     ],
@@ -137,6 +149,7 @@ router.post(
 // Rating: up to 3 other groups' finished dishes to nominate for awards
 router.get(
     '/:group_id/other-dishes',
+    participantAuth,
     [
         param('group_id').isNumeric().withMessage('group_id must be numeric'),
     ],
@@ -148,6 +161,7 @@ router.get(
 // 1–5 star rating and an emoji reaction (both required); once-only per dish.
 router.post(
     '/rate',
+    participantAuth,
     [
         body('instance_id').isNumeric().withMessage('instance_id is required'),
         body('participant_id').isNumeric().withMessage('participant_id is required'),
@@ -164,6 +178,7 @@ router.post(
 // required review (enforced in the handler).
 router.get(
     '/:group_id/awards',
+    participantAuth,
     [
         param('group_id').isNumeric().withMessage('group_id must be numeric'),
         query('participant_id').isNumeric().withMessage('participant_id is required'),

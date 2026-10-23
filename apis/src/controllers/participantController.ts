@@ -8,7 +8,11 @@ import moment from 'moment';
 import crypto from 'crypto';
 import { buildLobbyPayload, emitLobbyUpdate } from '../services/lobbyService';
 import { buildGameSummaryPayload } from '../services/gameSummaryService';
-import { assertCanStartJoin, assignParticipantToGroup } from '../services/participantGroupService';
+import {
+    assertBrowserNotBoundToOtherParticipant,
+    assertCanStartJoin,
+    assignParticipantToGroup,
+} from '../services/participantGroupService';
 import { emitEventStatsUpdate } from '../services/eventStatsService';
 import { generateNumericOtp } from '../utils/otp';
 import { notifyParticipantJoined } from '../services/notificationService';
@@ -107,10 +111,11 @@ export const participantJoin = asyncHandler(async (req: Request, res: Response) 
     const { booking_id, name, email } = req.body;
 
     const normalizedEmail = String(email).trim().toLowerCase();
+    await assertBrowserNotBoundToOtherParticipant(req.get('x-participant-token'), booking_id, normalizedEmail);
     await assertCanStartJoin(booking_id, normalizedEmail);
 
     const [existing] = await query(
-        'SELECT id FROM game_participants WHERE LOWER(email) = ? AND booking_id = ?',
+        'SELECT id, join_token FROM game_participants WHERE LOWER(email) = ? AND booking_id = ?',
         [normalizedEmail, booking_id]
     );
 
@@ -141,9 +146,15 @@ export const participantJoin = asyncHandler(async (req: Request, res: Response) 
     const game_id = bookingRows[0].game_id;
 
     if (existing.length > 0) {
+        // Keep the participant's existing join_token stable across re-joins and OTP
+        // resends. The token is this participant's persistent credential — the
+        // browser lock and the participant game-API auth both key on it — so
+        // regenerating it here would silently invalidate a still-valid session on
+        // another device. Only mint one for a legacy row that somehow has none.
+        const preservedToken = existing[0].join_token || join_token;
         await query(
             'UPDATE game_participants SET name = ?, otp = ?, otp_expires_at = ?, join_token = ? WHERE id = ?',
-            [name, otp, otp_expires_at, join_token, existing[0].id]
+            [name, otp, otp_expires_at, preservedToken, existing[0].id]
         );
     } else {
         await query(
@@ -169,6 +180,7 @@ export const participantJoin = asyncHandler(async (req: Request, res: Response) 
 export const verifyParticipantOtp = asyncHandler(async (req: Request, res: Response) => {
     const { email, otp, booking_id } = req.body;
     const normalizedEmail = String(email).trim().toLowerCase();
+    await assertBrowserNotBoundToOtherParticipant(req.get('x-participant-token'), booking_id, normalizedEmail);
 
     const result = await withTransaction(async (conn) => {
         await conn.query('SELECT id FROM organizer_bookings WHERE id = ? FOR UPDATE', [booking_id]);

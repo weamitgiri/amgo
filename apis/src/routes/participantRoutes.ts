@@ -5,6 +5,7 @@ import * as joinLinkController from '../controllers/joinLinkController';
 import { validateRequest } from '../middlewares/validateRequest';
 import { joinLinkRateLimit } from '../middlewares/joinLinkRateLimit';
 import { otpRequestRateLimit, otpVerifyRateLimit } from '../middlewares/authRateLimit';
+import { participantAuth } from '../middlewares/participantAuth';
 
 const router = Router();
 
@@ -41,9 +42,9 @@ router.post(
 );
 
 // Get Lobby Information
-router.get('/lobby/:group_id', participantController.getLobbyInfo);
+router.get('/lobby/:group_id', participantAuth, participantController.getLobbyInfo);
 
 // Case summary / game screen
-router.get('/game-summary/:group_id', participantController.getGameSummary);
+router.get('/game-summary/:group_id', participantAuth, participantController.getGameSummary);
 
 export default router;

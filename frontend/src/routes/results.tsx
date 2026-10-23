@@ -11,7 +11,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { participantService } from "@/api/services/participant.service";
 import type { GameResultsResponse, ResultPlayer, ResultPlayerStatus } from "@/api/types/participant";
-import { getParticipantSession } from "@/lib/participant-session";
+import { clearParticipantSession, getParticipantSession } from "@/lib/participant-session";
+import { disconnectSocket } from "@/lib/socket";
 import { resolveMediaUrl } from "@/utils/media";
 import { toastError, toastSuccess } from "@/lib/toast";
 import mystery from "@/assets/mystery.jpg";
@@ -484,6 +485,10 @@ function ResultsPage() {
 
           <Link
             to="/"
+            onClick={() => {
+              disconnectSocket();
+              clearParticipantSession();
+            }}
             className="mt-6 lg:mt-auto block text-center w-full rounded-full bg-gradient-to-r from-[#a855f7] to-[#d946ef] py-3.5 text-sm font-bold text-white shadow-glow hover:opacity-90 transition-opacity print:hidden"
           >
             Exit to Lobby
