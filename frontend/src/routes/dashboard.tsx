@@ -185,7 +185,9 @@ function DashboardPage() {
     : "Schedule unavailable";
   const eventOverviewBadgeLabel = isEventCompleted
     ? "Event Completed"
-    : booking?.booking_status
+    : isEventStarted
+      ? "Event Started"
+      : booking?.booking_status
       ? booking.booking_status.charAt(0).toUpperCase() + booking.booking_status.slice(1)
       : "Active";
 
@@ -325,7 +327,7 @@ function DashboardPage() {
                   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 22l-6-4-6 4 1.5-8.5L2 9h7z"/></svg>
                 </div>
                 <h2 className="text-xl font-bold">{activityName}</h2>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${isEventCompleted ? 'bg-rose-100 text-rose-700' : booking?.booking_status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted/30 text-foreground/70'}`}>{eventOverviewBadgeLabel}</span>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${isEventCompleted ? 'bg-rose-100 text-rose-700' : isEventStarted || booking?.booking_status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted/30 text-foreground/70'}`}>{eventOverviewBadgeLabel}</span>
                 <span className="text-xs text-muted-foreground">Package ID: {booking?.booking_id ?? '—'}</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2 max-w-md">
