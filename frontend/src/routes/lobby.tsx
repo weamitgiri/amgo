@@ -314,16 +314,18 @@ function LobbyPage() {
             <span className="text-lg font-bold tracking-wide">Mystery Quest</span>
           </div>
           <div className="flex items-center gap-3">
-            {/* DEV / TESTING ONLY — start the game now. Remove before production. */}
-            <button
-              type="button"
-              onClick={handleDevNext}
-              disabled={devSkipping}
-              title="Testing: skip the lobby countdown and start the game"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-sm font-semibold text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
-            >
-              {devSkipping ? "Starting…" : "Next ⏭"}
-            </button>
+            {/* DEV / TESTING ONLY — start the game now. Hidden; handleDevNext kept for local testing. */}
+            {false && (
+              <button
+                type="button"
+                onClick={handleDevNext}
+                disabled={devSkipping}
+                title="Testing: skip the lobby countdown and start the game"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-sm font-semibold text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
+              >
+                {devSkipping ? "Starting…" : "Next ⏭"}
+              </button>
+            )}
             <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-xs font-bold">
               {initials(session?.name ?? "You")}
             </div>
