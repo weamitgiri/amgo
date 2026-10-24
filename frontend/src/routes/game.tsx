@@ -1995,15 +1995,11 @@ function InvestigationView(props: {
                   {/* Presence text ("Available"/"Offline") is hidden — only the active
                       "Answering" / "Left" states, which affect gameplay, still show. They sit
                       on the right (not under the name) so every row keeps the same height. */}
+                  {/* The per-player response countdown is intentionally not shown here
+                      (it crowded the card); the authoritative timer stays in the
+                      question panel. Only the "Answering" / "Left" status remains. */}
                   {(isAnswering || frozen) && (
                     <div className="shrink-0 flex flex-col items-end gap-0.5">
-                      {isAnswering && (
-                        <AnswerCountdown
-                          askedAt={answeringItem?.askedAt}
-                          totalSecs={answerSecs}
-                          className="text-[#facc15] text-lg font-semibold tabular-nums whitespace-nowrap leading-none"
-                        />
-                      )}
                       <div className={`text-[11px] flex items-center gap-1.5 whitespace-nowrap ${statusColor}`}>
                         <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot}`} /> {statusText}
                       </div>
