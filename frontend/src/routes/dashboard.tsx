@@ -161,8 +161,11 @@ function DashboardPage() {
   const eventStartsMs = scheduledDateTime ? scheduledDateTime.getTime() - now.getTime() : null;
   const eventStartsMin = eventStartsMs !== null ? Math.ceil(eventStartsMs / 60000) : 0;
   const isEventStarted = eventStartsMs !== null && eventStartsMs <= 0;
-  const eventEndedMs = eventEndTime ? eventEndTime.getTime() - now.getTime() : null;
-  const isEventCompleted = eventEndedMs !== null && eventEndedMs <= 0;
+  // Completion is driven by the server's real end state (all groups finished),
+  // NOT by the scheduled-start + duration window. A game can start later than
+  // its scheduled time, so the time window would flag "completed" while a group
+  // is still playing. `eventEndTime` is retained only for the display label.
+  const isEventCompleted = eventStatusMeta?.is_completed ?? false;
   const eventStatusLabel = eventStartsMs === null
     ? "Schedule unavailable"
     : isEventStarted
@@ -184,7 +187,7 @@ function DashboardPage() {
       : eventStatusLabel
     : "Schedule unavailable";
   const eventOverviewBadgeLabel = isEventCompleted
-    ? "Event Completed"
+    ? "Event Ended"
     : isEventStarted
       ? "Event Started"
       : booking?.booking_status
@@ -207,7 +210,7 @@ function DashboardPage() {
     : "Schedule information is unavailable.";
   const accessValidityLabel = isEventCompleted ? "Expired" : "5 Days";
   const accessValidityClass = isEventCompleted ? "text-red-500" : "text-foreground";
-  const accessValiditySubLabel = isEventCompleted ? "event completed" : "from activation";
+  const accessValiditySubLabel = isEventCompleted ? "event ended" : "from activation";
 
   // min date = today in YYYY-MM-DD format
   const todayStr = new Date().toISOString().split("T")[0];
@@ -463,7 +466,7 @@ function DashboardPage() {
         </Card>
 
         <Card>
-          <h3 className="text-lg font-bold">{isEventCompleted ? "Event Completed" : "Event Status"}</h3>
+          <h3 className={`text-lg font-bold ${isEventCompleted ? "text-red-600" : ""}`}>{isEventCompleted ? "Event Ended" : "Event Status"}</h3>
           <p className="text-sm text-muted-foreground mt-1">
             {isEventCompleted
               ? "The session has ended. Review participation, export records, and download the GST invoice."
@@ -473,7 +476,7 @@ function DashboardPage() {
             className={`mt-4 w-full rounded-full text-white py-3 font-semibold inline-flex items-center justify-center gap-2 shadow-glow ${isEventCompleted ? "bg-gradient-to-r from-rose-500 to-red-500" : "bg-gradient-primary"}`}
             disabled={isEventCompleted}
           >
-            <Play className="h-4 w-4" /> {isEventCompleted ? "Event Completed" : eventStatusButtonLabel}
+            <Play className="h-4 w-4" /> {isEventCompleted ? "Event Ended" : eventStatusButtonLabel}
           </button>
           <div className={`mt-3 flex items-start gap-2 rounded-xl px-4 py-3 text-sm ${isEventCompleted ? "bg-rose-50 text-rose-700" : "bg-purple-50"}`}>
             <Info className={`h-4 w-4 mt-0.5 ${isEventCompleted ? "text-rose-500" : "text-primary"}`} />

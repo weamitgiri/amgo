@@ -18,6 +18,11 @@ export type EventStatsPayload = {
         reschedule_cutoff: string;
         is_reschedule_allowed: boolean;
         min_players_per_group: number;
+        // True only when the game has actually ended for every group that was
+        // formed, i.e. all groups are in a terminal state ('completed' or
+        // 'incomplete'). NOTE: organizer_bookings.status === 'completed' means
+        // *payment* completed, not event completed, so it cannot be used here.
+        is_completed: boolean;
     };
     recent_groups: Array<{
         id: number;
@@ -196,6 +201,17 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
 
     const groupsFormed = groupRows.filter((g: any) => Number(g.member_count) === playersPerGroup).length;
 
+    // The event is only "completed" once the actual game has ended for every
+    // group that exists — i.e. each group is in a terminal status. While any
+    // group is still 'waiting' or 'active' (timer running), the event is live.
+    // This replaces the old time-window inference (scheduled start + duration)
+    // that flagged completion while a group was still playing.
+    const TERMINAL_GROUP_STATUSES = new Set(['completed', 'incomplete']);
+    const terminalGroupCount = (groupRows as any[]).filter((g) =>
+        TERMINAL_GROUP_STATUSES.has(String(g.status))
+    ).length;
+    const isEventCompleted = groupRows.length > 0 && terminalGroupCount === groupRows.length;
+
     const currentIncompleteGroup = groupRows.find(
         (g: any) => Number(g.member_count) > 0 && Number(g.member_count) < playersPerGroup
     );
@@ -272,6 +288,7 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
             reschedule_cutoff: cutoffTime.format('DD MMM YYYY, hh:mm A'),
             is_reschedule_allowed: !booking.is_rescheduled && moment().isBefore(cutoffTime),
             min_players_per_group: playersPerGroup,
+            is_completed: isEventCompleted,
         },
         recent_groups: groupRows.slice(-10).map((g: any) => ({
             id: g.id,

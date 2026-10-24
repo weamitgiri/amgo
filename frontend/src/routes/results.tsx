@@ -395,7 +395,7 @@ function ResultsPage() {
               <div className="mt-6 space-y-6">
                 {fullStory.map((item) => (
                   <div key={item.id} className="flex gap-4 items-start">
-                    <div className="w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-xl overflow-hidden border border-purple-400/40 bg-black/40">
+                    <div className="w-32 h-32 md:w-40 md:h-40 shrink-0 rounded-xl overflow-hidden border border-purple-400/40 bg-black/40">
                       <img
                         src={resolveMediaUrl(item.image) ?? mystery}
                         alt=""

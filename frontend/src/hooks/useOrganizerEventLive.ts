@@ -21,6 +21,10 @@ export function useOrganizerEventLive() {
     queryFn: () => organizerService.getEventStats(bookingId as number),
     enabled: !!bookingId,
     staleTime: 1000 * 10,
+    // Stats are socket-pushed on participant joins, but NOT when a game ends,
+    // so poll so the dashboard flips to "Event Completed" once all groups
+    // finish without requiring a manual reload.
+    refetchInterval: 1000 * 15,
     retry: false,
   });
 

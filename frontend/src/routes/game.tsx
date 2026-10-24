@@ -177,6 +177,35 @@ function RoleAvatar({
 }
 
 /**
+ * Case Summary evidence collage. The admin-uploaded image is the SAME for every
+ * player in a group (the API serves it from the shared game row), so when it
+ * "shows for some players and not others" the cause is never the data — it is a
+ * single failed image request for one client: a timeout, a reset, a storage
+ * worker saturated by several players loading this ~1 MB image at once, a stale
+ * deploy, or a wrong storage base URL. Unlike the role portraits above, the two
+ * Case Summary <img>s had no onError handling, so that one player was left with
+ * a permanently broken/blank image while everyone else saw it. We degrade to the
+ * bundled collage on error (and when no image is set), and fade the real image in
+ * on load so a slow fetch never flashes a half-painted frame. */
+function CaseSummaryImage({ src }: { src: string | null | undefined }) {
+  const resolved = resolveMediaUrl(src);
+  const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const useFallback = !resolved || failed;
+  return (
+    <img
+      src={useFallback ? caseCollage : resolved!}
+      alt="Investigation evidence — crime scene photos and quick facts"
+      onError={() => setFailed(true)}
+      onLoad={() => setLoaded(true)}
+      className={`w-full max-w-[440px] h-auto object-contain drop-shadow-2xl transition-opacity duration-300 ${
+        useFallback || loaded ? "opacity-100" : "opacity-0"
+      }`}
+    />
+  );
+}
+
+/**
  * Grid for player cards. Every card gets the same width AND height (auto-rows-fr),
  * and the columns stretch so the row always ends at the panel's right edge — no
  * empty gap after the last card, whatever the player count or screen width.
@@ -1559,11 +1588,7 @@ function SummaryView(props: {
               </div>
               <div className="relative flex items-start justify-center">
                 {/* Pre-composed evidence collage (pinned photos + compass + quick-facts note) */}
-                <img
-                  src={resolveMediaUrl(gameData.game.case_summary_image) ?? caseCollage}
-                  alt="Investigation evidence — crime scene photos and quick facts"
-                  className="w-full max-w-[440px] h-auto object-contain drop-shadow-2xl"
-                />
+                <CaseSummaryImage src={gameData.game.case_summary_image} />
               </div>
             </div>
           </div>
@@ -2950,11 +2975,7 @@ function CaseSummaryModal({ gameData, onClose }: { gameData: GameSummaryResponse
 
               <div className="relative flex items-start justify-center">
                 {/* Pre-composed evidence collage (pinned photos + compass + quick-facts note) */}
-                <img
-                  src={resolveMediaUrl(gameData.game.case_summary_image) ?? caseCollage}
-                  alt="Investigation evidence — crime scene photos and quick facts"
-                  className="w-full max-w-[440px] h-auto object-contain drop-shadow-2xl"
-                />
+                <CaseSummaryImage src={gameData.game.case_summary_image} />
               </div>
             </div>
           </div>

@@ -180,6 +180,9 @@ export interface OrganizerEventStats {
     reschedule_cutoff: string;
     is_reschedule_allowed: boolean;
     min_players_per_group: number;
+    // True only when the game has actually ended for every formed group
+    // (all groups terminal). Source of truth for the "Event Completed" state.
+    is_completed?: boolean;
   };
   recent_groups: RecentGroup[];
   recent_participants: RecentParticipant[];
