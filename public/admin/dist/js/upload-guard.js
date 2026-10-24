@@ -49,9 +49,12 @@
 
   function maxBytesFor(input) {
     var bytes = 0;
+    var ownKb = parseFloat(input.getAttribute('data-max-kb'));
     var own = parseFloat(input.getAttribute('data-max-mb'));
     var form = input.form;
-    if (own > 0) {
+    if (ownKb > 0) {
+      bytes = ownKb * 1024;
+    } else if (own > 0) {
       bytes = own * MB;
     } else if (form) {
       var map = parseJson(form.getAttribute('data-upload-limits'));
@@ -101,6 +104,30 @@
     }
   }
 
+  // A form can opt into inline errors (beside the field) instead of toasts by
+  // setting data-upload-inline-errors — used where routine validation is shown
+  // inline, so file problems match the rest of the form and never toast.
+  function inlineMode(input) {
+    return !!(input.form && input.form.hasAttribute('data-upload-inline-errors'));
+  }
+  function showInlineError(input, message) {
+    clearInlineError(input);
+    var anchor = (input.closest && input.closest('.custom-file')) || input;
+    var div = document.createElement('div');
+    div.className = 'upload-guard-error invalid-feedback d-block';
+    div.textContent = message;
+    if (anchor.parentNode) anchor.parentNode.insertBefore(div, anchor.nextSibling);
+    input.classList.add('is-invalid');
+  }
+  function clearInlineError(input) {
+    input.classList.remove('is-invalid');
+    var scope = (input.closest && (input.closest('.form-group') || input.closest('[class*="col-"]'))) || input.parentNode;
+    if (scope) {
+      var errs = scope.querySelectorAll('.upload-guard-error');
+      for (var k = 0; k < errs.length; k++) errs[k].remove();
+    }
+  }
+
   // Capture phase, so a rejected file never reaches the page's own change
   // handlers (file-name labels, previews).
   document.addEventListener('change', function (event) {
@@ -113,12 +140,18 @@
       label.setAttribute('data-placeholder', label.textContent);
     }
 
+    // A fresh valid selection clears any previous inline error for this input.
+    if (inlineMode(input)) clearInlineError(input);
+
     var files = Array.prototype.slice.call(input.files || []);
     for (var i = 0; i < files.length; i++) {
       var problem = problemWith(input, files[i]);
       if (problem) {
+        // Clearing the file input keeps any previously saved image intact — the
+        // existing-image hidden field and thumbnail are left untouched.
         resetInput(input);
-        toast(problem);
+        if (inlineMode(input)) showInlineError(input, problem);
+        else toast(problem);
         event.stopImmediatePropagation();
         event.stopPropagation();
         return;

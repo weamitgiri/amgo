@@ -20,10 +20,10 @@
             <i class="fas fa-trophy mr-1"></i> Award Categories
         </a>
     </li>
-    <li class="nav-item">
+  <!--   <li class="nav-item">
         <a class="nav-link {{ str_starts_with($ccActive, 'admin.cook-and-create.sessions') ? 'active' : '' }}"
            href="{{ route('admin.cook-and-create.sessions.index') }}">
             <i class="fas fa-list mr-1"></i> Sessions
         </a>
-    </li>
+    </li> -->
 </ul>

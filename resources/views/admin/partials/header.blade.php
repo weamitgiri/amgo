@@ -11,8 +11,21 @@
 <ul class="navbar-nav ml-auto">
   <li class="nav-item">
       <div id="google_translate_element" class="ml-5 mt-1"></div>
-     
+
   </li>
+
+  @if(\App\Models\MenuPermission::checkRoutePermissions('admin.database.export'))
+  {{-- Full database backup (.sql download). Plain POST + CSRF; the response is a file, not a page. --}}
+  <li class="nav-item d-flex align-items-center mr-2">
+      <form method="POST" action="{{ route('admin.database.export') }}" class="mb-0"
+            onsubmit="return confirm('Download a full database backup?\n\nThe file contains ALL data, including personal details and password hashes. Store it securely and never share it.');">
+          @csrf
+          <button style="display: none;" type="submit" class="btn btn-primary btn-sm" title="Download a full .sql backup of every table and its data">
+              <i class="fas fa-database mr-1"></i> Export Database
+          </button>
+      </form>
+  </li>
+  @endif
 
 <li class="nav-item dropdown headerProfile">
   <a class="nav-link text-dark" data-toggle="dropdown" href="#">

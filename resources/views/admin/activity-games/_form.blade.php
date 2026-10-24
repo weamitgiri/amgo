@@ -100,14 +100,14 @@
                             </div>
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label for="tagline">Results Page Tagline</label>
+                                    <label for="tagline">Results Page Tagline <span class="text-danger">*</span></label>
                                     <input type="text" name="tagline" id="tagline" class="form-control @error('tagline') is-invalid @enderror" value="{{ old('tagline', $game->tagline ?? '') }}" placeholder="A mystery solved, but at what cost?">
                                     @error('tagline')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
                                 </div>
                             </div>
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label for="bg_image">Case Background Image</label>
+                                    <label for="bg_image">Case Background Image <span class="text-danger">*</span></label>
                                     @if(!empty($game?->bg_image))
                                         <input type="hidden" name="existing_bg_image" value="{{ $game->bg_image }}">
                                         <div class="mb-2">
@@ -155,10 +155,12 @@
                         @foreach($timeline as $index => $item)
                             <div class="row timeline-item mb-2 animate__animated animate__fadeIn">
                                 <div class="col-md-3">
-                                    <input type="text" name="timeline[{{ $index }}][time]" class="form-control" value="{{ $item['time'] ?? '' }}" placeholder="10:00 PM">
+                                    <input type="text" name="timeline[{{ $index }}][time]" class="form-control @error("timeline.$index.time") is-invalid @enderror" value="{{ $item['time'] ?? '' }}" placeholder="10:00 PM">
+                                    @error("timeline.$index.time")<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                 </div>
                                 <div class="col-md-8">
-                                    <input type="text" name="timeline[{{ $index }}][event]" class="form-control" value="{{ $item['event'] ?? '' }}" placeholder="Event description">
+                                    <input type="text" name="timeline[{{ $index }}][event]" class="form-control @error("timeline.$index.event") is-invalid @enderror" value="{{ $item['event'] ?? '' }}" placeholder="Event description">
+                                    @error("timeline.$index.event")<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                 </div>
                                 <div class="col-md-1">
                                     <button type="button" class="btn btn-outline-danger remove-item btn-block"><i class="fas fa-trash"></i></button>
@@ -225,7 +227,8 @@
                                 </div>
                                 <div class="col-md-5">
                                     <label>Label</label>
-                                    <input type="text" name="photos[{{ $index }}][label]" class="form-control" value="{{ $photo['label'] ?? $photo->label ?? '' }}" placeholder="Photo description">
+                                    <input type="text" name="photos[{{ $index }}][label]" class="form-control @error("photos.$index.label") is-invalid @enderror" value="{{ $photo['label'] ?? $photo->label ?? '' }}" placeholder="Photo description">
+                                    @error("photos.$index.label")<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                 </div>
                                 <div class="col-md-4">
                                     <label>Image</label>
@@ -321,7 +324,8 @@
                                     </div>
                                     <div class="col-md-5">
                                         <label>Suspect Label</label>
-                                        <input type="text" name="investigator_cards[{{ $index }}][suspect_label]" class="form-control" value="{{ $iCard['suspect_label'] ?? $iCard->suspect_label ?? '' }}" placeholder="e.g. Suspect 1: Name">
+                                        <input type="text" name="investigator_cards[{{ $index }}][suspect_label]" class="form-control @error("investigator_cards.$index.suspect_label") is-invalid @enderror" value="{{ $iCard['suspect_label'] ?? $iCard->suspect_label ?? '' }}" placeholder="e.g. Suspect 1: Name">
+                                        @error("investigator_cards.$index.suspect_label")<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                     </div>
                                     <div class="col-md-5">
                                         <label>Tag</label>
@@ -339,11 +343,13 @@
                                     </div>
                                     <div class="col-md-5 mt-2">
                                         <label>Appears (seconds)</label>
-                                        <input type="number" name="investigator_cards[{{ $index }}][appears_at_secs]" class="form-control" value="{{ $iCard['appears_at_secs'] ?? $iCard->appears_at_secs ?? '' }}">
+                                        <input type="number" name="investigator_cards[{{ $index }}][appears_at_secs]" class="form-control @error("investigator_cards.$index.appears_at_secs") is-invalid @enderror" value="{{ $iCard['appears_at_secs'] ?? $iCard->appears_at_secs ?? '' }}" min="0">
+                                        @error("investigator_cards.$index.appears_at_secs")<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                     </div>
                                     <div class="col-md-5 mt-2">
                                         <label>Closes (seconds)</label>
-                                        <input type="number" name="investigator_cards[{{ $index }}][closes_at_secs]" class="form-control" value="{{ $iCard['closes_at_secs'] ?? $iCard->closes_at_secs ?? '' }}">
+                                        <input type="number" name="investigator_cards[{{ $index }}][closes_at_secs]" class="form-control @error("investigator_cards.$index.closes_at_secs") is-invalid @enderror" value="{{ $iCard['closes_at_secs'] ?? $iCard->closes_at_secs ?? '' }}" min="0">
+                                        @error("investigator_cards.$index.closes_at_secs")<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                     </div>
                                     <div class="col-md-2 mt-2 text-right">
                                         <label>&nbsp;</label><br>
@@ -366,11 +372,14 @@
                                 @php $clue = isset($game->clues) ? $game->clues->first() : null; @endphp
                                 <div class="form-group">
                                     <label>Clue Title</label>
-                                    <input type="text" name="clues[0][clue_title]" class="form-control" value="{{ old('clues.0.clue_title', $clue->clue_title ?? '') }}">
+                                    <input type="text" name="clues[0][clue_title]" class="form-control @error('clues.0.clue_title') is-invalid @enderror" value="{{ old('clues.0.clue_title', $clue->clue_title ?? '') }}">
+                                    <small class="form-text text-muted">Optional — leave the whole Clue Room blank to skip it.</small>
+                                    @error('clues.0.clue_title')<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                 </div>
                                 <div class="form-group">
                                     <label>Short Description</label>
-                                    <input type="text" name="clues[0][clue_short_description]" class="form-control" value="{{ old('clues.0.clue_short_description', $clue->clue_short_description ?? '') }}">
+                                    <input type="text" name="clues[0][clue_short_description]" class="form-control @error('clues.0.clue_short_description') is-invalid @enderror" value="{{ old('clues.0.clue_short_description', $clue->clue_short_description ?? '') }}">
+                                    @error('clues.0.clue_short_description')<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                 </div>
                                 <div class="form-group">
                                     <label>Clue Detail</label>
@@ -403,7 +412,8 @@
                                 @foreach($rules as $index => $rule)
                                     <div class="row rule-item mb-2 animate__animated animate__fadeIn">
                                         <div class="col-md-9">
-                                            <input type="text" name="rules[{{ $index }}][rule_text]" class="form-control" value="{{ $rule['rule_text'] ?? $rule->rule_text ?? '' }}" placeholder="Rule text">
+                                            <input type="text" name="rules[{{ $index }}][rule_text]" class="form-control @error("rules.$index.rule_text") is-invalid @enderror" value="{{ $rule['rule_text'] ?? $rule->rule_text ?? '' }}" placeholder="Rule text">
+                                            @error("rules.$index.rule_text")<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                         </div>
                                         <div class="col-md-2 px-0">
                                             <input type="number" name="rules[{{ $index }}][order]" class="form-control" value="{{ $rule['order'] ?? $rule->order ?? 0 }}">
@@ -421,7 +431,7 @@
                 <!-- Full Story -->
                 <div class="card card-outline card-primary mt-4">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-book-open mr-2"></i>Full Story Reveal (Max 3 Parts)</h3>
+                        <h3 class="card-title"><i class="fas fa-book-open mr-2"></i>Full Story Reveal (Max 3 Parts) <span class="text-danger">*</span></h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-primary btn-sm add-story-item"><i class="fas fa-plus mr-1"></i> Add Part</button>
                         </div>
@@ -439,6 +449,10 @@
                             @endif
                         </div>
                     </div>
+                    <div class="card-body pb-0">
+                        <div id="full-story-msg" class="text-danger small mb-0"></div>
+                        @error('full_story')<div class="text-danger small"><strong>{{ $message }}</strong></div>@enderror
+                    </div>
                     <div class="card-body" id="story-container">
                         @php $stories = old('full_story', isset($game->fullStory) ? $game->fullStory : []); @endphp
                         @foreach($stories as $index => $story)
@@ -454,7 +468,8 @@
                                     </div>
                                     <div class="col-md-9">
                                         <label>Part Title</label>
-                                        <input type="text" name="full_story[{{ $index }}][part_title]" class="form-control" value="{{ $story['part_title'] ?? $story->part_title ?? '' }}">
+                                        <input type="text" name="full_story[{{ $index }}][part_title]" class="form-control @error("full_story.$index.part_title") is-invalid @enderror" value="{{ $story['part_title'] ?? $story->part_title ?? '' }}">
+                                        @error("full_story.$index.part_title")<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                     </div>
                                     <div class="col-md-1 text-right">
                                         <label>&nbsp;</label><br>
@@ -462,7 +477,8 @@
                                     </div>
                                     <div class="col-md-12 mt-2">
                                         <label>Content</label>
-                                        <textarea name="full_story[{{ $index }}][part_body]" class="form-control summernote">{{ $story['part_body'] ?? $story->part_body ?? '' }}</textarea>
+                                        <textarea name="full_story[{{ $index }}][part_body]" class="form-control summernote @error("full_story.$index.part_body") is-invalid @enderror">{{ $story['part_body'] ?? $story->part_body ?? '' }}</textarea>
+                                        @error("full_story.$index.part_body")<span class="invalid-feedback d-block"><strong>{{ $message }}</strong></span>@enderror
                                     </div>
                                     <div class="col-md-12 mt-2">
                                         <label>Part Image</label>
@@ -534,32 +550,54 @@
         let currentStep = 1;
         const totalSteps = 4;
 
-        function showStep(step) {
+        function showStep(step, opts) {
+            opts = opts || {};
             $('.step-content').removeClass('active');
             $(`#step${step}`).addClass('active');
             $('.step').removeClass('active');
             $(`.step[data-target="#step${step}"]`).addClass('active');
             currentStep = step;
             window.scrollTo(0, 0);
+            // On returning to a step (Previous / clicking a prior step / after a
+            // server error) show its accurate validation state; don't nag on a
+            // fresh forward step.
+            if (typeof Validator !== 'undefined') {
+                if (opts.returning) Validator.showStepErrors(step);
+                Validator.refreshNav();
+            }
         }
 
+        // Next only advances when the current step is valid; otherwise it reveals
+        // that step's errors and stays put. (The button is also shown disabled in
+        // real time — see Validator.refreshNav — so this is a second guard.)
         $('.next-step').click(function() {
-            if (currentStep < totalSteps) showStep(currentStep + 1);
+            if (currentStep >= totalSteps) return;
+            Validator.markShown(currentStep);
+            const problems = Validator.problems(currentStep);
+            if (problems.length) {
+                Validator.showStepErrors(currentStep);
+                Validator.scrollToFirst(problems);
+                return;
+            }
+            showStep(currentStep + 1);
         });
 
+        // Previous is never blocked and never loses data.
         $('.prev-step').click(function() {
-            if (currentStep > 1) showStep(currentStep - 1);
+            if (currentStep > 1) showStep(currentStep - 1, { returning: true });
         });
 
         $('.step-trigger').click(function() {
             const target = $(this).closest('.step').data('target');
             const step = parseInt(target.replace('#step', ''));
-            showStep(step);
+            showStep(step, { returning: step <= currentStep });
         });
 
         // Open the step that contains the first validation error (if any).
+        // Note: the wizard is opened (showStep) at the very end of this script,
+        // after the Validator module is initialised — calling it earlier would hit
+        // the const's temporal dead zone.
         const initialStep = {{ (int) ($initialStep ?? 1) }};
-        showStep(initialStep);
 
         // Dynamic Role Loading Logic
         function updateRoleCount() {
@@ -570,6 +608,8 @@
             } else {
                 $('#role-validation-msg').text(`Need ${5 - count} more roles.`).removeClass('text-success').addClass('text-danger');
             }
+            // Keep the step-3 Next button state in sync when roles change.
+            if (typeof Validator !== 'undefined') Validator.refreshNav();
         }
 
         $(document).on('click', '.add-role-btn', function() {
@@ -826,27 +866,286 @@
             });
         });
 
-        // Game Roles: reject any role image/icon over 100 KB as soon as it is selected.
-        const ROLE_IMAGE_MAX_BYTES = 100 * 1024;
-        $(document).on('change', '#roles-container input[type="file"]', function() {
-            const $input = $(this);
-            const $group = $input.closest('.form-group');
-            $group.find('.role-image-size-error').remove();
-            $input.removeClass('is-invalid');
-
-            const file = this.files && this.files[0];
-            if (file && file.size > ROLE_IMAGE_MAX_BYTES) {
-                const sizeKb = Math.ceil(file.size / 1024);
-                this.value = '';
-                $input.addClass('is-invalid');
-                $input.closest('.custom-file').after(
-                    $('<div class="text-danger small role-image-size-error"></div>')
-                        .text(`"${file.name}" is ${sizeKb} KB. Images must be 100 KB or smaller. Please choose a smaller image.`)
-                );
-            }
-        });
+        // Image type/size validation on selection (inline, beside the field) is
+        // handled by upload-guard.js for every file input on this form — including
+        // role images/icons — so no per-field handler is needed here.
 
         updateRoleCount();
+
+        /* --------------------------------------------------------------------
+         * Shared wizard validation module. One place validates every field,
+         * drives the inline error display, the real-time per-step Next button
+         * state, and the final submit. Routine field validation is inline only
+         * (no toasts); backend validation remains the final source of truth.
+         * ------------------------------------------------------------------ */
+        const $form = $('.bs-stepper').closest('form');
+
+        // `var` (not `const`) so the `typeof Validator` guards in showStep /
+        // updateRoleCount read as 'undefined' if they run before this assignment,
+        // instead of throwing on the temporal dead zone.
+        var Validator = (function () {
+            // Max character limits, keyed by the field name's last key segment.
+            const MAX = {
+                title: 150, tagline: 255, time: 50, event: 255, label: 150,
+                character_name: 150, subtitle: 255, footer_text: 255, heading: 150,
+                suspect_label: 150, clue_title: 150, clue_short_description: 255,
+                rule_text: 255, part_title: 150,
+                location: 150, date_time: 150, weather: 150, cctv_status: 150
+            };
+            const LABEL = {
+                title: 'Game title', tagline: 'Tagline', time: 'Event time', event: 'Event description',
+                label: 'Photo label', character_name: 'Character name', subtitle: 'Subtitle',
+                footer_text: 'Footer text', heading: 'Strategy heading', suspect_label: 'Suspect label',
+                clue_title: 'Clue title', clue_short_description: 'Short description', rule_text: 'Rule text',
+                part_title: 'Story part title', location: 'Location', date_time: 'Date/Time',
+                weather: 'Weather', cctv_status: 'CCTV status'
+            };
+            const shown = { 1: false, 2: false, 3: false, 4: false };
+
+            function lastKey(name) {
+                const keys = (name || '').match(/\[([^\]]+)\]/g);
+                if (keys && keys.length) return keys[keys.length - 1].replace(/[\[\]]/g, '');
+                return name || '';
+            }
+            function isRich($el) {
+                return $el.is('textarea') && ($el.hasClass('summernote') || $el.hasClass('summernote-dynamic') || $el.hasClass('summernote-simple'));
+            }
+            function richText($el) {
+                let html = $el.val() || '';
+                try { if ($el.next('.note-editor').length) html = $el.summernote('code'); } catch (e) {}
+                return $('<div>').html(html).text().replace(/ /g, ' ').trim();
+            }
+            function containerFor($el) {
+                let $c = $el.closest('.form-group'); if ($c.length) return $c;
+                $c = $el.closest('[class*="col-"]'); if ($c.length) return $c;
+                return $el.parent();
+            }
+            function anchorFor($el) {
+                if (isRich($el)) { const $ed = $el.next('.note-editor'); if ($ed.length) return $ed; }
+                if ($el.closest('.custom-file').length) return $el.closest('.custom-file');
+                return $el;
+            }
+            function stepOf($el) {
+                const $c = $el.closest('.step-content');
+                return $c.length ? (parseInt($c.attr('id').replace('step', ''), 10) || 1) : 1;
+            }
+
+            // --- inline error rendering (reuses Bootstrap invalid styling) ---
+            function setError(el, msg) {
+                const $el = $(el);
+                containerFor($el).find('.client-error, .invalid-feedback').remove();
+                if (isRich($el)) $el.next('.note-editor').addClass('summernote-invalid');
+                else $el.addClass('is-invalid');
+                $('<div class="client-error invalid-feedback d-block"></div>').text(msg).insertAfter(anchorFor($el));
+            }
+            function clearError(el) {
+                const $el = $(el);
+                if (isRich($el)) $el.next('.note-editor').removeClass('summernote-invalid');
+                $el.removeClass('is-invalid');
+                containerFor($el).find('.client-error, .invalid-feedback').remove();
+            }
+            function clearStep(step) {
+                const $s = $('#step' + step);
+                $s.find('.client-error, .invalid-feedback').remove();
+                $s.find('.is-invalid').removeClass('is-invalid');
+                $s.find('.note-editor.summernote-invalid').removeClass('summernote-invalid');
+            }
+
+            function maxProblem(el) {
+                const key = lastKey(el.name || ''); const max = MAX[key];
+                if (!max) return null;
+                const len = (el.value || '').length;
+                if (len > max) return (LABEL[key] || 'This field') + ' must be ' + max + ' characters or fewer (currently ' + len + ').';
+                return null;
+            }
+
+            // --- per-step problem collectors (no rendering) -----------------
+            // "Present" tests mirror the backend's empty-row stripping so the
+            // front end and back end agree on which rows are validated.
+            function problems(step) {
+                const list = [];
+                const push = function (el, msg, kind) { list.push({ el: el, msg: msg, kind: kind }); };
+
+                if (step === 1) {
+                    const t = $('#title')[0];
+                    if (t) { if (!t.value.trim()) push(t, 'Game title is required.'); else { const m = maxProblem(t); if (m) push(t, m); } }
+                    const tag = $('#tagline')[0];
+                    if (tag) { if (!tag.value.trim()) push(tag, 'Results page tagline is required.'); else { const m = maxProblem(tag); if (m) push(tag, m); } }
+                    const $cs = $('#case_summary');
+                    if ($cs.length && !richText($cs)) push($cs[0], 'Case summary is required.');
+                    // Case background image is required, but an already-saved image
+                    // (carried in existing_bg_image when editing) satisfies it.
+                    const bg = $('#bg_image')[0];
+                    if (bg) {
+                        const bgHasFile = !!(bg.files && bg.files.length);
+                        const bgHasExisting = $('input[name="existing_bg_image"]').length > 0;
+                        if (!bgHasFile && !bgHasExisting) push(bg, 'Case background image is required.');
+                    }
+                }
+
+                if (step === 2) {
+                    $('#timeline-container .timeline-item').each(function () {
+                        const te = $(this).find('input[name$="[time]"]')[0];
+                        const ev = $(this).find('input[name$="[event]"]')[0];
+                        if (!te || !ev) return;
+                        const t = te.value.trim(), e = ev.value.trim();
+                        if (t || e) {
+                            if (!t) push(te, 'Add a time for this event (or clear the row to remove it).');
+                            else { const m = maxProblem(te); if (m) push(te, m); }
+                            if (!e) push(ev, 'Add a description for this event (or clear the row to remove it).');
+                            else { const m = maxProblem(ev); if (m) push(ev, m); }
+                        }
+                    });
+                    $('#photos-container .photo-item').each(function () {
+                        const lb = $(this).find('input[name$="[label]"]')[0];
+                        const fileEl = $(this).find('input[type="file"]')[0];
+                        const hasFile = !!(fileEl && fileEl.files && fileEl.files.length);
+                        const hasExisting = $(this).find('input[name$="[existing_image]"]').length > 0;
+                        if (!lb) return;
+                        if (!lb.value.trim()) { if (hasFile || hasExisting) push(lb, 'Please add a label for this photo.'); }
+                        else { const m = maxProblem(lb); if (m) push(lb, m); }
+                    });
+                    $('#step2 input[name^="quick_facts"]').each(function () { const m = maxProblem(this); if (m) push(this, m); });
+                }
+
+                if (step === 3) {
+                    const count = $('#roles-container .role-item').length;
+                    if (count !== 5) push(null, count < 5 ? ('Add ' + (5 - count) + ' more role(s) — exactly 5 are required.') : 'Only 5 roles are allowed.', 'rolecount');
+                    $('#roles-container .role-item').each(function () {
+                        const nm = $(this).find('input[name$="[character_name]"]')[0];
+                        if (nm) { if (!nm.value.trim()) push(nm, 'Character name is required.'); else { const m = maxProblem(nm); if (m) push(nm, m); } }
+                        $(this).find('input[name$="[subtitle]"], input[name$="[footer_text]"]').each(function () { const m = maxProblem(this); if (m) push(this, m); });
+                    });
+                }
+
+                if (step === 4) {
+                    $('#investigator-cards-container .investigator-card-item').each(function () {
+                        const lb = $(this).find('input[name$="[suspect_label]"]')[0];
+                        const tg = $(this).find('input[name$="[tag]"]')[0];
+                        const $pf = $(this).find('textarea[name$="[profile_text]"]');
+                        const present = (lb && lb.value.trim()) || (tg && tg.value.trim()) || ($pf.length && richText($pf));
+                        if (!present) return;
+                        const ap = $(this).find('input[name$="[appears_at_secs]"]')[0];
+                        const cl = $(this).find('input[name$="[closes_at_secs]"]')[0];
+                        if (lb && !lb.value.trim()) push(lb, 'Suspect label is required.');
+                        else if (lb) { const m = maxProblem(lb); if (m) push(lb, m); }
+                        if (ap && ap.value === '') push(ap, '"Appears at" (seconds) is required.');
+                        if (cl && cl.value === '') push(cl, '"Closes at" (seconds) is required.');
+                        else if (ap && cl && ap.value !== '' && Number(cl.value) <= Number(ap.value)) push(cl, '"Closes at" must be greater than "Appears at".');
+                    });
+                    const ct = $('input[name="clues[0][clue_title]"]')[0];
+                    const sd = $('input[name="clues[0][clue_short_description]"]')[0];
+                    const $cd = $('textarea[name="clues[0][clue_detail]"]');
+                    const clueFilled = (ct && ct.value.trim()) || (sd && sd.value.trim()) || ($cd.length && $cd.val().trim());
+                    if (clueFilled && ct && !ct.value.trim()) push(ct, 'Clue title is required.');
+                    else if (ct) { const m = maxProblem(ct); if (m) push(ct, m); }
+                    if (sd) { const m = maxProblem(sd); if (m) push(sd, m); }
+                    $('#rules-container .rule-item').each(function () { const rt = $(this).find('input[name$="[rule_text]"]')[0]; if (rt && rt.value.trim()) { const m = maxProblem(rt); if (m) push(rt, m); } });
+                    let storyPresent = 0;
+                    $('#story-container .story-item').each(function () {
+                        const pt = $(this).find('input[name$="[part_title]"]')[0];
+                        const $pb = $(this).find('textarea[name$="[part_body]"]');
+                        const present = (pt && pt.value.trim()) || ($pb.length && richText($pb));
+                        if (!present) return;
+                        storyPresent++;
+                        if (pt && !pt.value.trim()) push(pt, 'Story part title is required.'); else if (pt) { const m = maxProblem(pt); if (m) push(pt, m); }
+                        if ($pb.length && !richText($pb)) push($pb[0], 'Story content is required.');
+                    });
+                    // Full Story Reveal is required — at least one complete part.
+                    if (storyPresent === 0) push(null, 'Please add at least one Full Story Reveal part (title and content).', 'fullstory');
+                }
+                return list;
+            }
+
+            function showStepErrors(step) {
+                clearStep(step);
+                const list = problems(step);
+                let roleMsg = '', storyMsg = '';
+                list.forEach(function (p) {
+                    if (p.el) setError(p.el, p.msg);
+                    else if (p.kind === 'fullstory') storyMsg = p.msg;
+                    else roleMsg = p.msg; // rolecount
+                });
+                if (step === 3) {
+                    const $m = $('#role-validation-msg');
+                    if (roleMsg) $m.text(roleMsg).removeClass('text-success').addClass('text-danger');
+                    else $m.text('Perfect! 5 roles added.').removeClass('text-danger').addClass('text-success');
+                }
+                if (step === 4) $('#full-story-msg').text(storyMsg);
+                return list;
+            }
+            function refreshNav() {
+                for (let s = 1; s <= 3; s++) {
+                    const ok = problems(s).length === 0;
+                    $('#step' + s + ' .next-step').toggleClass('disabled', !ok).attr('aria-disabled', ok ? null : 'true');
+                }
+            }
+            function scrollToFirst(list) {
+                const first = (list || []).find(function (p) { return p.el; });
+                if (first && first.el && first.el.scrollIntoView) setTimeout(function () { first.el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
+            }
+            function markShown(step) { shown[step] = true; }
+            function validateAll() {
+                let all = [];
+                for (let s = 1; s <= 4; s++) { shown[s] = true; const l = showStepErrors(s).map(function (p) { return { step: s, el: p.el, msg: p.msg }; }); all = all.concat(l); }
+                return all;
+            }
+
+            // --- live field events ------------------------------------------
+            $form.on('blur', 'input, textarea, select', function () {
+                if (this.type === 'file') return;
+                const step = stepOf($(this));
+                shown[step] = true;
+                showStepErrors(step);
+                refreshNav();
+            });
+            $form.on('input change', 'input, textarea, select', function () {
+                const step = stepOf($(this));
+                if (this.type === 'file') {
+                    // upload-guard.js owns per-file type/size errors; here we only
+                    // keep the required-field state (e.g. Case Background) in sync.
+                    if (shown[step]) showStepErrors(step);
+                    refreshNav();
+                    return;
+                }
+                if (shown[step]) showStepErrors(step); else clearError(this);
+                refreshNav();
+            });
+            // Rich-text editors don't fire input/blur on the hidden textarea.
+            $form.on('summernote.change summernote.blur', 'textarea.summernote, textarea.summernote-dynamic, textarea.summernote-simple', function () {
+                const step = stepOf($(this));
+                shown[step] = true;
+                showStepErrors(step);
+                refreshNav();
+            });
+            // After rows are added/removed, recompute Next and refresh shown steps.
+            $form.on('click', '.add-timeline-item, .add-photo-item, .add-investigator-card, .add-rule-item, .add-story-item, .add-role-btn, .add-strategy-card, .add-simple-repeater, .remove-item, .remove-repeater-item', function () {
+                setTimeout(function () { refreshNav(); if (shown[currentStep]) showStepErrors(currentStep); }, 400);
+            });
+
+            // --- submit: validate all steps, jump to first invalid, no toast,
+            //     no duplicate submits ----------------------------------------
+            let submitting = false;
+            $form.on('submit', function (e) {
+                if (submitting) { e.preventDefault(); return false; }
+                const all = validateAll();
+                if (all.length) {
+                    e.preventDefault();
+                    showStep(all[0].step, { returning: true });
+                    scrollToFirst(all.filter(function (p) { return p.step === all[0].step; }));
+                    return false;
+                }
+                submitting = true;
+                $form.find('button[type="submit"]').prop('disabled', true).addClass('disabled');
+            });
+
+            return { problems: problems, showStepErrors: showStepErrors, refreshNav: refreshNav, scrollToFirst: scrollToFirst, markShown: markShown, validateAll: validateAll };
+        })();
+
+        // Open the initial step (shows errors if returning from a server failure)
+        // and set the initial Next-button state.
+        showStep(initialStep, { returning: initialStep > 1 || {{ $errors->any() ? 'true' : 'false' }} });
+        Validator.refreshNav();
     });
 </script>
 @endsection

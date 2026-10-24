@@ -109,7 +109,8 @@
       'requestBytes' => \App\Support\UploadLimits::requestBytes(),
     ]);
   </script>
-  <script src="{{ asset('admin/dist/js/upload-guard.js')}}"></script>
+  @php($uploadGuardPath = public_path('admin/dist/js/upload-guard.js'))
+  <script src="{{ asset('admin/dist/js/upload-guard.js') }}?v={{ file_exists($uploadGuardPath) ? filemtime($uploadGuardPath) : '1' }}"></script>
 
   <script>
     toastr.options = {
@@ -124,9 +125,10 @@
     @if(Session::has('error'))
       toastr.error(@json(Session::get('error')), '', { timeOut: 8000 });
     @endif
-    {{-- Validation failures (e.g. an image that is too large or failed to upload)
-         also show as toasts, not only inline under the field. --}}
-    @if($errors->any())
+    {{-- Validation failures normally also surface as toasts. A form can opt out by
+         setting the "suppress_error_toasts" section (e.g. when it already shows the
+         errors inline and in a summary box) so the same errors aren't duplicated. --}}
+    @if($errors->any() && !View::hasSection('suppress_error_toasts'))
       @foreach(collect($errors->all())->unique()->take(5) as $message)
         toastr.error(@json($message), '', { timeOut: 8000 });
       @endforeach

@@ -1,33 +1,45 @@
-@php $type = $type ?? ''; @endphp
+@php
+    $type = $type ?? '';
+    $role = $role ?? null;
+    // $role is an Eloquent model on first load, but a plain array from old() after a
+    // validation failure — read role_type safely from either, and let old() win so the
+    // chosen role type is preserved when the form is re-rendered with errors.
+    $roleTypeValue = is_array($role) ? ($role['role_type'] ?? '') : ($role->role_type ?? '');
+    $roleTypeValue = old("roles.$i.role_type", $roleTypeValue !== '' ? $roleTypeValue : $type);
+    $characterNameValue = is_array($role) ? ($role['character_name'] ?? '') : ($role->character_name ?? '');
+@endphp
 
 <div class="role-item border p-4 mb-4 bg-light rounded shadow-sm animate__animated animate__fadeIn">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0 text-primary font-weight-bold">
-            <i class="fas fa-user-tag mr-2"></i> Role: <span class="role-type-label text-uppercase">{{ $role->role_type ?? $type }}</span>
+            <i class="fas fa-user-tag mr-2"></i> Role: <span class="role-type-label text-uppercase">{{ $roleTypeValue }}</span>
         </h5>
         <button type="button" class="btn btn-sm btn-outline-danger remove-item"><i class="fas fa-trash mr-1"></i> Remove Role</button>
     </div>
-    
-    <input type="hidden" name="roles[{{ $i }}][role_type]" value="{{ $role->role_type ?? $type }}">
-    
+
+    <input type="hidden" name="roles[{{ $i }}][role_type]" value="{{ $roleTypeValue }}">
+    @error("roles.$i.role_type")<div class="text-danger small mb-2"><strong>{{ $message }}</strong></div>@enderror
+
     <div class="row">
         <div class="col-md-6">
             <div class="form-group">
                 <label>Character Name <span class="text-danger">*</span></label>
-                <input type="text" name="roles[{{ $i }}][character_name]" class="form-control" value="{{ old("roles.$i.character_name", $role->character_name ?? '') }}" placeholder="e.g. Detective Stark" required>
+                <input type="text" name="roles[{{ $i }}][character_name]" class="form-control @error("roles.$i.character_name") is-invalid @enderror" value="{{ old("roles.$i.character_name", $characterNameValue) }}" placeholder="e.g. Detective Stark" required>
+                @error("roles.$i.character_name")<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label>Subtitle</label>
-                <input type="text" name="roles[{{ $i }}][subtitle]" class="form-control" value="{{ old("roles.$i.subtitle", $role->subtitle ?? '') }}" placeholder="e.g. Lead Investigator">
+                <input type="text" name="roles[{{ $i }}][subtitle]" class="form-control @error("roles.$i.subtitle") is-invalid @enderror" value="{{ old("roles.$i.subtitle", is_array($role) ? ($role['subtitle'] ?? '') : ($role->subtitle ?? '')) }}" placeholder="e.g. Lead Investigator">
+                @error("roles.$i.subtitle")<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
             </div>
         </div>
         <div class="col-md-6">
             <div class="form-group">
                 <label>Role Image</label>
                 <div class="custom-file">
-                    <input type="file" name="roles[{{ $i }}][role_image]" class="custom-file-input">
+                    <input type="file" name="roles[{{ $i }}][role_image]" accept="image/*" data-max-kb="100" class="custom-file-input">
                     <label class="custom-file-label">Choose character image</label>
                 </div>
                 @if(isset($role->role_image) && $role->role_image)
@@ -40,7 +52,7 @@
             <div class="form-group">
                 <label>Role Icon</label>
                 <div class="custom-file">
-                    <input type="file" name="roles[{{ $i }}][role_icon]" accept="image/*" class="custom-file-input @error("roles.$i.role_icon") is-invalid @enderror">
+                    <input type="file" name="roles[{{ $i }}][role_icon]" accept="image/*" data-max-kb="100" class="custom-file-input @error("roles.$i.role_icon") is-invalid @enderror">
                     <label class="custom-file-label">Choose role icon</label>
                 </div>
                 <small class="form-text text-muted">60&times;60 px (square) &middot; Max 100 KB &middot; PNG (transparent), JPG, WEBP or JPEG. Shown as the badge on the player's "Your Role" card.</small>
@@ -55,7 +67,8 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label>Footer Text</label>
-                <input type="text" name="roles[{{ $i }}][footer_text]" class="form-control" value="{{ old("roles.$i.footer_text", $role->footer_text ?? '') }}" placeholder="Small note at the bottom">
+                <input type="text" name="roles[{{ $i }}][footer_text]" class="form-control @error("roles.$i.footer_text") is-invalid @enderror" value="{{ old("roles.$i.footer_text", is_array($role) ? ($role['footer_text'] ?? '') : ($role->footer_text ?? '')) }}" placeholder="Small note at the bottom">
+                @error("roles.$i.footer_text")<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
             </div>
         </div>
         <div class="col-md-12">

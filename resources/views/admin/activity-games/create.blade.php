@@ -1,5 +1,9 @@
 @extends('admin.layouts.default')
 
+{{-- This wizard shows validation errors inline beside each field and in one
+     summary box, so suppress the layout's duplicate per-error toasts. --}}
+@section('suppress_error_toasts', 'yes')
+
 @section('content')
 <div class="content-wrapper">
     <section class="content-header">
@@ -22,7 +26,7 @@
 
     <section class="content">
         <div class="container-fluid">
-            <form action="{{ route('admin.activity-games.store', $activity->id) }}" method="POST" enctype="multipart/form-data" data-upload-limits='{"bg_image":4,"role_icon":1}' data-upload-default-mb="2" data-upload-types="jpg,jpeg,png,webp">
+            <form action="{{ route('admin.activity-games.store', $activity->id) }}" method="POST" enctype="multipart/form-data" data-upload-limits='{"bg_image":4,"case_summary_image":4}' data-upload-default-mb="2" data-upload-types="jpg,jpeg,png,webp" data-upload-inline-errors>
                 @csrf
                 <div class="card">
                     @include('admin.activity-games._form')
