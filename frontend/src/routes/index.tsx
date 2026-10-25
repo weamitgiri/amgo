@@ -11,6 +11,7 @@ import { PillButton } from "@/components/PillButton";
 import { useGames, usePackages } from "@/hooks/usePublicContent";
 import type { ApiActivity, ApiPackage } from "@/api/types/public";
 import { resolveMediaUrl } from "@/utils/media";
+import { homeSeoLinks } from "@/seo/homeSeo";
 import hero from "@/assets/hero-bg-home.jpg";
 import mystery from "@/assets/mystery.jpg";
 import cook from "@/assets/cook.jpg";
@@ -38,6 +39,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Zoventro — Interactive Team Engagement" },
       { property: "og:description", content: "Boost engagement, collaboration and energy without complicated setups." },
     ],
+    links: homeSeoLinks,
   }),
   component: Home,
 });
