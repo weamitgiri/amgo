@@ -6,6 +6,8 @@ import { participantService } from "@/api/services/participant.service";
 import type { JoinLinkResponse } from "@/api/types/participant";
 import { saveParticipantSession } from "@/lib/participant-session";
 import { toastError, toastInfo, toastSuccess } from "@/lib/toast";
+import { getRetryAfterSeconds } from "@/api/errors";
+import { useResendCountdown } from "@/hooks/useResendCountdown";
 import mystery from "@/assets/game-a-card-bg.jpg";
 import cooka from "@/assets/cook.jpg";
 import cook from "@/assets/cookandcreate/game-2-lobby-bg-expanded.jpg";
@@ -130,6 +132,7 @@ function JoinPage() {
   const [scheduleStart, setScheduleStart] = useState<Date | null>(null);
   const [linkError, setLinkError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const resend = useResendCountdown(60);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [joinedInfo, setJoinedInfo] = useState<{ group_id: number; group_name: string; name: string } | null>(null);
 
@@ -262,10 +265,31 @@ function JoinPage() {
         if (import.meta.env.DEV && data && "dev_otp" in data && data.dev_otp) {
           toastInfo(`Dev mode: use OTP ${data.dev_otp}`);
         }
+        resend.start(60);
         setStep("otp");
       })
       .catch((error) => {
         toastError(error?.message || "Unable to send verification code.");
+      })
+      .finally(() => setIsSubmitting(false));
+  };
+
+  const handleResendOtp = () => {
+    if (!bookingId || resend.active) return;
+    setIsSubmitting(true);
+    participantService
+      .resendOtp({ booking_id: bookingId, email: email.trim() })
+      .then((data) => {
+        toastSuccess("A new code has been sent to your email.");
+        if (import.meta.env.DEV && data && "dev_otp" in data && data.dev_otp) {
+          toastInfo(`Dev mode: use OTP ${data.dev_otp}`);
+        }
+        resend.start(data?.resend_cooldown ?? 60);
+      })
+      .catch((error) => {
+        const retry = getRetryAfterSeconds(error);
+        if (retry) resend.start(retry);
+        toastError(error?.message || "Unable to resend the code.");
       })
       .finally(() => setIsSubmitting(false));
   };
@@ -466,8 +490,9 @@ function JoinPage() {
                 onUpdate={updateOtpValue}
                 onBack={() => setStep("form")}
                 onVerify={handleVerifyOtp}
-                onResend={handleSendOtp}
+                onResend={handleResendOtp}
                 isSubmitting={isSubmitting}
+                cooldown={resend.remaining}
               />
             )}
             {step === "done" && (
@@ -719,6 +744,7 @@ function OtpStep({
   onVerify,
   onResend,
   isSubmitting,
+  cooldown,
 }: {
   email: string;
   values: string[];
@@ -727,6 +753,7 @@ function OtpStep({
   onVerify: () => void;
   onResend: () => void;
   isSubmitting: boolean;
+  cooldown: number;
 }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   useEffect(() => {
@@ -787,10 +814,10 @@ function OtpStep({
         <button
           type="button"
           onClick={onResend}
-          disabled={isSubmitting}
+          disabled={isSubmitting || cooldown > 0}
           className="text-[#F43F5E] hover:text-[#E11D48] transition-colors disabled:opacity-50"
         >
-          Resend
+          {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend"}
         </button>
       </p>
 

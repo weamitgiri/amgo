@@ -80,6 +80,14 @@ export const participantService = {
       pAuth()
     ),
 
+  /** Resend OTP to an already-joined participant (enforces the 60s cooldown) */
+  resendOtp: (payload: { booking_id: number; email: string }) =>
+    apiClient.post<{ email: string; resend_cooldown?: number; dev_otp?: string }>(
+      API_ENDPOINTS.participant.resendOtp,
+      payload,
+      pAuth()
+    ),
+
   /** Step 3: Verify OTP and assign group */
   verifyOtp: (payload: ParticipantVerifyOtpPayload) =>
     apiClient.post<ParticipantVerifyOtpResponse>(

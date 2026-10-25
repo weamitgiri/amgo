@@ -15,7 +15,8 @@ import {
 } from '../services/participantGroupService';
 import { emitEventStatsUpdate } from '../services/eventStatsService';
 import { generateNumericOtp } from '../utils/otp';
-import { getOtpExpiresAt } from '../services/otpConfig';
+import { getOtpExpiresAt, OTP_RESEND_COOLDOWN_SECONDS } from '../services/otpConfig';
+import { assertResendCooldown } from '../services/otpResend';
 import { notifyParticipantJoined } from '../services/notificationService';
 
 /**
@@ -154,12 +155,12 @@ export const participantJoin = asyncHandler(async (req: Request, res: Response) 
         // another device. Only mint one for a legacy row that somehow has none.
         const preservedToken = existing[0].join_token || join_token;
         await query(
-            'UPDATE game_participants SET name = ?, otp = ?, otp_expires_at = ?, join_token = ? WHERE id = ?',
+            'UPDATE game_participants SET name = ?, otp = ?, otp_expires_at = ?, otp_sent_at = NOW(), join_token = ? WHERE id = ?',
             [name, otp, otp_expires_at, preservedToken, existing[0].id]
         );
     } else {
         await query(
-            'INSERT INTO game_participants (booking_id, game_id, name, email, otp, otp_expires_at, join_token, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO game_participants (booking_id, game_id, name, email, otp, otp_expires_at, otp_sent_at, join_token, status) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?)',
             [booking_id, game_id, name, normalizedEmail, otp, otp_expires_at, join_token, 'joined']
         );
     }
@@ -173,6 +174,46 @@ export const participantJoin = asyncHandler(async (req: Request, res: Response) 
     }
 
     return successResponse(res, 'OTP sent to your email.', payload);
+});
+
+/**
+ * Participant: Resend OTP to an already-joined (but perhaps not yet verified)
+ * participant. Regenerates the OTP for the existing row, honouring the 60s
+ * resend cooldown; it does NOT re-run the join/group logic or mint a new token.
+ */
+export const resendParticipantOtp = asyncHandler(async (req: Request, res: Response) => {
+    const { booking_id, email } = req.body;
+    const normalizedEmail = String(email).trim().toLowerCase();
+    await assertBrowserNotBoundToOtherParticipant(req.get('x-participant-token'), booking_id, normalizedEmail);
+
+    const [rows] = await query(
+        'SELECT id, email_verified_at FROM game_participants WHERE LOWER(email) = ? AND booking_id = ?',
+        [normalizedEmail, booking_id]
+    );
+    if (rows.length === 0) throw new AppError('Please join first before requesting a code.', 404);
+    if (rows[0].email_verified_at) throw new AppError('This email is already verified.', 400);
+
+    await assertResendCooldown('game_participants', 'id', rows[0].id);
+
+    const otp = generateNumericOtp(6);
+    const otp_expires_at = await getOtpExpiresAt();
+    await query(
+        'UPDATE game_participants SET otp = ?, otp_expires_at = ?, otp_sent_at = NOW() WHERE id = ?',
+        [otp, otp_expires_at, rows[0].id]
+    );
+
+    // Fire-and-forget: SMTP can block and exceed the client timeout.
+    sendOtpEmail(normalizedEmail, otp);
+
+    const payload: { email: string; resend_cooldown: number; dev_otp?: string } = {
+        email: normalizedEmail,
+        resend_cooldown: OTP_RESEND_COOLDOWN_SECONDS,
+    };
+    if (process.env.NODE_ENV === 'development') {
+        payload.dev_otp = otp;
+    }
+
+    return successResponse(res, 'A new code has been sent to your email.', payload);
 });
 
 /**

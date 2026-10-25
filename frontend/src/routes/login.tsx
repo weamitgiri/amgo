@@ -8,7 +8,8 @@ import { isOrganizerAuthenticated } from "@/lib/auth";
 import { isValidEmail } from "@/utils/common";
 import { organizerService } from "@/api/services/organizer.service";
 import { apiClient } from "@/api/client";
-import { mapApiFieldErrors, parseApiError } from "@/api/errors";
+import { getRetryAfterSeconds, mapApiFieldErrors, parseApiError } from "@/api/errors";
+import { useResendCountdown } from "@/hooks/useResendCountdown";
 import { validateOtpCode } from "@/utils/organizer";
 import hero from "@/assets/login-a.jpg";
 import mystery from "@/assets/login-b.jpg";
@@ -28,6 +29,7 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const resend = useResendCountdown(60);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const navigate = useNavigate();
@@ -70,6 +72,7 @@ function LoginPage() {
     try {
       await organizerService.sendLoginOtp({ email: email.trim() });
       toastSuccess("Verification code sent to your email.");
+      resend.start(60);
       setStep("otp");
     } catch (err) {
       const { message, fieldErrors } = parseApiError(err);
@@ -106,11 +109,15 @@ function LoginPage() {
   };
 
   const handleResendOtp = async () => {
+    if (resend.active) return;
     setIsResending(true);
     try {
       await organizerService.resendOtp({ email: email.trim() });
       toastSuccess("A new verification code has been sent.");
+      resend.start(60);
     } catch (err) {
+      const retry = getRetryAfterSeconds(err);
+      if (retry) resend.start(retry);
       toastError(parseApiError(err).message);
     } finally {
       setIsResending(false);
@@ -177,6 +184,7 @@ function LoginPage() {
                 email={email}
                 isVerifying={isVerifying}
                 isResending={isResending}
+                cooldown={resend.remaining}
                 onBack={() => setStep("email")}
                 onVerify={handleVerifyOtp}
                 onResend={handleResendOtp}
@@ -263,6 +271,7 @@ function OtpStep({
   onResend,
   isVerifying,
   isResending,
+  cooldown,
 }: {
   email: string;
   onBack: () => void;
@@ -270,6 +279,7 @@ function OtpStep({
   onResend: () => Promise<void>;
   isVerifying: boolean;
   isResending: boolean;
+  cooldown: number;
 }) {
   const [vals, setVals] = useState<string[]>(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState<string | null>(null);
@@ -338,11 +348,11 @@ function OtpStep({
         Didn't receive code?{" "}
         <button
           type="button"
-          disabled={isResending}
+          disabled={isResending || cooldown > 0}
           onClick={onResend}
           className="text-primary font-medium disabled:opacity-50"
         >
-          {isResending ? "Sending..." : "Resend"}
+          {isResending ? "Sending..." : cooldown > 0 ? `Resend in ${cooldown}s` : "Resend"}
         </button>{" "}
         ·{" "}
         <button type="button" onClick={onBack} className="text-primary font-medium">

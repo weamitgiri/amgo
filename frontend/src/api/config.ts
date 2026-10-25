@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
     joinLink: (linkToken: string) => `/v1/participant/join-links/${linkToken}`,
     join: "/v1/participant/join",
     verifyOtp: "/v1/participant/verify-otp",
+    resendOtp: "/v1/participant/resend-otp",
     lobby: (groupId: number | string) => `/v1/participant/lobby/${groupId}`,
     gameSummary: (groupId: number | string) => `/v1/participant/game-summary/${groupId}`,
   },

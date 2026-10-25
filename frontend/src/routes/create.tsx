@@ -9,7 +9,8 @@ import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toastSuccess, toastWarning, toastError } from "@/lib/toast";
 import { organizerService } from "@/api/services/organizer.service";
-import { mapApiFieldErrors, parseApiError } from "@/api/errors";
+import { getRetryAfterSeconds, mapApiFieldErrors, parseApiError } from "@/api/errors";
+import { useResendCountdown } from "@/hooks/useResendCountdown";
 import {
   normalizeWebsite,
   validateOtpCode,
@@ -544,7 +545,15 @@ function VerifyStep({
   const [otpError, setOtpError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const resend = useResendCountdown(60);
   const otpInputs = useRef<Array<HTMLInputElement | null>>([]);
+
+  // The OTP was sent during registration, just before this step shows, so the
+  // resend cooldown starts immediately.
+  useEffect(() => {
+    resend.start(60);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const otpValue = otp.join("");
 
@@ -575,11 +584,15 @@ function VerifyStep({
   };
 
   const handleResend = async () => {
+    if (resend.active) return;
     setIsResending(true);
     try {
       await organizerService.resendOtp({ email: email.trim() });
       toastSuccess("A new OTP has been sent to your email.");
+      resend.start(60);
     } catch (err) {
+      const retry = getRetryAfterSeconds(err);
+      if (retry) resend.start(retry);
       toastError(parseApiError(err).message);
     } finally {
       setIsResending(false);
@@ -647,11 +660,11 @@ function VerifyStep({
         Didn't receive code?{" "}
         <button
           type="button"
-          disabled={isResending}
+          disabled={isResending || resend.active}
           onClick={handleResend}
           className="text-primary font-semibold disabled:opacity-50"
         >
-          {isResending ? "Sending..." : "Resend"}
+          {isResending ? "Sending..." : resend.active ? `Resend in ${resend.remaining}s` : "Resend"}
         </button>{" "}
         ·{" "}
         <button type="button" onClick={onBack} className="text-primary font-semibold">

@@ -11,7 +11,8 @@ import jwt from 'jsonwebtoken';
 import { buildEventStats } from '../services/eventStatsService';
 import { ensureOrganizerStatusColumns } from '../utils/schemaHelpers';
 import { generateNumericOtp } from '../utils/otp';
-import { getOtpExpiresAt } from '../services/otpConfig';
+import { getOtpExpiresAt, OTP_RESEND_COOLDOWN_SECONDS } from '../services/otpConfig';
+import { assertResendCooldown } from '../services/otpResend';
 import { getJwtSecret } from '../utils/jwtSecret';
 import {
     PAYMENT_METHODS,
@@ -56,13 +57,14 @@ export const registerOrganizer = asyncHandler(async (req: Request, res: Response
         }
 
         organizerId = existing[0].id;
+        await assertResendCooldown('organizers', 'id', organizerId);
         await query(
-            'UPDATE organizers SET name = ?, company_name = ?, company_website = ?, otp = ?, otp_expires_at = ? WHERE id = ?',
+            'UPDATE organizers SET name = ?, company_name = ?, company_website = ?, otp = ?, otp_expires_at = ?, otp_sent_at = NOW() WHERE id = ?',
             [name, company_name, company_website, otp, otp_expires_at, organizerId]
         );
     } else {
         const [result] = await query(
-            'INSERT INTO organizers (name, email, company_name, company_website, otp, otp_expires_at, status, payment_status, account_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO organizers (name, email, company_name, company_website, otp, otp_expires_at, otp_sent_at, status, payment_status, account_status) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)',
             [name, email, company_name, company_website, otp, otp_expires_at, 'active', 'pending', 'pending']
         );
         organizerId = (result as any).insertId;
@@ -85,18 +87,20 @@ export const organizerLogin = asyncHandler(async (req: Request, res: Response) =
         throw new AppError('Organizer not found. Please register first.', 404);
     }
 
+    await assertResendCooldown('organizers', 'id', rows[0].id);
+
     const otp = generateNumericOtp(6);
     const otp_expires_at = await getOtpExpiresAt();
 
     await query(
-        'UPDATE organizers SET otp = ?, otp_expires_at = ? WHERE email = ?',
+        'UPDATE organizers SET otp = ?, otp_expires_at = ?, otp_sent_at = NOW() WHERE email = ?',
         [otp, otp_expires_at, email]
     );
 
     // Send OTP via email (fire-and-forget to avoid blocking response)
     sendOtpEmail(email, otp);
 
-    return successResponse(res, 'Login OTP sent to your email.');
+    return successResponse(res, 'Login OTP sent to your email.', { resend_cooldown: OTP_RESEND_COOLDOWN_SECONDS });
 });
 
 /**
@@ -267,18 +271,21 @@ export const resendOtp = asyncHandler(async (req: Request, res: Response) => {
         throw new AppError('Organizer not found', 404);
     }
 
+    await assertResendCooldown('organizers', 'id', rows[0].id);
+
     const otp = generateNumericOtp(6);
 
     const otp_expires_at = await getOtpExpiresAt();
 
     await query(
-        'UPDATE organizers SET otp = ?, otp_expires_at = ? WHERE email = ?',
+        'UPDATE organizers SET otp = ?, otp_expires_at = ?, otp_sent_at = NOW() WHERE email = ?',
         [otp, otp_expires_at, email]
     );
 
-    await sendOtpEmail(email, otp);
+    // Fire-and-forget: SMTP can block and exceed the client timeout.
+    sendOtpEmail(email, otp);
 
-    return successResponse(res, 'OTP resent successfully.');
+    return successResponse(res, 'OTP resent successfully.', { resend_cooldown: OTP_RESEND_COOLDOWN_SECONDS });
 });
 
 export const createBooking = asyncHandler(async (req: Request, res: Response) => {

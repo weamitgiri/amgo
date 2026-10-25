@@ -15,6 +15,13 @@ export const DEFAULT_OTP_EXPIRY_SECONDS = 300; // 5 minutes
 export const MIN_OTP_EXPIRY_SECONDS = 60; // 1 minute
 export const MAX_OTP_EXPIRY_SECONDS = 600; // 10 minutes
 
+/**
+ * Minimum gap between OTP requests for the same account — a fixed 60-second
+ * resend cooldown, separate from the OTP expiry. Prevents resend spam and
+ * duplicate OTP generation from repeated clicks or concurrent requests.
+ */
+export const OTP_RESEND_COOLDOWN_SECONDS = 60;
+
 // Re-read from the DB at most this often, so an admin change takes effect within
 // the window without a query on every single OTP generated.
 const CACHE_TTL_MS = 30 * 1000;
@@ -52,6 +59,19 @@ export async function getOtpExpirySeconds(): Promise<number> {
 export async function getOtpExpiresAt(): Promise<string> {
     const seconds = await getOtpExpirySeconds();
     return moment().add(seconds, 'seconds').format('YYYY-MM-DD HH:mm:ss');
+}
+
+/**
+ * Seconds still remaining on the resend cooldown given when the last OTP was
+ * sent (a MySQL datetime string, Date, or null). 0 means a resend is allowed.
+ */
+export function resendCooldownRemaining(lastSentAt: string | Date | null | undefined): number {
+    if (!lastSentAt) return 0;
+    const last = moment(lastSentAt);
+    if (!last.isValid()) return 0;
+    const elapsed = moment().diff(last, 'seconds');
+    const remaining = OTP_RESEND_COOLDOWN_SECONDS - elapsed;
+    return remaining > 0 ? remaining : 0;
 }
 
 /** Test helper: drop the cached value so the next read hits the DB. */

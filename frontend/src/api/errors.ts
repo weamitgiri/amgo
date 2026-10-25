@@ -65,6 +65,18 @@ export function parseApiError(
   return { message, fieldErrors };
 }
 
+/**
+ * Seconds to wait from a 429 cooldown response (errorData.retry_after), or null.
+ */
+export function getRetryAfterSeconds(error: unknown): number | null {
+  const data = (error as { data?: unknown })?.data;
+  if (data && typeof data === "object" && "retry_after" in data) {
+    const n = Number((data as { retry_after?: unknown }).retry_after);
+    if (Number.isFinite(n) && n > 0) return Math.ceil(n);
+  }
+  return null;
+}
+
 /** Map API field names to form field keys */
 export function mapApiFieldErrors(
   apiErrors: Record<string, string>,

@@ -28,6 +28,18 @@ router.post(
     participantController.participantJoin
 );
 
+// Resend OTP (dedicated; enforces the 60s cooldown)
+router.post(
+    '/resend-otp',
+    otpRequestRateLimit,
+    [
+        body('booking_id').isNumeric().withMessage('Booking ID is required'),
+        body('email').isEmail().withMessage('Valid email is required'),
+    ],
+    validateRequest,
+    participantController.resendParticipantOtp
+);
+
 // Step 2: Verify OTP & Assign Group
 router.post(
     '/verify-otp',
