@@ -11,7 +11,7 @@ import { PillButton } from "@/components/PillButton";
 import { useGames, usePackages } from "@/hooks/usePublicContent";
 import type { ApiActivity, ApiPackage } from "@/api/types/public";
 import { resolveMediaUrl } from "@/utils/media";
-import { homeSeoLinks } from "@/seo/homeSeo";
+import { homeSeoLinks, homeSeoMeta, homeSeoScripts } from "@/seo/homeSeo";
 import hero from "@/assets/hero-bg-home.jpg";
 import mystery from "@/assets/mystery.jpg";
 import cook from "@/assets/cook.jpg";
@@ -33,13 +33,9 @@ const FALLBACK_IMAGES = [mystery, cook];
 
 export const Route = createFileRoute("/")({
   head: () => ({
-    meta: [
-      { title: "Zoventro — Interactive Team Engagement Platform" },
-      { name: "description", content: "Turn team activities into interactive experiences. Built for HR, designed for real engagement. Setup in minutes, no IT required." },
-      { property: "og:title", content: "Zoventro — Interactive Team Engagement" },
-      { property: "og:description", content: "Boost engagement, collaboration and energy without complicated setups." },
-    ],
+    meta: homeSeoMeta,
     links: homeSeoLinks,
+    scripts: homeSeoScripts,
   }),
   component: Home,
 });
