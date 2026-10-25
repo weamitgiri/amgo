@@ -121,6 +121,32 @@ class StoreActivityGameRequest extends FormRequest
             $clean['full_story'] = $filtered;
         }
 
+        // Role strategy cards: drop a card with no heading and no body text, and
+        // blank out an editor body that has no real text (e.g. "<p><br></p>") so
+        // the required rule below catches it.
+        if (is_array($roles = $this->input('roles'))) {
+            foreach ($roles as $r => $role) {
+                if (!is_array($role) || !is_array($role['strategy_cards'] ?? null)) {
+                    continue;
+                }
+                $cards = [];
+                foreach ($role['strategy_cards'] as $c => $card) {
+                    if (!is_array($card)) {
+                        continue;
+                    }
+                    $hasBody = trim(html_entity_decode(strip_tags((string) ($card['body_content'] ?? '')))) !== '';
+                    if (!$hasBody) {
+                        $card['body_content'] = '';
+                    }
+                    if (trim((string) ($card['heading'] ?? '')) !== '' || $hasBody) {
+                        $cards[$c] = $card;
+                    }
+                }
+                $roles[$r]['strategy_cards'] = $cards;
+            }
+            $clean['roles'] = $roles;
+        }
+
         if (!empty($clean)) {
             $this->merge($clean);
         }
@@ -161,7 +187,8 @@ class StoreActivityGameRequest extends FormRequest
             'photos' => 'nullable|array|max:5',
             'photos.*.photo_number' => 'required|integer|min:1|max:5',
             'photos.*.label' => 'required|string|max:150',
-            'photos.*.image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            // A saved photo needs an image; on edit the already-saved one counts.
+            'photos.*.image' => 'required_without:photos.*.existing_image|image|mimes:jpeg,jpg,png,webp|max:2048',
 
             'roles' => 'required|array|size:5',
             'roles.*.role_type' => 'required|string|distinct',
@@ -178,9 +205,9 @@ class StoreActivityGameRequest extends FormRequest
             'roles.*.keep_in_mind.*' => 'nullable|string|max:255',
             'roles.*.strategy_cards' => 'nullable|array|max:4',
             'roles.*.strategy_cards.*.card_number' => 'required_with:roles.*.strategy_cards|integer|min:1|max:4',
-            'roles.*.strategy_cards.*.heading' => 'nullable|string|max:150',
+            'roles.*.strategy_cards.*.heading' => 'required|string|max:150',
             'roles.*.strategy_cards.*.heading_color' => 'nullable|string|max:20',
-            'roles.*.strategy_cards.*.body_content' => 'nullable|string',
+            'roles.*.strategy_cards.*.body_content' => 'required|string',
 
             'investigator_cards' => 'nullable|array|max:4',
             'investigator_cards.*.card_number' => 'required|integer|min:1|max:4',
@@ -273,6 +300,9 @@ class StoreActivityGameRequest extends FormRequest
             'timeline.*.event.max' => 'A timeline event description may not be longer than 255 characters.',
 
             'photos.*.label.required' => 'Every investigation photo needs a label.',
+            'photos.*.image.required_without' => 'Every investigation photo needs an image.',
+            'roles.*.strategy_cards.*.heading.required' => 'Each strategy card needs a heading.',
+            'roles.*.strategy_cards.*.body_content.required' => 'Each strategy card needs some text.',
             'photos.*.label.max' => 'A photo label may not be longer than 150 characters.',
 
             'roles.required' => 'Please add all 5 game roles.',

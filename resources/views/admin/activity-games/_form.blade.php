@@ -613,18 +613,27 @@
             if (typeof Validator !== 'undefined') Validator.refreshNav();
         }
 
+        // Strategy card body editors. Only textareas that don't have an editor yet
+        // are set up, so a body is never initialised twice (which breaks it) and
+        // saved cards rendered by the server get their editor too.
+        const SIMPLE_EDITOR_OPTIONS = {
+            height: 100,
+            toolbar: [['style', ['bold', 'underline']], ['para', ['ul', 'ol']]]
+        };
+        function initSimpleEditors($scope) {
+            $scope.find('textarea.summernote-simple').addBack('textarea.summernote-simple').each(function () {
+                if (!$(this).next('.note-editor').length) $(this).summernote(SIMPLE_EDITOR_OPTIONS);
+            });
+        }
+        initSimpleEditors($('#roles-container'));
+
         // Loads one role form of the given type at the next index.
         function loadRoleForm(type) {
             const count = $('#roles-container .role-item').length;
             return $.get(`{{ route('admin.activity-games.get-role-form', $activity->id) }}?type=${encodeURIComponent(type)}&index=${count}`, function(html) {
-                $('#roles-container').append(html);
+                const $role = $(html).appendTo('#roles-container');
                 updateRoleCount();
-
-                // Initialize summernote for dynamic strategy cards in the new role
-                $('.summernote-simple').summernote({
-                    height: 100,
-                    toolbar: [['style', ['bold', 'underline']], ['para', ['ul', 'ol']]]
-                });
+                initSimpleEditors($role);
             });
         }
 
@@ -654,7 +663,11 @@
 
         // Event listeners for dynamic items
         $(document).on('click', '.remove-item', function() {
-            $(this).closest('.row, .border').fadeOut(300, function() {
+            // A strategy card's remove button sits inside the card's own .row, so
+            // target the whole card — otherwise an empty card shell is left behind
+            // and still counts toward the 4-card limit.
+            const $card = $(this).closest('.strategy-card-item');
+            ($card.length ? $card : $(this).closest('.row, .border')).fadeOut(300, function() {
                 $(this).remove();
                 updateRoleCount();
             });
@@ -876,13 +889,10 @@
                         </div>
                     </div>
                 </div>`;
-            container.append(html);
-            
-            // Initialize summernote for the new strategy card
-            $('.summernote-simple').last().summernote({
-                height: 100,
-                toolbar: [['style', ['bold', 'underline']], ['para', ['ul', 'ol']]]
-            });
+            const $card = $(html).appendTo(container);
+
+            // Initialize summernote for the new strategy card (this card only)
+            initSimpleEditors($card);
         });
 
         // Image type/size validation on selection (inline, beside the field) is
@@ -1073,6 +1083,8 @@
                         if (!lb) return;
                         if (!lb.value.trim()) { if (hasFile || hasExisting) push(lb, 'Please add a label for this photo.'); }
                         else { const m = maxProblem(lb); if (m) push(lb, m); }
+                        // A saved photo needs an image (the column is required).
+                        if (lb.value.trim() && !hasFile && !hasExisting && fileEl) push(fileEl, 'Please choose an image for this photo.');
                     });
                     $('#step2 input[name^="quick_facts"]').each(function () { const m = maxProblem(this); if (m) push(this, m); });
                 }
@@ -1084,6 +1096,18 @@
                         const nm = $(this).find('input[name$="[character_name]"]')[0];
                         if (nm) { if (!nm.value.trim()) push(nm, 'Character name is required.'); else { const m = maxProblem(nm); if (m) push(nm, m); } }
                         $(this).find('input[name$="[subtitle]"], input[name$="[footer_text]"]').each(function () { const m = maxProblem(this); if (m) push(this, m); });
+                        // Strategy cards: a card that has anything in it needs both a
+                        // heading and body text (fully empty cards are dropped on save).
+                        $(this).find('.strategy-card-item').each(function () {
+                            const hd = $(this).find('input[name$="[heading]"]')[0];
+                            const $bd = $(this).find('textarea[name$="[body_content]"]');
+                            if (!hd || !$bd.length) return;
+                            const hasHeading = !!hd.value.trim(), hasBody = !!richText($bd);
+                            if (!hasHeading && !hasBody) return;
+                            if (!hasHeading) push(hd, 'Strategy card heading is required.');
+                            else { const m = maxProblem(hd); if (m) push(hd, m); }
+                            if (!hasBody) push($bd[0], 'Strategy card text is required.');
+                        });
                     });
                 }
 
