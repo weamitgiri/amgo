@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zoventro Readiness Audit</title>
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--ink:#1b1f24;--muted:#5b6470;--line:#dfe3e8;--accent:#2457c5;
+  --p0:#b3261e;--p0bg:#fde8e6;--p1:#b45309;--p1bg:#fdf0dc;--p2:#8a6d00;--p2bg:#fbf5d6;
+  --p3:#2f6f4e;--p3bg:#e2f3ea;--info:#44546a;--infobg:#e7ecf2;--code:#eef1f5;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#111418;--panel:#1a1e24;--ink:#e6e9ee;--muted:#9aa4b1;--line:#2c323b;--accent:#7aa2ff;
+    --p0:#ff8a80;--p0bg:#3a1714;--p1:#ffb86b;--p1bg:#38250f;--p2:#e8cf63;--p2bg:#332c0c;
+    --p3:#7fd3a6;--p3bg:#12301f;--info:#b4c0d0;--infobg:#222a35;--code:#232933;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+header h1{font-size:26px;margin:0 0 4px}
+header p{margin:2px 0;color:var(--muted)}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:8px 0;margin:16px 0}
+nav a{display:inline-block;margin:2px 10px 2px 0;color:var(--accent);text-decoration:none;font-size:14px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:18px 0}
+h2{font-size:20px;margin:0 0 10px}
+h3{font-size:16px;margin:16px 0 6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--panel)}
+.card .n{font-size:28px;font-weight:700}
+.card .l{color:var(--muted);font-size:13px}
+.verdict{border-left:6px solid var(--p0);background:var(--p0bg);padding:14px 16px;border-radius:8px;margin-top:14px}
+.verdict b{color:var(--p0)}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.P0{color:var(--p0);background:var(--p0bg)}.P1{color:var(--p1);background:var(--p1bg)}
+.P2{color:var(--p2);background:var(--p2bg)}.P3{color:var(--p3);background:var(--p3bg)}
+.INFO{color:var(--info);background:var(--infobg)}
+.PASS{color:var(--p3);background:var(--p3bg)}.FAIL{color:var(--p0);background:var(--p0bg)}
+.PARTIAL{color:var(--p2);background:var(--p2bg)}.NT{color:var(--info);background:var(--infobg)}
+.BLOCKED{color:var(--p1);background:var(--p1bg)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:8px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:13px}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:var(--code);padding:1px 5px;border-radius:4px;word-break:break-word}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 12px}
+.filters label{font-size:13px;color:var(--muted)}
+select,input[type=search]{font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.chips button{font:inherit;font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:3px 10px;margin-right:4px;cursor:pointer;background:var(--panel);color:var(--ink)}
+.chips button[aria-pressed=true]{outline:2px solid var(--accent)}
+details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:8px 0;background:var(--panel)}
+details summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+details summary::-webkit-details-marker{display:none}
+details summary .t{font-weight:600}
+details summary .c{color:var(--muted);font-size:13px}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin-top:10px;font-size:14px}
+.kv div:nth-child(odd){color:var(--muted)}
+.muted{color:var(--muted)}
+ul{margin:6px 0 6px 20px;padding:0}
+li{margin:3px 0}
+ol li{margin:6px 0}
+.count{color:var(--muted);font-size:13px}
+.tablewrap{overflow-x:auto}
+@media (max-width:640px){.kv{grid-template-columns:1fr}.kv div:nth-child(odd){margin-top:6px}}
+@media print{nav,.filters{display:none}details{break-inside:avoid}details:not([open]) > *:not(summary){display:block}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Zoventro: Production Readiness Audit</h1>
+  <p>Repository: <code>/opt/homebrew/var/www/p</code> (branch <code>main</code>, HEAD <code>49795ca</code>). Audit date: 2026-10-25.</p>
+  <p>Method: read-only code review, read-only MySQL queries (SELECT/SHOW/DESCRIBE inside a READ ONLY session) and safe existing tests. A few unauthenticated GET and socket checks were run against the <b>local dev</b> services. Nothing was changed, and the live server was not touched.</p>
+  <p>This report holds no secret values, tokens, passwords or personal data. Where a secret was found, only its location and the fact that it exists are given.</p>
+</header>
+
+<nav aria-label="Sections">
+  <a href="#summary">Summary</a><a href="#register">Issue register</a><a href="#security">Security</a>
+  <a href="#laravel">Laravel</a><a href="#frontend">Frontend</a><a href="#node">Node API</a><a href="#mysql">MySQL</a>
+  <a href="#tests">Tests</a><a href="#e2e">E2E flows</a><a href="#perf">Performance</a><a href="#gaps">Gaps</a>
+  <a href="#plan">Remediation</a><a href="#checklist">Checklist</a><a href="#verdict">Verdict</a>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <div class="cards" id="sevCards"></div>
+  <div class="cards" style="margin-top:12px">
+    <div class="card"><div class="n" id="cConfirmed">0</div><div class="l">Confirmed findings</div></div>
+    <div class="card"><div class="n" id="cRepro">0</div><div class="l">Reproduced locally (read-only)</div></div>
+    <div class="card"><div class="n">11</div><div class="l">Test suites / checks run</div></div>
+    <div class="card"><div class="n">4</div><div class="l">Of those failing (1 more partial)</div></div>
+  </div>
+  <div class="verdict">
+    <b>Go-live recommendation: NOT READY.</b> Organizer and participant sign-in currently accept a fixed one-time passcode (OTP). Participant names and emails can be read without authentication over Socket.IO. Booking details, including the invitation link, are served without authentication. A JWT signing secret sits in a tracked file. Each of these blocks release on its own. See <a href="#verdict">Verdict</a>.
+  </div>
+  <h3>Scope covered</h3>
+  <ul>
+    <li><b>Laravel admin</b> at the repo root: routes, middleware, MenuPermission RBAC, uploads, the exception handler, and the legacy <code>/api/v1</code> controllers.</li>
+    <li><b>Node/Express TypeScript API</b> in <code>apis/src</code>: auth, routes, controllers, socket handler, rate limits, error handler, retention and the payments path.</li>
+    <li><b>TanStack Start React frontend</b> in <code>frontend/src</code>: HTML sinks, token storage, route guards, API base URL and SEO.</li>
+    <li><b>MySQL dev database</b> <code>zoventro</code>: 75 InnoDB tables, keys, indexes, uniqueness and retention counts (aggregates only).</li>
+  </ul>
+</section>
+
+<section id="register">
+  <h2>Issue register</h2>
+  <div class="filters">
+    <div class="chips" id="sevChips" role="group" aria-label="Filter by priority"></div>
+    <label>Component <select id="compSel"><option value="">All</option></select></label>
+    <label>Status <select id="statSel"><option value="">All</option><option>Confirmed</option><option>Suspected</option><option>Unverified</option></select></label>
+    <input type="search" id="q" placeholder="Search title, file, text" aria-label="Search findings">
+    <span class="count" id="shown"></span>
+  </div>
+  <div id="list"></div>
+</section>
+
+<section id="security">
+  <h2>Security review (OWASP-style)</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Category</th><th>Result</th><th>Findings</th></tr></thead>
+    <tbody id="owasp"></tbody>
+  </table></div>
+  <p class="muted">"Result" here is the audit outcome for that category on the code reviewed, not a penetration test result.</p>
+</section>
+
+<section id="laravel">
+  <h2>Laravel admin and backend</h2>
+  <ul>
+    <li><b>Routing.</b> <code>bootstrap/app.php</code> loads <code>routes/web.php</code>, <code>routes/admin.php</code> (prefix <code>admin</code>) and <code>routes/api.php</code> (prefix <code>api</code>). The admin group uses <code>auth:admin</code> plus <code>throttle:100,0.2</code>.</li>
+    <li><b>RBAC.</b> <code>MenuPermission::checkRoutePermissions()</code> is called only in AdminController, RoleController, SubAdminController and UsersController, and DatabaseExportController has its own check. The other 20 admin controllers (settings, organizers, payments, API logs, CMS, blogs, games, music, Cook &amp; Create) have no permission check, so every logged-in admin-guard user (usertype 0, 1 or 2) can reach them. See ZV-011.</li>
+    <li><b>CSRF.</b> No <code>validateCsrfTokens(except: ...)</code> exclusions were found, so the default web-group CSRF protection applies to admin POST routes. PASS on code review.</li>
+    <li><b>Mass assignment.</b> No model uses <code>$guarded = []</code>. <code>User</code> has a broad <code>$fillable</code> that includes <code>usertype</code> and <code>role_id</code>. No direct <code>$request-&gt;all()</code> into <code>User::create</code> was traced in this audit (not exhaustively verified).</li>
+    <li><b>Uploads.</b> MIME and size are validated, but stored names reuse the client-supplied extension (ZV-018). SVG is allowed for the profile image (ZV-019).</li>
+    <li><b>Session.</b> <code>Auth::guard('admin')-&gt;login()</code> migrates the session ID through Laravel's SessionGuard, so there is no session-fixation finding. Logout invalidates and regenerates the session.</li>
+    <li><b>Debug config.</b> The dev <code>.env</code> has <code>APP_ENV=local</code>, <code>APP_DEBUG=true</code> and <code>SESSION_SECURE_COOKIE=false</code>. The production values could not be checked (BLOCKED by the rule not to touch live).</li>
+    <li><b>Legacy API.</b> <code>/api/v1/auth/*</code> and <code>/api/v1/game-join/*</code> are still routed and use a fixed OTP (ZV-005).</li>
+    <li><b>Exception handler.</b> Contains leftover <code>echo ...; die</code> branches and a reference to a missing view <code>front.front_warning</code>. An unauthenticated <code>/admin</code> request returns HTTP 500 (ZV-022, ZV-027).</li>
+  </ul>
+</section>
+
+<section id="frontend">
+  <h2>Frontend (TanStack Start React)</h2>
+  <ul>
+    <li><b>HTML sinks.</b> 11 <code>dangerouslySetInnerHTML</code> uses: <code>routes/game.tsx</code> (3), <code>join.$linkToken.tsx</code> (3), <code>policy.$slug.tsx</code>, <code>index.tsx</code>, <code>cookandcreate/game.tsx</code>, <code>RoleRevealModal.tsx</code> and <code>summary.tsx</code>, plus the shadcn chart style tag. Every source traced is admin-authored rich text. None was traced to participant input. No sanitizer (such as DOMPurify) is used (ZV-020).</li>
+    <li><b>Token storage.</b> The organizer JWT is kept in <code>localStorage</code> (<code>lib/auth.ts:7</code>). The participant join token is in <code>sessionStorage</code> with a <code>localStorage</code> browser lock. Any script injected through the sinks above could read the JWT (ZV-034).</li>
+    <li><b>Protected routes.</b> Client-side guards exist (<code>middleware/routes.ts</code>, plus <code>beforeLoad</code> in the dashboard, groups, participants, payments, profile, notifications and hr-results routes). The real enforcement point is the API.</li>
+    <li><b>API URLs.</b> Production builds fall back to <code>http://localhost:6001</code> and <code>http://localhost/p/storage</code> when the Vite environment variables are missing (ZV-031).</li>
+    <li><b>Dev OTP toast.</b> <code>join.$linkToken.tsx:262</code> shows <code>dev_otp</code> only when <code>import.meta.env.DEV</code> is true. Correct.</li>
+    <li><b>SEO.</b> <code>src/seo/homeSeo.ts</code> sets the title, description, canonical, robots, Open Graph, Twitter and JSON-LD for the homepage. PASS on code review. There is no <code>frontend/public</code> directory, so there is no robots.txt or sitemap.xml (ZV-033).</li>
+    <li><b>Type and lint health.</b> <code>tsc --noEmit</code> reports 23 errors in 11 files. ESLint reports 3480 errors, 3443 of them prettier formatting (ZV-028).</li>
+  </ul>
+</section>
+
+<section id="node">
+  <h2>Node / Express API</h2>
+  <h3>Architecture map</h3>
+  <ul>
+    <li><b>Process.</b> One Express server (<code>src/server.ts</code>) with Socket.IO on the same HTTP server. It runs an in-process timer loop (<code>timerService</code>, <code>setInterval</code>) and the retention sweep. There is no Redis adapter, and the code warns that it must run as a single instance.</li>
+    <li><b>Organizer auth.</b> Email OTP issues an HS256 JWT valid for 24h (<code>organizerController.ts:145-154</code>). <code>authMiddleware</code> re-checks organizer status on every request. There is no server-side revocation.</li>
+    <li><b>Participant auth.</b> <code>/v1/participant/join</code> (booking_id, name, email) sends an OTP. <code>/verify-otp</code> returns a 64-hex <code>join_token</code>. <code>participantAuth</code> resolves the caller from <code>X-Participant-Token</code> and rejects a mismatched <code>participant_id</code> or route <code>group_id</code>.</li>
+    <li><b>Payments.</b> Razorpay order creation uses a server-side amount from the package price (<code>paymentService.ts:234</code>). Checkout verification uses an HMAC with <code>timingSafeEqual</code>. The webhook verifies its signature over the raw body (<code>razorpayWebhookController.ts:61</code>). PASS on code review.</li>
+    <li><b>PDFs.</b> Results PDFs (MQ per group, MQ per session, Cook &amp; Create awards) and the GST invoice are served with <code>res.download</code>. There is no <code>express.static</code> exposure of the storage folder.</li>
+    <li><b>Retention.</b> <code>retentionService.ts:149</code> purges groups with status <code>completed</code> or <code>incomplete</code> once <code>retention_purge_at</code> has passed. It nulls participant name, email and OTP, and deletes game rows.</li>
+  </ul>
+  <h3>Control checks</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Control</th><th>Result</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>SQL parameterisation</td><td><span class="badge PASS">PASS</span></td><td>All queries sampled use <code>?</code> placeholders. Interpolated identifiers in <code>groupDataCleanup.ts</code> come from hard-coded table lists. This was a sample, not an exhaustive review.</td></tr>
+      <tr><td>JWT verification</td><td><span class="badge PARTIAL">PARTIAL</span></td><td>The secret is required (<code>jwtSecret.ts</code>) and jsonwebtoken is v9. The secret is in a tracked file (ZV-004), and there is no revocation.</td></tr>
+      <tr><td>Ownership / IDOR</td><td><span class="badge FAIL">FAIL</span></td><td>Invoices, notifications, update-session and results use the organizer from the JWT. Event stats, booking details, complete-booking, create-booking and the socket rooms do not (ZV-002, 003, 008, 009).</td></tr>
+      <tr><td>CORS</td><td><span class="badge PARTIAL">PARTIAL</span></td><td>An allow-list is used, but any <code>http://localhost:*</code> origin is always accepted, and the default list hard-codes a plain-HTTP server IP (ZV-030).</td></tr>
+      <tr><td>Rate limits</td><td><span class="badge FAIL">FAIL</span></td><td>OTP limiters are skipped outside production, and <code>trust proxy</code> is not set behind nginx (ZV-013).</td></tr>
+      <tr><td>Body size limits</td><td><span class="badge PASS">PASS</span></td><td><code>express.json()</code> keeps the default 100 kB limit. No large-upload endpoint exists on the API.</td></tr>
+      <tr><td>Error leakage</td><td><span class="badge PARTIAL">PARTIAL</span></td><td>Stack traces are hidden in production, but raw <code>err.message</code>, including DB driver messages, is returned for HTTP 500 (ZV-017).</td></tr>
+      <tr><td>Socket auth</td><td><span class="badge FAIL">FAIL</span></td><td>No handshake auth on any event (ZV-002, ZV-014).</td></tr>
+      <tr><td>Participant join / browser lock</td><td><span class="badge PARTIAL">PARTIAL</span></td><td>The lock exists and the token is preserved across rejoin, but joining needs only a numeric booking_id (ZV-010) and the OTP is fixed (ZV-001).</td></tr>
+      <tr><td>Security headers</td><td><span class="badge PASS">PASS</span></td><td><code>helmet()</code> is enabled, with CORP set to cross-origin.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="mysql">
+  <h2>MySQL (dev database, read-only)</h2>
+  <ul>
+    <li>75 tables, all InnoDB, all with a primary key, and 48 foreign-key constraints.</li>
+    <li><b>Unique keys present:</b> <code>organizers.email</code>, <code>users.email</code>, <code>users.username</code>, <code>organizer_bookings.invitation_link</code>, <code>game_participants.join_token</code>, <code>payments.gateway_order_id</code>, <code>payments.gateway_payment_id</code>, <code>votes(reference_id, reference_type, voter_id)</code> and <code>cc_ratings(voting_participant_id, rated_group_id)</code>.</li>
+    <li><b>Unique keys missing</b> where the code assumes one row: <code>game_participants(booking_id, email)</code>, <code>participant_sessions(group_id, participant_id)</code> and <code>organizer_billings(booking_id)</code>. There are 0 duplicates today (ZV-023).</li>
+    <li><b>Indexes on hot lookup columns are present:</b> <code>game_participants.booking_id</code>, <code>participant_sessions.group_id</code> and <code>participant_id</code>, <code>timers(group_id, is_active, expires_at)</code>, <code>questions.group_id</code>, <code>votes.group_id</code> and <code>payments.booking_id</code>.</li>
+    <li><b>Types:</b> <code>payments.amount</code> is DECIMAL(12,2) NOT NULL (good). <code>game_participants.email</code> is nullable by design (retention nulls it). <code>organizer_bookings.invitation_link</code> is nullable.</li>
+    <li><b>PII retention:</b> 163 participant rows still hold an email. 133 of them belong to bookings scheduled more than 7 days ago whose groups are still <code>active</code> (71) or <code>waiting</code> (62), plus 1 with no group. The sweep never selects those groups (ZV-015). 23 groups keep a Cook &amp; Create awards PDF path permanently (ZV-024).</li>
+    <li><b>Invoice settings:</b> <code>invoice_seller_gstin</code>, address, city, state and state code are absent from <code>settings</code>, so invoices fall back to "PROVISIONAL RECEIPT" (ZV-012b).</li>
+    <li><b>DB account:</b> both the Laravel and Node dev configs connect as the MySQL <code>root</code> user (ZV-025).</li>
+    <li><b>Unbounded queries (from code):</b> <code>buildEventStats</code> returns every participant of a booking. This is bounded by the package size, not paginated. Admin lists use pagination.</li>
+  </ul>
+</section>
+
+<section id="tests">
+  <h2>Tests actually run</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Suite / check</th><th>Result</th><th>Detail</th></tr></thead>
+    <tbody id="testRows"></tbody>
+  </table></div>
+  <p class="muted">No coverage tool is configured, so no coverage percentage is given.</p>
+  <h3>Coverage gaps (no automated test found)</h3>
+  <ul>
+    <li>Node API: no HTTP or integration tests for any route, auth middleware, participantAuth, the socket handler, payments, the webhook, PDF generation or the retention purge. Only 2 unit-test files exist, and neither is wired to <code>npm test</code>.</li>
+    <li>Frontend: no test runner or test files.</li>
+    <li>Laravel: no tests for the login, the RBAC matrix (sub-admin access), uploads, the settings pages or the legacy <code>/api/v1</code> routes.</li>
+    <li>No CI configuration was found in the repo, so nothing blocks a merge when tests fail.</li>
+    <li>phpunit points at the shared dev MySQL (SQLite is commented out), which makes data-writing tests unsafe to run.</li>
+  </ul>
+</section>
+
+<section id="e2e">
+  <h2>End-to-end flows</h2>
+  <p class="muted">No in-browser E2E run was possible within the read-only rules. Every flow below was traced through the code only, unless stated.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Flow</th><th>Result</th><th>Observations</th></tr></thead>
+    <tbody id="e2eRows"></tbody>
+  </table></div>
+</section>
+
+<section id="perf">
+  <h2>Performance and reliability (code review only, not measured)</h2>
+  <ul>
+    <li><b>Single instance only.</b> Socket rooms, presence and the timer loop live in process memory (<code>server.ts</code> comment, <code>timerService.ts:32,51</code>). The API cannot scale horizontally or survive a restart mid-game without the timer recovery logic. Run pm2 in fork mode with <code>-i 1</code>.</li>
+    <li><b>DB pool.</b> <code>connectionLimit</code> defaults to 10 with <code>queueLimit: 0</code> (unbounded queue) in <code>config/db.ts:45-46</code>. Under a burst, requests queue without a limit instead of failing fast.</li>
+    <li><b>Per-request schema checks.</b> <code>authMiddleware</code> calls <code>ensureOrganizerStatusColumns()</code> on every authenticated request. If that is not memoised, it adds a query per request (not measured).</li>
+    <li><b>Logging.</b> <code>morgan('dev')</code> runs in every environment (<code>server.ts:83</code>). There is no log rotation config in the repo for <code>apis/logs</code>.</li>
+    <li><b>PDF generation</b> runs in the request or timer path with pdfkit, synchronously in the API process. Large groups could block the event loop briefly (not measured).</li>
+    <li><b>Stale dist.</b> The committed <code>apis/dist</code> is stale, and production runs <code>dist/</code>. Every deploy must rebuild (see the deploy note: three separate builds).</li>
+    <li><b>Rate limiter keyed on the proxy IP</b> behind nginx could throttle all users together (ZV-013).</li>
+  </ul>
+</section>
+
+<section id="gaps">
+  <h2>Missing tests and unverified areas</h2>
+  <ul>
+    <li><b>Production configuration</b> (nginx docroot, <code>.env</code> values, the JWT secret, <code>APP_DEBUG</code>, <code>NODE_ENV</code>, the DB user, TLS, cookie flags): BLOCKED. The rule is not to touch the live server. The only evidence is the repo's own setup notes (<code>setupserver.html</code>).</li>
+    <li><b>Whether the GitHub remote is private</b>, and whether historical commits containing keys and <code>.env</code> files were pushed: UNVERIFIED.</li>
+    <li><b>Dependency vulnerability audit</b> (<code>npm audit</code>, <code>composer audit</code>): NOT TESTED. Both need network calls to the package registries.</li>
+    <li><b>Full browser E2E</b> of both games, payment checkout (Razorpay test mode), invoice and PDF downloads: NOT TESTED.</li>
+    <li><b>Mutating reproductions</b> (dev advance, complete-booking, OTP login, socket leave): NOT RUN, because they write data or send email. Those findings are confirmed from the code only.</li>
+    <li><b>Frontend production build</b>: NOT TESTED, because it writes <code>frontend/dist</code>.</li>
+    <li><b>Laravel AdminPaymentModuleTest</b>: NOT RUN. It creates rows in the shared dev DB and removes them in <code>tearDown</code> without a transaction, and it exercises mark-paid.</li>
+  </ul>
+</section>
+
+<section id="plan">
+  <h2>Remediation plan (priority order)</h2>
+  <ol id="planList"></ol>
+</section>
+
+<section id="checklist">
+  <h2>Pre-release checklist</h2>
+  <ul id="checkList" style="list-style:none;margin-left:0"></ul>
+</section>
+
+<section id="verdict">
+  <h2>Final go-live recommendation</h2>
+  <div class="verdict"><b>NOT READY</b></div>
+  <p>The audit found <span id="vP0"></span> P0 and <span id="vP1"></span> P1 issues. The P0 items are: a fixed OTP on every sign-in path (organizer and participant, in both Node and Laravel); unauthenticated reads of participant PII and booking invitation links; and a JWT secret committed to version control. Each of these alone lets an outsider take over organizer accounts or join and read games.</p>
+  <p>After the P0 and P1 items are fixed and re-verified (the remediation steps 1 to 12 below), the status could move to "READY AFTER REMEDIATION". That also needs the production configuration to be checked against the unverified items above, and at least one full browser E2E run of both games and checkout.</p>
+</section>
+
+<p class="muted" style="text-align:center;margin-top:28px">Generated by a read-only audit session. No source, config, dependency or database data was modified.</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+var F = [
+{id:"ZV-001",sev:"P0",comp:"Node API",title:"OTP generator returns a fixed code for every organizer and participant sign-in",
+loc:"apis/src/utils/otp.ts:18-19",
+evidence:"generateNumericOtp() returns a constant before the CSPRNG lines run. A comment marks it as temporary test code (introduced in commit 81322e1, 2026-09-04). It is used by organizer register, login and resend (organizerController.ts:42, 87, 269) and by participant join (participantController.ts:139). The repo's own test tests/security/otp.test.ts fails 3 of 5 checks, including 'is not a constant'. The compiled apis/dist/utils/otp.js contains the same constant.",
+impact:"Anyone who knows an organizer's email can sign in as that organizer (bookings, billing, invoices, participant results). Anyone can verify as any participant email on a booking and receive that participant's join token.",
+likelihood:"High. The value is trivially guessable and appears in source and comments.",
+fix:"Remove the early return so the crypto.randomInt path runs. Add npm test running tests/security/otp.test.ts to the build or CI gate. Rebuild dist before deploy.",
+verify:"Run 'npm run test:security' and check all 5 checks pass. Then request two OTPs for a test organizer on dev and confirm they differ.",
+status:"Confirmed",repro:"Yes (unit test fails); endpoint login not exercised because it sends email"},
+
+{id:"ZV-002",sev:"P0",comp:"Node API",title:"Socket.IO organizer dashboard room returns participant names and emails without authentication",
+loc:"apis/src/socket/socketHandler.ts:207-224",
+evidence:"The 'join_organizer_dashboard' handler joins room organizer_{bookingId} for any client-supplied bookingId and emits buildEventStats(bookingId) immediately. There is no handshake or token check anywhere in setupSocketHandlers. A local read-only check connected with no credentials and received event_stats_updated with keys participants and recent_participants, each holding id, name, email, joined_at and group fields (5 participants for one dev booking). Only key names were printed.",
+impact:"Unauthenticated disclosure of participant PII (names and emails) and live game progress for every booking. Booking IDs are sequential, so enumeration is simple. Later organizer_notification events for that room are also received.",
+likelihood:"High. It needs only a socket client.",
+fix:"Require auth in the Socket.IO handshake middleware (io.use): the organizer JWT for organizer rooms (and check that the booking belongs to that organizer), and the participant join token for group rooms (and check group membership). Reject any join to a room the caller does not own.",
+verify:"Connect without a token, emit join_organizer_dashboard, and expect no stats and an error. With organizer A's JWT, request organizer B's booking and expect a refusal.",
+status:"Confirmed",repro:"Yes (local dev, read-only)"},
+
+{id:"ZV-003",sev:"P0",comp:"Node API",title:"Booking details, including the invitation link and organizer contact, served without authentication",
+loc:"apis/src/routes/organizerRoutes.ts:156-159; apis/src/controllers/organizerController.ts:340-376",
+evidence:"GET /v1/organizer/booking/:booking_id has no auth middleware. The query returns invitation_link, organizer_name, organizer_email, company_name, package and price for any id. A local GET returned success with exactly those keys (values not printed).",
+impact:"Exposes every organizer's email and company, and the invitation link token that grants participant entry to the event. Combined with ZV-001 and ZV-010, an outsider can join any event.",
+likelihood:"High. Sequential integer ids.",
+fix:"Require authMiddleware and check ob.organizer_id equals the JWT organizer. If checkout must work before a JWT exists, issue a short-lived checkout token at OTP verification and require it here. Never return invitation_link before the booking is paid and owned.",
+verify:"An unauthenticated GET returns 401. Organizer A requesting organizer B's booking returns 403 or 404.",
+status:"Confirmed",repro:"Yes (local dev, read-only)"},
+
+{id:"ZV-004",sev:"P0",comp:"Repo / Secrets",title:"JWT signing secret in a tracked file, and private keys and env files in git history",
+loc:"apis/DB_HOST=127.0.0.1 (tracked, last changed in c0a0c4c, 2026-09-11); history: commits b1db283 and c7322d2 (amigo, clear, .env, frontend/.env, frontend/txt-env, production.txt)",
+evidence:"A tracked file whose name looks like an env line holds DB, CORS and JWT settings. A hash comparison shows its JWT_SECRET equals the current apis/.env value (values not displayed). Two OpenSSH private keys (amigo, clear), .env files and production.txt were committed earlier and removed in c7322d2, so they remain in history. The remote is a GitHub repository. Its visibility was not checked.",
+impact:"Anyone with repo access can forge organizer JWTs (if the same secret is used anywhere) and may hold SSH keys and credentials from history.",
+likelihood:"Medium to high, depending on repo visibility and how widely the repo has been shared.",
+fix:"Rotate the JWT secret, DB passwords, SMTP and Razorpay secrets, and the SSH keys found in history. Remove the tracked file, then purge history (git filter-repo) and force-push with team coordination. Add a pre-commit secret scanner.",
+verify:"git ls-files shows no env-like files, a secret scanner over the full history is clean, and old JWTs fail verification after rotation.",
+status:"Confirmed",repro:"Yes (hash match, no values shown); production secret equality is unverified"},
+
+{id:"ZV-005",sev:"P1",comp:"Laravel",title:"Legacy Laravel /api/v1 auth and game-join endpoints use a fixed OTP and have no rate limit on game-join",
+loc:"app/Http/Controllers/API/AuthController.php:32,111; app/Http/Controllers/API/GameJoinController.php:97,110; routes/api.php:27-31",
+evidence:"Both controllers set the OTP to a fixed constant (marked TEMP). game-join/join and verify-otp have no throttle. joinGame() calls updateOrCreate on game_participants and overwrites the otp and join_token of an existing participant. AuthController writes the same organizers.otp column that the Node verify-login reads. setupserver.html routes /api/* to Laravel in the documented production nginx config. The local /p/api/v1/settings route responds.",
+impact:"An outside caller can set a known OTP on any organizer row (feeding the Node login check) and break existing participants' sessions by rotating their join_token. This duplicates the Node join logic without its safeguards.",
+likelihood:"High if /api is routed in production (the docs say it is). Unverified on live.",
+fix:"Remove routes/api.php auth and game-join routes (the frontend uses the Node API), or at least delete the fixed OTP and add throttling. Drop /api from the nginx Laravel location if it is unused.",
+verify:"/api/v1/auth/login/send-otp and /api/v1/game-join/join return 404 on staging, and the frontend flows still work.",
+status:"Confirmed",repro:"Partially (routes respond locally); OTP paths not exercised"},
+
+{id:"ZV-006",sev:"P1",comp:"Node API",title:"Unauthenticated dev endpoint can start or advance any game",
+loc:"apis/src/routes/gameRoutes.ts:17; apis/src/controllers/gameEngineController.ts:310-315; apis/src/services/timerService.ts:218",
+evidence:"POST /v1/game/dev/advance/:group_id has no auth and no NODE_ENV gate. devAdvancePhase() sets the group to active, creates timers or expires the current phase.",
+impact:"Anyone can skip phases or end live games for any group id, disrupting paid events.",
+likelihood:"High once discovered, because ids are sequential.",
+fix:"Do not register this route when NODE_ENV is production, and require admin auth even in dev.",
+verify:"On a production build the route returns 404.",
+status:"Confirmed",repro:"No (mutating; not run)"},
+
+{id:"ZV-007",sev:"P1",comp:"Node API",title:"Any organizer can create, edit or delete global Cook & Create templates and ingredients",
+loc:"apis/src/routes/cookandcreate/index.ts:194-236; apis/src/controllers/cookandcreateController.ts:1033-1136",
+evidence:"The /v1/cookandcreate/admin/* routes use authMiddleware (the organizer JWT) only. The handlers run INSERT, UPDATE and DELETE on cc_game_templates and cc_ingredients with no role check.",
+impact:"Privilege escalation: one customer can change or delete content used by every customer's games.",
+likelihood:"Medium. It needs an organizer account, which ZV-001 makes trivial.",
+fix:"Remove these routes (the Laravel admin already manages this content) or protect them with an admin-only credential.",
+verify:"An organizer JWT gets 403 on every /admin/* C&C route.",
+status:"Confirmed",repro:"No (mutating; not run)"},
+
+{id:"ZV-008",sev:"P1",comp:"Node API",title:"Event stats IDOR: any organizer can read any booking's participant list",
+loc:"apis/src/controllers/organizerController.ts:217-226; apis/src/routes/organizerRoutes.ts:99",
+evidence:"getEventStats() calls buildEventStats(booking_id) with no organizer ownership check, unlike invoices and notifications (assertOrganizerBooking). An unauthenticated call correctly returns 401, but any valid JWT passes.",
+impact:"Cross-tenant disclosure of participant names and emails.",
+likelihood:"Medium.",
+fix:"Call assertOrganizerBooking(booking_id, req.user.id) before building stats.",
+verify:"Organizer A requesting B's booking stats returns 403 or 404.",
+status:"Confirmed",repro:"Partially (401 without a token verified; cross-tenant not exercised)"},
+
+{id:"ZV-009",sev:"P1",comp:"Node API",title:"create-booking and complete-booking are unauthenticated and trust a client-supplied organizer or booking",
+loc:"apis/src/routes/organizerRoutes.ts:141-190; apis/src/controllers/organizerController.ts:283, 396",
+evidence:"POST /create-booking takes organizer_id from the body and needs only that organizer to be email-verified. POST /complete-booking takes booking_id and writes billing (GST number, address) and starts payment, including COD, with no auth. Both routes lack authMiddleware.",
+impact:"An outsider can create bookings under another organizer's account, or set the billing details and payment method on someone else's pending booking. This corrupts invoices and creates fake COD orders.",
+likelihood:"Medium.",
+fix:"Require a JWT or a short-lived checkout token bound to the organizer, and derive organizer_id from it. Check booking ownership in completeBooking.",
+verify:"Requests without a token, or with another organizer's token, return 401 or 403.",
+status:"Confirmed",repro:"No (mutating; not run)"},
+
+{id:"ZV-010",sev:"P1",comp:"Node API",title:"Participant join needs only a numeric booking_id, not the invitation token",
+loc:"apis/src/controllers/participantController.ts:110-178; apis/src/routes/participantRoutes.ts (POST /join)",
+evidence:"participantJoin reads booking_id, name and email from the body and never checks the invitation link token. verify-otp likewise keys on booking_id and email.",
+impact:"The invitation link is not a real access control. Anyone can register into any event's seats (up to the package limit), and with ZV-001 can take over existing participants by email.",
+likelihood:"High.",
+fix:"Require the link token (or a signed join-link id) in join and verify-otp, resolve booking_id from it on the server, and keep the per-email OTP attempt counter.",
+verify:"Join with a valid booking_id but no or wrong link token returns 403.",
+status:"Confirmed",repro:"No (sends email; not run)"},
+
+{id:"ZV-011",sev:"P1",comp:"Laravel",title:"MenuPermission RBAC is enforced in only 5 of 25 admin controllers",
+loc:"app/Models/MenuPermission.php:17-34; routes/admin.php:41-194 (for example settings :69-79, api-logs/clear :127, organizers.destroy :157, payments mark-paid :176)",
+evidence:"checkRoutePermissions() is called only in AdminController, RoleController, SubAdminController and UsersController, with a separate check in DatabaseExportController. SettingController, OrganizerController, PaymentController, ApiLogController, CMS, Blog, FAQ, Activity, Game, Music and C&C controllers have no check. The dev DB currently has usertype 0 and 1 users only (no sub-admins).",
+impact:"Any sub-admin (usertype 2) can change site, payment and invoice settings, delete organizers, mark COD payments paid and clear API logs, whatever their role.",
+likelihood:"Low today (no sub-admins on dev), high as soon as sub-admins are created.",
+fix:"Add a route middleware that calls checkRoutePermissions(route name) for every admin route, with an explicit allow-list for dashboard and profile.",
+verify:"A feature test acting as a usertype-2 user with an empty role gets 403 on every route except dashboard and profile.",
+status:"Confirmed",repro:"No (no sub-admin account; not created)"},
+
+{id:"ZV-012",sev:"P1",comp:"Infra / Laravel",title:"Dev Apache serves the repo root: .env, apis/.env, .git/config and production.txt are downloadable",
+loc:".htaccess (repo root) with index.php at the root; setupserver.html:279-326 (documented production nginx)",
+evidence:"The repo root is the Apache docroot (/p). Its .htaccess routes only non-existent files to index.php. Local GETs returned HTTP 200 for .env, apis/.env, the tracked env-like file, production.txt, .git/config, composer.json and phpunit.xml. SSH key files returned 403 because of file permissions. Only status codes were read. The documented production nginx uses public/ and frontend/dist as roots, which would not expose these files, but this is unverified on live.",
+impact:"If any environment mirrors the dev layout, all credentials are exposed. On dev it already exposes them to the local network.",
+likelihood:"Low for production if the documented nginx is in place (unverified). Certain for dev.",
+fix:"Point the docroot at public/ for Laravel in every environment, or deny dotfiles, *.txt, .git and apis/ in the root .htaccess. Move production.txt and the deployment notes out of the repo.",
+verify:"curl -I for /.env, /.git/config and /production.txt on staging and production returns 403 or 404.",
+status:"Confirmed",repro:"Yes (dev, status codes only); production unverified"},
+
+{id:"ZV-012b",sev:"P1",comp:"Business / Invoice",title:"Seller GSTIN and address settings are missing, so the GST invoice prints as a provisional receipt",
+loc:"apis/src/services/invoicePdfService.ts:13, 69-75; settings table",
+evidence:"The settings table holds only invoice_seller_name, invoice_number_prefix and invoice_gst_rate. invoice_seller_gstin, address, city, state and state_code are absent, and the service then falls back to 'PROVISIONAL RECEIPT' with no GST identifier. A sibling session's note reports the same.",
+impact:"Organizers cannot receive a valid GST tax invoice, a compliance and business blocker for paid bookings.",
+likelihood:"Certain until the settings are filled in (dev); production unverified.",
+fix:"Fill Settings > Invoice in the admin with the legal seller details before launch, and add a launch check that fails if they are empty.",
+verify:"Download an invoice for a paid test booking and confirm it shows the GSTIN and the correct CGST/SGST or IGST split.",
+status:"Confirmed",repro:"Yes (read-only settings check)"},
+
+{id:"ZV-013",sev:"P1",comp:"Node API",title:"OTP rate limits are skipped outside production and keyed on the proxy IP in production",
+loc:"apis/src/middlewares/authRateLimit.ts:28; apis/src/server.ts:63 (no 'trust proxy')",
+evidence:"skip() turns every limiter off unless NODE_ENV is production, and dev runs NODE_ENV=development. Express 'trust proxy' is never set, while production sits behind nginx proxy_pass (setupserver.html:284), so req.ip is the proxy address for every user.",
+impact:"In production, all visitors share one bucket (15 OTP requests per 15 minutes site-wide), so one user or bot can lock everyone out of login and join. Staging without NODE_ENV=production has no limit at all.",
+likelihood:"High under real traffic (suspected; not measured).",
+fix:"Set app.set('trust proxy', 1) to match the nginx hop. Add a per-email or per-booking attempt counter for OTP verification, and keep limiters on in staging.",
+verify:"Behind nginx on staging, two clients from different IPs get independent limits, and 11 wrong OTPs for one email lock only that email.",
+status:"Suspected",repro:"No"},
+
+{id:"ZV-014",sev:"P2",comp:"Node API",title:"Socket events let any client mark any participant offline or departed, and join any group room",
+loc:"apis/src/socket/socketHandler.ts:131-176, 184-187, 231-252",
+evidence:"join_lobby, join_game_group and join_cc_instance join rooms by client-supplied ids. leave_game_group updates participant_sessions.is_online=0 and schedules a departure for any groupId and participantId, with no token.",
+impact:"Spectating other groups' live game events, and disrupting games by removing players.",
+likelihood:"Medium.",
+fix:"The same handshake auth as ZV-002, and take participantId from the authenticated token rather than the payload.",
+verify:"An unauthenticated or foreign socket emitting leave_game_group does not change participant_sessions.",
+status:"Confirmed",repro:"No (mutating; not run)"},
+
+{id:"ZV-015",sev:"P1",comp:"Node API / Privacy",title:"Retention purge never covers groups stuck in 'active' or 'waiting', so participant PII is kept indefinitely",
+loc:"apis/src/services/retentionService.ts:147-153",
+evidence:"The sweep selects only status IN ('completed','incomplete'). On the dev DB, 133 participant rows with an email belong to bookings scheduled more than 7 days ago whose groups are 'active' (71) or 'waiting' (62), plus 1 with no group. Only aggregate counts were queried.",
+impact:"Breaks the stated '1 hour after finish' retention promise, and creates privacy and compliance exposure for abandoned or never-started games.",
+likelihood:"High. Abandoned sessions are common.",
+fix:"Add an age-based backstop (for example, the booking's scheduled date plus N hours) that marks stale groups incomplete and purges them, including participants never assigned to a group.",
+verify:"A read-only count of participants with an email for bookings older than the window returns 0 after one sweep on a test DB.",
+status:"Confirmed",repro:"Yes (dev data counts)"},
+
+{id:"ZV-016",sev:"P2",comp:"Node API",title:"Mystery Quest results PDF is authorised by a guessable participant_id query parameter",
+loc:"apis/src/routes/resultsRoutes.ts:8; apis/src/controllers/resultsController.ts:164-190",
+evidence:"GET /v1/results/:group_id/pdf has no participantAuth. It is authorised when the query participant_id belongs to group_id. Both are sequential integers.",
+impact:"Anyone can download another group's results PDF during its 1-hour window.",
+likelihood:"Medium.",
+fix:"Use a signed, expiring download token (an HMAC over group, participant and expiry) in the link, or a short-lived cookie.",
+verify:"A request with a valid participant_id but no valid signature returns 403.",
+status:"Confirmed",repro:"No"},
+
+{id:"ZV-017",sev:"P2",comp:"Node API / Laravel",title:"Raw error messages, including DB driver messages, are returned to clients in production",
+loc:"apis/src/middlewares/errorHandler.ts:22; bootstrap/app.php:88-91",
+evidence:"Node returns err.message for every status including 500, and hides only the stack in production. Laravel's api/* catch-all returns $e->getMessage(), plus the full trace when APP_DEBUG is on.",
+impact:"Leaks schema, table and column names and internal state, which helps attackers.",
+likelihood:"Medium.",
+fix:"For 5xx in production, return a generic message plus a correlation id, and log the detail server-side only.",
+verify:"Force a DB error on staging and confirm the response body has no SQL text.",
+status:"Confirmed",repro:"No"},
+
+{id:"ZV-018",sev:"P2",comp:"Laravel",title:"Uploaded files keep the client-supplied extension",
+loc:"app/Http/Controllers/Admin/CmsPageController.php:132,205,321; SettingController.php:413; HomeController.php:209; UsersController.php:215,342; app/Services/CmsPageService.php:53",
+evidence:"The files pass image and mimes validation (content-based), but the stored name uses getClientOriginalExtension(). The documented nginx has a regex PHP location that takes precedence over the /storage/ prefix alias.",
+impact:"A file whose content passes image checks but carries a script extension could be stored under public storage, and might execute depending on web server config (an admin account is needed).",
+likelihood:"Low (needs an admin account; depends on server config). Suspected.",
+fix:"Use $file->extension() or hashName() (extension derived from MIME), and deny script execution under /storage in nginx and Apache.",
+verify:"Upload a valid PNG with a non-image extension in a test and assert the stored name ends in .png.",
+status:"Suspected",repro:"No"},
+
+{id:"ZV-019",sev:"P2",comp:"Laravel",title:"SVG accepted for the admin profile image",
+loc:"app/Http/Controllers/Admin/HomeController.php:189",
+evidence:"The validation rule is mimes:jpeg,png,jpg,gif,svg. SVG can carry script and is served from the same origin as the admin panel.",
+impact:"Stored XSS in the admin panel, for example a sub-admin targeting a full admin.",
+likelihood:"Low.",
+fix:"Drop svg from the allowed types, or sanitise SVG on the server and serve it with Content-Disposition: attachment.",
+verify:"Uploading an SVG returns a validation error.",
+status:"Confirmed",repro:"No"},
+
+{id:"ZV-020",sev:"P2",comp:"Frontend",title:"Admin-authored HTML rendered without sanitisation on the public, organizer and participant pages",
+loc:"frontend/src/routes/game.tsx:1568,2303,2946; join.$linkToken.tsx:377,559,655; policy.$slug.tsx:61; index.tsx:393; cookandcreate/game.tsx:1280; RoleRevealModal.tsx:152; summary.tsx:172",
+evidence:"dangerouslySetInnerHTML with CMS, case-summary, activity-description and impostor-card HTML from the admin. cleanWordHtml() only strips Word markup. There is no DOMPurify or equivalent. The admin views also echo the same fields raw ({!! !!} in blogs/show, activity-games/show, cms/preview).",
+impact:"A compromised or low-privilege admin (see ZV-011) could run script on the public site and read the organizer JWT from localStorage.",
+likelihood:"Low.",
+fix:"Sanitise on output with an allow-list (DOMPurify) in one shared component, or sanitise on save in Laravel (HTMLPurifier).",
+verify:"A unit test renders content containing an event-handler attribute and asserts it is stripped.",
+status:"Confirmed",repro:"No"},
+
+{id:"ZV-021",sev:"P2",comp:"Laravel",title:"Weak brute-force protection on the admin login",
+loc:"routes/admin.php:30; app/Http/Controllers/Admin/HomeController.php:47-55",
+evidence:"The guest group throttle is 100 requests per 0.2 minutes (about 500 per minute per IP). The captcha rule is commented out. There is no lockout per account.",
+impact:"Password guessing against admin accounts is practical.",
+likelihood:"Medium.",
+fix:"Use a dedicated limiter on POST /admin/login (for example, 5 per minute per email and IP), re-enable the captcha after failures, and consider 2FA for admins.",
+verify:"The 6th wrong password within a minute returns 429.",
+status:"Confirmed",repro:"No"},
+
+{id:"ZV-022",sev:"P2",comp:"Laravel",title:"An unauthenticated request to /admin returns HTTP 500 instead of a redirect to login",
+loc:"bootstrap/app.php (no redirectGuestsTo; handler at :218-243); storage/logs/laravel-2026-10-25.log",
+evidence:"A local GET to /p/admin returned 500. The log shows RouteNotFoundException 'Route [login] not defined' (the admin login route is named admin.login) and then 'View [front.front_warning] not found'.",
+impact:"Broken guest experience and error noise. Any session expiry produces a 500.",
+likelihood:"Certain.",
+fix:"Call $middleware->redirectGuestsTo(fn () => route('admin.showLoginForm')) and remove the dead handlers and missing views.",
+verify:"A guest GET to /admin returns 302 to /admin/login.",
+status:"Confirmed",repro:"Yes (local dev)"},
+
+{id:"ZV-023",sev:"P2",comp:"MySQL",title:"Missing unique constraints where the code assumes one row",
+loc:"Tables game_participants(booking_id,email), participant_sessions(group_id,participant_id), organizer_billings(booking_id)",
+evidence:"Read-only information_schema check shows no unique index on these pairs. participantJoin does a SELECT then INSERT without a lock. There are 0 duplicates in dev today.",
+impact:"Under concurrent joins or double submits, duplicate participants or sessions could appear, breaking seat counts and scoring.",
+likelihood:"Low to medium.",
+fix:"Add unique indexes in a migration (after a duplicate check on production), and handle ER_DUP_ENTRY as success or conflict.",
+verify:"A concurrency test of two joins with the same email leaves one row.",
+status:"Confirmed",repro:"Yes (schema check)"},
+
+{id:"ZV-024",sev:"P2",comp:"Node API / Privacy",title:"Cook & Create awards PDF with member emails is kept permanently",
+loc:"apis/src/controllers/resultsController.ts:170-172; game_groups.cc_results_pdf_path",
+evidence:"A code comment states the C&C PDF is kept permanently and lists every winning group's members and emails. 23 dev groups have a stored PDF path.",
+impact:"Personal data survives the 1-hour retention purge, contradicting the retention policy.",
+likelihood:"Certain.",
+fix:"Either drop emails from the HR PDF or apply an explicit retention period, and document it in the privacy policy.",
+verify:"After the purge window, the stored file no longer contains participant emails.",
+status:"Confirmed",repro:"Yes (count only)"},
+
+{id:"ZV-025",sev:"P2",comp:"MySQL / Infra",title:"The application connects to MySQL as root (dev config)",
+loc:".env DB_USERNAME; apis/.env DB_USER",
+evidence:"Both dev configs use the root account (name only; no password shown). Production is unverified.",
+impact:"Any SQL injection or credential leak gives full server control, including other databases.",
+likelihood:"Medium if mirrored in production.",
+fix:"Create a least-privilege app user (DML on the zoventro schema only) and a separate migration user.",
+verify:"SHOW GRANTS for the app user lists only the schema-scoped privileges.",
+status:"Confirmed",repro:"Yes (dev config); production unverified"},
+
+{id:"ZV-026",sev:"P3",comp:"Laravel",title:"showImage builds a file path from up to five URL segments with no allow-list",
+loc:"app/Http/Controllers/Admin/HomeController.php:269-299; routes/admin.php:43",
+evidence:"public_path('/'.a.'/'.b...) is read with file_get_contents, checking only that the file exists and has an extension. The route is behind auth:admin. Traversal depends on the server's URL normalisation (not tested).",
+impact:"An authenticated admin might read files under or near public_path.",
+likelihood:"Low. Suspected.",
+fix:"Restrict to known image folders, realpath() the result and check it stays inside them, and allow-list image extensions.",
+verify:"A unit test with dot-segment input returns 404.",
+status:"Suspected",repro:"No"},
+
+{id:"ZV-027",sev:"P3",comp:"Laravel",title:"Exception handler contains debug echo/die branches and references a missing view",
+loc:"bootstrap/app.php:194-273",
+evidence:"Branches echo strings such as 'call from the admin side.11' and die. The ThrottleRequestsException handler for API returns 'Session expired' with status 500. The front.front_warning view is missing (confirmed in the log).",
+impact:"Wrong status codes, unprofessional error pages, and monitoring noise.",
+likelihood:"Certain.",
+fix:"Replace them with consistent JSON or HTML error responses and add the missing view (or remove the front branch).",
+verify:"Feature tests for a 404, 405 and 429 under /admin and /api assert the correct status.",
+status:"Confirmed",repro:"Yes (log evidence)"},
+
+{id:"ZV-028",sev:"P3",comp:"Frontend",title:"The frontend has 23 TypeScript errors and 3480 ESLint errors",
+loc:"src/components/Header.tsx, common/index.ts, layouts/index.ts, hooks/index.ts, routes/cookandcreate/lobby.tsx, create.tsx, join.$linkToken.tsx, login.tsx, notifications.tsx, store/index.ts, store/slices/gamesSlice.ts",
+evidence:"tsc --noEmit exits 2 with 23 errors. ESLint reports 3443 prettier/prettier, 32 no-explicit-any, 11 react-hooks/exhaustive-deps, 6 react-refresh, 2 no-useless-escape, 2 no-constant-binary-expression and 1 no-prototype-builtins.",
+impact:"Type errors in the join and login routes may hide real bugs. The lint noise hides real warnings.",
+likelihood:"n/a",
+fix:"Fix the 23 type errors (several are stale barrel exports), run prettier once, and gate CI on tsc and eslint.",
+verify:"tsc --noEmit and eslint both exit 0.",
+status:"Confirmed",repro:"Yes"},
+
+{id:"ZV-029",sev:"P2",comp:"Tests",title:"No automated test gate; the existing security test already fails",
+loc:"apis/package.json:6-12 (no 'test' script); tests/Feature/ExampleTest.php; phpunit.xml:25-26",
+evidence:"Node has 2 ad-hoc unit scripts and no runner, and the OTP test fails. Laravel's ExampleTest fails (404). phpunit uses the shared dev MySQL. No CI config was found.",
+impact:"Regressions such as ZV-001 ship unnoticed.",
+likelihood:"High.",
+fix:"Add a CI workflow running the Node tests, tsc, eslint and phpunit against a disposable DB (SQLite or a throwaway MySQL). Start with auth, ownership and socket-auth tests.",
+verify:"CI is red on the current main and green after the fixes.",
+status:"Confirmed",repro:"Yes"},
+
+{id:"ZV-030",sev:"P3",comp:"Node API",title:"CORS always allows any http://localhost origin, and the defaults include a plain-HTTP server IP",
+loc:"apis/src/server.ts:27-58",
+evidence:"isLocalDevelopmentOrigin() is accepted in every environment, with credentials true. The default origins include a hard-coded public IP over HTTP.",
+impact:"Low. Auth uses bearer headers rather than cookies, but credentialed localhost origins on a user's machine are trusted in production.",
+likelihood:"Low.",
+fix:"Apply the localhost rule only when NODE_ENV is not production, and set CORS_ORIGINS to the HTTPS production origins only.",
+verify:"With NODE_ENV=production, a localhost Origin is rejected.",
+status:"Confirmed",repro:"No"},
+
+{id:"ZV-031",sev:"P3",comp:"Frontend",title:"Production build silently falls back to localhost API and storage URLs",
+loc:"frontend/src/config/environment.ts:9-14",
+evidence:"When VITE_API_BASE_URL or VITE_STORAGE_BASE_URL is missing at build time, the production bundle targets http://localhost:6001 and http://localhost/p/storage.",
+impact:"A misconfigured build ships a site that cannot reach the API, with no build-time error.",
+likelihood:"Low to medium.",
+fix:"Fail the production build when these variables are missing.",
+verify:"A production build without the variables fails with a clear message.",
+status:"Confirmed",repro:"No"},
+
+{id:"ZV-032",sev:"P3",comp:"Node API",title:"participantAuth does not scope body group_id or round_id, and skips the group check while unassigned",
+loc:"apis/src/middlewares/participantAuth.ts:57-66; apis/src/routes/gameRoutes.ts:84",
+evidence:"Only req.params.group_id is compared, and only when the participant has a group_id. The lie-detector tally route is keyed by round_id with no group check in the middleware. The controllers mostly re-derive the session from (group_id, participant_id), which limits the impact (not exhaustively verified).",
+impact:"A participant might read other groups' tallies, or call group routes before group assignment.",
+likelihood:"Low. Suspected.",
+fix:"Compare body.group_id as well, deny route-group access while unassigned, and check that the round belongs to the participant's group.",
+verify:"A participant from group A requesting group B's round tally gets 403.",
+status:"Suspected",repro:"No"},
+
+{id:"ZV-033",sev:"INFO",comp:"Frontend / SEO",title:"Homepage SEO present; no robots.txt or sitemap",
+loc:"frontend/src/seo/homeSeo.ts; (no frontend/public directory)",
+evidence:"Title, description, canonical https://zoventro.com/, Open Graph, Twitter and JSON-LD are defined. No robots.txt or sitemap.xml file is in the repo.",
+impact:"Crawlers get less guidance. Minor.",
+likelihood:"n/a",
+fix:"Add robots.txt and sitemap.xml (homepage, policy pages, blogs), and noindex the participant and organizer app routes.",
+verify:"GET /robots.txt and /sitemap.xml return 200 on staging.",
+status:"Confirmed",repro:"No"},
+
+{id:"ZV-034",sev:"P3",comp:"Frontend / Node API",title:"Organizer JWT in localStorage with a 24h life and no server-side revocation",
+loc:"frontend/src/lib/auth.ts:7; apis/src/controllers/organizerController.ts:145-154",
+evidence:"A stateless JWT, and the API has no logout endpoint (noted by the earlier session-isolation work). The token is readable by any script on the origin.",
+impact:"A stolen token stays valid for up to 24h, and logout cannot invalidate it.",
+likelihood:"Low (depends on XSS, see ZV-020).",
+fix:"Add a token-version column checked in authMiddleware (needs a migration), or move to an httpOnly cookie with CSRF protection.",
+verify:"After logout, the previous token returns 401.",
+status:"Confirmed",repro:"No"},
+
+{id:"ZV-035",sev:"INFO",comp:"Node API",title:"Payments path: server-side amount, constant-time HMAC and raw-body webhook verification",
+loc:"apis/src/services/paymentService.ts:234; apis/src/config/razorpay.ts:164-214; apis/src/controllers/razorpayWebhookController.ts:49-64",
+evidence:"The amount is recomputed from the package price on record, never read from the request. Signatures are compared with timingSafeEqual. The webhook rejects missing or invalid signatures with 400.",
+impact:"Positive control.",
+likelihood:"n/a",
+fix:"Keep it. Add tests for the signature-mismatch and replay (duplicate event id) paths.",
+verify:"Unit tests for verifyWebhookSignature with good and bad inputs.",
+status:"Confirmed",repro:"No"}
+];
+
+var TESTS = [
+["apis: tests/security/otp.test.ts (ts-node)","FAIL","3 of 5 checks fail: custom length, 'is not a constant', leading-zero range. Caused by ZV-001."],
+["apis: tests/cookandcreate/stageDurations.test.ts","PASS","6 of 6 checks pass (pure unit test, no DB)."],
+["apis: tsc --noEmit","PASS","Exit 0."],
+["frontend: tsc --noEmit","FAIL","23 errors in 11 files (ZV-028)."],
+["frontend: eslint .","FAIL","3480 errors, 0 warnings; 3443 are prettier formatting."],
+["Laravel: tests/Unit/ExampleTest.php","PASS","1 test, 1 assertion."],
+["Laravel: tests/Feature/ExampleTest.php","FAIL","Expected 200 from '/', received 404 (the default scaffold test was never updated)."],
+["Laravel: tests/Feature/AdminOrganizerPagesTest.php","PASS","4 tests, 15 assertions (read-only GETs)."],
+["Laravel: tests/Feature/AdminMusicManagerTest.php","PASS","12 tests, 72 assertions (DatabaseTransactions, Storage::fake)."],
+["Laravel: tests/Feature/CookAndCreateStageDurationsTest.php","PASS","5 tests, 544 assertions (DatabaseTransactions)."],
+["Read-only local probes","PARTIAL","Reproduced ZV-002, ZV-003, ZV-012 and ZV-022. PASS: event-stats without a token returns 401, MQ state without a participant token returns 401, and public settings expose no secret-like keys."],
+["Laravel: tests/Feature/AdminPaymentModuleTest.php","NT","NOT RUN: writes payment rows to the shared dev DB (tearDown delete, no transaction) and calls mark-paid."],
+["npm audit / composer audit","NT","NOT TESTED: needs registry network access."],
+["Frontend production build","NT","NOT TESTED: writes frontend/dist."],
+["Production / live checks","BLOCKED","BLOCKED by the standing rule not to touch the live server."]
+];
+
+var E2E = [
+["Organizer registration and OTP login","FAIL","The OTP is fixed (ZV-001). Rate limits are off in dev and IP-shared in production (ZV-013). JWT 24h. Code review only."],
+["Booking, checkout, payment","PARTIAL","The amount and signatures are sound (ZV-035), but create-booking, booking details and complete-booking are unauthenticated (ZV-003, ZV-009). Razorpay test checkout NOT TESTED."],
+["GST invoice PDF","FAIL","Ownership is checked (invoiceController uses the JWT organizer), but the seller GSTIN and address settings are missing, so the PDF is a provisional receipt (ZV-012b)."],
+["Participant join, OTP and browser lock","FAIL","Joining needs only booking_id (ZV-010), the OTP is fixed (ZV-001), and the legacy Laravel join path overwrites tokens (ZV-005). The lock and token stability were improved in earlier work (sibling note)."],
+["Mystery Quest game, results and PDF","PARTIAL","participantAuth protects the game routes. The dev advance route is open (ZV-006), sockets have no auth (ZV-014), and the PDF link uses a guessable participant_id (ZV-016). Browser E2E NOT TESTED."],
+["Cook & Create game, rating, awards PDF","PARTIAL","Participant routes use participantAuth, and cc_ratings has a unique (voter, rated group) key. The admin template routes are open to organizers (ZV-007), and the awards PDF is kept permanently (ZV-024). Browser E2E NOT TESTED."],
+["HR Results download","PARTIAL","The organizer MQ and C&C PDF routes check ownership via the JWT (code review). Not exercised."],
+["Retention purge","FAIL","Works for completed or incomplete groups, but misses active or waiting ones: 133 dev rows retained (ZV-015)."]
+];
+
+var OWASP = [
+["A01 Broken Access Control","FAIL",["ZV-002","ZV-003","ZV-006","ZV-007","ZV-008","ZV-009","ZV-010","ZV-011","ZV-014","ZV-016"]],
+["A02 Cryptographic Failures","FAIL",["ZV-004","ZV-034"]],
+["A03 Injection (SQL / XSS)","PARTIAL",["ZV-020","ZV-019"]],
+["A04 Insecure Design","FAIL",["ZV-005","ZV-015","ZV-024"]],
+["A05 Security Misconfiguration","FAIL",["ZV-012","ZV-017","ZV-025","ZV-030","ZV-027"]],
+["A06 Vulnerable Components","NT",[]],
+["A07 Identification and Authentication Failures","FAIL",["ZV-001","ZV-013","ZV-021"]],
+["A08 Software and Data Integrity","PARTIAL",["ZV-018","ZV-029"]],
+["A09 Logging and Monitoring","PARTIAL",["ZV-017"]],
+["A10 SSRF","PASS",[]]
+];
+
+var PLAN = [
+"Restore the random OTP in apis/src/utils/otp.ts and delete the fixed OTP in the Laravel AuthController and GameJoinController. Rebuild apis/dist (ZV-001, ZV-005).",
+"Rotate the JWT secret, DB, SMTP and Razorpay secrets and the SSH keys. Remove the tracked env-like file and purge git history (ZV-004).",
+"Add Socket.IO handshake authentication and room ownership checks (ZV-002, ZV-014).",
+"Put auth and ownership on booking details, create-booking, complete-booking and event-stats (ZV-003, ZV-008, ZV-009).",
+"Require the invitation token for participant join and verify, derive booking_id on the server, and add a per-email OTP attempt counter (ZV-010).",
+"Remove or production-gate /v1/game/dev/advance, and remove or admin-gate the C&C /admin routes (ZV-006, ZV-007).",
+"Remove the legacy Laravel /api/v1 auth and game-join routes, and drop /api from the nginx Laravel location if it is unused (ZV-005).",
+"Set 'trust proxy' and keep the limiters on in staging (ZV-013).",
+"Enforce MenuPermission on every admin route through middleware (ZV-011).",
+"Fix the retention backstop for stale groups and decide the C&C PDF retention (ZV-015, ZV-024).",
+"Fill in the seller GSTIN and address invoice settings (ZV-012b).",
+"Verify production: docroot, APP_DEBUG=false, NODE_ENV=production, DB user and CORS_ORIGINS (ZV-012, ZV-025, ZV-030).",
+"Generic 5xx messages, safe upload names, no SVG, an admin login limiter, and a fix for the /admin guest redirect (ZV-017 to ZV-022).",
+"Add unique indexes after a duplicate check on production (ZV-023).",
+"Add CI: Node tests, tsc, eslint and phpunit on a disposable DB. Add auth, IDOR and socket tests (ZV-029, ZV-028).",
+"Sanitise rendered admin HTML, consider httpOnly cookie sessions, fail the build on missing env, and add robots.txt and sitemap.xml (ZV-020, ZV-031, ZV-033, ZV-034)."
+];
+
+var CHECK = [
+"npm run test:security passes, and OTPs differ across requests",
+"No secrets in git ls-files, and a history scan is clean after rotation",
+"Unauthenticated socket client receives no organizer or group data",
+"Booking, event-stats and checkout endpoints return 401 or 403 cross-tenant",
+"Participant join without a valid link token is rejected",
+"/v1/game/dev/* and /v1/cookandcreate/admin/* are unreachable for organizers in production",
+"Legacy /api/v1/auth and /api/v1/game-join return 404 in production",
+"OTP limits are per client IP and per email behind nginx",
+"A sub-admin with an empty role gets 403 on settings, payments and organizers",
+"Retention: no participant email retained past the window for any group status",
+"An invoice PDF shows the seller GSTIN and the correct tax split",
+"Production: APP_DEBUG=false, NODE_ENV=production, docroot=public/, least-privilege DB user, HTTPS-only CORS",
+"/.env, /.git/config and /production.txt return 403 or 404 on every host",
+"Fresh build of apis/dist and frontend/dist from the release commit; pm2 in fork mode with one instance",
+"Full browser E2E: organizer booking, test payment, invoice, MQ game and PDF, C&C game, rating and awards PDF, HR results download",
+"DB backup taken before migrations; rollback plan written down"
+];
+
+function el(tag, cls, text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+function badge(s){var map={NT:"NOT TESTED"};return el("span","badge "+s,map[s]||s);}
+var SEVS=["P0","P1","P2","P3","INFO"];
+
+var cards=document.getElementById("sevCards");
+SEVS.forEach(function(s){
+  var n=F.filter(function(f){return f.sev===s;}).length;
+  var c=el("div","card");var top=el("div","n",String(n));c.appendChild(top);
+  var l=el("div","l");l.appendChild(badge(s));c.appendChild(l);cards.appendChild(c);
+});
+document.getElementById("cConfirmed").textContent=F.filter(function(f){return f.status==="Confirmed";}).length;
+document.getElementById("cRepro").textContent=F.filter(function(f){return /^Yes/.test(f.repro);}).length;
+document.getElementById("vP0").textContent=F.filter(function(f){return f.sev==="P0";}).length;
+document.getElementById("vP1").textContent=F.filter(function(f){return f.sev==="P1";}).length;
+
+var active={};SEVS.forEach(function(s){active[s]=true;});
+var chips=document.getElementById("sevChips");
+SEVS.forEach(function(s){
+  var b=el("button","",s);b.type="button";b.setAttribute("aria-pressed","true");b.className=s;
+  b.addEventListener("click",function(){active[s]=!active[s];b.setAttribute("aria-pressed",String(active[s]));render();});
+  chips.appendChild(b);
+});
+var comps=[];F.forEach(function(f){if(comps.indexOf(f.comp)<0)comps.push(f.comp);});comps.sort();
+var compSel=document.getElementById("compSel");
+comps.forEach(function(c){var o=el("option","",c);o.value=c;compSel.appendChild(o);});
+var statSel=document.getElementById("statSel"),q=document.getElementById("q");
+[compSel,statSel].forEach(function(x){x.addEventListener("change",render);});q.addEventListener("input",render);
+
+function render(){
+  var list=document.getElementById("list");list.textContent="";
+  var term=q.value.trim().toLowerCase(),shown=0;
+  F.forEach(function(f){
+    if(!active[f.sev])return;
+    if(compSel.value&&f.comp!==compSel.value)return;
+    if(statSel.value&&f.status!==statSel.value)return;
+    if(term){var hay=(f.id+" "+f.title+" "+f.loc+" "+f.evidence+" "+f.comp).toLowerCase();if(hay.indexOf(term)<0)return;}
+    shown++;
+    var d=el("details");var s=el("summary");
+    s.appendChild(badge(f.sev));s.appendChild(el("span","mono",f.id));s.appendChild(el("span","t",f.title));
+    s.appendChild(el("span","c",f.comp+" · "+f.status));d.appendChild(s);
+    var kv=el("div","kv");
+    [["Location",f.loc,true],["Evidence",f.evidence],["Impact",f.impact],["Likelihood",f.likelihood],["Recommended fix (not applied)",f.fix],["Verification test",f.verify],["Status",f.status],["Reproduced",f.repro]].forEach(function(r){
+      kv.appendChild(el("div","",r[0]));var v=el("div");if(r[2]){v.appendChild(el("code","",r[1]));}else{v.textContent=r[1];}kv.appendChild(v);
+    });
+    d.appendChild(kv);list.appendChild(d);
+  });
+  document.getElementById("shown").textContent=shown+" of "+F.length+" shown";
+}
+render();
+
+var tb=document.getElementById("testRows");
+TESTS.forEach(function(t){var tr=el("tr");tr.appendChild(el("td","",t[0]));var td=el("td");td.appendChild(badge(t[1]));tr.appendChild(td);tr.appendChild(el("td","",t[2]));tb.appendChild(tr);});
+var eb=document.getElementById("e2eRows");
+E2E.forEach(function(t){var tr=el("tr");tr.appendChild(el("td","",t[0]));var td=el("td");td.appendChild(badge(t[1]));tr.appendChild(td);tr.appendChild(el("td","",t[2]));eb.appendChild(tr);});
+var ob=document.getElementById("owasp");
+OWASP.forEach(function(t){var tr=el("tr");tr.appendChild(el("td","",t[0]));var td=el("td");td.appendChild(badge(t[1]));tr.appendChild(td);
+  tr.appendChild(el("td","",t[2].length?t[2].join(", "):(t[1]==="NT"?"npm/composer audit not run (network)":"No server-side outbound fetch of user-supplied URLs found")));ob.appendChild(tr);});
+var pl=document.getElementById("planList");PLAN.forEach(function(p){pl.appendChild(el("li","",p));});
+var cl=document.getElementById("checkList");CHECK.forEach(function(c){var li=el("li");var cb=el("input");cb.type="checkbox";cb.setAttribute("aria-label",c);li.appendChild(cb);li.appendChild(document.createTextNode(" "+c));cl.appendChild(li);});
+})();
+</script>
+</body>
+</html>
