@@ -7,7 +7,6 @@ import { apiClient } from "@/api/client";
 import { useOrganizerEventLive } from "@/hooks/useOrganizerEventLive";
 import { formatTimeShort } from "@/lib/format-datetime";
 import { MEMBER_AVATAR_COLORS } from "@/lib/avatar-tones";
-import { useIsEventCompleted } from "@/lib/event-status";
 import type { BookingGroup } from "@/api/types/organizer";
 
 export const Route = createFileRoute("/groups")({
@@ -26,9 +25,10 @@ const statusTone = (s: BookingGroup["status"]) =>
 function GroupsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const { organizer, booking, eventStats, isLoading, isError } = useOrganizerEventLive();
-  // Once the event is Completed, no group rows are shown.
-  const eventCompleted = useIsEventCompleted(booking);
+  const { organizer, eventStats, isLoading, isError } = useOrganizerEventLive();
+  // Once the event has ended (every group finished — the same flag as the
+  // dashboard's "Event Ended"), no group rows are shown.
+  const eventCompleted = eventStats?.event_status?.is_completed ?? false;
 
   useEffect(() => {
     if (!isOrganizerAuthenticated()) {

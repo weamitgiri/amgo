@@ -7,7 +7,6 @@ import { apiClient } from "@/api/client";
 import { useOrganizerEventLive } from "@/hooks/useOrganizerEventLive";
 import { formatJoinedAt } from "@/lib/format-datetime";
 import { avatarTone } from "@/lib/avatar-tones";
-import { useIsEventCompleted } from "@/lib/event-status";
 import type { BookingParticipant } from "@/api/types/organizer";
 
 export const Route = createFileRoute("/participants")({
@@ -34,9 +33,10 @@ function ParticipantsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const { organizer, booking, eventStats, isLoading, isError } = useOrganizerEventLive();
-  // Once the event is Completed, no participant rows are shown.
-  const eventCompleted = useIsEventCompleted(booking);
+  const { organizer, eventStats, isLoading, isError } = useOrganizerEventLive();
+  // Once the event has ended (every group finished — the same flag as the
+  // dashboard's "Event Ended"), no participant rows are shown.
+  const eventCompleted = eventStats?.event_status?.is_completed ?? false;
 
   useEffect(() => {
     if (!isOrganizerAuthenticated()) {
