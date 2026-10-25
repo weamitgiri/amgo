@@ -612,6 +612,21 @@
             if (typeof Validator !== 'undefined') Validator.refreshNav();
         }
 
+        // Loads one role form of the given type at the next index.
+        function loadRoleForm(type) {
+            const count = $('#roles-container .role-item').length;
+            return $.get(`{{ route('admin.activity-games.get-role-form', $activity->id) }}?type=${encodeURIComponent(type)}&index=${count}`, function(html) {
+                $('#roles-container').append(html);
+                updateRoleCount();
+
+                // Initialize summernote for dynamic strategy cards in the new role
+                $('.summernote-simple').summernote({
+                    height: 100,
+                    toolbar: [['style', ['bold', 'underline']], ['para', ['ul', 'ol']]]
+                });
+            });
+        }
+
         $(document).on('click', '.add-role-btn', function() {
             const type = $('#role-type-selector').val();
             if (!type) return toastr.warning('Please select a role type');
@@ -619,19 +634,22 @@
             const count = $('#roles-container .role-item').length;
             if (count >= 5) return toastr.error('Maximum 5 roles allowed');
 
-            $.get(`{{ route('admin.activity-games.get-role-form', $activity->id) }}?type=${type}&index=${count}`, function(html) {
-                $('#roles-container').append(html);
-                updateRoleCount();
-                
-                // Initialize summernote for dynamic strategy cards in the new role
-                $('.summernote-simple').summernote({
-                    height: 100,
-                    toolbar: [['style', ['bold', 'underline']], ['para', ['ul', 'ol']]]
-                });
-                
+            loadRoleForm(type).done(() => {
                 toastr.success(`${type.charAt(0).toUpperCase() + type.slice(1)} role added`);
             });
         });
+
+        // A game with no roles yet (new game) starts with all five role forms
+        // in a fixed order, so nothing has to be picked and added by hand.
+        // Loaded one after another so each gets the next index. Games that
+        // already have roles (edit, or a failed save re-rendered) are untouched.
+        const DEFAULT_ROLE_TYPES = ['investigator', 'hidden culprit', 'key suspect', 'witness', 'participant'];
+        if ($('#roles-container .role-item').length === 0) {
+            DEFAULT_ROLE_TYPES.reduce(
+                (chain, type) => chain.then(() => loadRoleForm(type)),
+                $.Deferred().resolve().promise()
+            );
+        }
 
         // Event listeners for dynamic items
         $(document).on('click', '.remove-item', function() {
