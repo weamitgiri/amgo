@@ -1972,7 +1972,7 @@ function InvestigationView(props: {
                   key={p.session_id}
                   disabled={p.is_you || frozen}
                   onClick={() => { if (isInvestigator) setSelectedAskee(i); }}
-                  className={`w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-all border border-[#3b2a59] bg-[#2a174c] hover:border-purple-400/40 ${
+                  className={`w-full h-full flex items-center gap-3 p-3 rounded-2xl text-left transition-all border border-[#3b2a59] bg-[#2a174c] hover:border-purple-400/40 ${
                     i === selectedAskee && isInvestigator
                       ? "ring-1 ring-purple-400/40 border-purple-400/40"
                       : ""

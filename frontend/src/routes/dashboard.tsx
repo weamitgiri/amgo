@@ -186,13 +186,18 @@ function DashboardPage() {
       ? "Event Started"
       : eventStatusLabel
     : "Schedule unavailable";
+  // Pill follows the real event lifecycle, NOT booking.booking_status
+  // (which is 'completed' once PAYMENT is done and would wrongly read
+  // "Completed" before the event even starts). Only genuine administrative
+  // states (expired/cancelled) fall back to booking.booking_status.
+  const bookingStatusRaw = booking?.booking_status?.toLowerCase();
   const eventOverviewBadgeLabel = isEventCompleted
     ? "Event Ended"
     : isEventStarted
       ? "Event Started"
-      : booking?.booking_status
-      ? booking.booking_status.charAt(0).toUpperCase() + booking.booking_status.slice(1)
-      : "Active";
+      : bookingStatusRaw === "expired" || bookingStatusRaw === "cancelled"
+        ? booking!.booking_status.charAt(0).toUpperCase() + booking!.booking_status.slice(1)
+        : "Upcoming";
 
   const rescheduleCutoff = scheduledDateTime
     ? new Date(scheduledDateTime.getTime() - 60 * 60 * 1000)
