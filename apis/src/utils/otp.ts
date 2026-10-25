@@ -15,8 +15,6 @@ export function generateNumericOtp(length = 6): string {
         throw new Error('OTP length must be at least 1');
     }
 
-    // TEMP: fixed OTP for testing — revert to the CSPRNG lines below before production.
-    return '123456';
     const max = 10 ** length;
     return crypto.randomInt(0, max).toString().padStart(length, '0');
 }
