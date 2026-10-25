@@ -103,14 +103,16 @@ class ActivityGameController extends Controller
                 // Save Photos
                 if ($request->has('photos')) {
                     foreach ($request->photos as $index => $photoData) {
-                        $photo = $game->photos()->create([
+                        // game_photos.image is NOT NULL, so the row is inserted with
+                        // its image path (or '' when none was chosen, as on update).
+                        $image = $request->hasFile("photos.{$index}.image")
+                            ? $this->storePublicImageOrFail($request->file("photos.{$index}.image"), 'game_photos')
+                            : '';
+                        $game->photos()->create([
                             'photo_number' => $photoData['photo_number'],
                             'label' => $photoData['label'],
+                            'image' => $image,
                         ]);
-                        if ($request->hasFile("photos.{$index}.image")) {
-                            $photo->image = $this->storePublicImageOrFail($request->file("photos.{$index}.image"), 'game_photos');
-                            $photo->save();
-                        }
                     }
                 }
 
