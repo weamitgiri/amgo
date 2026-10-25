@@ -268,10 +268,16 @@ class SettingController extends Controller {
 
     public function otpUpdate(Request $request)
     {
+        // OTP expiry: 60s–600s (10 min), default 5 min. The Node API reads
+        // `otp_expiry_time` from the settings table (see services/otpConfig.ts),
+        // so this is the single source of truth for OTP validity.
         $validated = $request->validate([
-            'otp_expiry_time' => 'required|integer|min:30|max:3600',
+            'otp_expiry_time' => 'required|integer|min:60|max:600',
             'otp_resend_limit' => 'required|integer|min:1|max:20',
             'otp_retry_attempts' => 'required|integer|min:1|max:20',
+        ], [
+            'otp_expiry_time.min' => 'OTP expiry must be at least 60 seconds.',
+            'otp_expiry_time.max' => 'OTP expiry may not exceed 600 seconds (10 minutes).',
         ]);
 
         Setting::set($validated);

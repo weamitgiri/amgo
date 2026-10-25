@@ -15,6 +15,7 @@ import {
 } from '../services/participantGroupService';
 import { emitEventStatsUpdate } from '../services/eventStatsService';
 import { generateNumericOtp } from '../utils/otp';
+import { getOtpExpiresAt } from '../services/otpConfig';
 import { notifyParticipantJoined } from '../services/notificationService';
 
 /**
@@ -137,7 +138,7 @@ export const participantJoin = asyncHandler(async (req: Request, res: Response) 
     }
 
     const otp = generateNumericOtp(6);
-    const otp_expires_at = moment().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+    const otp_expires_at = await getOtpExpiresAt();
     const join_token = crypto.randomBytes(32).toString('hex');
 
     // Get game_id from booking

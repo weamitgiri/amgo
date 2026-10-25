@@ -3,7 +3,11 @@
     <div class="row">
         <div class="col-md-4 form-group">
             <label>OTP Expiry Time (seconds) <span class="text-danger">*</span></label>
-            <input name="otp_expiry_time" type="number" class="form-control" value="{{ old('otp_expiry_time', setting('otp_expiry_time', 300)) }}">
+            <input name="otp_expiry_time" type="number" min="60" max="600" step="1" class="form-control" value="{{ old('otp_expiry_time', setting('otp_expiry_time', 300)) }}">
+            <small class="form-text text-muted">
+                60–600 seconds (1–10 min). Common: 60, 120, 300, 600.
+                Currently <strong>{{ setting('otp_expiry_time', 300) }}s</strong>. Applies to newly generated OTPs.
+            </small>
         </div>
         <div class="col-md-4 form-group">
             <label>OTP Resend Limit <span class="text-danger">*</span></label>

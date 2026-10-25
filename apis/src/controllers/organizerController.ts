@@ -11,6 +11,7 @@ import jwt from 'jsonwebtoken';
 import { buildEventStats } from '../services/eventStatsService';
 import { ensureOrganizerStatusColumns } from '../utils/schemaHelpers';
 import { generateNumericOtp } from '../utils/otp';
+import { getOtpExpiresAt } from '../services/otpConfig';
 import { getJwtSecret } from '../utils/jwtSecret';
 import {
     PAYMENT_METHODS,
@@ -40,7 +41,7 @@ export const registerOrganizer = asyncHandler(async (req: Request, res: Response
     const { name, email, company_name, company_website } = req.body;
 
     const otp = generateNumericOtp(6);
-    const otp_expires_at = moment().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+    const otp_expires_at = await getOtpExpiresAt();
 
     // Ensure schema has payment/account columns (avoid runtime SQL errors)
     await ensureOrganizerStatusColumns();
@@ -85,7 +86,7 @@ export const organizerLogin = asyncHandler(async (req: Request, res: Response) =
     }
 
     const otp = generateNumericOtp(6);
-    const otp_expires_at = moment().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+    const otp_expires_at = await getOtpExpiresAt();
 
     await query(
         'UPDATE organizers SET otp = ?, otp_expires_at = ? WHERE email = ?',
@@ -268,7 +269,7 @@ export const resendOtp = asyncHandler(async (req: Request, res: Response) => {
 
     const otp = generateNumericOtp(6);
 
-    const otp_expires_at = moment().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+    const otp_expires_at = await getOtpExpiresAt();
 
     await query(
         'UPDATE organizers SET otp = ?, otp_expires_at = ? WHERE email = ?',
