@@ -870,44 +870,54 @@
         // handled by upload-guard.js for every file input on this form — including
         // role images/icons — so no per-field handler is needed here.
 
-        // Role Image / Role Icon: preview the chosen file under its field. A
-        // rejected file never reaches this handler (upload-guard.js stops it), so
-        // only valid picks are previewed; the saved thumbnail is hidden while a
-        // new file is selected and comes back if the selection is cleared.
-        const ROLE_UPLOAD_FIELDS = 'input[type="file"][name$="[role_image]"], input[type="file"][name$="[role_icon]"]';
+        // Every image upload on this form (Case Background, Case Summary,
+        // Investigation Photos, Clue, Hidden Culprit, Full Story parts, Role Image
+        // and Role Icon — including rows added later): preview the chosen file
+        // under its field. A rejected file never reaches this handler
+        // (upload-guard.js stops it), so only valid picks are previewed; the saved
+        // thumbnail is hidden while a new file is selected and comes back if the
+        // selection is cleared.
+        const $gameForm = $('#roles-container').closest('form');
+        const uploadFieldOf = (el) => $(el).closest('.form-group, [class*="col-"]');
 
-        function clearRolePreview($group) {
-            $group.find('.role-upload-preview').remove();
-            $group.find('img.img-thumbnail').show();
+        function clearUploadPreview($field) {
+            $field.find('.upload-preview').remove();
+            // Bring back only the thumbnails the preview hid (a saved photo whose
+            // file is missing hides itself and must stay hidden).
+            $field.find('img.img-thumbnail[data-hidden-by-preview]').removeAttr('data-hidden-by-preview').show();
         }
 
-        $(document).on('change', '#roles-container ' + ROLE_UPLOAD_FIELDS, function () {
-            const $group = $(this).closest('.form-group');
-            clearRolePreview($group);
+        $gameForm.on('change', 'input[type="file"]:not(.note-image-input)', function () {
+            const $field = uploadFieldOf(this);
+            clearUploadPreview($field);
             const file = this.files && this.files[0];
             if (!file || !/^image\//.test(file.type)) return;
 
+            // Match the saved thumbnail's size; the role icon is a square badge.
+            const $saved = $field.find('img.img-thumbnail').first();
+            const css = /\[role_icon\]$/.test(this.name)
+                ? { width: '60px', height: '60px', objectFit: 'contain' }
+                : { height: ($saved.length && $saved[0].style.height) || ($(this).hasClass('form-control-file') ? '90px' : '60px') };
+
             const url = URL.createObjectURL(file);
-            const isIcon = /\[role_icon\]$/.test(this.name);
-            $group.find('img.img-thumbnail').hide();
-            $('<img class="mt-2 img-thumbnail role-upload-preview" alt="Selected image preview">')
+            $field.find('img.img-thumbnail:visible').attr('data-hidden-by-preview', '1').hide();
+            $('<img class="mt-2 img-thumbnail upload-preview" alt="Selected image preview">')
                 .attr('src', url)
-                .css(isIcon ? { width: '60px', height: '60px', objectFit: 'contain' } : { height: '60px' })
+                .css(css)
                 .on('load error', () => URL.revokeObjectURL(url))
-                .appendTo($group);
+                .appendTo($('<div class="upload-preview"></div>').appendTo($field));
         });
 
         // When upload-guard.js rejects a pick it clears the input and adds its
         // inline error, so drop any preview of an earlier pick for that field.
-        const rolesContainer = document.getElementById('roles-container');
-        if (rolesContainer && window.MutationObserver) {
+        if ($gameForm.length && window.MutationObserver) {
             new MutationObserver((mutations) => {
                 mutations.forEach((m) => m.addedNodes.forEach((node) => {
                     if (node.nodeType === 1 && node.classList.contains('upload-guard-error')) {
-                        clearRolePreview($(node).closest('.form-group'));
+                        clearUploadPreview(uploadFieldOf(node));
                     }
                 }));
-            }).observe(rolesContainer, { childList: true, subtree: true });
+            }).observe($gameForm[0], { childList: true, subtree: true });
         }
 
         updateRoleCount();
