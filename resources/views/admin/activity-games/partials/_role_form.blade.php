@@ -14,7 +14,8 @@
         <h5 class="mb-0 text-primary font-weight-bold">
             <i class="fas fa-user-tag mr-2"></i> Role: <span class="role-type-label text-uppercase">{{ $roleTypeValue }}</span>
         </h5>
-        <button type="button" class="btn btn-sm btn-outline-danger remove-item"><i class="fas fa-trash mr-1"></i> Remove Role</button>
+        {{-- Hidden: the five roles are fixed, so a role can't be removed. --}}
+        <button type="button" class="btn btn-sm btn-outline-danger remove-item d-none"><i class="fas fa-trash mr-1"></i> Remove Role</button>
     </div>
 
     <input type="hidden" name="roles[{{ $i }}][role_type]" value="{{ $roleTypeValue }}">

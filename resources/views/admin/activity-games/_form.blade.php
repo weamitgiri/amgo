@@ -264,7 +264,8 @@
                 <div class="card card-outline card-warning">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-users mr-2"></i>Game Roles (Exactly 5 Required)</h3>
-                        <div class="card-tools">
+                        {{-- Hidden: the five roles are fixed and pre-loaded (see DEFAULT_ROLE_TYPES). --}}
+                        <div class="card-tools d-none">
                             <div class="input-group input-group-sm" style="width: 250px;">
                                 <select id="role-type-selector" class="form-control">
                                     <option value="">Select Role Type to Add</option>
