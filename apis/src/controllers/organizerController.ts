@@ -82,9 +82,15 @@ export const registerOrganizer = asyncHandler(async (req: Request, res: Response
 export const organizerLogin = asyncHandler(async (req: Request, res: Response) => {
     const { email } = req.body;
 
-    const [rows] = await query('SELECT id FROM organizers WHERE email = ?', [email]);
+    // Mirror authMiddleware, which excludes soft-deleted accounts: a deactivated
+    // organizer must not be able to request a login OTP. Without this, login
+    // succeeds but every authenticated request fails with "Organizer not found".
+    const [rows] = await query('SELECT id, deleted_at FROM organizers WHERE email = ?', [email]);
     if (rows.length === 0) {
         throw new AppError('Organizer not found. Please register first.', 404);
+    }
+    if (rows[0].deleted_at) {
+        throw new AppError('This account has been deactivated. Please contact support.', 403);
     }
 
     await assertResendCooldown('organizers', 'id', rows[0].id);
@@ -112,7 +118,7 @@ export const verifyLoginOtp = asyncHandler(async (req: Request, res: Response) =
     await ensureOrganizerStatusColumns();
 
     const [rows] = await query(
-        'SELECT id, name, otp, otp_expires_at, email_verified_at, status, payment_status, account_status FROM organizers WHERE email = ?',
+        'SELECT id, name, otp, otp_expires_at, email_verified_at, status, payment_status, account_status, deleted_at FROM organizers WHERE email = ?',
         [email]
     );
 
@@ -121,6 +127,12 @@ export const verifyLoginOtp = asyncHandler(async (req: Request, res: Response) =
     }
 
     const organizer = rows[0];
+
+    // A soft-deleted account must not receive a session token; authMiddleware
+    // would reject every subsequent request with "Organizer not found".
+    if (organizer.deleted_at) {
+        throw new AppError('This account has been deactivated. Please contact support.', 403);
+    }
 
     if (organizer.otp !== otp) {
         throw new AppError('Invalid OTP', 400);
@@ -266,9 +278,12 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
 export const resendOtp = asyncHandler(async (req: Request, res: Response) => {
     const { email } = req.body;
 
-    const [rows] = await query('SELECT id FROM organizers WHERE email = ?', [email]);
+    const [rows] = await query('SELECT id, deleted_at FROM organizers WHERE email = ?', [email]);
     if (rows.length === 0) {
         throw new AppError('Organizer not found', 404);
+    }
+    if (rows[0].deleted_at) {
+        throw new AppError('This account has been deactivated. Please contact support.', 403);
     }
 
     await assertResendCooldown('organizers', 'id', rows[0].id);
