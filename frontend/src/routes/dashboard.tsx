@@ -369,6 +369,14 @@ function DashboardPage() {
                 <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700 font-medium">
                   <CheckCircle2 className="h-4 w-4 shrink-0" /> Rescheduled successfully
                 </div>
+              ) : isEventStarted || isEventCompleted ? (
+                <button
+                  disabled
+                  title="The event has already started and can no longer be rescheduled."
+                  className="mt-3 w-full rounded-full border-2 border-muted text-muted-foreground bg-muted/30 text-sm font-semibold py-2 cursor-not-allowed"
+                >
+                  Reschedule Event
+                </button>
               ) : (
                 <button
                   onClick={() => setRescheduleOpen(true)}
