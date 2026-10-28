@@ -73,7 +73,7 @@ export const registerOrganizer = asyncHandler(async (req: Request, res: Response
     }
 
     // Send OTP via email (fire-and-forget to avoid blocking response)
-    //sendOtpEmail(email, otp);
+    sendOtpEmail(email, otp);
 
     return successResponse(res, 'Registration initiated. OTP sent to email.', { organizer_id: organizerId });
 });
@@ -106,7 +106,7 @@ export const organizerLogin = asyncHandler(async (req: Request, res: Response) =
     );
 
     // Send OTP via email (fire-and-forget to avoid blocking response)
-    //sendOtpEmail(email, otp);
+    sendOtpEmail(email, otp);
 
     return successResponse(res, 'Login OTP sent to your email.', { resend_cooldown: OTP_RESEND_COOLDOWN_SECONDS });
 });
@@ -300,7 +300,7 @@ export const resendOtp = asyncHandler(async (req: Request, res: Response) => {
     );
 
     // Fire-and-forget: SMTP can block and exceed the client timeout.
-   // sendOtpEmail(email, otp);
+    sendOtpEmail(email, otp);
 
     return successResponse(res, 'OTP resent successfully.', { resend_cooldown: OTP_RESEND_COOLDOWN_SECONDS });
 });

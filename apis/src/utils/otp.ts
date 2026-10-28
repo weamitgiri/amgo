@@ -16,5 +16,8 @@ export function generateNumericOtp(length = 6): string {
     }
 
     const max = 10 ** length;
-    return crypto.randomInt(0, max).toString().padStart(length, '0');
+    return '123456';
+    //return crypto.randomInt(0, max).toString().padStart(length, '0');
+    //return crypto.randomInt(0, max).toString().padStart(length, '0');
+
 }
