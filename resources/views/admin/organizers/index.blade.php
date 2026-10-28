@@ -107,9 +107,13 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <span class="badge badge-{{ $organizer->status === 'active' ? 'success' : 'secondary' }}">
-                                            {{ ucfirst($organizer->status) }}
-                                        </span>
+                                        @if($organizer->trashed())
+                                            <span class="badge badge-danger">Deactivated</span>
+                                        @else
+                                            <span class="badge badge-{{ $organizer->status === 'active' ? 'success' : 'secondary' }}">
+                                                {{ ucfirst($organizer->status) }}
+                                            </span>
+                                        @endif
                                     </td>
                                     <td class="actions text-right">
                                         <a href="{{ route('admin.organizers.show', $organizer->id) }}" class="btn btn-info btn-sm" title="View">
@@ -129,6 +133,21 @@
                                                 <i class="fas fa-file-pdf"></i> Invoice
                                             </button>
                                         @endif
+                                        <form action="{{ route('admin.organizers.toggleStatus', $organizer->id) }}" method="POST" class="d-inline-block">
+                                            @csrf
+                                            @method('PATCH')
+                                            @if($organizer->trashed())
+                                                <button type="submit" class="btn btn-success btn-sm" title="Activate"
+                                                        onclick="return confirm('Activate this organizer? They will be able to log in again.')">
+                                                    <i class="fas fa-user-check"></i> Activate
+                                                </button>
+                                            @else
+                                                <button type="submit" class="btn btn-warning btn-sm" title="Deactivate"
+                                                        onclick="return confirm('Deactivate this organizer? They will no longer be able to log in.')">
+                                                    <i class="fas fa-user-slash"></i> Deactivate
+                                                </button>
+                                            @endif
+                                        </form>
                                         <form action="{{ route('admin.organizers.destroy', $organizer->id) }}" method="POST" class="d-inline-block">
                                             @csrf
                                             @method('DELETE')

@@ -155,7 +155,7 @@ Route::group(
             Route::get('/{organizer}/edit', [\App\Http\Controllers\Admin\OrganizerController::class, 'edit'])->name('organizers.edit');
             Route::put('/{organizer}', [\App\Http\Controllers\Admin\OrganizerController::class, 'update'])->name('organizers.update');
             Route::delete('/{organizer}', [\App\Http\Controllers\Admin\OrganizerController::class, 'destroy'])->name('organizers.destroy');
-            Route::post('/toggle-status', [\App\Http\Controllers\Admin\OrganizerController::class, 'toggleStatus'])->name('organizers.toggleStatus');
+            Route::patch('/{organizer}/toggle-status', [\App\Http\Controllers\Admin\OrganizerController::class, 'toggleStatus'])->name('organizers.toggleStatus')->withTrashed();
             Route::get('/get-packages/{gameId}', [\App\Http\Controllers\Admin\OrganizerController::class, 'getPackages'])->name('organizers.getPackages');
         });
 

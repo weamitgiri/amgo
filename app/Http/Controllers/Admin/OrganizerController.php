@@ -25,7 +25,8 @@ class OrganizerController extends Controller
 
         // Paginated on the server (newest first) instead of loading every
         // organizer into a client-side DataTable.
-        $organizers = Organizer::with(['bookings' => fn ($q) => $q->latest('id'), 'bookings.activity', 'bookings.package', 'bookings.billing'])
+        $organizers = Organizer::withTrashed()
+            ->with(['bookings' => fn ($q) => $q->latest('id'), 'bookings.activity', 'bookings.package', 'bookings.billing'])
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -247,6 +248,31 @@ class OrganizerController extends Controller
         return redirect()->route('admin.organizers.index')->with('success', 'Organizer deleted successfully.');
     }
 
+    /**
+     * Activate / deactivate an HR (organizer). Deactivation soft-deletes the
+     * row (sets deleted_at) and marks account_status inactive — the same state
+     * a self-service deactivation produces — so the organizer can no longer log
+     * in (authMiddleware and the login OTP flow both reject soft-deleted
+     * accounts). Reactivation restores the row. Billing/GST records are kept.
+     */
+    public function toggleStatus(Organizer $organizer)
+    {
+        if ($organizer->trashed()) {
+            $organizer->restore();
+            // Direct assignment (account_status is not mass-assignable).
+            $organizer->account_status = 'active';
+            $organizer->save();
+            $message = 'Organizer activated. They can log in again.';
+        } else {
+            $organizer->account_status = 'inactive';
+            $organizer->save();
+            $organizer->delete();
+            $message = 'Organizer deactivated. They can no longer log in.';
+        }
+
+        return redirect()->route('admin.organizers.index')->with('success', $message);
+    }
+
     public function getPackages($gameId)
     {
         // Simple logic to return packages - could be filtered by game in future
@@ -254,11 +280,4 @@ class OrganizerController extends Controller
         return response()->json($packages);
     }
 
-    public function toggleStatus(Request $request)
-    {
-        $organizer = Organizer::findOrFail($request->id);
-        $organizer->status = $organizer->status === 'active' ? 'inactive' : 'active';
-        $organizer->save();
-        return response()->json(['success' => true, 'status' => $organizer->status]);
-    }
 }
