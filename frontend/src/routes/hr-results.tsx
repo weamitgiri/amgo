@@ -6,7 +6,7 @@
  */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trophy, Download, Clock, AlertCircle } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { isOrganizerAuthenticated, requireOrganizerAuth } from "@/lib/auth";
@@ -40,6 +40,27 @@ function HrResultsPage() {
   });
 
   const results = data?.results ?? [];
+
+  // HR Results visibility: a result row (and its Download PDF button) is shown
+  // only for one hour after the game completes, then it disappears — matching
+  // the retention window after which the underlying data is purged. A ticking
+  // clock re-evaluates this live so a row vanishes without a manual refresh.
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const visibleResults = useMemo(
+    () =>
+      results.filter((r) => {
+        if (!r.completed_at) return true;
+        const completed = new Date(r.completed_at).getTime();
+        if (Number.isNaN(completed)) return true;
+        return now - completed < ONE_HOUR_MS;
+      }),
+    [results, now]
+  );
 
   const downloadPdf = async (r: OrganizerGameResult) => {
     try {
@@ -96,7 +117,7 @@ function HrResultsPage() {
 
         {isLoading ? (
           <p className="mt-8 text-sm text-muted-foreground animate-pulse">Loading results…</p>
-        ) : results.length === 0 ? (
+        ) : visibleResults.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-dashed border-border px-6 py-12 text-center">
             <Trophy className="h-8 w-8 mx-auto text-muted-foreground/50" />
             <p className="mt-3 text-sm font-medium">No completed games yet</p>
@@ -117,7 +138,7 @@ function HrResultsPage() {
                 </tr>
               </thead>
               <tbody>
-                {results.map((r) => (
+                {visibleResults.map((r) => (
                   <tr key={r.group_id} className="border-b border-border/40 last:border-0 hover:bg-muted/20">
                     <td className="px-5 py-4 font-medium">{r.group_name}</td>
                     <td className="px-5 py-4 text-muted-foreground">{r.activity_name}</td>
