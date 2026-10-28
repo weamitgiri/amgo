@@ -156,10 +156,59 @@ export function validateBillingForm(data: {
   return errors;
 }
 
-export function calculateBillingTotals(price: number | string) {
+const DEFAULT_GST_RATE = 18;
+
+export function calculateBillingTotals(
+  price: number | string,
+  gstRate: number | string | null = DEFAULT_GST_RATE,
+) {
   const priceNum = typeof price === "string" ? parseFloat(price) : price;
   const safePrice = Number.isNaN(priceNum) ? 0 : priceNum;
-  const gst = parseFloat((safePrice * 0.18).toFixed(2));
+  const rate = toRate(gstRate);
+  const gst = parseFloat(((safePrice * rate) / 100).toFixed(2));
   const total = parseFloat((safePrice + gst).toFixed(2));
-  return { priceNum: safePrice, gst, total };
+  return { priceNum: safePrice, gstRate: rate, gst, total };
+}
+
+function toRate(rate: number | string | null | undefined): number {
+  const n = typeof rate === "string" ? parseFloat(rate) : rate;
+  return typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : DEFAULT_GST_RATE;
+}
+
+// Minimal state normalization for the checkout preview only. The server
+// (gstService) is authoritative for the stored snapshot and invoice; this just
+// mirrors its intra/inter decision so the breakdown shown matches the total.
+const STATE_ALIASES: Record<string, string> = {
+  jk: "jammu and kashmir", hp: "himachal pradesh", pb: "punjab", uk: "uttarakhand",
+  uttaranchal: "uttarakhand", hr: "haryana", dl: "delhi", "new delhi": "delhi",
+  rj: "rajasthan", up: "uttar pradesh", br: "bihar", wb: "west bengal", jh: "jharkhand",
+  or: "odisha", orissa: "odisha", cg: "chhattisgarh", chattisgarh: "chhattisgarh",
+  mp: "madhya pradesh", gj: "gujarat", mh: "maharashtra", ap: "andhra pradesh",
+  ka: "karnataka", ga: "goa", kl: "kerala", tn: "tamil nadu", ts: "telangana",
+  tg: "telangana", py: "puducherry", pondicherry: "puducherry",
+};
+
+function normalizeState(input: string | null | undefined): string {
+  const key = String(input ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return STATE_ALIASES[key] ?? key;
+}
+
+/**
+ * Checkout preview breakdown: CGST+SGST when the billing state matches the
+ * supplier state, otherwise IGST. The total is identical either way.
+ */
+export function computeGstPreview(
+  price: number | string,
+  gstRate: number | string | null,
+  billingState: string | null | undefined,
+  supplierState: string | null | undefined,
+) {
+  const { priceNum, gstRate: rate, gst, total } = calculateBillingTotals(price, gstRate);
+  const buyer = normalizeState(billingState);
+  const seller = normalizeState(supplierState);
+  const isIntra = !!buyer && !!seller && buyer === seller;
+  const cgst = isIntra ? parseFloat((gst / 2).toFixed(2)) : 0;
+  const sgst = isIntra ? parseFloat((gst - cgst).toFixed(2)) : 0;
+  const igst = isIntra ? 0 : gst;
+  return { priceNum, gstRate: rate, gst, total, isIntra, cgst, sgst, igst };
 }

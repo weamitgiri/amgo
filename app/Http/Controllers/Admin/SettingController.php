@@ -369,6 +369,47 @@ class SettingController extends Controller {
      * generator marks the document as a provisional receipt rather than
      * printing a fabricated GSTIN.
      */
+    /**
+     * Resolves an Indian state name (or 2-letter abbreviation / 2-digit code) to
+     * its statutory GST state code. Returns null when it can't be matched.
+     */
+    private function gstStateCode(string $state): ?string
+    {
+        $codes = [
+            'jammu and kashmir' => '01', 'himachal pradesh' => '02', 'punjab' => '03',
+            'chandigarh' => '04', 'uttarakhand' => '05', 'haryana' => '06', 'delhi' => '07',
+            'rajasthan' => '08', 'uttar pradesh' => '09', 'bihar' => '10', 'sikkim' => '11',
+            'arunachal pradesh' => '12', 'nagaland' => '13', 'manipur' => '14', 'mizoram' => '15',
+            'tripura' => '16', 'meghalaya' => '17', 'assam' => '18', 'west bengal' => '19',
+            'jharkhand' => '20', 'odisha' => '21', 'chhattisgarh' => '22', 'madhya pradesh' => '23',
+            'gujarat' => '24', 'daman and diu' => '25', 'maharashtra' => '27', 'karnataka' => '29',
+            'goa' => '30', 'lakshadweep' => '31', 'kerala' => '32', 'tamil nadu' => '33',
+            'puducherry' => '34', 'andaman and nicobar islands' => '35', 'telangana' => '36',
+            'andhra pradesh' => '37', 'ladakh' => '38', 'other territory' => '97',
+        ];
+        $aliases = [
+            'jk' => 'jammu and kashmir', 'hp' => 'himachal pradesh', 'pb' => 'punjab',
+            'uk' => 'uttarakhand', 'uttaranchal' => 'uttarakhand', 'hr' => 'haryana', 'dl' => 'delhi',
+            'new delhi' => 'delhi', 'rj' => 'rajasthan', 'up' => 'uttar pradesh', 'br' => 'bihar',
+            'wb' => 'west bengal', 'jh' => 'jharkhand', 'or' => 'odisha', 'orissa' => 'odisha',
+            'cg' => 'chhattisgarh', 'chattisgarh' => 'chhattisgarh', 'mp' => 'madhya pradesh',
+            'gj' => 'gujarat', 'mh' => 'maharashtra', 'ap' => 'andhra pradesh', 'ka' => 'karnataka',
+            'ga' => 'goa', 'kl' => 'kerala', 'tn' => 'tamil nadu', 'ts' => 'telangana', 'tg' => 'telangana',
+            'py' => 'puducherry', 'pondicherry' => 'puducherry',
+        ];
+        $key = strtolower(trim(preg_replace('/\s+/', ' ', $state)));
+        if (preg_match('/^\d{2}$/', $key) && in_array($key, $codes, true)) {
+            return $key;
+        }
+        if (isset($codes[$key])) {
+            return $codes[$key];
+        }
+        if (isset($aliases[$key])) {
+            return $codes[$aliases[$key]];
+        }
+        return null;
+    }
+
     public function invoiceUpdate(Request $request)
     {
         $validated = $request->validate([
@@ -397,6 +438,13 @@ class SettingController extends Controller {
             // keep them in sync so intra/inter-state tax split can't disagree
             // with the GSTIN printed right above it.
             $validated['invoice_seller_state_code'] = substr($validated['invoice_seller_gstin'], 0, 2);
+        } elseif (!empty($validated['invoice_seller_state'])) {
+            // No GSTIN yet (e.g. provisional-receipt mode): still resolve the
+            // state code from the state name so the CGST/SGST vs IGST split works.
+            $code = $this->gstStateCode($validated['invoice_seller_state']);
+            if ($code !== null) {
+                $validated['invoice_seller_state_code'] = $code;
+            }
         }
 
         Setting::set($validated);

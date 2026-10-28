@@ -20,6 +20,7 @@ import {
 import {
   buildJoinUrl,
   calculateBillingTotals,
+  computeGstPreview,
   formatDisplayDate,
   formatDisplayTime,
   formatPrice,
@@ -40,7 +41,7 @@ import type {
   SessionSetup,
 } from "@/api/types/organizer";
 import type { ApiActivity, ApiPackage } from "@/api/types/public";
-import { useGames, useGameDetails, usePackages, usePaymentMethods } from "@/hooks/usePublicContent";
+import { useGames, useGameDetails, usePackages, usePaymentMethods, useSiteSettings } from "@/hooks/usePublicContent";
 import { loadRazorpayCheckout, openRazorpayCheckout } from "@/utils/razorpay";
 import { resolveMediaUrl } from "@/utils/media";
 import { isOrganizerAuthenticated } from "@/lib/auth";
@@ -1310,7 +1311,15 @@ function PaymentStep({
   });
 
   const price = session.package?.price ?? 0;
-  const { priceNum, gst, total } = calculateBillingTotals(price);
+  const packageGstRate = session.package?.gst_rate ?? 18;
+  const { data: siteSettings } = useSiteSettings();
+  const supplierState = siteSettings?.invoice_seller_state ?? "";
+  const { priceNum, gstRate, gst, total, isIntra, cgst, sgst, igst } = computeGstPreview(
+    price,
+    packageGstRate,
+    state,
+    supplierState,
+  );
   const fmt = formatPrice;
 
   // Fetched with the total so the server can apply COD min/max to this order.
@@ -1572,8 +1581,15 @@ function PaymentStep({
       </div>
 
       <div className="rounded-xl border border-border p-4 space-y-2">
-        <Row k="Package Price" v={fmt(priceNum)} />
-        <Row k="GST (18%)" v={fmt(gst)} />
+        <Row k="Taxable Value" v={fmt(priceNum)} />
+        {isIntra ? (
+          <>
+            <Row k={`CGST @ ${gstRate / 2}%`} v={fmt(cgst)} />
+            <Row k={`SGST @ ${gstRate / 2}%`} v={fmt(sgst)} />
+          </>
+        ) : (
+          <Row k={`IGST @ ${gstRate}%`} v={fmt(igst)} />
+        )}
         <Row k="Additional Charges" v="₹0" />
         <div className="border-t border-border pt-2.5 mt-2.5">
           <Row k="Total Payable" v={fmt(total)} bold />

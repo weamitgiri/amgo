@@ -224,11 +224,31 @@ export async function assertMethodAllowed(method: PaymentMethod, amount: number)
 
 export interface BookingAmount {
     packagePrice: number;
+    gstRate: number;
     gstAmount: number;
     totalPayable: number;
 }
 
-const GST_RATE = 0.18;
+/** Fallback GST % when a package has no rate configured. */
+export const DEFAULT_GST_RATE_PERCENT = 18;
+
+/**
+ * The supplier's registered GST state code (Place of Supply comparison point).
+ * Uses the configured `invoice_seller_state_code`, else the first two digits of
+ * the supplier GSTIN. Empty when neither is set (then every supply is treated as
+ * inter-state and charged IGST, which is the safe default).
+ */
+export async function getSellerStateCode(): Promise<string> {
+    const [rows] = await query<any>(
+        "SELECT `key`, `value` FROM settings WHERE `key` IN ('invoice_seller_state_code','invoice_seller_gstin')"
+    );
+    const map: Record<string, string> = {};
+    for (const r of rows || []) map[r.key] = (r.value ?? '').trim();
+    const code = map['invoice_seller_state_code'];
+    if (code) return code;
+    const gstin = (map['invoice_seller_gstin'] || '').toUpperCase();
+    return gstin.length === 15 ? gstin.slice(0, 2) : '';
+}
 
 /**
  * Recomputes the payable amount from the package price on record.
@@ -236,12 +256,14 @@ const GST_RATE = 0.18;
  * The amount is never read from the request. A browser that could name its own
  * total could buy a package for a rupee.
  */
-export function calculateBookingAmount(packagePrice: number): BookingAmount {
+export function calculateBookingAmount(packagePrice: number, gstRatePercent: number = DEFAULT_GST_RATE_PERCENT): BookingAmount {
     const price = Number.isFinite(packagePrice) ? packagePrice : 0;
-    const gstAmount = parseFloat((price * GST_RATE).toFixed(2));
+    const rate = Number.isFinite(gstRatePercent) && gstRatePercent >= 0 ? gstRatePercent : DEFAULT_GST_RATE_PERCENT;
+    const gstAmount = parseFloat(((price * rate) / 100).toFixed(2));
 
     return {
         packagePrice: price,
+        gstRate: rate,
         gstAmount,
         totalPayable: parseFloat((price + gstAmount).toFixed(2)),
     };

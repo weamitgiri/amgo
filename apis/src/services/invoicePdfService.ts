@@ -1,6 +1,8 @@
 import PDFDocument from 'pdfkit';
 import { query } from '../config/db';
 
+import { resolveState, amountInWords } from './gstService';
+
 /**
  * GST invoice generation for organizer bookings.
  *
@@ -52,6 +54,14 @@ export type InvoiceRecord = {
     payment_status: 'pending' | 'paid' | 'failed';
     /** true = supplier and buyer in the same state -> CGST + SGST; false -> IGST. */
     is_intra_state: boolean;
+    gst_rate: number;
+    cgst_amount: number;
+    sgst_amount: number;
+    igst_amount: number;
+    place_of_supply: string | null;
+    place_of_supply_code: string | null;
+    sac_code: string | null;
+    amount_in_words: string;
 };
 
 const money = (n: number) =>
@@ -124,7 +134,10 @@ export async function getInvoiceForBooking(
                 p.name AS package_name, a.title AS activity_title,
                 b.gst_number, b.billing_address, b.city, b.state, b.pin_code,
                 b.package_price, b.taxes, b.additional_charges, b.gst_amount, b.total_payable,
-                b.payment_method, b.payment_status
+                b.payment_method, b.payment_status,
+                b.gst_rate, b.tax_type, b.cgst_amount, b.sgst_amount, b.igst_amount,
+                b.place_of_supply, b.place_of_supply_code, b.sac_code,
+                p.sac_code AS package_sac_code
          FROM organizer_bookings ob
          JOIN organizer_billings b ON b.booking_id = ob.id
          LEFT JOIN organizers o ON o.id = ob.organizer_id
@@ -142,10 +155,23 @@ export async function getInvoiceForBooking(
 
 function mapInvoiceRow(r: any, seller: InvoiceSeller): InvoiceRecord {
     const buyerState = (r.state || '').trim();
-    // Compared on the state NAME because organizer_billings stores a name, not a
-    // code. Unknown either side => treat as intra-state only when they match.
-    const isIntraState =
-        !!seller.state && !!buyerState && seller.state.trim().toLowerCase() === buyerState.toLowerCase();
+    const gstAmount = Number(r.gst_amount || 0);
+
+    // Prefer the immutable snapshot captured at checkout; fall back to deriving it
+    // for bookings created before the snapshot existed.
+    const hasSnapshot = r.tax_type === 'intra' || r.tax_type === 'inter';
+    const resolved = resolveState(buyerState);
+    const isIntraState = hasSnapshot
+        ? r.tax_type === 'intra'
+        : !!seller.stateCode && !!resolved && resolved.code === seller.stateCode;
+
+    const gstRate = r.gst_rate != null ? Number(r.gst_rate) : seller.gstRate;
+    const cgst = hasSnapshot ? Number(r.cgst_amount || 0) : (isIntraState ? Math.round((gstAmount / 2) * 100) / 100 : 0);
+    const sgst = hasSnapshot ? Number(r.sgst_amount || 0) : (isIntraState ? gstAmount - cgst : 0);
+    const igst = hasSnapshot ? Number(r.igst_amount || 0) : (isIntraState ? 0 : gstAmount);
+    const placeOfSupply = (r.place_of_supply || resolved?.name || buyerState) || null;
+    const placeOfSupplyCode = r.place_of_supply_code || resolved?.code || null;
+    const sacCode = r.sac_code || r.package_sac_code || null;
 
     return {
         booking_id: Number(r.booking_id),
@@ -168,6 +194,14 @@ function mapInvoiceRow(r: any, seller: InvoiceSeller): InvoiceRecord {
         payment_method: r.payment_method ?? null,
         payment_status: r.payment_status,
         is_intra_state: isIntraState,
+        gst_rate: gstRate,
+        cgst_amount: cgst,
+        sgst_amount: sgst,
+        igst_amount: igst,
+        place_of_supply: placeOfSupply,
+        place_of_supply_code: placeOfSupplyCode,
+        sac_code: sacCode,
+        amount_in_words: amountInWords(Number(r.total_payable || 0)),
     };
 }
 
@@ -180,7 +214,10 @@ export async function listInvoicesForOrganizer(organizerId: number | string): Pr
                 p.name AS package_name, a.title AS activity_title,
                 b.gst_number, b.billing_address, b.city, b.state, b.pin_code,
                 b.package_price, b.taxes, b.additional_charges, b.gst_amount, b.total_payable,
-                b.payment_method, b.payment_status
+                b.payment_method, b.payment_status,
+                b.gst_rate, b.tax_type, b.cgst_amount, b.sgst_amount, b.igst_amount,
+                b.place_of_supply, b.place_of_supply_code, b.sac_code,
+                p.sac_code AS package_sac_code
          FROM organizer_bookings ob
          JOIN organizer_billings b ON b.booking_id = ob.id
          LEFT JOIN organizers o ON o.id = ob.organizer_id
@@ -235,7 +272,10 @@ export function renderInvoicePdf(inv: InvoiceRecord, seller: InvoiceSeller, stre
     const meta: [string, string][] = [
         ['Invoice No:', inv.invoice_no],
         ['Invoice Date:', new Date(inv.invoice_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })],
-        ['Place of Supply:', inv.buyer_state ? `${inv.buyer_state}` : '-'],
+        ['Place of Supply:', inv.place_of_supply
+            ? `${inv.place_of_supply}${inv.place_of_supply_code ? ` (Code ${inv.place_of_supply_code})` : ''}`
+            : (inv.buyer_state || '-')],
+        ...(inv.sac_code ? ([['SAC/HSN:', inv.sac_code]] as [string, string][]) : []),
         ['Payment Mode:', (inv.payment_method || '-').toUpperCase()],
         ['Package:', inv.package_name],
     ];
@@ -263,21 +303,21 @@ export function renderInvoicePdf(inv: InvoiceRecord, seller: InvoiceSeller, stre
 
     // ---- Line items table ----
     y = doc.y + 22;
-    const half = inv.gst_amount / 2;
+    const halfRate = inv.gst_rate / 2;
     const cols = inv.is_intra_state
         ? [
               { label: '#', x: left, w: 24, align: 'left' as const },
               { label: 'Description', x: 74, w: 176, align: 'left' as const },
               { label: 'Taxable Value', x: 250, w: 78, align: 'right' as const },
-              { label: `CGST (${seller.gstRate / 2}%)`, x: 328, w: 68, align: 'right' as const },
-              { label: `SGST (${seller.gstRate / 2}%)`, x: 396, w: 68, align: 'right' as const },
+              { label: `CGST (${halfRate}%)`, x: 328, w: 68, align: 'right' as const },
+              { label: `SGST (${halfRate}%)`, x: 396, w: 68, align: 'right' as const },
               { label: 'Total', x: 464, w: 81, align: 'right' as const },
           ]
         : [
               { label: '#', x: left, w: 24, align: 'left' as const },
               { label: 'Description', x: 74, w: 220, align: 'left' as const },
               { label: 'Taxable Value', x: 294, w: 100, align: 'right' as const },
-              { label: `IGST (${seller.gstRate}%)`, x: 394, w: 70, align: 'right' as const },
+              { label: `IGST (${inv.gst_rate}%)`, x: 394, w: 70, align: 'right' as const },
               { label: 'Total', x: 464, w: 81, align: 'right' as const },
           ];
 
@@ -289,10 +329,11 @@ export function renderInvoicePdf(inv: InvoiceRecord, seller: InvoiceSeller, stre
     const rowH = 34;
     doc.rect(left, y, right - left, rowH).strokeColor('#E5E7EB').lineWidth(1).stroke();
     doc.fillColor(DARK).font('Helvetica').fontSize(9);
-    const description = inv.activity_title ? `${inv.activity_title} - ${inv.package_name}` : inv.package_name;
+    const baseDesc = inv.activity_title ? `${inv.activity_title} - ${inv.package_name}` : inv.package_name;
+    const description = inv.sac_code ? `${baseDesc}\nSAC/HSN: ${inv.sac_code}` : baseDesc;
     const values = inv.is_intra_state
-        ? ['1', description, money(inv.taxable_value), money(half), money(half), money(inv.total_payable)]
-        : ['1', description, money(inv.taxable_value), money(inv.gst_amount), money(inv.total_payable)];
+        ? ['1', description, money(inv.taxable_value), money(inv.cgst_amount), money(inv.sgst_amount), money(inv.total_payable)]
+        : ['1', description, money(inv.taxable_value), money(inv.igst_amount), money(inv.total_payable)];
     cols.forEach((c, i) => doc.text(values[i], c.x + 4, y + 11, { width: c.w - 8, align: c.align }));
 
     // ---- Totals ----
@@ -304,10 +345,11 @@ export function renderInvoicePdf(inv: InvoiceRecord, seller: InvoiceSeller, stre
             : []),
         ...(inv.is_intra_state
             ? ([
-                  [`CGST @ ${seller.gstRate / 2}%`, money(half)],
-                  [`SGST @ ${seller.gstRate / 2}%`, money(half)],
+                  [`CGST @ ${halfRate}%`, money(inv.cgst_amount)],
+                  [`SGST @ ${halfRate}%`, money(inv.sgst_amount)],
               ] as [string, string][])
-            : ([[`IGST @ ${seller.gstRate}%`, money(inv.gst_amount)]] as [string, string][])),
+            : ([[`IGST @ ${inv.gst_rate}%`, money(inv.igst_amount)]] as [string, string][])),
+        ['Total GST', money(inv.gst_amount)],
     ];
     doc.fontSize(9.5).font('Helvetica').fillColor(DARK);
     for (const [label, value] of totals) {
@@ -320,6 +362,9 @@ export function renderInvoicePdf(inv: InvoiceRecord, seller: InvoiceSeller, stre
     doc.font('Helvetica-Bold').fontSize(12);
     doc.text('Total Payable', 300, y, { width: 130, align: 'left' });
     doc.text(money(inv.total_payable), 430, y, { width: right - 430, align: 'right' });
+    y += 20;
+    doc.font('Helvetica-Oblique').fontSize(8.5).fillColor(DARK)
+        .text(`Amount in words: ${inv.amount_in_words}`, left, y, { width: right - left });
 
     // ---- Footer notes ----
     y += 34;

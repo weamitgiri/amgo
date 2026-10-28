@@ -3,6 +3,8 @@ export interface ApiPackage {
   name: string;
   slug: string;
   price: number | string;
+  gst_rate?: number | string | null;
+  sac_code?: string | null;
   max_users: number;
   total_groups: number;
   validity_days: number;
@@ -56,6 +58,8 @@ export interface ApiCmsPage {
 }
 
 export interface SiteSettings {
+  invoice_seller_state?: string;
+  invoice_seller_state_code?: string;
   website_name?: string;
   website_url?: string;
   tagline?: string;

@@ -67,7 +67,7 @@
             <label>State code</label>
             <input name="invoice_seller_state_code" type="text" class="form-control" maxlength="2" readonly
                    value="{{ old('invoice_seller_state_code', setting('invoice_seller_state_code')) }}">
-            <small class="form-text text-muted">Derived from the GSTIN.</small>
+            <small class="form-text text-muted">Auto-filled from the GSTIN, or from the State name when no GSTIN is set.</small>
         </div>
         <div class="col-md-3 form-group">
             <label>PIN code</label>

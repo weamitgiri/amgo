@@ -9,7 +9,7 @@ import { AppError } from '../utils/AppError';
  */
 export const getPackages = asyncHandler(async (req: Request, res: Response) => {
     const [rows] = await query(
-        'SELECT id, name, slug, price, max_users, total_groups, validity_days, short_description, features, game_access, status FROM packages WHERE status = ? AND deleted_at IS NULL ORDER BY sort_order ASC',
+        'SELECT id, name, slug, price, gst_rate, sac_code, max_users, total_groups, validity_days, short_description, features, game_access, status FROM packages WHERE status = ? AND deleted_at IS NULL ORDER BY sort_order ASC',
         ['active']
     );
     
@@ -89,6 +89,8 @@ const PUBLIC_SETTING_KEYS = [
     'meta_title',
     'meta_description',
     'meta_keywords',
+    'invoice_seller_state',
+    'invoice_seller_state_code',
     'primary_color',
     'secondary_color',
     'button_color',
