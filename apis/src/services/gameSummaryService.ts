@@ -1,6 +1,8 @@
 import { query, withTransaction } from '../config/db';
 import { shortName } from '../utils/pseudonym';
 import { ensureCaseSummaryTimer } from './timerService';
+import { isGroupAtCapacity } from './lobbyService';
+import { AppError } from '../utils/AppError';
 
 const ROLE_GRADS = [
     'from-amber-700 via-orange-600 to-red-900',
@@ -244,6 +246,14 @@ export async function buildGameSummaryPayload(
     if (groupRows.length === 0 || !groupRows[0].game_row_id) return null;
 
     const row = groupRows[0];
+
+    // Complete-group gate: a group that never reached capacity must not proceed to
+    // the Game Summary screen. Only block a group still `waiting` (not yet started);
+    // an already-`active`/`finished`/`completed`/`incomplete` group is left as-is so
+    // running and finished games keep working. Scoped to THIS group only.
+    if (row.group_status === 'waiting' && !(await isGroupAtCapacity(row.id))) {
+        throw new AppError('Your group not complete participant.', 403);
+    }
 
     let participant = { id: 0, name: 'Participant' };
     if (participantId) {

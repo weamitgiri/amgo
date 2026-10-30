@@ -24,6 +24,7 @@ import { io } from '../server';
 import moment from 'moment';
 import { submitAccusation as submitAccusationService } from '../services/verdictScoringService';
 import { ensureCaseSummaryTimer, devAdvancePhase, recoverMissedQuestioningPhase } from '../services/timerService';
+import { isGroupAtCapacity } from '../services/lobbyService';
 
 async function getSessionForParticipant(groupId: number | string, participantId: number | string) {
     const [rows] = await query<any>(
@@ -116,6 +117,14 @@ export const getGameState = asyncHandler(async (req: Request, res: Response) => 
     // timer for a `finished`/`completed`/`incomplete` group.
     if (group.status === 'active' || group.status === 'waiting') {
         if (group.status === 'waiting') {
+            // Complete-group gate: never start the game for a group that never
+            // reached capacity. Incomplete groups end on the lobby
+            // (buildLobbyPayload → group_incomplete); this is the backend safety
+            // net for any direct hit on the game endpoint. Already-`active` groups
+            // (a game that legitimately started) are untouched.
+            if (!(await isGroupAtCapacity(group_id))) {
+                throw new AppError('Your group not complete participant.', 403);
+            }
             await query("UPDATE game_groups SET status = 'active' WHERE id = ? AND status = 'waiting'", [group_id]);
         }
         const activeCfg = await getActivityConfigForGroup(group_id);

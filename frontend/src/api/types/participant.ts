@@ -84,7 +84,7 @@ export type LobbySessionResponse = {
   scheduled_start_at: string | null;
   scheduled_start_label: string | null;
   game_redirect_at: string | null;
-  lobby_phase: "before_start" | "waiting_members" | "lobby_timer" | "ready";
+  lobby_phase: "before_start" | "waiting_members" | "lobby_timer" | "ready" | "group_incomplete";
   lobby_countdown_seconds: number | null;
   game_starts_at: string | null;
   can_start_game: boolean;

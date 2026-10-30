@@ -291,18 +291,23 @@ function LobbyPage() {
     }
   };
 
+  const isGroupIncomplete = lobby.lobby_phase === "group_incomplete";
   const timerLabel =
     lobby.lobby_phase === "lobby_timer"
       ? "Session Starts in"
       : lobby.lobby_phase === "before_start"
         ? "Starts at"
-        : "Joined";
+        : isGroupIncomplete
+          ? "Session"
+          : "Joined";
   const timerValue =
     lobby.lobby_phase === "lobby_timer"
       ? `${mm}:${ss}`
       : lobby.lobby_phase === "before_start" && lobby.scheduled_start_label
         ? lobby.scheduled_start_label.split(",").pop()?.trim() ?? "—"
-        : `${lobby.member_count}/${lobby.group_capacity}`;
+        : isGroupIncomplete
+          ? "ENDED"
+          : `${lobby.member_count}/${lobby.group_capacity}`;
 
   return (
     <div className="min-h-screen bg-[#0a0715] text-white">
@@ -342,7 +347,7 @@ function LobbyPage() {
                 alt="Mystery Quest"
                 className="mx-auto w-56 max-w-full object-contain drop-shadow-[0_0_45px_rgba(168,85,247,0.45)]"
               />
-              <p className="mt-6 text-xs text-white/50">{lobby.group_name}</p>
+              <p className="mt-6 text-xs text-white/50"></p>
             </div>
           </div>
 
@@ -417,7 +422,14 @@ function LobbyPage() {
                 <Gamepad2 className="h-5 w-5 text-purple-300" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">Session Status</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-bold">Session Status</h3>
+                  {isGroupIncomplete && (
+                    <span className="rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-red-400 ring-1 ring-red-500/30">
+                      Ended
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-white/55">Ensure all the participants have joined and groups are complete</p>
               </div>
             </div>
@@ -455,11 +467,26 @@ function LobbyPage() {
                       </>
                     ))}
                   {lobby.lobby_phase === "ready" && <>All participants have joined. Launching the game now…</>}
+                  {isGroupIncomplete && (
+                    <span className="font-semibold text-red-300">Your group not complete participant.</span>
+                  )}
                 </p>
               </div>
-              <div className="grid min-w-[150px] place-items-center rounded-2xl border border-purple-500/30 bg-gradient-to-b from-[#2a1a4d] to-[#1a1033] p-5 text-center">
+              <div
+                className={`grid min-w-[150px] place-items-center rounded-2xl border p-5 text-center ${
+                  isGroupIncomplete
+                    ? "border-red-500/40 bg-gradient-to-b from-[#3a1420] to-[#2a0f18]"
+                    : "border-purple-500/30 bg-gradient-to-b from-[#2a1a4d] to-[#1a1033]"
+                }`}
+              >
                 <div className="text-xs text-white/70">{timerLabel}</div>
-                <div className="mt-1 text-4xl font-black tabular-nums">{timerValue}</div>
+                <div
+                  className={`mt-1 font-black tabular-nums ${
+                    isGroupIncomplete ? "text-3xl text-red-400" : "text-4xl"
+                  }`}
+                >
+                  {timerValue}
+                </div>
               </div>
             </div>
 
