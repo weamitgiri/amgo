@@ -377,11 +377,18 @@ function LobbyPage() {
         {/* Bottom row: group / session status */}
         <section className="mt-5 grid gap-5 lg:grid-cols-2">
           <div className="rounded-3xl border border-purple-500/15 bg-gradient-to-b from-[#1c1440] to-[#140e2b] p-6">
-            <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-purple-500/20">
-                <Users className="h-5 w-5 text-purple-300" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-purple-500/20">
+                  <Users className="h-5 w-5 text-purple-300" />
+                </div>
+                <h3 className="text-xl font-bold">Your Group &amp; Status</h3>
               </div>
-              <h3 className="text-xl font-bold">Your Group &amp; Status</h3>
+              {lobby.group_name && (
+                <span className="shrink-0 rounded-full bg-purple-500/20 px-3.5 py-1.5 text-sm font-bold text-purple-200 ring-1 ring-purple-400/30">
+                  {lobby.group_name}
+                </span>
+              )}
             </div>
 
             <div className="mt-5 grid grid-cols-3 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-black/20">
