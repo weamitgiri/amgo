@@ -108,7 +108,7 @@ function Home() {
               Experiences
             </h1>
             <p className="mt-6 text-white/80 text-base md:text-lg whitespace-nowrap">
-              Boost engagement.collaboration.and energy, without complicated setups.
+              Boost engagement, collaboration, and energy, without complicated setups.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/create" search={{ activity: undefined }}><PillButton variant="light">Get Started Now</PillButton></Link>
