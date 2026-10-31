@@ -92,7 +92,7 @@ export const organizerLogin = asyncHandler(async (req: Request, res: Response) =
         throw new AppError('Organizer not found. Please register first.', 404);
     }
     if (rows[0].deleted_at) {
-        throw new AppError('This account has been deactivated. Please contact support.', 403);
+        throw new AppError('Your email id is deactivated. Please contact support to reactivate.', 403);
     }
 
     await assertResendCooldown('organizers', 'id', rows[0].id);
