@@ -475,7 +475,7 @@ function LobbyPage() {
                     ))}
                   {lobby.lobby_phase === "ready" && <>All participants have joined. Launching the game now…</>}
                   {isGroupIncomplete && (
-                    <span className="font-semibold text-red-300">Your group not complete participant.</span>
+                    <span className="font-semibold text-red-300">Your group could not be completed. 5 participants are needed for a group.</span>
                   )}
                 </p>
               </div>
