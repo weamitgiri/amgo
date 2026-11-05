@@ -125,8 +125,13 @@ export const participantJoin = asyncHandler(async (req: Request, res: Response) 
         const { getBookingLimits } = await import('../services/eventStatsService');
         const limits = await getBookingLimits(booking_id);
         if (limits && limits.maxUsers > 0) {
+            // Count only VERIFIED participants — the same count the dashboard shows
+            // and the OTP-verify step enforces (under a booking row lock). Counting
+            // every row also counted people who requested an OTP but never verified
+            // (typo'd email, abandoned attempt), so e.g. 9 joined + 1 abandoned
+            // attempt blocked the genuine 10th participant.
             const [totalRows] = await query(
-                'SELECT COUNT(*) as total FROM game_participants WHERE booking_id = ?',
+                'SELECT COUNT(*) as total FROM game_participants WHERE booking_id = ? AND email_verified_at IS NOT NULL',
                 [booking_id]
             );
             if (Number(totalRows[0]?.total ?? 0) >= limits.maxUsers) {
