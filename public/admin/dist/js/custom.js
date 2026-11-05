@@ -144,10 +144,13 @@ $(document).keydown(function (event) {
         }
     });
     
-    //if (event.keyCode === 121 || event.keyCode === 122 || event.keyCode === 123 || event.keyCode === 222) { 
-    if (event.keyCode === 123 || event.keyCode === 222) { 
+    //if (event.keyCode === 121 || event.keyCode === 122 || event.keyCode === 123 || event.keyCode === 222) {
+    if (event.keyCode === 123) {
         // Prevent F12 (123)
         // F11 (122,121)
+        // NOTE: keyCode 222 (the ' / " key) was removed here — blocking it
+        // unconditionally stopped apostrophes/quotes being typed in any field.
+        // Ctrl+' is still blocked in the Ctrl branch below.
         return false;
     }
 
@@ -162,7 +165,9 @@ $(document).keydown(function (event) {
         (event.keyCode === 68 || event.keyCode === 83 ||  event.keyCode === 85 || event.keyCode === 117 || event.keyCode === 190 || event.keyCode === 191 || event.keyCode === 222 || event.keyCode === 80))
     {
         return false;
-    }else if (event.ctrlKey && event.shiftKey && event.keyCode == 73 || event.keyCode == 74) { // Prevent Ctrl+Shift+I        
+    }else if (event.ctrlKey && event.shiftKey && (event.keyCode == 73 || event.keyCode == 74)) { // Prevent Ctrl+Shift+I / Ctrl+Shift+J
+        // Parentheses matter: without them `|| keyCode == 74` matched a plain "J"
+        // press, so the letter J could not be typed anywhere in the admin.
         return false;
     }
 
