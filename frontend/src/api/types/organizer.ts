@@ -111,6 +111,9 @@ export type OrganizerGameResult = {
   completed_at: string | null;
   pdf_available: boolean;
   pdf_expires_at: string | null;
+  /** Seconds left (server clock) until this result and its PDF button are hidden —
+   *  one hour after the result was declared (every group finished). */
+  pdf_seconds_remaining?: number;
   /** Cook & Create: one row per game session (booking) with a single, permanent
    *  awards PDF downloaded by booking_id; group_name summarises its groups. */
   is_cook_and_create?: boolean;

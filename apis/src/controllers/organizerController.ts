@@ -14,6 +14,7 @@ import { generateNumericOtp } from '../utils/otp';
 import { computeGst } from '../services/gstService';
 import { getOtpExpiresAt, OTP_RESEND_COOLDOWN_SECONDS } from '../services/otpConfig';
 import { assertResendCooldown } from '../services/otpResend';
+import { getSessionResultWindow, getBookingResultWindow } from '../services/resultWindowService';
 import { getJwtSecret } from '../utils/jwtSecret';
 import {
     PAYMENT_METHODS,
@@ -759,13 +760,15 @@ export const deactivateAccount = asyncHandler(async (req: Request, res: Response
 });
 
 /**
- * Results tab — every completed/incomplete group across the organizer's
- * bookings, with results-PDF availability (PDFs live for 1 hour post-game).
- * Cook & Create sessions are listed as one row each, with one permanent PDF.
+ * Results tab — one row per game session (booking), listed only once the
+ * session's result is declared (every played group finished) and only for one
+ * hour after that declaration. Applies to Mystery Quest and Cook & Create.
  */
 export const getOrganizerResults = asyncHandler(async (req: Request, res: Response) => {
     const organizerId = (req as any).user.id;
 
+    // Every group of the organizer's bookings (not only finished ones), so a
+    // session with a group still playing is recognised as not declared yet.
     const [rows] = await query(
         `SELECT gg.id AS group_id, gg.group_name, gg.status, gg.completed_at, gg.purged_at,
                 gg.results_pdf_path, gg.results_pdf_expires_at,
@@ -775,20 +778,42 @@ export const getOrganizerResults = asyncHandler(async (req: Request, res: Respon
          FROM game_groups gg
          JOIN organizer_bookings ob ON ob.id = gg.booking_id
          JOIN activities a ON a.id = ob.activity_id
-         WHERE ob.organizer_id = ? AND gg.status IN ('completed', 'incomplete')
+         WHERE ob.organizer_id = ?
          ORDER BY gg.completed_at DESC, gg.id DESC`,
         [organizerId]
     );
 
+    // Group by booking; a booking is Cook & Create if any of its groups has a CC
+    // instance (a group that never started may not have one yet).
+    const groupsByBooking = new Map<number, any[]>();
+    for (const r of rows as any[]) {
+        const bookingId = Number(r.booking_id);
+        if (!groupsByBooking.has(bookingId)) groupsByBooking.set(bookingId, []);
+        groupsByBooking.get(bookingId)!.push(r);
+    }
+
     const results: any[] = [];
     const ccGroupsByBooking = new Map<number, any[]>();
     const mqGroupsByBooking = new Map<number, any[]>();
-    for (const r of rows as any[]) {
-        const byBooking = Number(r.is_cc) === 1 ? ccGroupsByBooking : mqGroupsByBooking;
-        const bookingId = Number(r.booking_id);
-        if (!byBooking.has(bookingId)) byBooking.set(bookingId, []);
-        byBooking.get(bookingId)!.push(r);
+    const windowByBooking = new Map<number, { declaredAt: number; expiresAt: number }>();
+    for (const [bookingId, all] of groupsByBooking) {
+        const window = getSessionResultWindow(all);
+        if (!window || !window.isOpen) continue; // not declared yet, or the hour has passed
+        windowByBooking.set(bookingId, window);
+        const finished = all.filter((g) => g.status === 'completed' || g.status === 'incomplete');
+        const isCc = all.some((g) => Number(g.is_cc) === 1);
+        (isCc ? ccGroupsByBooking : mqGroupsByBooking).set(bookingId, finished);
     }
+    const windowFields = (bookingId: number) => {
+        const w = windowByBooking.get(bookingId)!;
+        return {
+            completed_at: new Date(w.declaredAt),
+            pdf_expires_at: new Date(w.expiresAt),
+            // Server-computed, so the page hides the button on time regardless
+            // of the viewer's own clock.
+            pdf_seconds_remaining: Math.max(0, Math.ceil((w.expiresAt - Date.now()) / 1000)),
+        };
+    };
 
     // Mystery Quest: one results PDF per game session (booking) listing every
     // group and its players, so each session is a single row with a single
@@ -803,9 +828,6 @@ export const getOrganizerResults = asyncHandler(async (req: Request, res: Respon
             } catch {
                 /* non-fatal: list still returns, retried next load */
             }
-            const completedTimes = groups
-                .map((g) => (g.completed_at ? new Date(g.completed_at).getTime() : NaN))
-                .filter((t) => !isNaN(t));
             results.push({
                 group_id: Math.min(...groups.map((g) => Number(g.group_id))),
                 group_name: groups.length === 1 ? groups[0].group_name : `All groups (${groups.length})`,
@@ -814,11 +836,10 @@ export const getOrganizerResults = asyncHandler(async (req: Request, res: Respon
                 scheduled_date: groups[0].scheduled_date,
                 scheduled_time: groups[0].scheduled_time,
                 status: groups.some((g) => g.status === 'completed') ? 'completed' : 'incomplete',
-                completed_at: completedTimes.length > 0 ? new Date(Math.max(...completedTimes)) : null,
                 is_cook_and_create: false,
                 is_mystery_session: true,
                 pdf_available: Boolean(filename),
-                pdf_expires_at: null,
+                ...windowFields(bookingId),
             });
         }
     }
@@ -840,9 +861,6 @@ export const getOrganizerResults = asyncHandler(async (req: Request, res: Respon
                     /* non-fatal: list still returns, retried next load */
                 }
             }
-            const completedTimes = groups
-                .map((g) => (g.completed_at ? new Date(g.completed_at).getTime() : NaN))
-                .filter((t) => !isNaN(t));
             results.push({
                 group_id: Math.min(...groups.map((g) => Number(g.group_id))),
                 group_name: `All groups (${groups.length})`,
@@ -851,10 +869,9 @@ export const getOrganizerResults = asyncHandler(async (req: Request, res: Respon
                 scheduled_date: groups[0].scheduled_date,
                 scheduled_time: groups[0].scheduled_time,
                 status: anyCompleted ? 'completed' : 'incomplete',
-                completed_at: completedTimes.length > 0 ? new Date(Math.max(...completedTimes)) : null,
                 is_cook_and_create: true,
                 pdf_available: Boolean(filename),
-                pdf_expires_at: null,
+                ...windowFields(bookingId),
             });
         }
     }
@@ -880,6 +897,10 @@ export const downloadMQResultsPdf = asyncHandler(async (req: Request, res: Respo
         organizerId,
     ]);
     if (!rows?.[0]) throw new AppError('Results PDF not available', 404);
+    // Same rule as the Results list: only after every played group has finished,
+    // and only within one hour of that declaration.
+    const window = await getBookingResultWindow(bookingId);
+    if (!window || !window.isOpen) throw new AppError('Results PDF not available', 404);
 
     const { generateMQResultsPdfForBooking, resolveMQSessionPdfPath } = await import('../services/mqSessionResultsPdfService');
     const filename = await generateMQResultsPdfForBooking(bookingId);
@@ -907,6 +928,10 @@ export const downloadCCResultsPdf = asyncHandler(async (req: Request, res: Respo
         [bookingId, organizerId]
     );
     if (!rows?.[0]) throw new AppError('Results PDF not available', 404);
+    // Same rule as the Results list: only after every played group has finished,
+    // and only within one hour of that declaration.
+    const window = await getBookingResultWindow(bookingId);
+    if (!window || !window.isOpen) throw new AppError('Results PDF not available', 404);
 
     const { generateCCResultsPdfForBooking, resolveCCPdfPath } = await import('../services/ccResultsPdfService');
     const filename = await generateCCResultsPdfForBooking(bookingId);

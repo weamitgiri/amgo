@@ -134,7 +134,6 @@ async function renderPdf(bookingId: number, sections: GroupSection[], filePath: 
         // ---------- Session meta ----------
         const meta: [string, string][] = [
             ['Game', 'Mystery Quest'],
-            ['Case', (info.case_title || '').trim() || '—'],
             ['Date', fmtDate(info.scheduled_date)],
             ['Start time', fmtTime(info.scheduled_time)],
             ['Organiser', (info.organiser_name || '').trim() || 'Organizer'],

@@ -2,12 +2,14 @@ import fs from 'fs';
 import moment from 'moment';
 import { query, withTransaction } from '../config/db';
 import { resolvePdfPath } from './resultsPdfService';
+import { getBookingResultWindow } from './resultWindowService';
 
 /**
- * How long after a game STARTS its joining data (participants, groups and group
- * membership) is automatically deleted. Matches the 1-hour value the game
- * previously used (hardcoded in verdictScoringService); no new admin setting is
- * introduced.
+ * Fallback only: for a booking where NO group ever started playing (every group
+ * stayed `waiting` because it never filled), there is no result to declare, so
+ * its joining data is deleted this long after the game's start time. Bookings
+ * that did play are kept until their one-hour results window has expired (see
+ * runRetentionSweep). No new admin setting is introduced.
  */
 const RETENTION_WINDOW_HOURS = 1;
 
@@ -266,24 +268,38 @@ export async function purgeBookingJoiningData(bookingId: number | string): Promi
 
 export async function runRetentionSweep(): Promise<void> {
     try {
-        // Event-wide joining-data cleanup, anchored to when the game actually
-        // STARTS: the booking's scheduled start plus the lobby entry window
-        // (activities.lobby_wait_secs) — the same moment buildLobbyPayload flips a
-        // group to active. RETENTION_WINDOW_HOURS after that, every group and
-        // participant of the booking is deleted (complete, incomplete, or never
-        // filled). Runs on the server timer loop, so it works with no admin panel
-        // or browser open. Per booking, so other events are unaffected.
+        // Event-wide joining-data cleanup, anchored to the RESULT DECLARATION:
+        // once every played group has finished, the booking's game data and PDF
+        // downloads stay available for the full one-hour results window (the same
+        // window the HR Results tab uses, from resultWindowService). Only when that
+        // window has expired is every group and participant of the booking deleted
+        // (complete, incomplete, or never filled). A game still being played is
+        // never deleted. Runs on the server timer loop, so it works with no admin
+        // panel or browser open. Per booking, so other events are unaffected.
         // Dynamic import avoids a static retentionService → lobbyService →
         // timerService → retentionService import cycle.
         const { parseBookingSchedule } = await import('./lobbyService');
         const [bookings] = await query<any>(
-            `SELECT ob.id AS booking_id, ob.scheduled_date, ob.scheduled_time, a.lobby_wait_secs
+            `SELECT ob.id AS booking_id, ob.scheduled_date, ob.scheduled_time, a.lobby_wait_secs,
+                    (SELECT COUNT(*) FROM game_groups gg
+                      WHERE gg.booking_id = ob.id AND gg.status <> 'waiting') AS played_groups
                FROM organizer_bookings ob
                JOIN activities a ON a.id = ob.activity_id
               WHERE EXISTS (SELECT 1 FROM game_groups gg WHERE gg.booking_id = ob.id)`
         );
         const now = moment();
         for (const b of bookings as any[]) {
+            const window = await getBookingResultWindow(Number(b.booking_id));
+            if (window) {
+                // Declared: keep everything until the one-hour results window ends.
+                if (Date.now() >= window.expiresAt) await purgeBookingJoiningData(b.booking_id);
+                continue;
+            }
+            // Not declared. If any group played, one is still in progress — wait.
+            if (Number(b.played_groups) > 0) continue;
+
+            // No group ever started (none filled), so there is no result to keep:
+            // delete RETENTION_WINDOW_HOURS after the game's start time.
             const start = parseBookingSchedule(b.scheduled_date, b.scheduled_time);
             if (!start) continue;
             const lobbyWaitSecs = Number(b.lobby_wait_secs) || 900;

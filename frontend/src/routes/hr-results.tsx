@@ -33,7 +33,7 @@ function HrResultsPage() {
     }
   }, [navigate]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ["organizerResults"],
     queryFn: () => organizerService.getResults(),
     refetchInterval: 30_000,
@@ -41,25 +41,31 @@ function HrResultsPage() {
 
   const results = data?.results ?? [];
 
-  // HR Results visibility: a result row (and its Download PDF button) is shown
-  // only for one hour after the game completes, then it disappears — matching
-  // the retention window after which the underlying data is purged. A ticking
-  // clock re-evaluates this live so a row vanishes without a manual refresh.
+  // HR Results visibility: the server only lists a session once its result is
+  // declared (every group finished) and for one hour after that declaration.
+  // Between refetches, hide each row at its exact expiry. The expiry comes from
+  // the server's remaining seconds, measured from when this response arrived, so
+  // the viewer's own clock setting can't keep a button up or hide it early.
   const ONE_HOUR_MS = 60 * 60 * 1000;
+  const expiryOf = (r: OrganizerGameResult): number => {
+    if (typeof r.pdf_seconds_remaining === "number") {
+      return dataUpdatedAt + r.pdf_seconds_remaining * 1000;
+    }
+    const declared = r.completed_at ? new Date(r.completed_at).getTime() : NaN;
+    return Number.isNaN(declared) ? 0 : declared + ONE_HOUR_MS;
+  };
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
+    // Wake up exactly when the next visible row expires.
+    const t = Date.now();
+    const upcoming = results.map(expiryOf).filter((e) => e > t);
+    if (upcoming.length === 0) return;
+    const id = setTimeout(() => setNow(Date.now()), Math.min(...upcoming) - t + 50);
+    return () => clearTimeout(id);
+  }, [results, dataUpdatedAt, now]);
   const visibleResults = useMemo(
-    () =>
-      results.filter((r) => {
-        if (!r.completed_at) return true;
-        const completed = new Date(r.completed_at).getTime();
-        if (Number.isNaN(completed)) return true;
-        return now - completed < ONE_HOUR_MS;
-      }),
-    [results, now]
+    () => results.filter((r) => Math.max(now, Date.now()) < expiryOf(r)),
+    [results, dataUpdatedAt, now]
   );
 
   const downloadPdf = async (r: OrganizerGameResult) => {
