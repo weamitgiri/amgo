@@ -382,12 +382,16 @@ export async function markGroupIncomplete(groupId: number | string, reason: stri
 
     // Conditional for the same reason as finalizeVerdict's claim: if a concurrent
     // finalization just completed the group, don't overwrite its outcome.
-    const [, header] = await query(
+    // mysql2 returns an UPDATE's ResultSetHeader as the FIRST element (query()'s
+    // second element is undefined for it), so read affectedRows from there —
+    // reading only the second element made this always return before the
+    // game_incomplete emit below, leaving players on a dead game until a poll.
+    const [claim, header] = await query(
         `UPDATE game_groups SET status = 'incomplete', completed_at = ?, retention_purge_at = ?
           WHERE id = ? AND status NOT IN ('completed', 'incomplete')`,
         [completedAt, retentionPurgeAt, groupId]
     );
-    if (Number(header?.affectedRows || 0) === 0) return;
+    if (Number((header ?? (claim as any))?.affectedRows || 0) === 0) return;
 
     io.to(`group_${groupId}`).emit(
         'game_incomplete',
