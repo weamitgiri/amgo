@@ -4,11 +4,10 @@ import { Link } from "@tanstack/react-router";
 import { useCmsPages, useSiteSettings } from "@/hooks/usePublicContent";
 import type { ApiCmsPage } from "@/api/types/public";
 
-const CMS_LEGAL_ROUTES: Record<string, string> = {
-  "privacy-policy": "/privacy",
-  "terms-conditions": "/terms",
-};
-
+// Every legal page links to the CMS-driven /policy/$slug page, so edits made in
+// the admin's CMS Pages show on the website. (Privacy / Terms used to link to the
+// hard-coded /privacy and /terms pages, which never showed admin edits; those
+// pages remain as the fallback when the CMS list can't be loaded.)
 const LEGAL_SLUGS = ["privacy-policy", "terms-conditions", "refund-policy", "legal-policy"];
 
 export function Footer() {
@@ -83,26 +82,17 @@ export function Footer() {
           <div>
             <h4 className="text-xs font-semibold tracking-widest text-primary mb-3">LEGAL</h4>
             <ul className="space-y-2 text-sm text-foreground/80">
-              {(legalPages.length > 0 ? legalPages : null)?.map((item) => {
-                const route = CMS_LEGAL_ROUTES[item.slug];
-                return (
-                  <li key={item.slug}>
-                    {route ? (
-                      <Link to={route as "/privacy" | "/terms"} className="hover:text-primary transition-colors">
-                        {item.title}
-                      </Link>
-                    ) : (
-                      <Link
-                        to="/policy/$slug"
-                        params={{ slug: item.slug }}
-                        className="hover:text-primary transition-colors"
-                      >
-                        {item.title}
-                      </Link>
-                    )}
-                  </li>
-                );
-              }) ??
+              {(legalPages.length > 0 ? legalPages : null)?.map((item) => (
+                <li key={item.slug}>
+                  <Link
+                    to="/policy/$slug"
+                    params={{ slug: item.slug }}
+                    className="hover:text-primary transition-colors"
+                  >
+                    {item.title}
+                  </Link>
+                </li>
+              )) ??
                 fallbackLegal.map((item) => (
                   <li key={item.label}>
                     <Link to={item.to as "/privacy" | "/terms"} className="hover:text-primary transition-colors">
