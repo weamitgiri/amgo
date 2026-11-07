@@ -98,7 +98,7 @@ class SettingController extends Controller {
 
         }
             foreach ($settingArray as $key => $setting) {
-                // Every social link is optional; a blank field clears the link.
+                // Every social link is required (validated above).
                 $settingArray[$key] = strip_tags((string) $setting);
             }
 
@@ -118,19 +118,19 @@ class SettingController extends Controller {
     }
 
     /**
-     * Social Media tab (admin.setting.social-links). Every field is optional;
+     * Social Media tab (admin.setting.social-links). Every field is required;
      * when filled, each must be a full URL on its own platform's domain (a
      * profile/page path is allowed), and WhatsApp must be a phone number.
      */
     private function siteValidateArrayLinks()
     {
         return [
-            'facebook_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(facebook\.com|fb\.com)(\/.*)?$/i'],
-            'instagram_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?instagram\.com(\/.*)?$/i'],
-            'whatsapp_number' => ['bail', 'nullable', 'string', 'max:20', 'regex:/^\+?[0-9\s\-]{7,20}$/'],
-            'twitter_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(twitter\.com|x\.com)(\/.*)?$/i'],
-            'linkedin_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?linkedin\.com(\/.*)?$/i'],
-            'youtube_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(youtube\.com|youtu\.be)(\/.*)?$/i'],
+            'facebook_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(facebook\.com|fb\.com)(\/.*)?$/i'],
+            'instagram_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?instagram\.com(\/.*)?$/i'],
+            'whatsapp_number' => ['bail', 'required', 'string', 'max:20', 'regex:/^\+?[0-9\s\-]{7,20}$/'],
+            'twitter_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(twitter\.com|x\.com)(\/.*)?$/i'],
+            'linkedin_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?linkedin\.com(\/.*)?$/i'],
+            'youtube_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(youtube\.com|youtu\.be)(\/.*)?$/i'],
         ];
     }
 
