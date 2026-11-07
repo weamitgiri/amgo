@@ -28,6 +28,9 @@ $(document).ready(function()
         // alert(posturl);
         $(formid).find(".form-group").removeClass('has-error');
         $(formid).find(".help-block.text-danger").remove();
+        // Clear this form's validation errors from the previous submit.
+        $(formid).find('.error.formmessage').remove();
+        $(formid).find('.inputTxtError').removeClass('inputTxtError is-invalid');
 
         $(formid).find('.alert').removeClass('alert-success').removeClass('alert-danger').removeClass('alert-info');
         $(formid).find('.alert').addClass('alert-info').children('.ajax_message').html('<p><strong>Please wait! </strong>Your action is in proccess...</p>');
@@ -240,12 +243,15 @@ $(document).ready(function()
         //   });
 
 
+        // Show each error under its field in the form that was submitted only —
+        // searching every .ajaxform put e.g. a Social Media error under a
+        // same-named field on another settings tab.
         var data = response.responseJSON;
         $.each(data, function(key, value)
         {
-          $('.ajaxform').find('label[for="' + key + '"]').remove();
+          $(formid).find('label[for="' + key + '"].formmessage').remove();
           var msg = '<label class="error formmessage text-danger" for="' + key + '">' + value + '</label>';
-          var inputElement = $('.ajaxform').find('input[name="' + key + '"], select[name="' + key + '"],textarea[name="' + key + '"]');
+          var inputElement = $(formid).find('input[name="' + key + '"], select[name="' + key + '"],textarea[name="' + key + '"]');
           inputElement.addClass('inputTxtError is-invalid').after(msg);
         });
 

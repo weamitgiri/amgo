@@ -36,18 +36,7 @@ class SettingController extends Controller {
     {
         try {
 
-        $settingArray = Validator::make($request->all(), [
-            "website_name" => "required|string|max:120",
-            "website_url" => "required|url|max:255",
-            "tagline" => "nullable|string|max:255",
-            "admin_email" => "required|email|max:120",
-            "support_email" => "required|email|max:120",
-            "contact_number" => "required|string|max:20",
-            "company_address" => "required|string|max:500",
-            "timezone" => "required|string|max:100",
-            "date_format" => "required|string|max:50",
-            "currency" => "required|string|max:10",
-        ]);
+        $settingArray = Validator::make($request->all(), $this->siteValidateArray());
         if ($settingArray->fails()) {
             return response()->json($settingArray->messages(), 422);
         }else{
@@ -56,11 +45,12 @@ class SettingController extends Controller {
 
         }
             foreach ($settingArray as $key => $setting) {
-                $settingArray[$key] = strip_tags($setting);
+                // Optional fields may be left blank (null) now.
+                $settingArray[$key] = strip_tags((string) $setting);
             }
             Setting::set($settingArray);
             Setting::save();
-            
+
 
             $response["status"] = "success";
             $response["reload"] = true;
@@ -74,44 +64,42 @@ class SettingController extends Controller {
 
     private function siteValidateArray()
     {
+        // Only the website name and URL are required; every other General field
+        // is optional, but still format-checked when filled in.
         return [
             "website_name" => "required|string|max:120",
             "website_url" => "required|url|max:255",
             "tagline" => "nullable|string|max:255",
-            "admin_email" => "required|email|max:120",
-            "support_email" => "required|email|max:120",
-            "contact_number" => "required|string|max:20",
-            "company_address" => "required|string|max:500",
-            "timezone" => "required|string|max:100",
-            "date_format" => "required|string|max:50",
-            "currency" => "required|string|max:10",
+            "admin_email" => "nullable|email|max:120",
+            "support_email" => "nullable|email|max:120",
+            "contact_number" => ["nullable", "string", "max:20", "regex:/^\+?[0-9\s\-()]{7,20}$/"],
+            "company_address" => "nullable|string|max:500",
+            "timezone" => "nullable|timezone",
+            "date_format" => "nullable|string|max:50",
+            "currency" => "nullable|string|max:10",
         ];
-    } 
+    }
 
 // =====================================================================
     public function linkupdateSettings(Request $request)
     {
         try {
 
-        $settingArray = Validator::make($request->all(), [
-             
-            'facebook_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?facebook\.com$/i'],
-            'instagram_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?instagram\.com$/i'],
-            'twitter_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?twitter\.com$/i'],
-            'linkedin_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?linkedin\.com$/i'],
-            'youtube_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?youtube\.com$/i'],
-            'rss_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?rss\.com$/i'],
-            'yelp_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?yelp\.com$/i'],
-            'vimeo_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?vimeo\.com$/i'],        ]);
+        $settingArray = Validator::make(
+            $request->all(),
+            $this->siteValidateArrayLinks(),
+            $this->siteValidateLinksMessages()
+        );
         if ($settingArray->fails()) {
             return response()->json($settingArray->messages(), 422);
         }else{
             $niceNames = [];
-             $settingArray = $this->validate($request, $this->siteValidateArrayLinks(), [], $niceNames);
+             $settingArray = $this->validate($request, $this->siteValidateArrayLinks(), $this->siteValidateLinksMessages(), $niceNames);
 
         }
             foreach ($settingArray as $key => $setting) {
-                $settingArray[$key] = strip_tags($setting);
+                // Every social link is optional; a blank field clears the link.
+                $settingArray[$key] = strip_tags((string) $setting);
             }
 
 
@@ -129,17 +117,33 @@ class SettingController extends Controller {
             }
     }
 
+    /**
+     * Social Media tab (admin.setting.social-links). Every field is optional;
+     * when filled, each must be a full URL on its own platform's domain (a
+     * profile/page path is allowed), and WhatsApp must be a phone number.
+     */
     private function siteValidateArrayLinks()
     {
         return [
-            'facebook_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?facebook\.com$/i'],
-            'instagram_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?instagram\.com$/i'],
-            'twitter_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?twitter\.com$/i'],
-            'linkedin_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?linkedin\.com$/i'],
-            'youtube_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?youtube\.com$/i'],
-            'rss_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?rss\.com$/i'],
-            'yelp_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?yelp\.com$/i'],
-            'vimeo_link' => ['required', 'string', 'regex:/^(https?:\/\/)?(www\.)?vimeo\.com$/i'],         ];
+            'facebook_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(facebook\.com|fb\.com)(\/.*)?$/i'],
+            'instagram_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?instagram\.com(\/.*)?$/i'],
+            'whatsapp_number' => ['bail', 'nullable', 'string', 'max:20', 'regex:/^\+?[0-9\s\-]{7,20}$/'],
+            'twitter_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(twitter\.com|x\.com)(\/.*)?$/i'],
+            'linkedin_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?linkedin\.com(\/.*)?$/i'],
+            'youtube_url' => ['bail', 'nullable', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(youtube\.com|youtu\.be)(\/.*)?$/i'],
+        ];
+    }
+
+    private function siteValidateLinksMessages()
+    {
+        return [
+            'facebook_url.regex' => 'Enter a Facebook link, e.g. https://facebook.com/yourpage',
+            'instagram_url.regex' => 'Enter an Instagram link, e.g. https://instagram.com/yourprofile',
+            'whatsapp_number.regex' => 'Enter a valid phone number, e.g. +919876543210',
+            'twitter_url.regex' => 'Enter a Twitter / X link, e.g. https://x.com/yourprofile',
+            'linkedin_url.regex' => 'Enter a LinkedIn link, e.g. https://linkedin.com/in/yourprofile',
+            'youtube_url.regex' => 'Enter a YouTube link, e.g. https://youtube.com/@yourchannel',
+        ];
     }
 // =====================================================================
 

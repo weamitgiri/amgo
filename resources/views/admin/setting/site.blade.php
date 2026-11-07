@@ -24,49 +24,49 @@
             </div>
 
              <div class="col-md-6 form-group">
-                <label>Admin Email <span class="text-danger">*</span></label>
+                <label>Admin Email</label>
                 <input name="admin_email" type="email" class="form-control @error('admin_email') is-invalid @enderror"
                 value="{{ old('admin_email', setting('admin_email')) }}">
                <span class="text-danger">{{ $errors->first('admin_email') }}</span>
             </div>
 
             <div class="col-md-6 form-group">
-                <label>Support Email <span class="text-danger">*</span></label>
+                <label>Support Email</label>
                 <input name="support_email" type="email" class="form-control @error('support_email') is-invalid @enderror"
                 value="{{ old('support_email', setting('support_email')) }}">
                <span class="text-danger">{{ $errors->first('support_email') }}</span>
               </div>
 
               <div class="col-md-6 form-group">
-                <label>Contact Number <span class="text-danger">*</span></label>
+                <label>Contact Number</label>
                 <input name="contact_number" type="text" class="form-control @error('contact_number') is-invalid @enderror"
                 value="{{ old('contact_number', setting('contact_number')) }}">
                <span class="text-danger">{{ $errors->first('contact_number') }}</span>
               </div>
 
             <div class="col-md-6 form-group">
-                <label>Timezone <span class="text-danger">*</span></label>
+                <label>Timezone</label>
                 <input name="timezone" type="text" class="form-control @error('timezone') is-invalid @enderror"
                 value="{{ old('timezone', setting('timezone', 'Asia/Kolkata')) }}">
                <span class="text-danger">{{ $errors->first('timezone') }}</span>
               </div>
 
               <div class="col-md-6 form-group">
-                <label>Date Format <span class="text-danger">*</span></label>
+                <label>Date Format</label>
                 <input name="date_format" type="text" class="form-control @error('date_format') is-invalid @enderror"
                 value="{{ old('date_format', setting('date_format', 'd M Y')) }}">
                <span class="text-danger">{{ $errors->first('date_format') }}</span>
               </div>
 
               <div class="col-md-6 form-group">
-                <label>Currency <span class="text-danger">*</span></label>
+                <label>Currency</label>
                 <input name="currency" type="text" class="form-control @error('currency') is-invalid @enderror"
                 value="{{ old('currency', setting('currency', 'INR')) }}">
                <span class="text-danger">{{ $errors->first('currency') }}</span>
               </div>
 
               <div class="col-md-6 form-group">
-                <label>Company Address <span class="text-danger">*</span></label>
+                <label>Company Address</label>
                 <textarea class="form-control @error('company_address') is-invalid @enderror" name="company_address">{{ old('company_address', setting('company_address')) }}</textarea>
                <span class="text-danger">{{ $errors->first('company_address') }}</span>
               </div>

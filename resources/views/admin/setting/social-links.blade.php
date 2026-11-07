@@ -1,4 +1,4 @@
-<form method="POST" action="{{ route('admin.settings.updateSettings') }}" class="ajaxform" id="socialSettingsForm">
+<form method="POST" action="{{ route('admin.settings.linkupdateSettings') }}" class="ajaxform" id="socialSettingsForm">
     @csrf
     <div class="row">
         <div class="col-md-6 form-group">
