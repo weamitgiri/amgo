@@ -139,8 +139,8 @@ export async function getAvailablePaymentMethods(amount?: number) {
     if (settings.optionNetBanking) supported.push('Net Banking');
     if (settings.optionWallet) supported.push('Wallets');
 
-    const codRange = codAmountRejection(amount, settings);
-
+    // Checkout offers Razorpay only — Cash on Delivery is no longer listed.
+    // (assertMethodAllowed rejects 'cod' too, so it can't be forced via the API.)
     return {
         methods: [
             {
@@ -153,18 +153,6 @@ export async function getAvailablePaymentMethods(amount?: number) {
                 mode: razorpayAvailable ? getRazorpayMode() : null,
                 cta: 'Continue to Payment',
                 unavailable_reason: razorpayAvailable ? null : 'Online payment is currently unavailable',
-            },
-            {
-                id: 'cod' as const,
-                label: 'Cash on Delivery',
-                description: 'Pay when your order is delivered',
-                enabled: settings.codEnabled && !codRange,
-                min_amount: settings.codMinAmount || null,
-                max_amount: settings.codMaxAmount || null,
-                cta: 'Place Order',
-                unavailable_reason: !settings.codEnabled
-                    ? 'Cash on Delivery is currently unavailable'
-                    : codRange,
             },
         ],
         currency: 'INR',
@@ -204,15 +192,8 @@ export async function assertMethodAllowed(method: PaymentMethod, amount: number)
     }
 
     if (method === 'cod') {
-        if (!settings.codEnabled) {
-            throw new AppError('Cash on Delivery is currently unavailable.', 422);
-        }
-
-        const rejection = codAmountRejection(amount, settings);
-        if (rejection) {
-            throw new AppError(rejection, 422);
-        }
-        return;
+        // Cash on Delivery is withdrawn from checkout — only Razorpay is accepted.
+        throw new AppError('Cash on Delivery is currently unavailable.', 422);
     }
 
     throw new AppError('Unsupported payment method.', 422);

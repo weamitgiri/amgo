@@ -1185,7 +1185,7 @@ function PaymentMethodSelector({
       <p className="text-sm font-semibold mb-2">Payment Method</p>
 
       {/* Single column on mobile so the description text never gets squeezed. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className={`grid grid-cols-1 gap-3 ${methods.length > 1 ? "sm:grid-cols-2" : ""}`}>
         {methods.map((method) => {
           const isSelected = selected === method.id;
 
