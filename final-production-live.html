@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Production Go-Live Audit</title>
+<style>
+:root{
+  --bg:#f5f6fa;--panel:#fff;--ink:#1b2130;--muted:#5d6678;--line:#e2e6ee;--brand:#3451c7;
+  --crit:#c4242b;--crit-bg:#fde8e9;--high:#d9560b;--high-bg:#fdeee3;--med:#a37a00;--med-bg:#fbf3d6;
+  --low:#1a6fc2;--low-bg:#e4f0fc;--ok:#23803a;--ok-bg:#e4f4e8;--chip:#eef1f6;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f131a;--panel:#171c25;--ink:#e5e9f1;--muted:#98a2b3;--line:#283040;--brand:#8098ff;
+  --crit:#ff6b70;--crit-bg:#3a1a1d;--high:#ff9d5c;--high-bg:#3a2616;--med:#f2c94c;--med-bg:#332b12;
+  --low:#6cb6ff;--low-bg:#132638;--ok:#6ad582;--ok-bg:#15301d;--chip:#212836;}}
+:root[data-theme="dark"]{
+  --bg:#0f131a;--panel:#171c25;--ink:#e5e9f1;--muted:#98a2b3;--line:#283040;--brand:#8098ff;
+  --crit:#ff6b70;--crit-bg:#3a1a1d;--high:#ff9d5c;--high-bg:#3a2616;--med:#f2c94c;--med-bg:#332b12;
+  --low:#6cb6ff;--low-bg:#132638;--ok:#6ad582;--ok-bg:#15301d;--chip:#212836;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 80px}
+h1{font-size:26px;margin:0 0 6px;letter-spacing:-.3px}
+h2{font-size:19px;margin:34px 0 12px}
+p{margin:0 0 10px}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+code{background:var(--chip);padding:1px 5px;border-radius:4px;word-break:break-word}
+.muted{color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.verdict{border-left:5px solid var(--crit)}
+.verdict b{color:var(--crit)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat .n{font-size:26px;font-weight:700}
+.stat.c .n{color:var(--crit)}.stat.h .n{color:var(--high)}.stat.m .n{color:var(--med)}.stat.l .n{color:var(--low)}.stat.o .n{color:var(--ok)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.filters button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:5px 13px;font:inherit;font-size:13px;cursor:pointer}
+.filters button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.f{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.f header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}
+.f h3{font-size:16px;margin:0;flex:1 1 320px}
+.id{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)}
+.sev,.tag{font-size:11.5px;font-weight:700;letter-spacing:.3px;padding:2px 9px;border-radius:999px;text-transform:uppercase}
+.sev.critical{background:var(--crit-bg);color:var(--crit)}.sev.high{background:var(--high-bg);color:var(--high)}
+.sev.medium{background:var(--med-bg);color:var(--med)}.sev.low{background:var(--low-bg);color:var(--low)}
+.tag{background:var(--chip);color:var(--muted);font-weight:600}
+.tag.new{background:var(--crit-bg);color:var(--crit)}
+dl{display:grid;grid-template-columns:120px 1fr;gap:4px 14px;margin:0}
+dt{color:var(--muted);font-size:13px}
+dd{margin:0;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px}
+.tbl{overflow-x:auto}
+ol li,ul li{margin-bottom:6px}
+@media (max-width:620px){dl{grid-template-columns:1fr}dt{margin-top:6px}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Zoventro: Final Production Go-Live Audit</h1>
+<p class="muted">Repo <code>/opt/homebrew/var/www/p</code> · branch <code>main</code> · HEAD <code>7808723</code> · Date 2026-11-10 ·
+Scope: Laravel admin + legacy API, Node/Express API + Socket.IO (<code>apis/</code>), React frontend (<code>frontend/</code>), config, dependencies.</p>
+<p class="muted">Method: read-only code review, plus local checks (type-check, <code>npm audit</code>, <code>composer audit</code>, and Laravel route matching via tinker). <b>No code was changed.</b> Secret values are never shown: only where they are and that they exist.</p>
+
+<div class="card verdict" style="margin-top:18px">
+  <p style="font-size:17px;margin:0 0 8px"><b>Verdict: NOT READY for production live.</b></p>
+  <p>Three issues each block release on their own:</p>
+  <ol style="margin:0 0 0 18px;padding:0">
+    <li>The OTP is still fixed at <code>123456</code>, so anyone can log in as any organizer or participant knowing only an email.</li>
+    <li>Real secrets (JWT, DB, SMTP, Razorpay) sit in a git-tracked file.</li>
+    <li>Any admin can read server files such as <code>.env</code> through <code>showImage</code> path traversal.</li>
+  </ol>
+  <p style="margin-top:8px">Most of the October audit (<code>production-index.html</code>) is still open. The API rate limiter also has a functional bug: behind nginx every user shares one IP bucket, so a real event will hit HTTP 429 after about 15 joins.</p>
+</div>
+
+<div class="stats">
+  <div class="stat c"><div class="n">3</div>Critical</div>
+  <div class="stat h"><div class="n">10</div>High</div>
+  <div class="stat m"><div class="n">8</div>Medium</div>
+  <div class="stat l"><div class="n">8</div>Low</div>
+  <div class="stat o"><div class="n">7</div>Checks passed</div>
+</div>
+
+<h2>Fix first (go-live checklist)</h2>
+<div class="card">
+<ol style="margin:0 0 0 18px;padding:0">
+  <li><b>P-01:</b> Remove <code>return '123456';</code> in <code>apis/src/utils/otp.ts:19</code>, and the 3 fixed OTPs in the Laravel legacy API.</li>
+  <li><b>P-03:</b> Delete the tracked file <code>apis/DB_HOST=127.0.0.1</code>, then <b>rotate</b> JWT_SECRET, the DB password, the SMTP password and the Razorpay key and webhook secrets. Rotate every key that was ever in git history too.</li>
+  <li><b>P-04:</b> Lock <code>showImage</code> to an allow-listed folder (reject <code>..</code>; check <code>realpath</code> stays inside <code>public/</code>).</li>
+  <li><b>P-05 to P-10:</b> Add auth and ownership checks to the booking, event-stats, socket, dev-advance and C&amp;C admin endpoints.</li>
+  <li><b>P-11:</b> Set <code>app.set('trust proxy', 1)</code> and confirm <code>NODE_ENV=production</code> on the server.</li>
+  <li>Production <code>.env</code>: <code>APP_ENV=production</code>, <code>APP_DEBUG=false</code>, <code>SESSION_SECURE_COOKIE=true</code>, a non-root DB user, and nginx docroot = <code>public/</code>.</li>
+  <li>Upgrade dependencies: run <code>npm audit fix</code> in <code>apis/</code> and <code>frontend/</code>, and <code>composer update laravel/framework symfony/*</code>. Retest afterwards.</li>
+</ol>
+</div>
+
+<h2>Issue list</h2>
+<div class="filters" id="filters">
+  <button class="on" data-f="all">All</button>
+  <button data-f="critical">Critical</button>
+  <button data-f="high">High</button>
+  <button data-f="medium">Medium</button>
+  <button data-f="low">Low</button>
+  <button data-f="functional">Functional</button>
+  <button data-f="new">New since Oct</button>
+</div>
+
+<div id="list">
+
+<!-- ================= CRITICAL ================= -->
+<article class="f" data-sev="critical" data-kind="security">
+<header><span class="id">P-01</span><h3>OTP generator returns a fixed code <code>123456</code> for every organizer and participant login</h3><span class="sev critical">Critical</span><span class="tag">Still open (ZV-001)</span></header>
+<dl>
+<dt>Where</dt><dd><code>apis/src/utils/otp.ts:19</code>: <code>return '123456';</code> sits before the real <code>crypto.randomInt</code> line, which is unreachable. Used by organizer register/login/resend and participant join/resend.</dd>
+<dt>Impact</dt><dd>Full account takeover. Call <code>POST /v1/organizer/login</code> with the victim's email, then <code>/verify-login</code> with <code>otp=123456</code>, and you get a valid 24h JWT. You can then see bookings, invoices and billing/GST data, reschedule events and download result PDFs. The same works for any participant seat.</dd>
+<dt>Fix</dt><dd>Delete line 19 so <code>crypto.randomInt(0, max)</code> runs. Add a per-account failed-attempt counter that clears the OTP after 5 wrong tries.</dd>
+</dl></article>
+
+<article class="f" data-sev="critical" data-kind="security">
+<header><span class="id">P-02</span><h3>Legacy Laravel <code>/api/v1</code> auth and game-join also use fixed OTP <code>123456</code></h3><span class="sev critical">Critical</span><span class="tag">Still open (ZV-005)</span></header>
+<dl>
+<dt>Where</dt><dd><code>app/Http/Controllers/API/AuthController.php:32, 111</code>; <code>app/Http/Controllers/API/GameJoinController.php:97</code> (comment: "TEMP … revert before production"). Routes are still live in <code>routes/api.php:20-31</code>. <code>game-join</code> has no throttle.</dd>
+<dt>Impact</dt><dd>A second account-takeover path through the old API, even after P-01 is fixed.</dd>
+<dt>Fix</dt><dd>If the React app no longer uses these routes, remove them from <code>routes/api.php</code>. Otherwise use <code>random_int(100000, 999999)</code> and add <code>throttle:6,1</code> to <code>game-join</code>.</dd>
+</dl></article>
+
+<article class="f" data-sev="critical" data-kind="security">
+<header><span class="id">P-03</span><h3>Real secrets committed in a tracked file, and private keys and env files in git history</h3><span class="sev critical">Critical</span><span class="tag">Still open (ZV-004)</span></header>
+<dl>
+<dt>Where</dt><dd><code>apis/DB_HOST=127.0.0.1</code> (an env file saved with a wrong name) is tracked in git. It has <b>5 non-empty secret entries</b>: JWT_SECRET, DB_PASSWORD, MAIL_PASSWORD, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET. Git history also holds <code>.env</code>, <code>frontend/.env</code>, <code>frontend/txt-env</code>, <code>production.txt</code>, the SSH keys <code>amigo</code>/<code>amigo.pub</code> and <code>storage/oauth-private.key</code>.</dd>
+<dt>Impact</dt><dd>Anyone with repo access can forge organizer JWTs, log in to the DB and SMTP, and call Razorpay with your key. Payments could be refunded and fake webhooks would pass verification.</dd>
+<dt>Fix</dt><dd>Run <code>git rm --cached "apis/DB_HOST=127.0.0.1"</code>, then <b>rotate every secret</b>. Removing the file does not undo the exposure. Optionally scrub history with <code>git filter-repo</code> and force-push.</dd>
+</dl></article>
+
+<!-- ================= HIGH ================= -->
+<article class="f" data-sev="high" data-kind="security" data-new="1">
+<header><span class="id">P-04</span><h3>Admin <code>showImage</code> path traversal can read any file, including <code>.env</code></h3><span class="sev high">High</span><span class="tag new">New</span></header>
+<dl>
+<dt>Where</dt><dd><code>app/Http/Controllers/Admin/HomeController.php:269-299</code>; route <code>routes/admin.php:43</code> <code>showImage/{a}/{b?}/…</code></dd>
+<dt>Proof</dt><dd>Through tinker, <code>/admin/showImage/%2e%2e/.env</code> and <code>/admin/showImage/../.env</code> both match the route with <code>a=".."</code>. <code>public_path("/../.env")</code> exists and has an extension, so the code would return the file. The file itself was not read.</dd>
+<dt>Impact</dt><dd>Any logged-in admin user, including a low-permission sub-admin (there is no RBAC here), can download <code>.env</code> with the DB, mail, Razorpay and APP_KEY secrets. With APP_KEY they can forge session cookies.</dd>
+<dt>Fix</dt><dd>Reject any segment equal to <code>..</code>. Resolve with <code>realpath()</code>, check it starts with <code>public_path('uploads')</code>, and allow-list image extensions.</dd>
+</dl></article>
+
+<article class="f" data-sev="high" data-kind="security">
+<header><span class="id">P-05</span><h3>Booking details, including the invitation link and organizer email, served without login</h3><span class="sev high">High</span><span class="tag">Still open (ZV-003)</span></header>
+<dl>
+<dt>Where</dt><dd><code>GET /v1/organizer/booking/:booking_id</code>: <code>organizerRoutes.ts:155-158</code>, <code>organizerController.ts:366-403</code> (no <code>authMiddleware</code>)</dd>
+<dt>Impact</dt><dd>Booking IDs are sequential. Looping 1…N returns every customer's company, organizer email, package and price, plus the <code>invitation_link</code>, which lets an outsider join any event.</dd>
+<dt>Fix</dt><dd>Add <code>authMiddleware</code> and <code>WHERE ob.organizer_id = req.user.id</code>.</dd>
+</dl></article>
+
+<article class="f" data-sev="high" data-kind="security">
+<header><span class="id">P-06</span><h3><code>create-booking</code> and <code>complete-booking</code> are unauthenticated and trust the client's organizer_id / booking_id</h3><span class="sev high">High</span><span class="tag">Still open (ZV-009)</span></header>
+<dl>
+<dt>Where</dt><dd><code>organizerRoutes.ts:140-185</code>; <code>organizerController.ts:309</code> (<code>organizer_id</code> taken from the body) and <code>:422</code></dd>
+<dt>Impact</dt><dd>Anyone can create bookings for any organizer. They can also complete someone else's pending booking, writing their own billing and GST details, or choose <code>cod</code>, which activates the booking with no payment.</dd>
+<dt>Fix</dt><dd>Add <code>authMiddleware</code> and take the organizer id from the JWT. In <code>completeBooking</code>, check <code>booking.organizer_id === req.user.id</code>.</dd>
+</dl></article>
+
+<article class="f" data-sev="high" data-kind="security">
+<header><span class="id">P-07</span><h3>Event-stats IDOR: any organizer, or any anonymous socket, can read another booking's participant names and emails</h3><span class="sev high">High</span><span class="tag">Still open (ZV-008, ZV-002)</span></header>
+<dl>
+<dt>Where</dt><dd><code>organizerController.ts:237-246</code> <code>getEventStats</code> has no ownership check (unlike <code>notificationController</code>, which calls <code>assertOrganizerBooking</code>). <code>socketHandler.ts:242-261</code> <code>join_organizer_dashboard</code> needs no auth at all.</dd>
+<dt>Impact</dt><dd>Leaks participant PII across companies, and keeps streaming live updates.</dd>
+<dt>Fix</dt><dd>Call <code>assertOrganizerBooking(booking_id, req.user.id)</code>. Authenticate sockets in <code>io.use()</code> with the JWT or join_token, and check ownership before <code>socket.join</code>.</dd>
+</dl></article>
+
+<article class="f" data-sev="high" data-kind="security functional">
+<header><span class="id">P-08</span><h3>Socket events are unauthenticated: anyone can mark any player as left and force-end a game ("Investigator Left")</h3><span class="sev high">High</span><span class="tag">Still open (ZV-014)</span></header>
+<dl>
+<dt>Where</dt><dd><code>socketHandler.ts:165-207</code> (<code>join_lobby</code> / <code>join_game_group</code>), <code>:219</code> (<code>join_cc_instance</code>), <code>:231</code>, <code>:266-285</code> (<code>leave_game_group</code>). All of them trust <code>groupId</code> and <code>participantId</code> from the client.</dd>
+<dt>Impact</dt><dd>Emitting <code>leave_game_group</code> with the investigator's id closes the whole group once the 60s grace period passes. <code>join_lobby</code> with another id takes over their <code>socket_id</code>. Joining any <code>group_*</code> or <code>cc-instance-*</code> room lets an outsider read live game data. This undercuts the recent auto-close fix.</dd>
+<dt>Fix</dt><dd>Socket middleware that checks <code>handshake.auth.joinToken</code> and sets <code>socket.data.participant</code>. Use only that identity and group, and ignore ids sent by the client.</dd>
+</dl></article>
+
+<article class="f" data-sev="high" data-kind="security">
+<header><span class="id">P-09</span><h3>Any organizer can create, edit or delete the global Cook &amp; Create templates and ingredients</h3><span class="sev high">High</span><span class="tag">Still open (ZV-007)</span></header>
+<dl>
+<dt>Where</dt><dd><code>apis/src/routes/cookandcreate/index.ts:192-240</code>. Only <code>authMiddleware</code> (any organizer) protects them, and the controllers have no admin role check.</dd>
+<dt>Impact</dt><dd>One customer can break or alter the game content for every other customer.</dd>
+<dt>Fix</dt><dd>Remove these routes if admin edits happen in Laravel. Otherwise require an admin role.</dd>
+</dl></article>
+
+<article class="f" data-sev="high" data-kind="security functional">
+<header><span class="id">P-10</span><h3>Unauthenticated dev endpoint can start or skip phases of any live game</h3><span class="sev high">High</span><span class="tag">Still open (ZV-006)</span></header>
+<dl>
+<dt>Where</dt><dd><code>POST /v1/game/dev/advance/:group_id</code>: <code>gameRoutes.ts:17</code>, <code>gameEngineController.ts:319</code>, <code>timerService.ts:218</code>. No auth and no <code>NODE_ENV</code> check.</dd>
+<dt>Impact</dt><dd>Anyone can force-start a waiting group, which bypasses the new incomplete-group gate, or skip rounds in someone else's event.</dd>
+<dt>Fix</dt><dd>Only register the route when <code>NODE_ENV !== 'production'</code>, or delete it.</dd>
+</dl></article>
+
+<article class="f" data-sev="high" data-kind="functional security" data-new="1">
+<header><span class="id">P-11</span><h3>Rate limiter keys on the proxy IP: in production the whole site shares one bucket, and joins fail with 429</h3><span class="sev high">High</span><span class="tag new">Functional</span></header>
+<dl>
+<dt>Where</dt><dd><code>apis/src/server.ts</code> never calls <code>app.set('trust proxy', …)</code>. <code>authRateLimit.ts:28</code> skips every limit when <code>NODE_ENV !== 'production'</code>.</dd>
+<dt>Impact</dt><dd>Behind nginx, <code>req.ip</code> is <code>127.0.0.1</code> for every user. <code>otpRequestRateLimit</code> (15 per 15 min) and <code>otpVerifyRateLimit</code> (10 per 15 min) then apply to <b>all users together</b>. In a 20-person event, participants after the ~10th get "Too many requests". If NODE_ENV is not exactly <code>production</code>, there is no brute-force protection at all.</dd>
+<dt>Fix</dt><dd>Add <code>app.set('trust proxy', 1)</code> (one nginx hop), make sure pm2 sets <code>NODE_ENV=production</code>, and consider keying by IP + email.</dd>
+</dl></article>
+
+<article class="f" data-sev="high" data-kind="security" data-new="1">
+<header><span class="id">P-12</span><h3>Known vulnerable dependencies</h3><span class="sev high">High</span><span class="tag new">New check</span></header>
+<dl>
+<dt>Where</dt><dd><code>apis</code> (prod deps): 1 critical (<code>proxy-addr</code>) and 8 high (<code>socket.io-parser</code>, <code>engine.io</code>, <code>ws</code>, <code>body-parser</code>, <code>mysql2</code>, <code>nodemailer</code>, <code>socket.io-adapter</code>, <code>ip-address</code>).<br>
+<code>frontend</code>: 6 critical (<code>@tanstack/react-start*</code>, <code>seroval</code>) and 15 high (<code>vite</code>, <code>undici</code>, <code>ws</code>, <code>zod</code>, <code>wrangler</code>, and others).<br>
+Composer: <code>laravel/framework</code> (5 advisories), <code>symfony/http-foundation</code> (5), <code>phpoffice/phpspreadsheet</code> (3), <code>league/commonmark</code> (2), <code>symfony/http-kernel</code>, <code>mime</code>, <code>routing</code>, <code>yaml</code>. <code>akaunting/setting</code> is abandoned.</dd>
+<dt>Fix</dt><dd>Run <code>npm audit fix</code> in both apps, <code>composer update laravel/framework "symfony/*" phpoffice/phpspreadsheet league/commonmark</code>, then do a full regression test.</dd>
+</dl></article>
+
+<article class="f" data-sev="high" data-kind="security">
+<header><span class="id">P-13</span><h3>Admin RBAC enforced in only 5 of 26 admin controllers</h3><span class="sev high">High</span><span class="tag">Still open (ZV-011)</span></header>
+<dl>
+<dt>Where</dt><dd><code>MenuPermission::checkRoutePermissions()</code> is used only in Admin, Role, Users, SubAdmin and DatabaseExport. Settings, organizers, payments (mark-paid), API logs (clear), CMS, games and music have no check.</dd>
+<dt>Impact</dt><dd>A sub-admin with limited menus can still change payment settings, mark bookings paid, delete organizers, and use P-04.</dd>
+<dt>Fix</dt><dd>Move the check into a route middleware and apply it to the whole <code>auth:admin</code> group.</dd>
+</dl></article>
+
+<!-- ================= MEDIUM ================= -->
+<article class="f" data-sev="medium" data-kind="security functional">
+<header><span class="id">P-14</span><h3>Participant join needs only a numeric booking_id, not the invitation token</h3><span class="sev medium">Medium</span><span class="tag">Still open (ZV-010)</span></header>
+<dl>
+<dt>Where</dt><dd><code>participantRoutes.ts:19-30</code>, <code>participantController.ts:113</code></dd>
+<dt>Impact</dt><dd>Combined with P-01, an outsider can fill every seat of any booking using fake emails. The join limit is reached and real employees get "Join limit reached".</dd>
+<dt>Fix</dt><dd>Require <code>link_token</code> in join, resend-otp and verify-otp, and derive <code>booking_id</code> from it on the server.</dd>
+</dl></article>
+
+<article class="f" data-sev="medium" data-kind="security">
+<header><span class="id">P-15</span><h3>Mystery Quest results PDF authorized by a guessable <code>participant_id</code> query parameter</h3><span class="sev medium">Medium</span><span class="tag">Still open (ZV-016)</span></header>
+<dl>
+<dt>Where</dt><dd><code>resultsRoutes.ts:8</code> (no <code>participantAuth</code>), <code>resultsController.ts:164-190</code></dd>
+<dt>Impact</dt><dd>While the 1h window is open, anyone who guesses <code>group_id</code> and a member's sequential <code>participant_id</code> can download that group's results.</dd>
+<dt>Fix</dt><dd>Accept <code>?token=&lt;join_token&gt;</code> (or a short-lived signed URL) instead of a bare id.</dd>
+</dl></article>
+
+<article class="f" data-sev="medium" data-kind="security">
+<header><span class="id">P-16</span><h3>Admin-authored HTML rendered without sanitizing in 11 places, and the organizer JWT is in localStorage</h3><span class="sev medium">Medium</span><span class="tag">Still open (ZV-020, ZV-034)</span></header>
+<dl>
+<dt>Where</dt><dd><code>dangerouslySetInnerHTML</code> in <code>game.tsx:1568, 2303, 2946</code>; <code>join.$linkToken.tsx:401, 584, 680</code>; <code>policy.$slug.tsx:61</code>; <code>index.tsx:393</code>; <code>cookandcreate/game.tsx:1280</code>; <code>RoleRevealModal.tsx:152</code>; <code>summary.tsx:172</code>. No DOMPurify. The token is stored in <code>api/client.ts:61</code>.</dd>
+<dt>Impact</dt><dd>A compromised or rogue admin account, or P-04/P-13, can put a <code>&lt;script&gt;</code> in CMS or game content that steals every organizer's JWT.</dd>
+<dt>Fix</dt><dd>Wrap the HTML in <code>DOMPurify.sanitize()</code>, and also sanitize on save in Laravel (for example with HTMLPurifier).</dd>
+</dl></article>
+
+<article class="f" data-sev="medium" data-kind="security">
+<header><span class="id">P-17</span><h3>SVG uploads allowed, and stored files keep the client-supplied extension</h3><span class="sev medium">Medium</span><span class="tag">Still open (ZV-018, ZV-019)</span></header>
+<dl>
+<dt>Where</dt><dd><code>HomeController.php:189</code> (profile image); <code>ActivityController.php:48-49, 113-114</code> (cover and icon). <code>getClientOriginalExtension()</code> or <code>getClientOriginalName()</code> is used in 9 places (CmsPageController, SettingController, HomeController, UsersController, CmsPageService).</dd>
+<dt>Impact</dt><dd>An SVG with <code>&lt;script&gt;</code> runs on your domain when opened, which is stored XSS. A trusted client extension can lead to odd file types landing in <code>storage</code>.</dd>
+<dt>Fix</dt><dd>Drop <code>svg</code> from the mimes lists and name files with <code>$file-&gt;extension()</code> (based on the real MIME type).</dd>
+</dl></article>
+
+<article class="f" data-sev="medium" data-kind="security">
+<header><span class="id">P-18</span><h3>Weak brute-force protection on the admin login</h3><span class="sev medium">Medium</span><span class="tag">Still open (ZV-021)</span></header>
+<dl>
+<dt>Where</dt><dd><code>routes/admin.php:30</code> uses <code>throttle:100,0.2</code> (about 500 tries a minute per IP). <code>HomeController.php:45</code> has no lockout, and the captcha is commented out.</dd>
+<dt>Fix</dt><dd>Use <code>throttle:5,1</code> on the POST <code>/login</code> and <code>RateLimiter</code> keyed by email + IP. Re-enable the captcha.</dd>
+</dl></article>
+
+<article class="f" data-sev="medium" data-kind="security">
+<header><span class="id">P-19</span><h3>Raw error and DB driver messages returned to clients</h3><span class="sev medium">Medium</span><span class="tag">Still open (ZV-017)</span></header>
+<dl>
+<dt>Where</dt><dd><code>apis/src/middlewares/errorHandler.ts:22</code> sends <code>err.message</code> for any 500, including MySQL errors, even in production. The Laravel handler <code>bootstrap/app.php:90, 145</code> returns <code>$e-&gt;getMessage()</code>.</dd>
+<dt>Fix</dt><dd>When <code>statusCode &gt;= 500</code> and the error is not an <code>AppError</code>, return "Something went wrong" and log the details.</dd>
+</dl></article>
+
+<article class="f" data-sev="medium" data-kind="functional">
+<header><span class="id">P-20</span><h3>Retention never purges a group stuck in <code>active</code>, so PII is kept forever</h3><span class="sev medium">Medium</span><span class="tag">Still open (ZV-015)</span></header>
+<dl>
+<dt>Where</dt><dd><code>apis/src/services/retentionService.ts</code> <code>runRetentionSweep</code> waits whenever a played group has not finished. A group abandoned mid-game (server restart, everyone closed the tab) never finishes.</dd>
+<dt>Fix</dt><dd>Add a hard stop, for example scheduled start + lobby wait + max game duration + 1h, after which the booking is purged anyway.</dd>
+</dl></article>
+
+<article class="f" data-sev="medium" data-kind="security">
+<header><span class="id">P-21</span><h3>Debug settings and docroot need production values</h3><span class="sev medium">Medium</span><span class="tag">Verify on server (ZV-012, ZV-025)</span></header>
+<dl>
+<dt>Where</dt><dd>Local <code>.env</code>: <code>APP_ENV=local</code>, <code>APP_DEBUG=true</code>, <code>SESSION_SECURE_COOKIE=false</code>, DB user root. The repo root has <code>index.php</code> + <code>.htaccess</code>, which serves any existing file, so if the web root is the repo root, <code>/.env</code>, <code>/apis/.env</code> and <code>/.git/config</code> can be downloaded.</dd>
+<dt>Fix</dt><dd>Set the nginx root to <code>public/</code> only, and use <code>APP_DEBUG=false</code>, secure cookies and a least-privilege DB user. Then check that <code>curl https://&lt;site&gt;/.env</code> returns 404.</dd>
+</dl></article>
+
+<!-- ================= LOW ================= -->
+<article class="f" data-sev="low" data-kind="security">
+<header><span class="id">P-22</span><h3>CORS always allows any <code>http://localhost</code> origin, and the defaults include a plain-HTTP server IP</h3><span class="sev low">Low</span><span class="tag">Still open (ZV-030)</span></header>
+<dl><dt>Where</dt><dd><code>apis/src/server.ts:27-58</code></dd><dt>Fix</dt><dd>Use the localhost regex only when <code>NODE_ENV !== 'production'</code>, and remove the <code>http://3.25.202.185*</code> defaults.</dd></dl></article>
+
+<article class="f" data-sev="low" data-kind="functional">
+<header><span class="id">P-23</span><h3>The frontend production build silently falls back to localhost API and storage URLs</h3><span class="sev low">Low</span><span class="tag">Still open (ZV-031)</span></header>
+<dl><dt>Where</dt><dd><code>frontend/src/config/environment.ts:9-14</code></dd><dt>Impact</dt><dd>If <code>VITE_API_BASE_URL</code> is missing at build time, the live site calls <code>http://localhost:6001</code> and every page breaks.</dd><dt>Fix</dt><dd>Fail the build when these variables are missing in production mode.</dd></dl></article>
+
+<article class="f" data-sev="low" data-kind="functional">
+<header><span class="id">P-24</span><h3>Exception handler has debug leftovers and references a missing view</h3><span class="sev low">Low</span><span class="tag">Still open (ZV-022, ZV-027)</span></header>
+<dl><dt>Where</dt><dd><code>bootstrap/app.php:97-210</code>: commented <code>echo/die/dd</code>, a live <code>echo "call from the front side.";die;</code> at :210, and <code>view('front.front_warning')</code> at :129-190.</dd><dt>Impact</dt><dd>Error pages can return HTTP 500 or a bare debug string.</dd><dt>Fix</dt><dd>Remove the dead branches and return JSON or the standard error view.</dd></dl></article>
+
+<article class="f" data-sev="low" data-kind="functional" data-new="1">
+<header><span class="id">P-25</span><h3><code>apis/dist</code> (80 files) is tracked in git despite <code>.gitignore</code></h3><span class="sev low">Low</span><span class="tag new">New</span></header>
+<dl><dt>Impact</dt><dd>A <code>git pull</code> on the server can bring in a stale compiled build that doesn't match <code>src</code>. Also, <code>apis/AWS-DEPLOY-CMD.txt</code> exposes the server IP and SSH user.</dd><dt>Fix</dt><dd>Run <code>git rm -r --cached apis/dist</code> and always build on the server (<code>npm run build</code>).</dd></dl></article>
+
+<article class="f" data-sev="low" data-kind="functional">
+<header><span class="id">P-26</span><h3>Frontend has 23 TypeScript errors, and there is no automated test gate</h3><span class="sev low">Low</span><span class="tag">Still open (ZV-028, ZV-029)</span></header>
+<dl><dt>Where</dt><dd><code>cd frontend &amp;&amp; npx tsc --noEmit</code> reports 23 errors. The API type-check is clean. <code>apis/package.json</code> has no <code>test</code> script.</dd><dt>Fix</dt><dd>Fix the type errors and add <code>tsc --noEmit</code> + tests to the deploy script.</dd></dl></article>
+
+<article class="f" data-sev="low" data-kind="functional" data-new="1">
+<header><span class="id">P-27</span><h3>Laravel <code>global_settings</code> cache (1h) is never cleared on save</h3><span class="sev low">Low</span><span class="tag new">New</span></header>
+<dl><dt>Where</dt><dd><code>app/Http/Controllers/API/SettingController.php:13</code> uses <code>Cache::remember('global_settings', 3600, …)</code>, and nothing calls <code>Cache::forget</code>.</dd><dt>Impact</dt><dd>Clients of the legacy <code>/api/v1/settings</code> see old values for up to an hour after an admin save. The React site reads from the Node API, so it is not affected.</dd><dt>Fix</dt><dd>Call <code>Cache::forget('global_settings')</code> in the admin settings update methods.</dd></dl></article>
+
+<article class="f" data-sev="low" data-kind="security">
+<header><span class="id">P-28</span><h3>Organizer JWT lasts 24h with no server-side revocation</h3><span class="sev low">Low</span><span class="tag">Still open (ZV-034)</span></header>
+<dl><dt>Where</dt><dd><code>organizerController.ts</code> (sign, <code>expiresIn 24h</code>); <code>authMiddleware</code> re-checks status only.</dd><dt>Fix</dt><dd>Use a shorter expiry plus a <code>token_version</code> column that is bumped on logout or account deactivation.</dd></dl></article>
+
+<article class="f" data-sev="low" data-kind="functional">
+<header><span class="id">P-29</span><h3>Socket.IO and the timers must run as a single instance</h3><span class="sev low">Low</span><span class="tag">Deployment note</span></header>
+<dl><dt>Where</dt><dd><code>apis/src/server.ts:13-25</code></dd><dt>Impact</dt><dd>PM2 cluster mode breaks realtime events and runs the timer loop twice.</dd><dt>Fix</dt><dd>Keep <code>pm2 … -i 1</code> (fork mode), or add a Redis adapter before scaling.</dd></dl></article>
+
+</div>
+
+<h2>What is already good (passed)</h2>
+<div class="card tbl">
+<table>
+<tr><th>Area</th><th>Result</th></tr>
+<tr><td>SQL injection</td><td>All Node queries use <code>?</code> placeholders. The interpolated SQL in <code>retentionService</code> and <code>groupDataCleanup</code> uses only internal constants. Laravel <code>whereRaw</code> is bound. Nothing found.</td></tr>
+<tr><td>Razorpay payments</td><td>The server re-derives the amount, uses a constant-time HMAC, verifies the raw-body webhook and settles idempotently under row locks.</td></tr>
+<tr><td>JWT secret</td><td><code>getJwtSecret()</code> refuses to start without one (no hardcoded fallback). The value itself is exposed through P-03.</td></tr>
+<tr><td>Participant HTTP auth</td><td><code>participantAuth</code> resolves identity from a 64-hex <code>join_token</code> and rejects a forged <code>participant_id</code> or <code>group_id</code>.</td></tr>
+<tr><td>Dev OTP in responses</td><td><code>dev_otp</code> is returned only when <code>NODE_ENV === 'development'</code>.</td></tr>
+<tr><td>CSRF (admin)</td><td>No CSRF exclusions; all admin forms send <code>@csrf</code>.</td></tr>
+<tr><td>Headers / public settings</td><td><code>helmet</code> is on. The public settings endpoint uses an allow-list of keys, so secrets are not served.</td></tr>
+</table>
+</div>
+
+<h2>Not re-checked in this pass</h2>
+<p class="muted">From the October audit: ZV-023 (missing unique keys on <code>game_participants(booking_id,email)</code>, <code>participant_sessions(group_id,participant_id)</code> and <code>organizer_billings(booking_id)</code>), ZV-024 (C&amp;C awards PDF kept permanently), ZV-032 (participantAuth while unassigned) and ZV-033 (no robots.txt or sitemap). Production server config (nginx, the live <code>.env</code>, the pm2 env) was not accessed.</p>
+
+</div>
+<script>
+(function(){
+  var btns=document.querySelectorAll('#filters button'), items=document.querySelectorAll('#list .f');
+  btns.forEach(function(b){b.addEventListener('click',function(){
+    btns.forEach(function(x){x.classList.remove('on')}); b.classList.add('on');
+    var f=b.getAttribute('data-f');
+    items.forEach(function(it){
+      var show = f==='all' || it.dataset.sev===f || (f==='functional' && (it.dataset.kind||'').indexOf('functional')>-1) || (f==='new' && it.dataset.new==='1');
+      it.style.display = show ? '' : 'none';
+    });
+  });});
+})();
+</script>
+</body>
+</html>
