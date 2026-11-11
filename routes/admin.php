@@ -77,6 +77,8 @@ Route::group(
         Route::post("settings/invoice", [SettingController::class, "invoiceUpdate"])->name("settings.invoiceUpdate");
         // Full database export (all tables + data) as a .sql download — full admins only (checked in the controller).
         Route::post("settings/database-export", [DatabaseExportController::class, "export"])->name("database.export");
+        // Permanently clears organizer, participant & payment data (settings/games untouched) — full admins only.
+        Route::post("settings/clear-data", [\App\Http\Controllers\Admin\DataResetController::class, "clear"])->name("data.clear");
 
         // CMS Pages Management
         Route::prefix('cms')->group(function () {
