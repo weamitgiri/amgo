@@ -9,15 +9,25 @@ import { resolveMediaUrl } from "@/utils/media";
  * Background music for the game a participant is playing (admin Music Manager).
  *
  * Mounted once at the root so the track keeps playing across the in-game pages
- * (lobby → brief → game) and stops as soon as the player leaves them (results,
- * rating, any other page). Plays only the activity's active track; when there
+ * (lobby → brief → game → results) and stops as soon as the player leaves them
+ * (any other page). Plays only the activity's active track; when there
  * is none, renders nothing and plays nothing. If the browser blocks autoplay,
  * the music starts on the player's next tap/click/key press — the gesture is
  * only observed, never prevented, so game controls behave exactly as before.
  */
 
 /** In-game pages of Mystery Quest and Cook & Create that play the activity's music. */
-const MUSIC_ROUTES = ["/lobby", "/game", "/cookandcreate/lobby", "/cookandcreate/summary", "/cookandcreate/game"];
+// Includes the results pages (Mystery Quest /results, Cook & Create rating + awards)
+// so the music carries on until the player sees their result.
+const MUSIC_ROUTES = [
+  "/lobby",
+  "/game",
+  "/cookandcreate/lobby",
+  "/cookandcreate/summary",
+  "/cookandcreate/game",
+  "/results",
+  "/cookandcreate/rating",
+];
 const GESTURE_EVENTS = ["pointerdown", "keydown", "touchend"] as const;
 const MUTED_KEY = "zoventro_game_music_muted";
 const VOLUME = 0.35;
