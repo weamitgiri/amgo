@@ -491,10 +491,10 @@ function CostCalculator() {
   // exists — is therefore impossible, rather than producing a misleading figure.
   const STOPS = [50, 100, 300, 500] as const;
   const PACKAGES: Record<number, { name: string; totalCost: number }> = {
-    50: { name: "Starter Pack", totalCost: 2999 },
-    100: { name: "Growth Pack", totalCost: 4999 },
-    300: { name: "Business Pack", totalCost: 8999 },
-    500: { name: "Enterprise Pack", totalCost: 19999 },
+    50: { name: "Starter Pack", totalCost: 3999 },
+    100: { name: "Growth Pack", totalCost: 7999 },
+    300: { name: "Business Pack", totalCost: 14999 },
+    500: { name: "Enterprise Pack", totalCost: 23999 },
   };
 
   const [stepIndex, setStepIndex] = useState(1); // default: 100 employees (Growth Pack)
