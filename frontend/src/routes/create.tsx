@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef, type FormEvent, type ChangeEvent, type ComponentType, type Dispatch, type SetStateAction, type ReactNode } from "react";
 import { Header } from "@/components/Header";
 import { Crumbs } from "@/components/Crumbs";
@@ -144,6 +145,7 @@ function CreatePage() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!authenticated) return;
@@ -294,6 +296,10 @@ function CreatePage() {
                       // token yet, so show the success card with the login link.
                       if (authenticated) {
                         toastSuccess("Payment successful. Your package is now active.");
+                        // Drop the cached (pre-payment) dashboard data so the
+                        // dashboard reloads the now-active account and the
+                        // "Complete your payment" popup doesn't show again.
+                        queryClient.removeQueries({ queryKey: ["organizerDashboard"] });
                         navigate({ to: "/dashboard" });
                       } else {
                         setDone(true);
