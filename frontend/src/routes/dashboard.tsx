@@ -722,10 +722,7 @@ function PaymentRequiredModal({ onPay, onLogout }: { onPay: () => void; onLogout
           <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
             Your email is verified, but your package isn't active yet. Choose your activity, package &amp;
             schedule and complete the payment to activate your account and access the dashboard.
-            <br />
-            <span className="text-red-500 font-semibold">
-            Please logout and login again in order to access dashboard.
-            </span>
+          
           </p>
         </div>
         <div className="flex flex-col gap-2.5 px-6 pb-6">
