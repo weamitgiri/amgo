@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mystery Quest — Scoreboard Review</title>
+<style>
+  :root{
+    --bg:#0f1220; --panel:#171a2b; --panel2:#1d2138; --line:#2a2f4a;
+    --txt:#e7e9f5; --muted:#9aa0c3; --accent:#7c8cff; --good:#2ecc71;
+    --warn:#f1c40f; --bad:#ff5c7a; --chip:#242a44;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 16px 80px}
+  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:24px}
+  h1{margin:0 0 6px;font-size:26px}
+  h2{font-size:19px;margin:34px 0 12px;padding-top:8px;border-top:1px solid var(--line)}
+  h2 .n{color:var(--accent);margin-right:8px}
+  .sub{color:var(--muted);font-size:14px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card .big{font-size:28px;font-weight:700}
+  .card .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:14px}
+  th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--panel2);color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  tr:last-child td{border-bottom:none}
+  code{background:var(--chip);padding:1px 6px;border-radius:6px;font-size:12.5px;color:#cdd3ff}
+  .pts{font-weight:700;white-space:nowrap}
+  .pos{color:var(--good)} .neg{color:var(--bad)}
+  .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700}
+  .b-fix{background:rgba(124,140,255,.16);color:#aeb8ff}
+  .b-pass{background:rgba(46,204,113,.16);color:#7ef0ad}
+  .b-warn{background:rgba(241,196,15,.16);color:#ffe08a}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+  .filters button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:13px}
+  .filters button.active{background:var(--accent);border-color:var(--accent);color:#0f1220;font-weight:700}
+  ul{margin:8px 0 0;padding-left:20px} li{margin:4px 0}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:12px 14px;margin:12px 0;color:var(--muted)}
+  .ok{color:var(--good);font-weight:700}
+  .flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--muted);font-size:13px;margin:8px 0}
+  .flow span{background:var(--chip);padding:3px 9px;border-radius:6px;color:#cdd3ff}
+  footer{margin-top:40px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+  @media(max-width:640px){.scrollx{overflow-x:auto}.scrollx table{min-width:720px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Mystery Quest — Scoreboard Audit &amp; Verification</h1>
+  <div class="sub">Scope: Mystery Quest scoring only. Cook &amp; Create and every other game were not modified. Generated as part of the scoreboard alignment with the final scoring spec.</div>
+</header>
+
+<!-- ============ A ============ -->
+<h2><span class="n">A.</span>Executive Summary</h2>
+<p class="sub">The final leaderboard previously ran a separate <strong>"Equal-Chance"</strong> model that recomputed every player's score at game-end and <strong>overwrote</strong> the per-action points earned during play. The scoreboard has now been rebuilt so the <strong>per-action running total is the final score</strong>, with the final-accusation deltas (+60 / −20 / +80) applied on top — exactly matching the spec.</p>
+<div class="cards">
+  <div class="card"><div class="big">13</div><div class="lbl">Rules audited</div></div>
+  <div class="card"><div class="big" style="color:var(--good)">6</div><div class="lbl">Already working</div></div>
+  <div class="card"><div class="big" style="color:var(--accent)">7</div><div class="lbl">Fixed</div></div>
+  <div class="card"><div class="big" style="color:var(--bad)">0</div><div class="lbl">Still failing</div></div>
+  <div class="card"><div class="big" style="color:var(--warn)">1</div><div class="lbl">Not runtime-verified*</div></div>
+</div>
+<div class="note">* Code paths, builds, type-checks, PHP lint and route registration are verified. End-to-end verification inside a live multi-player game session (the full play flow) is marked <strong>NOT RUNTIME VERIFIED</strong> where a running game was required.</div>
+
+<!-- ============ B ============ -->
+<h2><span class="n">B.</span>Complete Scoring Audit (13 rules)</h2>
+<div class="filters" id="filters">
+  <button data-f="all" class="active">All</button>
+  <button data-f="fix">Fixed</button>
+  <button data-f="pass">Already working</button>
+</div>
+<div class="scrollx">
+<table id="auditTable">
+  <thead><tr><th>#</th><th>Activity</th><th>Pts</th><th>Before → After</th><th>Backend / file</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr data-s="pass"><td>1</td><td>Investigator asks a question</td><td class="pts pos">+10</td><td>Already awarded to the investigator.</td><td><code>investigator_question_bonus</code> · <code>askQuestion()</code></td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr data-s="pass"><td>2</td><td>Investigator starts Lie Detector</td><td class="pts pos">+5</td><td>Already awarded once on round start.</td><td><code>lie_detector_init_bonus</code> · <code>startLieDetector()</code></td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr data-s="fix"><td>3</td><td>Player answers Investigator question</td><td class="pts pos">+10</td><td><b>Was 0</b> — a valid answer to a normal question awarded nothing. Now every on-time answer earns +10.</td><td><code>timely_response_bonus</code> · <code>answerQuestion()</code></td><td><span class="badge b-fix">FIXED</span></td></tr>
+    <tr data-s="fix"><td>4</td><td>Player answers Lie Detector question</td><td class="pts pos">+10</td><td>Was +10 via a separate LD-only path; now unified under the one answer bonus so normal &amp; LD answers behave identically.</td><td><code>timely_response_bonus</code> · <code>answerQuestion()</code></td><td><span class="badge b-fix">FIXED</span></td></tr>
+    <tr data-s="pass"><td>5</td><td>Player fails to answer within time limit</td><td class="pts neg">−10</td><td>Already applied once, only to a late / no-response answer, never to a player who answered on time.</td><td><code>no_response_penalty</code> · <code>answerQuestion()</code> / <code>timerService</code></td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr data-s="pass"><td>6</td><td>Player votes Believable</td><td class="pts pos">+10</td><td>Already awarded once per round (duplicate-guarded by score log).</td><td><code>lie_detector_participation_bonus</code> · <code>voteLieDetector()</code></td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr data-s="pass"><td>7</td><td>Player votes Suspicious</td><td class="pts pos">+10</td><td>Same single-award path as Believable.</td><td><code>lie_detector_participation_bonus</code> · <code>voteLieDetector()</code></td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr data-s="pass"><td>8</td><td>Player submits Lie Detector vote</td><td class="pts pos">+10</td><td>Same action as 6/7 — one reward per round, never duplicated.</td><td><code>lie_detector_participation_bonus</code> · <code>voteLieDetector()</code></td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr data-s="fix"><td>9</td><td>Player fails to vote in Lie Detector round</td><td class="pts neg">−10</td><td><b>Was missing.</b> Now, at round end, every eligible player who did not vote loses 10 — once per round, never combined with the +10 reward.</td><td><code>no_response_penalty</code> · <code>timerService (lie_detector)</code></td><td><span class="badge b-fix">FIXED</span></td></tr>
+    <tr data-s="fix"><td>10</td><td>Player opens the Clue Room popup</td><td class="pts pos">+10</td><td><b>Was missing</b> as a live award (and gated behind the old final-model unlock). New endpoint awards +10 the first time the popup is opened — once per player, <b>no 10-minute requirement</b>; reopening is free.</td><td><code>clue_room_bonus</code> · <code>POST /v1/game/clue-room/open</code></td><td><span class="badge b-fix">FIXED</span></td></tr>
+    <tr data-s="fix"><td>11</td><td>Player correctly identifies the killer</td><td class="pts pos">+60</td><td>The old model gave 60 but <b>overwrote</b> the running total. Now +60 is a delta added on top of the earned score.</td><td><code>role_goal_bonus</code> · <code>finalizeVerdict()</code></td><td><span class="badge b-fix">FIXED</span></td></tr>
+    <tr data-s="fix"><td>12</td><td>Player fails to identify the correct killer</td><td class="pts neg">−20</td><td><b>Was not applied</b> (a wrong guess merely missed the bonus; the stored value was −10). Now −20 is deducted for a wrong or absent accusation.</td><td><code>role_wrong_penalty</code> · <code>finalizeVerdict()</code></td><td><span class="badge b-fix">FIXED</span></td></tr>
+    <tr data-s="fix"><td>13</td><td>Hidden Culprit remains unidentified</td><td class="pts pos">+80</td><td>The old model gave the culprit +60 and overwrote totals (stored value was 100). Now +80 is awarded to the Hidden Culprit <b>only</b> when no player identifies them.</td><td><code>culprit_win_bonus</code> · <code>finalizeVerdict()</code></td><td><span class="badge b-fix">FIXED</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============ C ============ -->
+<h2><span class="n">C.</span>Admin Panel Audit</h2>
+<ul>
+  <li><strong>Before:</strong> the activity "Scoring" card exposed only the Equal-Chance subset (Role Goal, Cooperation, Lie Detector, Clue Room, Final Accusation + two penalties) and every field was <em>editable</em>.</li>
+  <li><strong>Now:</strong> all 13 scoreboard rules are displayed in a single read-only reference table. Every value field is <code>disabled</code> + <code>readonly</code>, so admins can view but not change them.</li>
+  <li><strong>Backend protection:</strong> all scoring-point fields were removed from <code>store()</code> and <code>update()</code> validation in <code>ActivityController</code>. The controller saves only its validated keys, so a scoring value can never be set — not from the form, not from a crafted POST. Existing values are preserved.</li>
+  <li><strong>Authoritative values:</strong> <code>ensureMysteryQuestScoreboardValues()</code> runs on API boot and sets the mystery-quest activity's scoring columns to the spec values, so the read-only numbers and the backend scoring always agree.</li>
+  <li><strong>Untouched:</strong> timers, the Lie Detector enable toggle, and all non-scoring settings remain fully editable.</li>
+</ul>
+<div class="scrollx">
+<table>
+  <thead><tr><th>Admin setting</th><th>DB column</th><th>Value</th><th>Editable?</th></tr></thead>
+  <tbody>
+    <tr><td>Investigator question points</td><td><code>investigator_question_bonus</code></td><td class="pos">+10</td><td>Read-only</td></tr>
+    <tr><td>Lie Detector starting points</td><td><code>lie_detector_init_bonus</code></td><td class="pos">+5</td><td>Read-only</td></tr>
+    <tr><td>Player answer points</td><td><code>timely_response_bonus</code></td><td class="pos">+10</td><td>Read-only</td></tr>
+    <tr><td>Answer timeout penalty</td><td><code>no_response_penalty</code></td><td class="neg">−10</td><td>Read-only</td></tr>
+    <tr><td>Believable / Suspicious / LD voting points</td><td><code>lie_detector_participation_bonus</code></td><td class="pos">+10</td><td>Read-only</td></tr>
+    <tr><td>Lie Detector voting timeout penalty</td><td><code>no_response_penalty</code></td><td class="neg">−10</td><td>Read-only</td></tr>
+    <tr><td>Clue Room opening points</td><td><code>clue_room_bonus</code></td><td class="pos">+10</td><td>Read-only</td></tr>
+    <tr><td>Correct final accusation points</td><td><code>role_goal_bonus</code></td><td class="pos">+60</td><td>Read-only</td></tr>
+    <tr><td>Incorrect / failed accusation penalty</td><td><code>role_wrong_penalty</code></td><td class="neg">−20</td><td>Read-only</td></tr>
+    <tr><td>Hidden Culprit bonus</td><td><code>culprit_win_bonus</code></td><td class="pos">+80</td><td>Read-only</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============ D ============ -->
+<h2><span class="n">D.</span>Changes Made</h2>
+<div class="scrollx">
+<table>
+  <thead><tr><th>File</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td><code>apis/src/services/verdictScoringService.ts</code></td><td>Replaced the Equal-Chance recompute with per-action-total + accusation deltas (+60 / −20 / +80). The running total is no longer overwritten.</td></tr>
+    <tr><td><code>apis/src/controllers/gameEngineController.ts</code></td><td>+10 for every valid on-time answer (rules 3 &amp; 4); new <code>openClueRoom</code> endpoint awarding +10 once per player (rule 10).</td></tr>
+    <tr><td><code>apis/src/services/timerService.ts</code></td><td>Lie Detector round end: −10 to each eligible player who did not vote, once per round (rule 9); push fresh scores after.</td></tr>
+    <tr><td><code>apis/src/routes/gameRoutes.ts</code></td><td>Registered <code>POST /v1/game/clue-room/open</code>.</td></tr>
+    <tr><td><code>apis/src/utils/schemaHelpers.ts</code></td><td><code>ensureMysteryQuestScoreboardValues()</code> enforces the spec's fixed scoring values on boot.</td></tr>
+    <tr><td><code>frontend/src/routes/game.tsx</code>, <code>api/config.ts</code>, <code>api/services/participant.service.ts</code></td><td>Call the clue-room endpoint once when the popup opens.</td></tr>
+    <tr><td><code>app/Http/Controllers/Admin/ActivityController.php</code></td><td>Removed all scoring-point fields from validation → backend rejects any scoring change.</td></tr>
+    <tr><td><code>resources/views/admin/activities/_form.blade.php</code></td><td>Scoring card rebuilt as a read-only 13-rule reference table (disabled inputs).</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============ E ============ -->
+<h2><span class="n">E.</span>Test Results</h2>
+<div class="flow">Player action <span>→</span> Frontend event <span>→</span> API <span>→</span> Controller/Service <span>→</span> Validation <span>→</span> Score calc <span>→</span> DB txn <span>→</span> score_logs <span>→</span> Live scoreboard <span>→</span> Final leaderboard</div>
+<div class="scrollx">
+<table>
+  <thead><tr><th>Test</th><th>Expected</th><th>Result</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>API TypeScript build (<code>tsc</code>)</td><td>Compiles clean</td><td>No errors</td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr><td>Frontend type-check</td><td>No new errors in changed files</td><td>Clean</td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr><td>PHP lint (ActivityController)</td><td>No syntax errors</td><td>Clean</td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr><td>Clue-room route registered</td><td>Reachable, auth-guarded</td><td>HTTP 401 (not 404)</td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr><td>Spec scoring values in DB</td><td>Enforced on mystery-quest activity</td><td>10/5/10/−10/10/10/60/−20/80 verified</td><td><span class="badge b-pass">PASS</span></td></tr>
+    <tr><td>Duplicate-request guard (answer / vote / clue / accusation)</td><td>One reward per event</td><td>Unique keys + per-session score-log guards + row locks</td><td><span class="badge b-pass">PASS (code)</span></td></tr>
+    <tr><td>Reward vs timeout conflict</td><td>Never both +10 and −10 for one event</td><td>Bonus only when penalty is 0; LD no-vote skips voters</td><td><span class="badge b-pass">PASS (code)</span></td></tr>
+    <tr><td>Hidden Culprit +80 awarded once</td><td>Only if nobody identifies, culprit only</td><td>Idempotent verdict claim; delta applied once</td><td><span class="badge b-pass">PASS (code)</span></td></tr>
+    <tr><td>Full in-game play-through (multi-player live session)</td><td>All 13 events score end-to-end on the live board &amp; final leaderboard</td><td>Requires a running game with real participants</td><td><span class="badge b-warn">NOT RUNTIME VERIFIED</span></td></tr>
+  </tbody>
+</table>
+</div>
+<div class="note">Recommended before production sign-off: run one full Mystery Quest session (join → questions → answers → lie detector → votes → clue room → final accusation) and confirm each event moves the live Score Board and that the final leaderboard equals the running total plus the accusation delta.</div>
+
+<!-- ============ F ============ -->
+<h2><span class="n">F.</span>Final Conclusion</h2>
+<ul>
+  <li><strong>Already working (6):</strong> investigator question (+10), lie-detector start (+5), answer timeout (−10), and the believable/suspicious/lie-detector votes (+10, once per round).</li>
+  <li><strong>Was missing / wrong, now fixed (7):</strong> answering a normal question (+10), fail-to-vote (−10), clue-room open (+10), and the three final-accusation outcomes (+60 / −20 / +80) — which previously ran through a different model that discarded the in-game points.</li>
+  <li><strong>Core architectural fix:</strong> the final leaderboard no longer overwrites the per-action running total; the spec scoreboard is now the single source of truth.</li>
+  <li><strong>Remaining:</strong> a full live play-through is the one item left to confirm in a running game (NOT RUNTIME VERIFIED above).</li>
+</ul>
+
+<!-- ============ G ============ -->
+<h2><span class="n">G.</span>Cook &amp; Create Protection</h2>
+<p><span class="ok">Confirmed:</span> no Cook &amp; Create file, service, controller, template or scoring path was modified. The admin backend protection strips only Mystery-Quest scoreboard columns, and <code>ensureMysteryQuestScoreboardValues()</code> targets the <code>mystery-quest</code> activity row alone (<code>WHERE slug = 'mystery-quest'</code>). All changes are scoped to Mystery Quest.</p>
+
+<footer>
+  Mystery Quest Scoreboard Review · scope: Mystery Quest scoring only · generated from a source-level audit with build, type-check, lint and route verification. Live multi-player play-through left for final sign-off.
+</footer>
+</div>
+<script>
+  (function(){
+    var btns=document.querySelectorAll('#filters button');
+    var rows=document.querySelectorAll('#auditTable tbody tr');
+    btns.forEach(function(b){
+      b.addEventListener('click',function(){
+        btns.forEach(function(x){x.classList.remove('active')});
+        b.classList.add('active');
+        var f=b.getAttribute('data-f');
+        rows.forEach(function(r){
+          r.style.display=(f==='all'||r.getAttribute('data-s')===f)?'':'none';
+        });
+      });
+    });
+  })();
+</script>
+</body>
+</html>
