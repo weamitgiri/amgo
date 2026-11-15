@@ -186,28 +186,27 @@
             <h3 class="card-title"><i class="fas fa-trophy mr-2"></i>Scoring</h3>
         </div>
         <div class="card-body">
-            <div class="alert alert-info mb-3">
-                <i class="fas fa-lock mr-1"></i>
-                <strong>View only.</strong> These are the fixed Mystery Quest scoreboard values (the scoring spec is the source of truth).
-                They are shown here for reference and <strong>cannot be edited</strong> from the admin panel — the backend enforces them and ignores any change.
-            </div>
+            <p class="text-muted mb-3"><i class="fas fa-info-circle mr-1"></i> Mystery Quest scoreboard — the points awarded for each in-game activity. Bonuses are positive, penalties negative. Edit a value and Save; the game uses it live.</p>
 
             @php
-                // Each row: spec rule label, points, and the DB column it maps to.
+                // #, label, the DB column it maps to, and whether this row owns the
+                // editable input. Rows 3+4 share one answer value, 6+7+8 share one
+                // vote value, 5+9 share one timeout value — so the duplicates mirror
+                // the primary row (shown but not a second input for the same column).
                 $mqScoreRows = [
-                    ['#' => 1,  'label' => 'Investigator asks a question',               'points' => $activity->investigator_question_bonus ?? 10],
-                    ['#' => 2,  'label' => 'Investigator starts Lie Detector',           'points' => $activity->lie_detector_init_bonus ?? 5],
-                    ['#' => 3,  'label' => 'Player answers Investigator question',       'points' => $activity->timely_response_bonus ?? 10],
-                    ['#' => 4,  'label' => 'Player answers Lie Detector question',       'points' => $activity->timely_response_bonus ?? 10],
-                    ['#' => 5,  'label' => 'Player fails to answer within time limit',   'points' => $activity->no_response_penalty ?? -10],
-                    ['#' => 6,  'label' => 'Player votes Believable',                    'points' => $activity->lie_detector_participation_bonus ?? 10],
-                    ['#' => 7,  'label' => 'Player votes Suspicious',                    'points' => $activity->lie_detector_participation_bonus ?? 10],
-                    ['#' => 8,  'label' => 'Player submits Lie Detector vote',           'points' => $activity->lie_detector_participation_bonus ?? 10],
-                    ['#' => 9,  'label' => 'Player fails to vote in Lie Detector round', 'points' => $activity->no_response_penalty ?? -10],
-                    ['#' => 10, 'label' => 'Player opens the Clue Room popup',           'points' => $activity->clue_room_bonus ?? 10],
-                    ['#' => 11, 'label' => 'Player correctly identifies the killer',     'points' => $activity->role_goal_bonus ?? 60],
-                    ['#' => 12, 'label' => 'Player fails to identify the correct killer','points' => $activity->role_wrong_penalty ?? -20],
-                    ['#' => 13, 'label' => 'Hidden Culprit remains unidentified',        'points' => $activity->culprit_win_bonus ?? 80],
+                    ['#' => 1,  'label' => 'Investigator asks a question',               'col' => 'investigator_question_bonus',      'default' => 10,  'edit' => true,  'same' => null],
+                    ['#' => 2,  'label' => 'Investigator starts Lie Detector',           'col' => 'lie_detector_init_bonus',          'default' => 5,   'edit' => true,  'same' => null],
+                    ['#' => 3,  'label' => 'Player answers Investigator question',       'col' => 'timely_response_bonus',            'default' => 10,  'edit' => true,  'same' => null],
+                    ['#' => 4,  'label' => 'Player answers Lie Detector question',       'col' => 'timely_response_bonus',            'default' => 10,  'edit' => false, 'same' => 3],
+                    ['#' => 5,  'label' => 'Player fails to answer within time limit',   'col' => 'no_response_penalty',              'default' => -10, 'edit' => true,  'same' => null],
+                    ['#' => 6,  'label' => 'Player votes Believable',                    'col' => 'lie_detector_participation_bonus', 'default' => 10,  'edit' => true,  'same' => null],
+                    ['#' => 7,  'label' => 'Player votes Suspicious',                    'col' => 'lie_detector_participation_bonus', 'default' => 10,  'edit' => false, 'same' => 6],
+                    ['#' => 8,  'label' => 'Player submits Lie Detector vote',           'col' => 'lie_detector_participation_bonus', 'default' => 10,  'edit' => false, 'same' => 6],
+                    ['#' => 9,  'label' => 'Player fails to vote in Lie Detector round', 'col' => 'no_response_penalty',              'default' => -10, 'edit' => false, 'same' => 5],
+                    ['#' => 10, 'label' => 'Player opens the Clue Room popup',           'col' => 'clue_room_bonus',                  'default' => 10,  'edit' => true,  'same' => null],
+                    ['#' => 11, 'label' => 'Player correctly identifies the killer',     'col' => 'role_goal_bonus',                  'default' => 60,  'edit' => true,  'same' => null],
+                    ['#' => 12, 'label' => 'Player fails to identify the correct killer','col' => 'role_wrong_penalty',               'default' => -20, 'edit' => true,  'same' => null],
+                    ['#' => 13, 'label' => 'Hidden Culprit remains unidentified',        'col' => 'culprit_win_bonus',                'default' => 80,  'edit' => true,  'same' => null],
                 ];
             @endphp
 
@@ -217,26 +216,35 @@
                         <tr>
                             <th style="width:48px">#</th>
                             <th>Game Activity</th>
-                            <th style="width:160px">Points</th>
+                            <th style="width:170px">Points</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($mqScoreRows as $row)
-                            @php $pts = (int) $row['points']; @endphp
+                            @php $val = (int) old($row['col'], $activity->{$row['col']} ?? $row['default']); @endphp
                             <tr>
                                 <td class="text-muted">{{ $row['#'] }}</td>
-                                <td>{{ $row['label'] }}</td>
                                 <td>
-                                    <input type="number" class="form-control form-control-sm {{ $pts < 0 ? 'text-danger' : 'text-success' }} font-weight-bold"
-                                           value="{{ $pts > 0 ? '+'.$pts : $pts }}" disabled readonly
-                                           aria-label="{{ $row['label'] }} points (read only)">
+                                    {{ $row['label'] }}
+                                    @if (! $row['edit'])<small class="text-muted">(same value as #{{ $row['same'] }})</small>@endif
+                                </td>
+                                <td>
+                                    @if ($row['edit'])
+                                        <input type="number" name="{{ $row['col'] }}" id="{{ $row['col'] }}"
+                                               class="form-control form-control-sm font-weight-bold @error($row['col']) is-invalid @enderror"
+                                               value="{{ $val }}" aria-label="{{ $row['label'] }} points">
+                                        @error($row['col'])<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
+                                    @else
+                                        <input type="number" class="form-control form-control-sm font-weight-bold" value="{{ $val }}" disabled
+                                               aria-label="{{ $row['label'] }} points (mirrors #{{ $row['same'] }})">
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
-            <small class="form-text text-muted mt-2">Rule 13 (+80) is awarded to the Hidden Culprit only when no player identifies them. Disabled inputs are never submitted, and the backend rejects any scoring change regardless.</small>
+            <small class="form-text text-muted mt-2">Rule 13 (+80) goes to the Hidden Culprit only when no player identifies them. Penalties (#5, #9, #12) must be zero or negative.</small>
         </div>
     </div>
 

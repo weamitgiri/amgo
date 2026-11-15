@@ -52,12 +52,19 @@ class ActivityController extends Controller
                 'entry_cutoff_mins' => 'required|integer',
                 'game_duration_secs' => 'required|integer|min:300|max:10800',
                 'auto_expire_days' => 'required|integer',
-                // Scoring POINTS are the fixed Mystery Quest scoreboard (the scoring
-                // spec is the source of truth). They are shown read-only in the admin
-                // and are deliberately NOT validated/accepted here, so no admin form
-                // post — or a crafted request — can change a scoring value. The backend
-                // enforces the spec values itself (ensureMysteryQuestScoreboardValues in
-                // the API). Only timers and the Lie Detector toggle stay editable.
+                // Mystery Quest scoreboard points (editable, saved to the activity).
+                // Rules 3+4 share timely_response_bonus, 6+7+8 share
+                // lie_detector_participation_bonus, 5+9 share no_response_penalty —
+                // one editable value each; penalties must be <= 0.
+                'investigator_question_bonus' => 'nullable|integer|min:0',       // rule 1
+                'lie_detector_init_bonus' => 'nullable|integer|min:0',           // rule 2
+                'timely_response_bonus' => 'nullable|integer|min:0',             // rules 3, 4
+                'no_response_penalty' => 'nullable|integer|max:0',               // rules 5, 9
+                'lie_detector_participation_bonus' => 'nullable|integer|min:0',  // rules 6, 7, 8
+                'clue_room_bonus' => 'nullable|integer|min:0',                   // rule 10
+                'role_goal_bonus' => 'nullable|integer|min:0',                   // rule 11
+                'role_wrong_penalty' => 'nullable|integer|max:0',                // rule 12
+                'culprit_win_bonus' => 'nullable|integer|min:0',                 // rule 13
                 'lie_detector_enabled' => 'boolean',
                 'lie_detector_voting_timer_secs' => 'required_if:lie_detector_enabled,1|nullable|integer',
             ], $this->validationMessages());
@@ -101,12 +108,19 @@ class ActivityController extends Controller
                 'entry_cutoff_mins' => 'required|integer',
                 'game_duration_secs' => 'required|integer|min:300|max:10800',
                 'auto_expire_days' => 'required|integer',
-                // Scoring POINTS are the fixed Mystery Quest scoreboard (the scoring
-                // spec is the source of truth). They are shown read-only in the admin
-                // and are deliberately NOT validated/accepted here, so no admin form
-                // post — or a crafted request — can change a scoring value. The backend
-                // enforces the spec values itself (ensureMysteryQuestScoreboardValues in
-                // the API). Only timers and the Lie Detector toggle stay editable.
+                // Mystery Quest scoreboard points (editable, saved to the activity).
+                // Rules 3+4 share timely_response_bonus, 6+7+8 share
+                // lie_detector_participation_bonus, 5+9 share no_response_penalty —
+                // one editable value each; penalties must be <= 0.
+                'investigator_question_bonus' => 'nullable|integer|min:0',       // rule 1
+                'lie_detector_init_bonus' => 'nullable|integer|min:0',           // rule 2
+                'timely_response_bonus' => 'nullable|integer|min:0',             // rules 3, 4
+                'no_response_penalty' => 'nullable|integer|max:0',               // rules 5, 9
+                'lie_detector_participation_bonus' => 'nullable|integer|min:0',  // rules 6, 7, 8
+                'clue_room_bonus' => 'nullable|integer|min:0',                   // rule 10
+                'role_goal_bonus' => 'nullable|integer|min:0',                   // rule 11
+                'role_wrong_penalty' => 'nullable|integer|max:0',                // rule 12
+                'culprit_win_bonus' => 'nullable|integer|min:0',                 // rule 13
                 'lie_detector_enabled' => 'boolean',
                 'lie_detector_voting_timer_secs' => 'required_if:lie_detector_enabled,1|nullable|integer',
             ], $this->validationMessages());
