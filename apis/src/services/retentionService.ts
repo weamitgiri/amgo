@@ -247,10 +247,23 @@ export async function purgeBookingJoiningData(bookingId: number | string): Promi
             if (err?.code !== 'ER_NO_SUCH_TABLE') throw err;
         }
 
-        // Joining data — hard delete. Membership first, then joiners, then groups.
+        // Joining data — participant PII and membership are hard-deleted. The group
+        // SHELLS are kept (soft-purged): a group's status + completed_at are the only
+        // lasting record that the event actually ran and finished. If we deleted the
+        // groups too, the dashboard — which derives "Event Completed" from the live
+        // game_groups rows — would lose that signal and wrongly revert a finished
+        // event to "Event Started" once this booking's rows were gone. Keeping the
+        // shells (exactly as the per-group soft purge already does) fixes that while
+        // still removing every participant name/email and all game content.
+        // getSessionResultWindow keeps hiding the results an hour after declaration
+        // (it is time-based), and the sweep stops re-visiting the booking once
+        // purged_at is set.
         await conn.query(`DELETE FROM participant_sessions WHERE ${inBookingGroups}`, [bookingId]);
         await conn.query('DELETE FROM game_participants WHERE booking_id = ?', [bookingId]);
-        await conn.query('DELETE FROM game_groups WHERE booking_id = ?', [bookingId]);
+        await conn.query(
+            'UPDATE game_groups SET purged_at = NOW(), results_pdf_path = NULL, results_pdf_expires_at = NULL WHERE booking_id = ? AND purged_at IS NULL',
+            [bookingId]
+        );
     });
 
     // Remove each group's own (1-hour) results PDF file. The session/awards PDF
@@ -285,7 +298,7 @@ export async function runRetentionSweep(): Promise<void> {
                       WHERE gg.booking_id = ob.id AND gg.status <> 'waiting') AS played_groups
                FROM organizer_bookings ob
                JOIN activities a ON a.id = ob.activity_id
-              WHERE EXISTS (SELECT 1 FROM game_groups gg WHERE gg.booking_id = ob.id)`
+              WHERE EXISTS (SELECT 1 FROM game_groups gg WHERE gg.booking_id = ob.id AND gg.purged_at IS NULL)`
         );
         const now = moment();
         for (const b of bookings as any[]) {
