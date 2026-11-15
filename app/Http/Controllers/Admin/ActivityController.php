@@ -52,28 +52,12 @@ class ActivityController extends Controller
                 'entry_cutoff_mins' => 'required|integer',
                 'game_duration_secs' => 'required|integer|min:300|max:10800',
                 'auto_expire_days' => 'required|integer',
-                // Legacy scoring fields (kept for back-compat; no longer required).
-                'win_bonus' => 'nullable|integer|min:0',
-                'participation_bonus' => 'nullable|integer|min:0',
-                'timely_response_bonus' => 'nullable|integer|min:0',
-                'no_response_penalty' => 'required|integer|max:0',
-                'wrong_vote_penalty' => 'nullable|integer|max:0',
-                // Mystery Quest scoreboard-logic settings (spec §1–§3).
-                'investigator_question_bonus' => 'nullable|integer|min:0',
-                'investigator_correct_bonus' => 'nullable|integer|min:0',
-                'investigator_wrong_penalty' => 'nullable|integer|max:0',
-                'investigator_no_accusation_penalty' => 'nullable|integer|max:0',
-                'lie_detector_init_bonus' => 'nullable|integer|min:0',
-                'lie_detector_participation_bonus' => 'nullable|integer|min:0',
-                'culprit_win_bonus' => 'nullable|integer|min:0',
-                'culprit_caught_penalty' => 'nullable|integer|max:0',
-                'role_correct_bonus' => 'nullable|integer|min:0',
-                'role_wrong_penalty' => 'nullable|integer|max:0',
-                'witness_passcard_bonus' => 'nullable|integer|min:0',
-                'role_goal_bonus' => 'nullable|integer|min:0',
-                'cooperation_bonus' => 'nullable|integer|min:0',
-                'clue_room_bonus' => 'nullable|integer|min:0',
-                'final_accusation_bonus' => 'nullable|integer|min:0',
+                // Scoring POINTS are the fixed Mystery Quest scoreboard (the scoring
+                // spec is the source of truth). They are shown read-only in the admin
+                // and are deliberately NOT validated/accepted here, so no admin form
+                // post — or a crafted request — can change a scoring value. The backend
+                // enforces the spec values itself (ensureMysteryQuestScoreboardValues in
+                // the API). Only timers and the Lie Detector toggle stay editable.
                 'lie_detector_enabled' => 'boolean',
                 'lie_detector_voting_timer_secs' => 'required_if:lie_detector_enabled,1|nullable|integer',
             ], $this->validationMessages());
@@ -117,28 +101,12 @@ class ActivityController extends Controller
                 'entry_cutoff_mins' => 'required|integer',
                 'game_duration_secs' => 'required|integer|min:300|max:10800',
                 'auto_expire_days' => 'required|integer',
-                // Legacy scoring fields (kept for back-compat; no longer required).
-                'win_bonus' => 'nullable|integer|min:0',
-                'participation_bonus' => 'nullable|integer|min:0',
-                'timely_response_bonus' => 'nullable|integer|min:0',
-                'no_response_penalty' => 'required|integer|max:0',
-                'wrong_vote_penalty' => 'nullable|integer|max:0',
-                // Mystery Quest scoreboard-logic settings (spec §1–§3).
-                'investigator_question_bonus' => 'nullable|integer|min:0',
-                'investigator_correct_bonus' => 'nullable|integer|min:0',
-                'investigator_wrong_penalty' => 'nullable|integer|max:0',
-                'investigator_no_accusation_penalty' => 'nullable|integer|max:0',
-                'lie_detector_init_bonus' => 'nullable|integer|min:0',
-                'lie_detector_participation_bonus' => 'nullable|integer|min:0',
-                'culprit_win_bonus' => 'nullable|integer|min:0',
-                'culprit_caught_penalty' => 'nullable|integer|max:0',
-                'role_correct_bonus' => 'nullable|integer|min:0',
-                'role_wrong_penalty' => 'nullable|integer|max:0',
-                'witness_passcard_bonus' => 'nullable|integer|min:0',
-                'role_goal_bonus' => 'nullable|integer|min:0',
-                'cooperation_bonus' => 'nullable|integer|min:0',
-                'clue_room_bonus' => 'nullable|integer|min:0',
-                'final_accusation_bonus' => 'nullable|integer|min:0',
+                // Scoring POINTS are the fixed Mystery Quest scoreboard (the scoring
+                // spec is the source of truth). They are shown read-only in the admin
+                // and are deliberately NOT validated/accepted here, so no admin form
+                // post — or a crafted request — can change a scoring value. The backend
+                // enforces the spec values itself (ensureMysteryQuestScoreboardValues in
+                // the API). Only timers and the Lie Detector toggle stay editable.
                 'lie_detector_enabled' => 'boolean',
                 'lie_detector_voting_timer_secs' => 'required_if:lie_detector_enabled,1|nullable|integer',
             ], $this->validationMessages());

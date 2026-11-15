@@ -186,71 +186,57 @@
             <h3 class="card-title"><i class="fas fa-trophy mr-2"></i>Scoring</h3>
         </div>
         <div class="card-body">
-            <p class="text-muted mb-3"><i class="fas fa-info-circle mr-1"></i> Equal-Chance scoreboard. Every role can earn the same five parts, max 100. Bonuses positive, penalties negative. The game applies these at the final results.</p>
-
-            <h6 class="font-weight-bold text-uppercase text-secondary mb-2"><i class="fas fa-trophy mr-1"></i> Score Parts (same for all roles, max 100)</h6>
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="role_goal_bonus">Role Goal</label>
-                        <input type="number" name="role_goal_bonus" id="role_goal_bonus" class="form-control @error('role_goal_bonus') is-invalid @enderror" value="{{ old('role_goal_bonus', $activity->role_goal_bonus ?? 60) }}">
-                        @error('role_goal_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                        <small class="form-text text-muted">Investigator/others name the culprit; culprit not named</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="cooperation_bonus">Cooperation</label>
-                        <input type="number" name="cooperation_bonus" id="cooperation_bonus" class="form-control @error('cooperation_bonus') is-invalid @enderror" value="{{ old('cooperation_bonus', $activity->cooperation_bonus ?? 10) }}">
-                        @error('cooperation_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                        <small class="form-text text-muted">Investigator asks &ge;3 questions; others answer every question on time</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="lie_detector_participation_bonus">Lie Detector</label>
-                        <input type="number" name="lie_detector_participation_bonus" id="lie_detector_participation_bonus" class="form-control @error('lie_detector_participation_bonus') is-invalid @enderror" value="{{ old('lie_detector_participation_bonus', $activity->lie_detector_participation_bonus ?? 10) }}">
-                        @error('lie_detector_participation_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                        <small class="form-text text-muted">Start / answer / vote</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="clue_room_bonus">Clue Room</label>
-                        <input type="number" name="clue_room_bonus" id="clue_room_bonus" class="form-control @error('clue_room_bonus') is-invalid @enderror" value="{{ old('clue_room_bonus', $activity->clue_room_bonus ?? 10) }}">
-                        @error('clue_room_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                        <small class="form-text text-muted">Clue Room opened at least once</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="final_accusation_bonus">Final Accusation</label>
-                        <input type="number" name="final_accusation_bonus" id="final_accusation_bonus" class="form-control @error('final_accusation_bonus') is-invalid @enderror" value="{{ old('final_accusation_bonus', $activity->final_accusation_bonus ?? 10) }}">
-                        @error('final_accusation_bonus')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                        <small class="form-text text-muted">Submit before the timer ends</small>
-                    </div>
-                </div>
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-lock mr-1"></i>
+                <strong>View only.</strong> These are the fixed Mystery Quest scoreboard values (the scoring spec is the source of truth).
+                They are shown here for reference and <strong>cannot be edited</strong> from the admin panel — the backend enforces them and ignores any change.
             </div>
 
-            <h6 class="font-weight-bold text-uppercase text-secondary mb-2 mt-2"><i class="fas fa-minus-circle mr-1"></i> Penalties</h6>
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="no_response_penalty">No Response Penalty (all roles)</label>
-                        <input type="number" name="no_response_penalty" id="no_response_penalty" class="form-control @error('no_response_penalty') is-invalid @enderror" value="{{ old('no_response_penalty', $activity->no_response_penalty ?? -10) }}">
-                        @error('no_response_penalty')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                        <small class="form-text text-muted">Per missed 2-min answer, capped at -20. Negative e.g. -10</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="investigator_no_accusation_penalty">Investigator No Accusation</label>
-                        <input type="number" name="investigator_no_accusation_penalty" id="investigator_no_accusation_penalty" class="form-control @error('investigator_no_accusation_penalty') is-invalid @enderror" value="{{ old('investigator_no_accusation_penalty', $activity->investigator_no_accusation_penalty ?? -20) }}">
-                        @error('investigator_no_accusation_penalty')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
-                        <small class="form-text text-muted">Negative e.g. -20</small>
-                    </div>
-                </div>
+            @php
+                // Each row: spec rule label, points, and the DB column it maps to.
+                $mqScoreRows = [
+                    ['#' => 1,  'label' => 'Investigator asks a question',               'points' => $activity->investigator_question_bonus ?? 10],
+                    ['#' => 2,  'label' => 'Investigator starts Lie Detector',           'points' => $activity->lie_detector_init_bonus ?? 5],
+                    ['#' => 3,  'label' => 'Player answers Investigator question',       'points' => $activity->timely_response_bonus ?? 10],
+                    ['#' => 4,  'label' => 'Player answers Lie Detector question',       'points' => $activity->timely_response_bonus ?? 10],
+                    ['#' => 5,  'label' => 'Player fails to answer within time limit',   'points' => $activity->no_response_penalty ?? -10],
+                    ['#' => 6,  'label' => 'Player votes Believable',                    'points' => $activity->lie_detector_participation_bonus ?? 10],
+                    ['#' => 7,  'label' => 'Player votes Suspicious',                    'points' => $activity->lie_detector_participation_bonus ?? 10],
+                    ['#' => 8,  'label' => 'Player submits Lie Detector vote',           'points' => $activity->lie_detector_participation_bonus ?? 10],
+                    ['#' => 9,  'label' => 'Player fails to vote in Lie Detector round', 'points' => $activity->no_response_penalty ?? -10],
+                    ['#' => 10, 'label' => 'Player opens the Clue Room popup',           'points' => $activity->clue_room_bonus ?? 10],
+                    ['#' => 11, 'label' => 'Player correctly identifies the killer',     'points' => $activity->role_goal_bonus ?? 60],
+                    ['#' => 12, 'label' => 'Player fails to identify the correct killer','points' => $activity->role_wrong_penalty ?? -20],
+                    ['#' => 13, 'label' => 'Hidden Culprit remains unidentified',        'points' => $activity->culprit_win_bonus ?? 80],
+                ];
+            @endphp
+
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width:48px">#</th>
+                            <th>Game Activity</th>
+                            <th style="width:160px">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($mqScoreRows as $row)
+                            @php $pts = (int) $row['points']; @endphp
+                            <tr>
+                                <td class="text-muted">{{ $row['#'] }}</td>
+                                <td>{{ $row['label'] }}</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm {{ $pts < 0 ? 'text-danger' : 'text-success' }} font-weight-bold"
+                                           value="{{ $pts > 0 ? '+'.$pts : $pts }}" disabled readonly
+                                           aria-label="{{ $row['label'] }} points (read only)">
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
+            <small class="form-text text-muted mt-2">Rule 13 (+80) is awarded to the Hidden Culprit only when no player identifies them. Disabled inputs are never submitted, and the backend rejects any scoring change regardless.</small>
         </div>
     </div>
 
