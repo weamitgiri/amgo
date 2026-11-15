@@ -13,6 +13,7 @@ export type EventStatsPayload = {
         reschedule_cutoff: string;
         is_reschedule_allowed: boolean;
         min_players_per_group: number;
+        is_completed: boolean;
     };
     recent_groups: Array<{
         id: number;

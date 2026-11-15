@@ -161,6 +161,8 @@ router.post('/update-session', authMiddleware_1.authMiddleware, [
 ], validateRequest_1.validateRequest, organizerController.updateSession);
 // Results tab — completed/incomplete groups with results-PDF availability
 router.get('/results', authMiddleware_1.authMiddleware, organizerController.getOrganizerResults);
+router.get('/results/cook-and-create/:booking_id/pdf', authMiddleware_1.authMiddleware, organizerController.downloadCCResultsPdf);
+router.get('/results/mystery-quest/:booking_id/pdf', authMiddleware_1.authMiddleware, organizerController.downloadMQResultsPdf);
 // Payment history + GST invoice download (both scoped to the caller's own bookings)
 router.get('/invoices', authMiddleware_1.authMiddleware, invoiceController.getInvoices);
 router.get('/invoices/:booking_id/pdf', authMiddleware_1.authMiddleware, invoiceController.downloadInvoice);

@@ -2,6 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.assignParticipantToGroup = assignParticipantToGroup;
 exports.assertCanStartJoin = assertCanStartJoin;
+exports.assertBrowserNotBoundToOtherParticipant = assertBrowserNotBoundToOtherParticipant;
+const db_1 = require("../config/db");
+const groupDataCleanup_1 = require("./groupDataCleanup");
 const AppError_1 = require("../utils/AppError");
 const eventStatsService_1 = require("./eventStatsService");
 /**
@@ -64,6 +67,11 @@ async function assignParticipantToGroup(conn, bookingId, participantId, email) {
         const gameId = await resolveGameForGroup(conn, bookingId, groups.length);
         const [newGroup] = (await conn.query('INSERT INTO game_groups (booking_id, game_id, group_name, status) VALUES (?, ?, ?, ?)', [bookingId, gameId, groupName, 'waiting']));
         groupId = newGroup.insertId;
+        // The id may have been used by an earlier (since-deleted) group whose timers,
+        // questions, sessions etc. were left behind. Clear them now so this new game
+        // doesn't inherit an old, already-expired clock (fresh game opening on
+        // Investigation at 00:00) or old players/answers.
+        await (0, groupDataCleanup_1.clearStaleDataForNewGroup)(conn, groupId);
     }
     await conn.query('UPDATE game_participants SET group_id = ? WHERE id = ?', [groupId, participantId]);
     return { groupId, groupName, alreadyVerified: false };
@@ -75,4 +83,36 @@ async function assertCanStartJoin(bookingId, email) {
     catch (err) {
         throw new AppError_1.AppError(err.message, err.statusCode ?? 403);
     }
+}
+/**
+ * One participant per browser. The browser sends the join token it received from
+ * its last successful OTP verification (X-Participant-Token). If that token still
+ * belongs to a verified participant whose game is running, only that same
+ * participant (same booking + email) may join from this browser; anyone else is
+ * refused until that game ends or the player leaves (the frontend then drops the
+ * token). The identity comes from the server-issued token, never from a
+ * client-supplied participant id. Other browsers/devices send no token and are
+ * unaffected.
+ */
+async function assertBrowserNotBoundToOtherParticipant(browserToken, bookingId, email) {
+    if (typeof browserToken !== 'string' || !/^[a-f0-9]{64}$/.test(browserToken))
+        return;
+    const [rows] = await (0, db_1.query)(`SELECT gp.booking_id, LOWER(gp.email) AS email, gp.name
+         FROM game_participants gp
+         JOIN game_groups gg ON gg.id = gp.group_id
+         JOIN organizer_bookings ob ON ob.id = gp.booking_id
+         WHERE gp.join_token = ?
+           AND gp.email_verified_at IS NOT NULL
+           AND gp.status <> 'finished'
+           AND gg.status NOT IN ('completed', 'incomplete', 'finished')
+           AND (ob.scheduled_date IS NULL OR ob.scheduled_date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY))
+         LIMIT 1`, [browserToken]);
+    if (rows.length === 0)
+        return;
+    const bound = rows[0];
+    const sameParticipant = String(bound.booking_id) === String(bookingId) && bound.email === email.trim().toLowerCase();
+    if (sameParticipant)
+        return;
+    throw new AppError_1.AppError(`This browser is already joined to an active game as ${bound.name}. ` +
+        'Leave that game or wait for it to end before joining as a different participant.', 409);
 }

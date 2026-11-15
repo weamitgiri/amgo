@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
     lieDetectorTally: (roundId: number | string) => `/v1/game/lie-detector/${roundId}/tally`,
     endLieDetector: "/v1/game/end-lie-detector",
     usePasscard: "/v1/game/use-passcard",
+    openClueRoom: "/v1/game/clue-room/open",
     reopenCaseSummary: "/v1/game/reopen-case-summary",
     submitAccusation: "/v1/game/submit-accusation",
     // DEV / TESTING ONLY — skip the current phase timer (remove before production).

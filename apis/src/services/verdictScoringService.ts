@@ -186,15 +186,13 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
             (accusations as any[]).map((a: any) => [String(a.participant_session_id), a])
         );
 
-        // Equal-Chance scoreboard (Scoreboard Logic PDF). Every role earns the same
-        // five parts (max 100): role goal, cooperation, lie detector, clue room,
-        // final accusation; minus answer-timeout and investigator-no-accusation
-        // penalties. The final score is computed from scratch here (not the live
-        // in-game running total), so the results always reflect the PDF model.
+        // Spec scoreboard (the final source of truth): the live running total each
+        // player earned DURING the game — question/answer/vote/lie-detector/clue-room
+        // points — IS their score. At the verdict we apply ONLY the final-accusation
+        // deltas on top; we never recompute or overwrite the per-action total the way
+        // the old Equal-Chance model did. Mystery Quest only — no other game touched.
         const [cfgRows] = await conn.query<any[]>(
-            `SELECT a.role_goal_bonus, a.cooperation_bonus, a.lie_detector_participation_bonus,
-                    a.clue_room_bonus, a.final_accusation_bonus, a.no_response_penalty,
-                    a.investigator_no_accusation_penalty
+            `SELECT a.role_goal_bonus, a.role_wrong_penalty, a.culprit_win_bonus, a.culprit_caught_penalty
              FROM game_groups gg
              JOIN organizer_bookings ob ON ob.id = gg.booking_id
              JOIN activities a ON a.id = ob.activity_id
@@ -203,41 +201,11 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
         );
         const cfg = (cfgRows as any[])[0] || {};
         const P = {
-            roleGoal: numOr(cfg.role_goal_bonus, 60),
-            cooperation: numOr(cfg.cooperation_bonus, 10),
-            lieDetector: numOr(cfg.lie_detector_participation_bonus, 10),
-            clueRoom: numOr(cfg.clue_room_bonus, 10),
-            accusation: numOr(cfg.final_accusation_bonus, 10),
-            noResponsePenalty: Math.abs(numOr(cfg.no_response_penalty, -10)),
-            investigatorNoAccusation: Math.abs(numOr(cfg.investigator_no_accusation_penalty, -20)),
+            correctKiller: Math.abs(numOr(cfg.role_goal_bonus, 60)),          // +60 correct accusation
+            wrongKiller: -Math.abs(numOr(cfg.role_wrong_penalty, -20)),       // -20 wrong / no accusation
+            hiddenCulprit: Math.abs(numOr(cfg.culprit_win_bonus, 80)),        // +80 culprit never identified
+            culpritCaught: -Math.abs(numOr(cfg.culprit_caught_penalty, -20)), // culprit caught
         };
-
-        // Per-player facts the model needs.
-        const [qRows] = await conn.query<any[]>('SELECT asked_by FROM questions WHERE group_id = ?', [groupId]);
-        const questionsAskedBy = new Map<string, number>();
-        for (const q of qRows as any[]) {
-            questionsAskedBy.set(String(q.asked_by), (questionsAskedBy.get(String(q.asked_by)) || 0) + 1);
-        }
-        const [missRows] = await conn.query<any[]>(
-            `SELECT a.participant_session_id AS sid, COUNT(*) AS misses
-               FROM answers a JOIN questions q ON q.id = a.question_id
-              WHERE q.group_id = ? AND a.answer_text = '(No response — auto-skipped)'
-              GROUP BY a.participant_session_id`,
-            [groupId]
-        );
-        const missedBySession = new Map<string, number>();
-        for (const m of missRows as any[]) missedBySession.set(String(m.sid), Number(m.misses));
-
-        // Lie Detector and Clue Room are cooperative team actions: if the round happened /
-        // the clue room unlocked at all, every player who stayed earns that part.
-        const [ldRows] = await conn.query<any[]>('SELECT id FROM lie_detector_rounds WHERE group_id = ? LIMIT 1', [groupId]);
-        const lieDetectorHappened = (ldRows as any[]).length > 0;
-        const [crTimerRows] = await conn.query<any[]>(
-            `SELECT is_active, expires_at FROM timers WHERE group_id = ? AND timer_type = 'clue_room_unlock' ORDER BY id DESC LIMIT 1`,
-            [groupId]
-        );
-        const crTimer = (crTimerRows as any[])[0];
-        const clueRoomOpened = !!crTimer && (Number(crTimer.is_active) === 0 || new Date(crTimer.expires_at) <= new Date());
 
         // Did a player correctly name the Hidden Culprit?
         const namedCulprit = (s: any): boolean => {
@@ -250,31 +218,27 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
 
         const roleSessions = (sessions as any[]).filter((s: any) => s.role_type);
         const perRoleResults: PerRoleResult[] = roleSessions.map((s: any) => {
-            const isInvestigator = s.role_type === 'investigator';
             const isCulprit = isCulpritRole(s.role_type);
             const hasLeft = Boolean(s.left_at);
             const acc = accusationBySession.get(String(s.id));
-            const submitted = !!acc;
             const reachedGoal = isCulprit ? culpritWins : namedCulprit(s);
-            const missed = Math.min(missedBySession.get(String(s.id)) || 0, 2);
 
-            // A player who left mid-game scores 0 and cannot win (spec §8).
-            let bonus = 0;
-            let penalty = 0;
+            // Final-accusation delta, applied ON TOP of the running total:
+            //  - non-culprit: +60 for naming the Hidden Culprit, else -20 (a wrong
+            //    pick OR no accusation at all both count as a failed accusation).
+            //  - Hidden Culprit: +80 only when NOBODY identified them, else caught.
+            let delta = 0;
             if (!hasLeft) {
-                if (reachedGoal) bonus += P.roleGoal;
-                const cooperationOk = isInvestigator
-                    ? (questionsAskedBy.get(String(s.id)) || 0) >= 3
-                    : missed === 0;
-                if (cooperationOk) bonus += P.cooperation;
-                if (lieDetectorHappened) bonus += P.lieDetector;
-                if (clueRoomOpened) bonus += P.clueRoom;
-                if (submitted) bonus += P.accusation;
-                bonus = Math.min(bonus, 100);
-                penalty = missed * P.noResponsePenalty;
-                if (isInvestigator && !submitted) penalty += P.investigatorNoAccusation;
+                if (isCulprit) {
+                    delta = culpritWins ? P.hiddenCulprit : P.culpritCaught;
+                } else {
+                    delta = reachedGoal ? P.correctKiller : P.wrongKiller;
+                }
             }
-            const finalScore = hasLeft ? 0 : bonus - penalty;
+            // A player who left mid-game scores 0 and cannot win (spec §8); everyone
+            // else keeps the points they earned plus this verdict delta.
+            const runningTotal = Number(s.total_score) || 0;
+            const finalScore = hasLeft ? 0 : runningTotal + delta;
 
             return {
                 session_id: Number(s.id),
@@ -282,7 +246,7 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
                 guessed_session_id: acc ? Number(acc.accused_session_id) : null,
                 is_correct: !isCulprit && reachedGoal,
                 guess_submitted_at: acc?.created_at ? moment(acc.created_at).toISOString() : null,
-                verdict_points: finalScore,
+                verdict_points: hasLeft ? 0 : delta,
                 final_score: finalScore,
                 status: hasLeft ? 'loser' : reachedGoal ? (isCulprit ? 'killer_wins' : 'winner') : 'loser',
                 is_mvp: false,
@@ -304,14 +268,14 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
             ? accusationBySession.get(String(investigatorSession.id))
             : null;
 
-        // Set each player's final total to the equal-chance score (replacing the live
-        // running total), and record it in the score log for audit.
+        // Persist each player's final total (running total + verdict delta) and
+        // record the accusation delta in the score log for audit.
         for (const r of perRoleResults) {
             await conn.query(`UPDATE participant_sessions SET total_score = ? WHERE id = ?`, [r.final_score, r.session_id]);
             await conn.query(
                 `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
-                    VALUES (?, ?, 'final_scoreboard', NOW(), NOW())`,
-                [r.session_id, r.final_score]
+                    VALUES (?, ?, 'final_accusation', NOW(), NOW())`,
+                [r.session_id, r.verdict_points]
             );
         }
 

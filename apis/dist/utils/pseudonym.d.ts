@@ -1,1 +1,1 @@
-export declare function shortName(name: string, id: number): string;
+export declare function shortName(_name: string, id: number): string;

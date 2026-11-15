@@ -4,6 +4,8 @@ exports.buildGameSummaryPayload = buildGameSummaryPayload;
 const db_1 = require("../config/db");
 const pseudonym_1 = require("../utils/pseudonym");
 const timerService_1 = require("./timerService");
+const lobbyService_1 = require("./lobbyService");
+const AppError_1 = require("../utils/AppError");
 const ROLE_GRADS = [
     'from-amber-700 via-orange-600 to-red-900',
     'from-slate-700 via-zinc-700 to-slate-900',
@@ -146,7 +148,7 @@ async function buildGameSummaryPayload(groupId, participantId) {
             a.lie_detector_enabled, a.lie_detector_max_questions, a.lie_detector_timer_secs,
             a.no_response_penalty,
             ag.id AS game_row_id, ag.title AS case_title, ag.tagline, ag.case_summary,
-            ag.bg_image, ag.timeline, ag.quick_facts, ag.victim_name
+            ag.bg_image, ag.case_summary_image, ag.timeline, ag.quick_facts, ag.victim_name
          FROM game_groups gg
          JOIN organizer_bookings ob ON gg.booking_id = ob.id
          JOIN activities a ON ob.activity_id = a.id
@@ -155,6 +157,13 @@ async function buildGameSummaryPayload(groupId, participantId) {
     if (groupRows.length === 0 || !groupRows[0].game_row_id)
         return null;
     const row = groupRows[0];
+    // Complete-group gate: a group that never reached capacity must not proceed to
+    // the Game Summary screen. Only block a group still `waiting` (not yet started);
+    // an already-`active`/`finished`/`completed`/`incomplete` group is left as-is so
+    // running and finished games keep working. Scoped to THIS group only.
+    if (row.group_status === 'waiting' && !(await (0, lobbyService_1.isGroupAtCapacity)(row.id))) {
+        throw new AppError_1.AppError('Your group not complete participant.', 403);
+    }
     let participant = { id: 0, name: 'Participant' };
     if (participantId) {
         const [pRows] = await (0, db_1.query)('SELECT id, name FROM game_participants WHERE id = ? AND group_id = ?', [participantId, groupId]);
@@ -162,7 +171,7 @@ async function buildGameSummaryPayload(groupId, participantId) {
             participant = { id: Number(pRows[0].id), name: pRows[0].name || 'Participant' };
         }
     }
-    const [roleRows] = await (0, db_1.query)(`SELECT id, role_type, character_name, subtitle, role_image, objective, what_you_know, keep_in_mind
+    const [roleRows] = await (0, db_1.query)(`SELECT id, role_type, character_name, subtitle, role_image, role_icon, objective, what_you_know, keep_in_mind
          FROM game_roles WHERE game_id = ? ORDER BY id ASC`, [row.game_row_id]);
     const [photoRows] = await (0, db_1.query)('SELECT id, label, image FROM game_photos WHERE game_id = ? ORDER BY photo_number ASC', [row.game_row_id]);
     const [clueRows] = await (0, db_1.query)('SELECT id, clue_title, clue_short_description, clue_detail, clue_image FROM game_clues WHERE game_id = ? ORDER BY id ASC', [row.game_row_id]);
@@ -174,8 +183,18 @@ async function buildGameSummaryPayload(groupId, participantId) {
         myRoleId = await ensureParticipantRoleAssignment(Number(row.id), Number(row.game_row_id), Number(participant.id));
     }
     // Fallback game-clock start for participants who land on the game screen
-    // without a final lobby poll (e.g. direct refresh after the redirect).
-    if (row.group_status === 'active') {
+    // without a final lobby poll (e.g. direct refresh after the redirect, or the
+    // lobby's local countdown hitting zero and navigating before the server's own
+    // "ready" round-trip has flipped the group to `active` — see the matching
+    // comment in gameEngineController.ts's getGameState). Treat `waiting` the same
+    // as `active`: by the time this endpoint is hit the participant has already
+    // been routed to the game screen, so the game is starting for them regardless
+    // of which status value is stored yet. Never resurrect a timer for a
+    // `finished`/`completed`/`incomplete` group.
+    if (row.group_status === 'active' || row.group_status === 'waiting') {
+        if (row.group_status === 'waiting') {
+            await (0, db_1.query)("UPDATE game_groups SET status = 'active' WHERE id = ? AND status = 'waiting'", [row.id]);
+        }
         await (0, timerService_1.ensureCaseSummaryTimer)(Number(row.id), Number(row.case_summary_view_secs) || 300);
     }
     // Must be queried AFTER role assignment above — on the very first summary
@@ -200,16 +219,65 @@ async function buildGameSummaryPayload(groupId, participantId) {
             session_id: Number(s.id),
             pseudonym: s.participant_name || 'Player',
             character_name: role?.character_name ?? null,
+            // The player's OWN character portrait, so the UI can key avatars by
+            // session_id rather than assuming the roles list and the players list
+            // share an index order (they do not — roles are ordered by role id,
+            // players by session), which mismatched every avatar.
+            role_image: role?.role_image ?? null,
+            // The Investigator is PUBLIC — everyone sees them asking the questions —
+            // so it is safe to flag them here (no secret role leaks). The UI uses this
+            // to keep the Investigator out of the "who is the culprit?" accusation list,
+            // since the killer is always one of the non-investigator suspects.
+            is_investigator: (role?.role_type ?? '') === 'investigator',
             is_you: String(s.participant_id) === String(participant.id),
         };
     });
-    // Role-specific strategy cards (strategy_cards table) — shown to every role
-    // EXCEPT the investigator, who instead gets the timed suspect-profile cards
-    // (investigator_cards) mapped into strategy_slides below.
+    // Role-specific strategy cards (strategy_cards table). Every NON-investigator
+    // role sees only their OWN cards (roleStrategyRows below → role_strategy_slides).
     let roleStrategyRows = [];
     if (myRoleId) {
         const [rows] = await (0, db_1.query)('SELECT card_number, heading, body_content FROM strategy_cards WHERE role_id = ? ORDER BY card_number ASC', [myRoleId]);
         roleStrategyRows = rows;
+    }
+    // The Investigator has no strategy guide of their OWN — instead they review the
+    // OTHER roles' strategy cards, one slide per role (each slide = one role's cards,
+    // straight from the admin "Strategy Cards" section). Only the Investigator ever
+    // receives this, so no other role's private briefing leaks to a suspect.
+    const myRole = roleRows.find((r) => Number(r.id) === Number(myRoleId));
+    const requesterIsInvestigator = String(myRole?.role_type ?? '').toLowerCase().includes('investigator');
+    let allRoleStrategySlides = [];
+    if (requesterIsInvestigator) {
+        const [allCards] = await (0, db_1.query)(`SELECT sc.role_id, sc.card_number, sc.heading, sc.body_content
+             FROM strategy_cards sc
+             JOIN game_roles gr ON gr.id = sc.role_id
+             WHERE gr.game_id = ? ORDER BY gr.id, sc.card_number ASC`, [row.game_row_id]);
+        const cardsByRole = new Map();
+        for (const c of allCards) {
+            const list = cardsByRole.get(Number(c.role_id)) ?? [];
+            list.push(c);
+            cardsByRole.set(Number(c.role_id), list);
+        }
+        for (const r of roleRows) {
+            // Skip the Investigator's own role — they review everyone ELSE.
+            if (String(r.role_type ?? '').toLowerCase().includes('investigator'))
+                continue;
+            const cards = cardsByRole.get(Number(r.id)) ?? [];
+            if (cards.length === 0)
+                continue;
+            allRoleStrategySlides.push({
+                // The character name is public; the mechanic role_type (e.g. "hidden
+                // culprit") is NOT surfaced here as a label.
+                title: r.character_name || 'Suspect',
+                description: '',
+                details: cards
+                    .map((c) => {
+                    const heading = String(c.heading || '').trim();
+                    const body = String(c.body_content || '').trim();
+                    return heading && body ? `${heading}: ${body}` : heading || body;
+                })
+                    .filter(Boolean),
+            });
+        }
     }
     // Roles are the CASE CHARACTERS (public: everyone sees the same Key People
     // cards). What stays secret: which player has which role — so session_id and
@@ -237,6 +305,9 @@ async function buildGameSummaryPayload(groupId, participantId) {
             you_know: isYou ? parseJsonArray(r.what_you_know) : [],
             keep_in_mind: isYou ? parseJsonArray(r.keep_in_mind) : [],
             role_image: r.role_image,
+            // Private like objective/subtitle: an icon can give away the role type
+            // (e.g. a culprit badge), so it's only sent for the player's own role.
+            role_icon: isYou ? r.role_icon ?? null : null,
             is_you: isYou,
         };
         return base;
@@ -247,7 +318,9 @@ async function buildGameSummaryPayload(groupId, participantId) {
         description: r.rule_text,
         details: [r.rule_text],
     }));
-    const strategy_slides = cardRows.map((c) => ({
+    // Investigator Cards (admin Step 4) — every suspect's profile, so only the
+    // Investigator receives them; other roles use their own Step 3 cards.
+    const strategy_slides = (requesterIsInvestigator ? cardRows : []).map((c) => ({
         title: c.suspect_label || c.tag || 'Strategy Tip',
         description: c.profile_text || '',
         details: [
@@ -282,6 +355,7 @@ async function buildGameSummaryPayload(groupId, participantId) {
             tagline: row.tagline,
             case_summary_html: row.case_summary,
             bg_image: row.bg_image ?? null,
+            case_summary_image: row.case_summary_image ?? null,
             timeline: parseTimeline(row.timeline),
             quick_facts: parseQuickFacts(row.quick_facts),
             victim_name: row.victim_name || null,
@@ -306,7 +380,8 @@ async function buildGameSummaryPayload(groupId, participantId) {
             description: '',
             details: [c.body_content].filter(Boolean).map(String),
         })),
-        strategy_slides: strategy_slides.length > 0
+        all_role_strategy_slides: allRoleStrategySlides,
+        strategy_slides: strategy_slides.length > 0 || !requesterIsInvestigator
             ? strategy_slides
             : [
                 {

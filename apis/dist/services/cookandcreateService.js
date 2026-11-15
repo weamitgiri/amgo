@@ -37,11 +37,14 @@ exports.checkRound3VotingCompletion = checkRound3VotingCompletion;
 exports.getCCRatingCategories = getCCRatingCategories;
 exports.getCCRules = getCCRules;
 exports.getOtherDishes = getOtherDishes;
+exports.hasReviewedGroup = hasReviewedGroup;
 exports.submitRating = submitRating;
+exports.hasCompletedAllReviews = hasCompletedAllReviews;
 exports.getAwards = getAwards;
 const db_1 = require("../config/db");
 const moment_1 = __importDefault(require("moment"));
 const server_1 = require("../server");
+const ccStageDurations_1 = require("./ccStageDurations");
 /**
  * Get the ingredient pool for a specific template — via cc_game_template_ingredients,
  * not cc_ingredients.activity_id. The admin Template form already lets an admin pick
@@ -81,12 +84,18 @@ function mapTemplateRow(r) {
         round1_votes_per_player: Number(r.round1_votes_per_player),
         round1_top_ingredients: Number(r.round1_top_ingredients),
         round1_timer_secs: Number(r.round1_timer_secs),
+        // New stage durations — fall back to the required defaults if the
+        // column is somehow missing/null (e.g. before the migration runs on an
+        // environment), so the game never gets a 0-second stage.
+        round1_results_secs: Number(r.round1_results_secs) || 60,
         round2_step_max_chars: Number(r.round2_step_max_chars),
         round2_submit_timer_secs: Number(r.round2_submit_timer_secs),
         round2_review_timer_secs: Number(r.round2_review_timer_secs),
+        dish_naming_secs: Number(r.dish_naming_secs) || 60,
         round3_discussion_timer_secs: Number(r.round3_discussion_timer_secs),
         round3_voting_timer_secs: Number(r.round3_voting_timer_secs),
         round3_max_messages_per_player: Number(r.round3_max_messages_per_player),
+        role_brief_secs: Number(r.role_brief_secs) || 300,
         show_host_role_enabled: Boolean(r.show_host_role_enabled),
         impostor_bias_card_text: r.impostor_bias_card_text,
     };
@@ -108,6 +117,96 @@ async function getCCTemplateById(templateId) {
     if (rows.length === 0)
         return null;
     return mapTemplateRow(rows[0]);
+}
+/**
+ * Which template a NEW group's game uses, so different groups in the same
+ * booking get different ingredient pools instead of all sharing the first one.
+ *
+ * Eligible templates = the admin's active templates for this activity game that
+ * have at least one active ingredient, ordered by id. Groups are ordered by id
+ * within their booking (the "Group N" order) and take templates in the
+ * most-different-first order from orderTemplatesForVariety, so Group 1 and
+ * Group 2 get clearly different pools rather than adjacent templates whose
+ * pools often overlap heavily. Every template is used once before any repeats
+ * (one template ⇒ everyone shares it). The result is stored on the instance,
+ * so it never changes mid-game.
+ * Falls back to the previous single-template lookup if nothing is eligible.
+ */
+async function pickTemplateForGroup(activityGameId, groupId) {
+    const [templates] = await (0, db_1.query)(`SELECT t.* FROM cc_game_templates t
+         WHERE t.activity_game_id = ? AND t.status = 'active'
+           AND EXISTS (
+             SELECT 1 FROM cc_game_template_ingredients ti
+             JOIN cc_ingredients i ON i.id = ti.ingredient_id
+             WHERE ti.template_id = t.id AND i.status = 'active'
+           )
+         ORDER BY t.id ASC`, [activityGameId]);
+    if (templates.length === 0)
+        return getCCTemplateByGameId(activityGameId);
+    const [groups] = await (0, db_1.query)(`SELECT id FROM game_groups
+         WHERE booking_id = (SELECT booking_id FROM game_groups WHERE id = ?)
+         ORDER BY id ASC`, [groupId]);
+    const position = Math.max(0, groups.findIndex((g) => Number(g.id) === Number(groupId)));
+    const ordered = await orderTemplatesForVariety(templates);
+    return mapTemplateRow(ordered[position % ordered.length]);
+}
+/**
+ * Orders templates so each one shares as few ingredients as possible with those
+ * before it: start from the lowest-id template, then repeatedly take the
+ * remaining template whose worst-case overlap with the already-ordered ones is
+ * smallest (ties: smaller total overlap, then lower id). Group N takes entry
+ * (N - 1) mod count, so even a two-group booking gets visibly different pools,
+ * and every template is used once before any repeats. Depends only on the
+ * template data, so every group in the booking computes the same order.
+ */
+async function orderTemplatesForVariety(templates) {
+    if (templates.length <= 2)
+        return templates;
+    const [rows] = await (0, db_1.query)(`SELECT ti.template_id, LOWER(TRIM(i.name)) AS name
+         FROM cc_game_template_ingredients ti
+         JOIN cc_ingredients i ON i.id = ti.ingredient_id
+         WHERE i.status = 'active' AND ti.template_id IN (?)`, [templates.map((t) => Number(t.id))]);
+    const pools = new Map(templates.map((t) => [Number(t.id), new Set()]));
+    for (const r of rows)
+        pools.get(Number(r.template_id))?.add(r.name);
+    const overlap = (a, b) => {
+        const other = pools.get(Number(b.id));
+        let n = 0;
+        for (const name of pools.get(Number(a.id)))
+            if (other.has(name))
+                n++;
+        return n;
+    };
+    const remaining = [...templates];
+    const ordered = [remaining.shift()];
+    while (remaining.length > 0) {
+        let best = 0, bestMax = Infinity, bestSum = Infinity;
+        remaining.forEach((cand, i) => {
+            const counts = ordered.map((t) => overlap(cand, t));
+            const max = Math.max(...counts);
+            const sum = counts.reduce((a, b) => a + b, 0);
+            if (max < bestMax || (max === bestMax && sum < bestSum)) {
+                best = i;
+                bestMax = max;
+                bestSum = sum;
+            }
+        });
+        ordered.push(remaining.splice(best, 1)[0]);
+    }
+    return ordered;
+}
+/** The current global in-game stage durations, or null if the table isn't there yet. */
+async function getGlobalGameDurations() {
+    try {
+        const [rows] = await (0, db_1.query)(`SELECT * FROM cc_stage_durations WHERE id = 1 LIMIT 1`);
+        const row = rows?.[0];
+        if (!row)
+            return null;
+        return Object.fromEntries(ccStageDurations_1.CC_GAME_DURATION_FIELDS.map((f) => [f, Number(row[f])]));
+    }
+    catch {
+        return null;
+    }
 }
 function mapInstanceRow(r) {
     return {
@@ -145,7 +244,7 @@ async function getInstanceById(instanceId) {
     const template = await getCCTemplateById(instance.template_id);
     if (!template)
         return null;
-    return { instance, template };
+    return { instance, template: (0, ccStageDurations_1.withGameDurations)(template, rows[0]) };
 }
 /**
  * Count of participants currently in a group. Mirrors the same "whole roster,
@@ -351,12 +450,35 @@ async function getOrCreateCCInstance(groupId, activityGameId) {
             return null;
         resolvedActivityGameId = agRows[0].id;
     }
-    const template = await getCCTemplateByGameId(resolvedActivityGameId);
-    if (!template)
-        return null;
     let [rows] = await (0, db_1.query)(`SELECT * FROM cc_game_instances WHERE group_id = ?`, [groupId]);
-    if (rows.length === 0) {
-        await (0, db_1.query)(`INSERT INTO cc_game_instances (group_id, template_id, activity_id, status, created_at, updated_at) VALUES (?, ?, 2, 'waiting', NOW(), NOW())`, [groupId, template.id]);
+    let template;
+    if (rows.length > 0) {
+        // An existing game keeps the template it was created with, so its
+        // ingredients (and everything else) stay the same across refreshes and
+        // round transitions — the same template every round/vote/timer function
+        // already reads via getInstanceById.
+        template = await getCCTemplateById(rows[0].template_id);
+        if (!template) {
+            // Its template was deleted in the admin: re-pick this group's own
+            // template (not the shared first one, which would give every such
+            // group the same pool) and store it so getInstanceById agrees.
+            template = await pickTemplateForGroup(resolvedActivityGameId, groupId);
+            if (!template)
+                return null;
+            await (0, db_1.query)(`UPDATE cc_game_instances SET template_id = ?, updated_at = NOW() WHERE id = ?`, [template.id, rows[0].id]);
+            [rows] = await (0, db_1.query)(`SELECT * FROM cc_game_instances WHERE group_id = ?`, [groupId]);
+        }
+    }
+    else {
+        // New game: give this group its own template (see pickTemplateForGroup),
+        // and fix its stage durations now from the global settings, so later
+        // admin changes don't affect it (see ccStageDurations).
+        template = await pickTemplateForGroup(resolvedActivityGameId, groupId);
+        if (!template)
+            return null;
+        const durations = (await getGlobalGameDurations()) ??
+            Object.fromEntries(ccStageDurations_1.CC_GAME_DURATION_FIELDS.map((f) => [f, template[f]]));
+        await (0, db_1.query)(`INSERT INTO cc_game_instances (group_id, template_id, stage_durations, activity_id, status, created_at, updated_at) VALUES (?, ?, ?, 2, 'waiting', NOW(), NOW())`, [groupId, template.id, JSON.stringify(durations)]);
         [rows] = await (0, db_1.query)(`SELECT * FROM cc_game_instances WHERE group_id = ?`, [groupId]);
     }
     // Ensure a participant_sessions row exists for everyone currently in the group —
@@ -367,7 +489,7 @@ async function getOrCreateCCInstance(groupId, activityGameId) {
     await ensureCCParticipantSessions(groupId);
     return {
         instance: mapInstanceRow(rows[0]),
-        template,
+        template: (0, ccStageDurations_1.withGameDurations)(template, rows[0]),
     };
 }
 /**
@@ -407,7 +529,7 @@ async function ensureCCParticipantSessions(groupId) {
  */
 async function assignCCRoles(instanceId, participantIds) {
     if (participantIds.length === 0)
-        return { impostorId: null, showHostId: null };
+        return { impostorId: null, showHostId: null, claimed: false };
     // Shuffle array
     const shuffled = [...participantIds].sort(() => Math.random() - 0.5);
     // First = Impostor (always)
@@ -419,8 +541,14 @@ async function assignCCRoles(instanceId, participantIds) {
     if (showHostEnabled && shuffled.length >= 4) {
         showHostId = shuffled[1];
     }
-    await (0, db_1.query)(`UPDATE cc_game_instances SET impostor_participant_id = ?, show_host_participant_id = ?, status = 'round1', round1_started_at = ?, updated_at = NOW() WHERE id = ?`, [impostorId, showHostId, (0, moment_1.default)().format('YYYY-MM-DD HH:mm:ss'), instanceId]);
-    return { impostorId, showHostId };
+    // Atomic claim: only the first caller whose UPDATE actually flips the
+    // instance out of 'waiting' assigns the roles and starts the game. A
+    // concurrent request (two players hitting the expired lobby at once, or a
+    // retried poll) gets affectedRows = 0 and must NOT re-roll roles or start a
+    // second time — it re-reads the already-started instance instead.
+    const [claimHeader] = await (0, db_1.query)(`UPDATE cc_game_instances SET impostor_participant_id = ?, show_host_participant_id = ?, status = 'round1', round1_started_at = ?, updated_at = NOW() WHERE id = ? AND status = 'waiting'`, [impostorId, showHostId, (0, moment_1.default)().format('YYYY-MM-DD HH:mm:ss'), instanceId]);
+    const claimed = Number(claimHeader?.affectedRows || 0) > 0;
+    return { impostorId, showHostId, claimed };
 }
 /**
  * Save ingredient votes for round 1
@@ -437,11 +565,42 @@ async function saveRound1Votes(instanceId, participantId, ingredientIds) {
     return true;
 }
 /**
- * Calculate round 1 results and save top N ingredients
+ * Calculate round 1 results and save the top N ingredients for the recipe.
+ *
+ * Absurd ingredients (Sand, Ice Cubes, …) are deliberately kept OUT of the
+ * final N: the dish still has to be cookable in Round 2, so we only ever pick
+ * real ingredients. The selection is: real ingredients ranked by votes (most
+ * first), ties and the zero-vote fillers broken at random — so when only two
+ * real ingredients were voted for, two more random real ones fill the recipe
+ * up to N. Absurd ingredients are used only as a last resort, if the template
+ * pool somehow has fewer than N real ingredients. The absurd picks that drew
+ * votes still surface separately in the "also received votes" callout.
  */
-async function calculateRound1Results(instanceId, topCount) {
-    const [votes] = await (0, db_1.query)(`SELECT ingredient_id, COUNT(*) as c FROM cc_round1_votes WHERE instance_id = ? GROUP BY ingredient_id ORDER BY c DESC, ingredient_id ASC`, [instanceId]);
-    const results = votes.map((v) => ({ ingredientId: Number(v.ingredient_id), count: Number(v.c) })).slice(0, topCount);
+async function calculateRound1Results(instanceId, topCount, templateId) {
+    const [votes] = await (0, db_1.query)(`SELECT ingredient_id, COUNT(*) as c FROM cc_round1_votes WHERE instance_id = ? GROUP BY ingredient_id`, [instanceId]);
+    const voteCount = new Map();
+    for (const v of votes)
+        voteCount.set(Number(v.ingredient_id), Number(v.c));
+    const pool = await getCCIngredients(templateId);
+    const good = pool.filter((i) => !i.is_absurd);
+    const absurd = pool.filter((i) => i.is_absurd);
+    const shuffle = (arr) => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    };
+    // Shuffle first, then a stable sort by votes keeps equal-vote (and all the
+    // zero-vote) ingredients in random order — exactly the "pick max votes,
+    // then random good ones" behaviour.
+    const byVotesThenRandom = (list) => shuffle(list).sort((a, b) => (voteCount.get(b.id) ?? 0) - (voteCount.get(a.id) ?? 0));
+    let chosen = byVotesThenRandom(good).slice(0, topCount);
+    if (chosen.length < topCount && absurd.length > 0) {
+        chosen = [...chosen, ...byVotesThenRandom(absurd).slice(0, topCount - chosen.length)];
+    }
+    const results = chosen.map((i) => ({ ingredientId: i.id, count: voteCount.get(i.id) ?? 0 }));
     // Delete existing selected ingredients for this instance
     await (0, db_1.query)(`DELETE FROM cc_round1_selected_ingredients WHERE instance_id = ?`, [instanceId]);
     const values = results.map((r, i) => [instanceId, r.ingredientId, r.count, i + 1]);
@@ -467,7 +626,7 @@ async function finalizeRound1(instanceId, groupId) {
     const [claimHeader] = await (0, db_1.query)(`UPDATE cc_game_instances SET status = 'round2', round1_ended_at = NOW(), round2_started_at = NOW(), updated_at = NOW() WHERE id = ? AND status = 'round1'`, [instanceId]);
     if (Number(claimHeader?.affectedRows || 0) === 0)
         return;
-    const results = await calculateRound1Results(instanceId, template.round1_top_ingredients);
+    const results = await calculateRound1Results(instanceId, template.round1_top_ingredients, template.id);
     server_1.io.to(`cc-instance-${instanceId}`).emit('cc_round1_complete', { top_ingredients: results });
     // Round 2 is turn-based: fix a hidden, shuffled turn order and open the
     // first player's turn rather than starting one shared submission window.
@@ -574,10 +733,40 @@ async function advanceRound2Turn(instanceId, groupId) {
 // keeping a second path to review would have let a group with a skipped turn
 // resolve twice.
 /**
- * Resolves every step's final keep/remove status by simple majority (a tie
- * defaults to "kept" — lenient, per the plan). Idempotent: guarded by whether
- * any step is still in 'submitted' status, so a race between the "everyone
- * voted" fast path and the review-timer expiry can't double-resolve.
+ * Stable, deterministic tie-break key for Round 2 step selection. FNV-1a hash
+ * over the instance + step ids: the same inputs always yield the same number,
+ * so a tie between steps resolves identically for every player and on every
+ * refresh, while not simply letting the lowest step id always survive.
+ */
+function round2TieKey(instanceId, stepId) {
+    const s = `${instanceId}:${stepId}`;
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+}
+/**
+ * Resolves Round 2 review into the final recipe: keep the 4 steps with the most
+ * KEEP votes and drop the single step with the most REMOVE votes (equivalently
+ * the fewest KEEP votes — every player keeps 4 and removes 1, so each step's
+ * keep+remove total is the player count).
+ *
+ * Previously this was a per-step majority (removed only when remove > keep),
+ * which eliminated nobody whenever the removal votes were split across steps —
+ * so the results modal showed all 5 steps instead of 4.
+ *
+ * Exactly one step is dropped when 5 were submitted; with 4 or fewer steps
+ * (a player missed their Round-2 turn) nothing is dropped. The ties that matter
+ * — above all the case where all 5 players remove a different step, so every
+ * step has one remove vote — are broken by `round2TieKey`, so the result is the
+ * same for everyone and survives refreshes/reconnects without being reshuffled.
+ *
+ * Idempotent: only steps still in 'submitted' are read, so a second caller (the
+ * review-timer safety net racing the "everyone voted" fast path) finds nothing
+ * to resolve, and because the ordering is deterministic both callers that do
+ * run would write the identical result.
  */
 async function finalizeRound2Review(instanceId, groupId) {
     const [stepRows] = await (0, db_1.query)(`SELECT s.id,
@@ -586,10 +775,20 @@ async function finalizeRound2Review(instanceId, groupId) {
          FROM cc_round2_steps s WHERE s.instance_id = ? AND s.status = 'submitted'`, [instanceId]);
     if (!stepRows || stepRows.length === 0)
         return; // already resolved by a concurrent caller
-    for (const s of stepRows) {
-        const keep = Number(s.keep_votes);
-        const remove = Number(s.remove_votes);
-        const status = remove > keep ? 'removed' : 'kept'; // ties -> kept
+    const KEEP_COUNT = 4;
+    const steps = stepRows.map((s) => ({
+        id: Number(s.id),
+        keep: Number(s.keep_votes),
+        remove: Number(s.remove_votes),
+    }));
+    // Best-first: most KEEP votes, then fewest REMOVE votes, then the stable
+    // deterministic tie-break. Keep the top 4; everything after is dropped.
+    steps.sort((a, b) => b.keep - a.keep ||
+        a.remove - b.remove ||
+        round2TieKey(instanceId, a.id) - round2TieKey(instanceId, b.id));
+    const keepIds = new Set(steps.slice(0, KEEP_COUNT).map((s) => s.id));
+    for (const s of steps) {
+        const status = keepIds.has(s.id) ? 'kept' : 'removed';
         await (0, db_1.query)('UPDATE cc_round2_steps SET status = ? WHERE id = ?', [status, s.id]);
     }
     server_1.io.to(`cc-instance-${instanceId}`).emit('cc_round2_review_complete', {});
@@ -789,23 +988,51 @@ async function getCCRules(templateId) {
     return (rows || []).map((r) => ({ id: Number(r.id), rule_text: r.rule_text, order: Number(r.order) }));
 }
 /**
- * Up to 3 random *other* completed groups in the same booking, excluding any
- * group this participant has already nominated in any category — so the pool
- * naturally shrinks to unseen groups as the participant keeps rating.
+ * The ONE group this group is tasked with rating: the NEXT group in display
+ * order, among the groups that ACTUALLY PARTICIPATED in Cook & Create (i.e. have
+ * a game instance). Groups that were created but never joined are skipped
+ * entirely, so a never-joined group between two real ones can't become a phantom
+ * target. Participating groups are ordered by id ASC, which matches their
+ * "Group N" numbering (Group 1 → Group 2, Group 2 → Group 3, …). The mapping is
+ * purely positional (never id + 1), so it is correct when ids are
+ * non-consecutive. With exactly two participating groups they rate each other
+ * (Group 2 → Group 1 as well). Otherwise returns null when this group is the
+ * last participating one; also null when it isn't itself a participating group.
+ */
+async function getNextGroupIdInBooking(bookingId, groupId) {
+    const [rows] = await (0, db_1.query)(`SELECT DISTINCT gg.id
+         FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
+         WHERE gg.booking_id = ?
+         ORDER BY gg.id ASC`, [bookingId]);
+    const ids = (rows || []).map((r) => Number(r.id));
+    const idx = ids.indexOf(Number(groupId));
+    if (idx === -1)
+        return null;
+    if (ids.length === 2)
+        return ids[1 - idx];
+    if (idx + 1 >= ids.length)
+        return null;
+    return ids[idx + 1];
+}
+/**
+ * The single dish this group may rate: the NEXT group's finished dish (see
+ * getNextGroupIdInBooking). Returns exactly one dish when that next group has a
+ * completed recipe, otherwise an empty list (the UI then shows its empty state).
+ * The row carries this participant's own saved star/reaction (my_stars /
+ * my_category_id) so an already-rated dish renders read-only, never removed.
  */
 async function getOtherDishes(groupId, participantId) {
     const [groupRows] = await (0, db_1.query)('SELECT booking_id FROM game_groups WHERE id = ?', [groupId]);
     if (!groupRows || groupRows.length === 0)
         return [];
     const bookingId = groupRows[0].booking_id;
+    const nextGroupId = await getNextGroupIdInBooking(bookingId, groupId);
+    if (nextGroupId == null)
+        return [];
     const [rows] = await (0, db_1.query)(`SELECT gg.id as group_id, gg.group_name, ci.id AS instance_id, ci.dish_name
          FROM game_groups gg
          JOIN cc_game_instances ci ON ci.group_id = gg.id
-         WHERE gg.booking_id = ? AND gg.id != ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL
-           AND gg.id NOT IN (
-             SELECT rated_group_id FROM cc_ratings WHERE voting_participant_id = ? AND rated_group_id IS NOT NULL
-           )
-         ORDER BY RAND() LIMIT 3`, [bookingId, groupId, participantId]);
+         WHERE gg.id = ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL`, [nextGroupId]);
     if (!rows || rows.length === 0)
         return [];
     const groupIds = rows.map((r) => Number(r.group_id));
@@ -818,6 +1045,15 @@ async function getOtherDishes(groupId, participantId) {
         if (!countsByGroup.has(gid))
             countsByGroup.set(gid, {});
         countsByGroup.get(gid)[c.slug] = Number(c.c);
+    }
+    // Average received stars per dish — same rule as the awards board (saved
+    // star ratings only, rounded to one decimal).
+    const [avgRows] = await (0, db_1.query)(`SELECT rated_group_id, AVG(stars) AS avg_stars, COUNT(stars) AS n
+         FROM cc_ratings WHERE rated_group_id IN (?) AND stars IS NOT NULL
+         GROUP BY rated_group_id`, [groupIds]);
+    const avgByGroup = new Map();
+    for (const a of avgRows || []) {
+        avgByGroup.set(Number(a.rated_group_id), { avg: Math.round(Number(a.avg_stars) * 10) / 10, n: Number(a.n) });
     }
     // Each dish's final recipe = its kept Round-2 steps, in letter order. Removed
     // steps are excluded (they aren't part of the finished dish).
@@ -832,29 +1068,95 @@ async function getOtherDishes(groupId, participantId) {
             stepsByInstance.set(iid, []);
         stepsByInstance.get(iid).push({ letter: s.step_letter, text: s.step_text });
     }
-    return rows.map((r) => ({
-        group_id: Number(r.group_id),
-        group_name: r.group_name,
-        dish_name: r.dish_name,
-        nomination_counts: countsByGroup.get(Number(r.group_id)) || {},
-        steps: stepsByInstance.get(Number(r.instance_id)) || [],
-    }));
+    // This participant's own in-progress review of each dish (so a partial
+    // star/emoji selection is restored after a refresh).
+    const [myRows] = await (0, db_1.query)(`SELECT rated_group_id, category_id, stars FROM cc_ratings
+         WHERE voting_participant_id = ? AND rated_group_id IN (?)`, [participantId, groupIds]);
+    const myReviewByGroup = new Map();
+    for (const m of myRows || []) {
+        myReviewByGroup.set(Number(m.rated_group_id), {
+            category_id: m.category_id != null ? Number(m.category_id) : null,
+            stars: m.stars != null ? Number(m.stars) : null,
+        });
+    }
+    return rows.map((r) => {
+        const mine = myReviewByGroup.get(Number(r.group_id));
+        const avg = avgByGroup.get(Number(r.group_id));
+        return {
+            group_id: Number(r.group_id),
+            group_name: r.group_name,
+            dish_name: r.dish_name,
+            nomination_counts: countsByGroup.get(Number(r.group_id)) || {},
+            average_rating: avg && avg.n > 0 ? avg.avg : null,
+            rating_count: avg?.n ?? 0,
+            steps: stepsByInstance.get(Number(r.instance_id)) || [],
+            my_category_id: mine?.category_id ?? null,
+            my_stars: mine?.stars ?? null,
+        };
+    });
 }
 /**
- * Records one participant's award nomination for another group's dish.
- * One nomination per (participant, rated group, category) — re-tapping the
- * same category for the same group is a harmless idempotent no-op via the
- * unique key added in schemaHelpers.ts.
+ * True once this participant has a COMPLETE review (both the emoji reaction and
+ * the 1–5 star rating) for this other group's dish — i.e. they've already rated
+ * it and must not submit again.
  */
-async function submitRating(instanceId, participantId, ratedGroupId, categoryId) {
-    await (0, db_1.query)(`INSERT INTO cc_ratings (instance_id, category_id, voting_participant_id, rated_group_id, created_at)
-         VALUES (?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE created_at = created_at`, [instanceId, categoryId, participantId, ratedGroupId]);
+async function hasReviewedGroup(participantId, ratedGroupId) {
+    const [rows] = await (0, db_1.query)(`SELECT 1 FROM cc_ratings
+         WHERE voting_participant_id = ? AND rated_group_id = ?
+           AND category_id IS NOT NULL AND stars IS NOT NULL
+         LIMIT 1`, [participantId, ratedGroupId]);
+    return rows.length > 0;
+}
+/**
+ * Records one participant's review of another group's dish: a single cc_ratings
+ * row per (participant, rated group) carrying BOTH the emoji reaction
+ * (category_id) and the 1–5 star rating (stars), submitted together.
+ *
+ * Rating is once-only: the ON DUPLICATE KEY guard writes the two values only
+ * when the existing row is NOT already complete, so an already-rated dish can
+ * never be overwritten — even under a double-click race. Callers should still
+ * pre-check hasReviewedGroup() to return a friendly "already rated" response.
+ * The unique (participant, group) key makes this an upsert, which also completes
+ * a legacy emoji-only row (stars NULL) left by the previous flow.
+ */
+async function submitRating(instanceId, participantId, ratedGroupId, categoryId, stars) {
+    await (0, db_1.query)(`INSERT INTO cc_ratings (instance_id, category_id, stars, voting_participant_id, rated_group_id, created_at)
+         VALUES (?, ?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE
+            category_id = IF(cc_ratings.category_id IS NOT NULL AND cc_ratings.stars IS NOT NULL, cc_ratings.category_id, VALUES(category_id)),
+            stars       = IF(cc_ratings.category_id IS NOT NULL AND cc_ratings.stars IS NOT NULL, cc_ratings.stars, VALUES(stars))`, [instanceId, categoryId, stars, participantId, ratedGroupId]);
+}
+/**
+ * Backend source of truth for the rating-gated results. Each group rates exactly
+ * ONE dish — the next group's (see getNextGroupIdInBooking) — so this is true
+ * when the participant has a complete review (BOTH a star rating AND an emoji
+ * reaction) for that one designated dish. It is trivially true when there is no
+ * next group, or that group hasn't finished a dish yet (nothing to rate).
+ */
+async function hasCompletedAllReviews(groupId, participantId) {
+    const [groupRows] = await (0, db_1.query)('SELECT booking_id FROM game_groups WHERE id = ?', [groupId]);
+    if (!groupRows || groupRows.length === 0)
+        return false;
+    const bookingId = groupRows[0].booking_id;
+    const nextGroupId = await getNextGroupIdInBooking(bookingId, groupId);
+    if (nextGroupId == null)
+        return true;
+    const [rows] = await (0, db_1.query)(`SELECT COUNT(*) AS pending
+         FROM cc_game_instances ci
+         WHERE ci.group_id = ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL
+           AND ci.group_id NOT IN (
+             SELECT rated_group_id FROM cc_ratings
+             WHERE voting_participant_id = ? AND rated_group_id IS NOT NULL
+               AND category_id IS NOT NULL AND stars IS NOT NULL
+           )`, [nextGroupId, participantId]);
+    return Number(rows?.[0]?.pending || 0) === 0;
 }
 /**
  * The Final Results / Leaderboard board: every completed group in this
- * group's booking, plus whichever award category each one leads (most
- * nominations wins; earliest cc_game_instances.finished_at breaks ties),
- * plus this group's own impostor reveal.
+ * group's booking, plus the Fun Award each one earned (groups are ranked by
+ * their average received star rating, highest first, and mapped onto the five
+ * award categories in order; earliest cc_game_instances.finished_at then lower
+ * group id breaks ties), plus this group's own impostor reveal.
  */
 async function getAwards(groupId) {
     const [groupRows] = await (0, db_1.query)('SELECT booking_id FROM game_groups WHERE id = ?', [groupId]);
@@ -865,41 +1167,40 @@ async function getAwards(groupId) {
          FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
          WHERE gg.booking_id = ? AND ci.status = 'completed' AND ci.dish_name IS NOT NULL`, [bookingId]);
     const categories = await getCCRatingCategories();
-    const [tallyRows] = await (0, db_1.query)(`SELECT r.category_id, r.rated_group_id, COUNT(*) as c
-         FROM cc_ratings r
-         JOIN game_groups gg ON gg.id = r.rated_group_id
-         WHERE gg.booking_id = ?
-         GROUP BY r.category_id, r.rated_group_id`, [bookingId]);
     const finishedAtByGroup = new Map();
     for (const g of groupsRows || []) {
         finishedAtByGroup.set(Number(g.group_id), g.finished_at ? Date.parse(g.finished_at) : Number.MAX_SAFE_INTEGER);
     }
-    const byCategory = new Map();
-    for (const t of tallyRows || []) {
-        const catId = Number(t.category_id);
-        if (!byCategory.has(catId))
-            byCategory.set(catId, new Map());
-        byCategory.get(catId).set(Number(t.rated_group_id), Number(t.c));
-    }
+    // Fun Awards are ranked by each group's AVERAGE received star rating: the
+    // highest-rated group takes the first award (Master Chef), the next the
+    // second (Picasso of the Kitchen), and so on through the five categories in
+    // their configured order. Only groups that have received at least one saved
+    // star rating are eligible; ties break deterministically (earlier finish,
+    // then lower group id) so a refresh never reshuffles the winners.
+    const [avgRows] = await (0, db_1.query)(`SELECT r.rated_group_id, AVG(r.stars) AS avg_stars, COUNT(r.stars) AS n
+         FROM cc_ratings r
+         JOIN game_groups gg ON gg.id = r.rated_group_id
+         WHERE gg.booking_id = ? AND r.stars IS NOT NULL
+         GROUP BY r.rated_group_id`, [bookingId]);
+    const completedGroupIds = new Set((groupsRows || []).map((g) => Number(g.group_id)));
+    const eligible = (avgRows || [])
+        .map((r) => ({ groupId: Number(r.rated_group_id), avg: Number(r.avg_stars), n: Number(r.n) }))
+        .filter((e) => e.n > 0 && completedGroupIds.has(e.groupId))
+        .sort((a, b) => {
+        if (b.avg !== a.avg)
+            return b.avg - a.avg; // highest average first
+        const fa = finishedAtByGroup.get(a.groupId) ?? Number.MAX_SAFE_INTEGER;
+        const fb = finishedAtByGroup.get(b.groupId) ?? Number.MAX_SAFE_INTEGER;
+        if (fa !== fb)
+            return fa - fb; // earlier finish breaks ties
+        return a.groupId - b.groupId; // then lower group id
+    });
+    // Category i (in configured order) → the i-th ranked group, if one exists.
     const awardWinnerByCategory = new Map();
-    for (const cat of categories) {
-        const tally = byCategory.get(cat.id);
-        if (!tally || tally.size === 0)
-            continue;
-        let bestGroupId = null;
-        let bestCount = -1;
-        let bestFinishedAt = Number.MAX_SAFE_INTEGER;
-        for (const [gid, count] of tally.entries()) {
-            const finishedAt = finishedAtByGroup.get(gid) ?? Number.MAX_SAFE_INTEGER;
-            if (count > bestCount || (count === bestCount && finishedAt < bestFinishedAt)) {
-                bestCount = count;
-                bestGroupId = gid;
-                bestFinishedAt = finishedAt;
-            }
-        }
-        if (bestGroupId != null)
-            awardWinnerByCategory.set(cat.id, bestGroupId);
-    }
+    categories.forEach((cat, i) => {
+        if (i < eligible.length)
+            awardWinnerByCategory.set(cat.id, eligible[i].groupId);
+    });
     const groups = (groupsRows || []).map((g) => {
         const gid = Number(g.group_id);
         return {
@@ -944,6 +1245,15 @@ async function getAwards(groupId) {
         for (const row of reactionRows || [])
             reactionCounts[row.slug] = Number(row.c);
     }
+    // Average 1–5 star rating this group's dish received from other players
+    // (from the persisted `stars`, independent of the emoji reactions).
+    let averageRating = null;
+    let ratingCount = 0;
+    {
+        const [avgRows] = await (0, db_1.query)(`SELECT AVG(stars) AS avg_stars, COUNT(stars) AS n FROM cc_ratings WHERE rated_group_id = ? AND stars IS NOT NULL`, [groupId]);
+        ratingCount = Number(avgRows?.[0]?.n || 0);
+        averageRating = ratingCount > 0 ? Math.round(Number(avgRows[0].avg_stars) * 10) / 10 : null;
+    }
     return {
         groups,
         my_group: {
@@ -955,6 +1265,8 @@ async function getAwards(groupId) {
             double_down_used: doubleDownAccepted,
             double_down_penalty_applied: doubleDownAccepted && doubleDownWasWrong,
             reaction_counts: reactionCounts,
+            average_rating: averageRating,
+            rating_count: ratingCount,
         },
     };
 }

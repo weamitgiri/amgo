@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getGameSummary = exports.getLobbyInfo = exports.verifyParticipantOtp = exports.participantJoin = exports.verifyInvitation = void 0;
+exports.getGameSummary = exports.getLobbyInfo = exports.verifyParticipantOtp = exports.resendParticipantOtp = exports.participantJoin = exports.verifyInvitation = void 0;
 const db_1 = require("../config/db");
 const emailService_1 = require("../services/emailService");
 const apiResponse_1 = require("../utils/apiResponse");
@@ -49,6 +49,8 @@ const gameSummaryService_1 = require("../services/gameSummaryService");
 const participantGroupService_1 = require("../services/participantGroupService");
 const eventStatsService_1 = require("../services/eventStatsService");
 const otp_1 = require("../utils/otp");
+const otpConfig_1 = require("../services/otpConfig");
+const otpResend_1 = require("../services/otpResend");
 const notificationService_1 = require("../services/notificationService");
 /**
  * Verify Invitation Link and Get Booking Info
@@ -124,20 +126,26 @@ exports.verifyInvitation = (0, asyncHandler_1.asyncHandler)(async (req, res) => 
 exports.participantJoin = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { booking_id, name, email } = req.body;
     const normalizedEmail = String(email).trim().toLowerCase();
+    await (0, participantGroupService_1.assertBrowserNotBoundToOtherParticipant)(req.get('x-participant-token'), booking_id, normalizedEmail);
     await (0, participantGroupService_1.assertCanStartJoin)(booking_id, normalizedEmail);
-    const [existing] = await (0, db_1.query)('SELECT id FROM game_participants WHERE LOWER(email) = ? AND booking_id = ?', [normalizedEmail, booking_id]);
+    const [existing] = await (0, db_1.query)('SELECT id, join_token FROM game_participants WHERE LOWER(email) = ? AND booking_id = ?', [normalizedEmail, booking_id]);
     if (existing.length === 0) {
         const { getBookingLimits } = await Promise.resolve().then(() => __importStar(require('../services/eventStatsService')));
         const limits = await getBookingLimits(booking_id);
         if (limits && limits.maxUsers > 0) {
-            const [totalRows] = await (0, db_1.query)('SELECT COUNT(*) as total FROM game_participants WHERE booking_id = ?', [booking_id]);
+            // Count only VERIFIED participants — the same count the dashboard shows
+            // and the OTP-verify step enforces (under a booking row lock). Counting
+            // every row also counted people who requested an OTP but never verified
+            // (typo'd email, abandoned attempt), so e.g. 9 joined + 1 abandoned
+            // attempt blocked the genuine 10th participant.
+            const [totalRows] = await (0, db_1.query)('SELECT COUNT(*) as total FROM game_participants WHERE booking_id = ? AND email_verified_at IS NOT NULL', [booking_id]);
             if (Number(totalRows[0]?.total ?? 0) >= limits.maxUsers) {
                 throw new AppError_1.AppError(`Join limit reached. This package allows a maximum of ${limits.maxUsers} participants.`, 403);
             }
         }
     }
     const otp = (0, otp_1.generateNumericOtp)(6);
-    const otp_expires_at = (0, moment_1.default)().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+    const otp_expires_at = await (0, otpConfig_1.getOtpExpiresAt)();
     const join_token = crypto_1.default.randomBytes(32).toString('hex');
     // Get game_id from booking
     const [bookingRows] = await (0, db_1.query)('SELECT game_id FROM organizer_bookings WHERE id = ?', [booking_id]);
@@ -145,10 +153,16 @@ exports.participantJoin = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         throw new AppError_1.AppError('Booking not found', 404);
     const game_id = bookingRows[0].game_id;
     if (existing.length > 0) {
-        await (0, db_1.query)('UPDATE game_participants SET name = ?, otp = ?, otp_expires_at = ?, join_token = ? WHERE id = ?', [name, otp, otp_expires_at, join_token, existing[0].id]);
+        // Keep the participant's existing join_token stable across re-joins and OTP
+        // resends. The token is this participant's persistent credential — the
+        // browser lock and the participant game-API auth both key on it — so
+        // regenerating it here would silently invalidate a still-valid session on
+        // another device. Only mint one for a legacy row that somehow has none.
+        const preservedToken = existing[0].join_token || join_token;
+        await (0, db_1.query)('UPDATE game_participants SET name = ?, otp = ?, otp_expires_at = ?, otp_sent_at = NOW(), join_token = ? WHERE id = ?', [name, otp, otp_expires_at, preservedToken, existing[0].id]);
     }
     else {
-        await (0, db_1.query)('INSERT INTO game_participants (booking_id, game_id, name, email, otp, otp_expires_at, join_token, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [booking_id, game_id, name, normalizedEmail, otp, otp_expires_at, join_token, 'joined']);
+        await (0, db_1.query)('INSERT INTO game_participants (booking_id, game_id, name, email, otp, otp_expires_at, otp_sent_at, join_token, status) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?)', [booking_id, game_id, name, normalizedEmail, otp, otp_expires_at, join_token, 'joined']);
     }
     // Fire-and-forget: SMTP can block 30s+ and exceed the client timeout
     (0, emailService_1.sendOtpEmail)(email, otp);
@@ -159,11 +173,41 @@ exports.participantJoin = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     return (0, apiResponse_1.successResponse)(res, 'OTP sent to your email.', payload);
 });
 /**
+ * Participant: Resend OTP to an already-joined (but perhaps not yet verified)
+ * participant. Regenerates the OTP for the existing row, honouring the 60s
+ * resend cooldown; it does NOT re-run the join/group logic or mint a new token.
+ */
+exports.resendParticipantOtp = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const { booking_id, email } = req.body;
+    const normalizedEmail = String(email).trim().toLowerCase();
+    await (0, participantGroupService_1.assertBrowserNotBoundToOtherParticipant)(req.get('x-participant-token'), booking_id, normalizedEmail);
+    const [rows] = await (0, db_1.query)('SELECT id, email_verified_at FROM game_participants WHERE LOWER(email) = ? AND booking_id = ?', [normalizedEmail, booking_id]);
+    if (rows.length === 0)
+        throw new AppError_1.AppError('Please join first before requesting a code.', 404);
+    if (rows[0].email_verified_at)
+        throw new AppError_1.AppError('This email is already verified.', 400);
+    await (0, otpResend_1.assertResendCooldown)('game_participants', 'id', rows[0].id);
+    const otp = (0, otp_1.generateNumericOtp)(6);
+    const otp_expires_at = await (0, otpConfig_1.getOtpExpiresAt)();
+    await (0, db_1.query)('UPDATE game_participants SET otp = ?, otp_expires_at = ?, otp_sent_at = NOW() WHERE id = ?', [otp, otp_expires_at, rows[0].id]);
+    // Fire-and-forget: SMTP can block and exceed the client timeout.
+    (0, emailService_1.sendOtpEmail)(normalizedEmail, otp);
+    const payload = {
+        email: normalizedEmail,
+        resend_cooldown: otpConfig_1.OTP_RESEND_COOLDOWN_SECONDS,
+    };
+    if (process.env.NODE_ENV === 'development') {
+        payload.dev_otp = otp;
+    }
+    return (0, apiResponse_1.successResponse)(res, 'A new code has been sent to your email.', payload);
+});
+/**
  * Participant Step 2: Verify OTP and Assign Group
  */
 exports.verifyParticipantOtp = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { email, otp, booking_id } = req.body;
     const normalizedEmail = String(email).trim().toLowerCase();
+    await (0, participantGroupService_1.assertBrowserNotBoundToOtherParticipant)(req.get('x-participant-token'), booking_id, normalizedEmail);
     const result = await (0, db_1.withTransaction)(async (conn) => {
         await conn.query('SELECT id FROM organizer_bookings WHERE id = ? FOR UPDATE', [booking_id]);
         const [rows] = await conn.query('SELECT id, otp, otp_expires_at, name, join_token, email_verified_at FROM game_participants WHERE email = ? AND booking_id = ?', [normalizedEmail, booking_id]);

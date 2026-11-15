@@ -1,9 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOrganizerResults = exports.deactivateAccount = exports.updateSession = exports.completeBooking = exports.getBookingDetails = exports.createBooking = exports.resendOtp = exports.verifyOtp = exports.getEventStats = exports.getOrganizerDashboard = exports.verifyLoginOtp = exports.organizerLogin = exports.registerOrganizer = void 0;
+exports.downloadCCResultsPdf = exports.downloadMQResultsPdf = exports.getOrganizerResults = exports.deactivateAccount = exports.updateSession = exports.completeBooking = exports.getBookingDetails = exports.createBooking = exports.resendOtp = exports.verifyOtp = exports.getEventStats = exports.getOrganizerDashboard = exports.verifyLoginOtp = exports.organizerLogin = exports.registerOrganizer = void 0;
+const fs_1 = __importDefault(require("fs"));
 const db_1 = require("../config/db");
 const emailService_1 = require("../services/emailService");
 const apiResponse_1 = require("../utils/apiResponse");
@@ -14,6 +48,10 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const eventStatsService_1 = require("../services/eventStatsService");
 const schemaHelpers_1 = require("../utils/schemaHelpers");
 const otp_1 = require("../utils/otp");
+const gstService_1 = require("../services/gstService");
+const otpConfig_1 = require("../services/otpConfig");
+const otpResend_1 = require("../services/otpResend");
+const resultWindowService_1 = require("../services/resultWindowService");
 const jwtSecret_1 = require("../utils/jwtSecret");
 const paymentService_1 = require("../services/paymentService");
 // Total number of days a session may be scheduled/rescheduled within, counting
@@ -32,7 +70,7 @@ function isCookAndCreateSlug(slug) {
 exports.registerOrganizer = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { name, email, company_name, company_website } = req.body;
     const otp = (0, otp_1.generateNumericOtp)(6);
-    const otp_expires_at = (0, moment_1.default)().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+    const otp_expires_at = await (0, otpConfig_1.getOtpExpiresAt)();
     // Ensure schema has payment/account columns (avoid runtime SQL errors)
     await (0, schemaHelpers_1.ensureOrganizerStatusColumns)();
     // Check if organizer already exists
@@ -43,10 +81,11 @@ exports.registerOrganizer = (0, asyncHandler_1.asyncHandler)(async (req, res) =>
             throw new AppError_1.AppError('You already registered this email id. Please login.', 409);
         }
         organizerId = existing[0].id;
-        await (0, db_1.query)('UPDATE organizers SET name = ?, company_name = ?, company_website = ?, otp = ?, otp_expires_at = ? WHERE id = ?', [name, company_name, company_website, otp, otp_expires_at, organizerId]);
+        await (0, otpResend_1.assertResendCooldown)('organizers', 'id', organizerId);
+        await (0, db_1.query)('UPDATE organizers SET name = ?, company_name = ?, company_website = ?, otp = ?, otp_expires_at = ?, otp_sent_at = NOW() WHERE id = ?', [name, company_name, company_website, otp, otp_expires_at, organizerId]);
     }
     else {
-        const [result] = await (0, db_1.query)('INSERT INTO organizers (name, email, company_name, company_website, otp, otp_expires_at, status, payment_status, account_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [name, email, company_name, company_website, otp, otp_expires_at, 'active', 'pending', 'pending']);
+        const [result] = await (0, db_1.query)('INSERT INTO organizers (name, email, company_name, company_website, otp, otp_expires_at, otp_sent_at, status, payment_status, account_status) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)', [name, email, company_name, company_website, otp, otp_expires_at, 'active', 'pending', 'pending']);
         organizerId = result.insertId;
     }
     // Send OTP via email (fire-and-forget to avoid blocking response)
@@ -58,16 +97,23 @@ exports.registerOrganizer = (0, asyncHandler_1.asyncHandler)(async (req, res) =>
  */
 exports.organizerLogin = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { email } = req.body;
-    const [rows] = await (0, db_1.query)('SELECT id FROM organizers WHERE email = ?', [email]);
+    // Mirror authMiddleware, which excludes soft-deleted accounts: a deactivated
+    // organizer must not be able to request a login OTP. Without this, login
+    // succeeds but every authenticated request fails with "Organizer not found".
+    const [rows] = await (0, db_1.query)('SELECT id, deleted_at FROM organizers WHERE email = ?', [email]);
     if (rows.length === 0) {
         throw new AppError_1.AppError('Organizer not found. Please register first.', 404);
     }
+    if (rows[0].deleted_at) {
+        throw new AppError_1.AppError('Your email id is deactivated. Please contact support to reactivate.', 403);
+    }
+    await (0, otpResend_1.assertResendCooldown)('organizers', 'id', rows[0].id);
     const otp = (0, otp_1.generateNumericOtp)(6);
-    const otp_expires_at = (0, moment_1.default)().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
-    await (0, db_1.query)('UPDATE organizers SET otp = ?, otp_expires_at = ? WHERE email = ?', [otp, otp_expires_at, email]);
+    const otp_expires_at = await (0, otpConfig_1.getOtpExpiresAt)();
+    await (0, db_1.query)('UPDATE organizers SET otp = ?, otp_expires_at = ?, otp_sent_at = NOW() WHERE email = ?', [otp, otp_expires_at, email]);
     // Send OTP via email (fire-and-forget to avoid blocking response)
     (0, emailService_1.sendOtpEmail)(email, otp);
-    return (0, apiResponse_1.successResponse)(res, 'Login OTP sent to your email.');
+    return (0, apiResponse_1.successResponse)(res, 'Login OTP sent to your email.', { resend_cooldown: otpConfig_1.OTP_RESEND_COOLDOWN_SECONDS });
 });
 /**
  * Organizer Login - Step 2: Verify OTP & Return Token
@@ -75,11 +121,16 @@ exports.organizerLogin = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
 exports.verifyLoginOtp = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { email, otp } = req.body;
     await (0, schemaHelpers_1.ensureOrganizerStatusColumns)();
-    const [rows] = await (0, db_1.query)('SELECT id, name, otp, otp_expires_at, email_verified_at, status, payment_status, account_status FROM organizers WHERE email = ?', [email]);
+    const [rows] = await (0, db_1.query)('SELECT id, name, otp, otp_expires_at, email_verified_at, status, payment_status, account_status, deleted_at FROM organizers WHERE email = ?', [email]);
     if (rows.length === 0) {
         throw new AppError_1.AppError('Organizer not found', 404);
     }
     const organizer = rows[0];
+    // A soft-deleted account must not receive a session token; authMiddleware
+    // would reject every subsequent request with "Organizer not found".
+    if (organizer.deleted_at) {
+        throw new AppError_1.AppError('This account has been deactivated. Please contact support.', 403);
+    }
     if (organizer.otp !== otp) {
         throw new AppError_1.AppError('Invalid OTP', 400);
     }
@@ -137,7 +188,16 @@ exports.getOrganizerDashboard = (0, asyncHandler_1.asyncHandler)(async (req, res
             p.price as package_price,
             p.max_users,
             (SELECT COUNT(*) FROM game_participants WHERE booking_id = ob.id AND email_verified_at IS NOT NULL) as registered_participants,
-            (SELECT COALESCE(bill.created_at, ob.created_at) FROM organizer_billings bill WHERE bill.booking_id = ob.id ORDER BY bill.id DESC LIMIT 1) as payment_date
+            (SELECT COALESCE(bill.created_at, ob.created_at) FROM organizer_billings bill WHERE bill.booking_id = ob.id ORDER BY bill.id DESC LIMIT 1) as payment_date,
+            -- A game is "completed" once every one of its groups is in a terminal
+            -- state (completed/incomplete) and at least one group exists. Mirrors
+            -- eventStatsService's isEventCompleted so the dashboard can gate the
+            -- "Register for New Game" button without a separate stats call per booking.
+            (SELECT CASE
+                        WHEN COUNT(*) > 0 AND COUNT(*) = SUM(CASE WHEN gg.status IN ('completed','incomplete') THEN 1 ELSE 0 END)
+                        THEN 1 ELSE 0
+                    END
+             FROM game_groups gg WHERE gg.booking_id = ob.id) as is_completed
         FROM organizer_bookings ob
         JOIN activities a ON ob.activity_id = a.id
         JOIN packages p ON ob.package_id = p.id
@@ -183,15 +243,20 @@ exports.verifyOtp = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
 });
 exports.resendOtp = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { email } = req.body;
-    const [rows] = await (0, db_1.query)('SELECT id FROM organizers WHERE email = ?', [email]);
+    const [rows] = await (0, db_1.query)('SELECT id, deleted_at FROM organizers WHERE email = ?', [email]);
     if (rows.length === 0) {
         throw new AppError_1.AppError('Organizer not found', 404);
     }
+    if (rows[0].deleted_at) {
+        throw new AppError_1.AppError('This account has been deactivated. Please contact support.', 403);
+    }
+    await (0, otpResend_1.assertResendCooldown)('organizers', 'id', rows[0].id);
     const otp = (0, otp_1.generateNumericOtp)(6);
-    const otp_expires_at = (0, moment_1.default)().add(10, 'minutes').format('YYYY-MM-DD HH:mm:ss');
-    await (0, db_1.query)('UPDATE organizers SET otp = ?, otp_expires_at = ? WHERE email = ?', [otp, otp_expires_at, email]);
-    await (0, emailService_1.sendOtpEmail)(email, otp);
-    return (0, apiResponse_1.successResponse)(res, 'OTP resent successfully.');
+    const otp_expires_at = await (0, otpConfig_1.getOtpExpiresAt)();
+    await (0, db_1.query)('UPDATE organizers SET otp = ?, otp_expires_at = ?, otp_sent_at = NOW() WHERE email = ?', [otp, otp_expires_at, email]);
+    // Fire-and-forget: SMTP can block and exceed the client timeout.
+    (0, emailService_1.sendOtpEmail)(email, otp);
+    return (0, apiResponse_1.successResponse)(res, 'OTP resent successfully.', { resend_cooldown: otpConfig_1.OTP_RESEND_COOLDOWN_SECONDS });
 });
 exports.createBooking = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { organizer_id, activity_id, game_id, package_id, scheduled_date, scheduled_time } = req.body;
@@ -292,7 +357,7 @@ exports.completeBooking = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     // would hold row locks open across a network round trip to Razorpay — so
     // validation runs first and the write transaction re-checks under a lock.
     const [bookingRows] = await (0, db_1.query)(`SELECT ob.status, ob.organizer_id, ob.package_id, ob.scheduled_date, ob.scheduled_time,
-                o.email_verified_at, p.price
+                o.email_verified_at, p.price, p.gst_rate, p.sac_code
            FROM organizer_bookings ob
            JOIN organizers o ON o.id = ob.organizer_id
            JOIN packages p ON p.id = ob.package_id
@@ -318,7 +383,18 @@ exports.completeBooking = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     }
     // Amount is always recomputed from the package on record. Nothing about
     // pricing is accepted from the request.
-    const amounts = (0, paymentService_1.calculateBookingAmount)(parseFloat(booking.price || 0));
+    const packageGstRate = booking.gst_rate != null ? parseFloat(booking.gst_rate) : undefined;
+    const amounts = (0, paymentService_1.calculateBookingAmount)(parseFloat(booking.price || 0), packageGstRate);
+    // Full GST breakdown (CGST/SGST vs IGST) by Place of Supply = the billing
+    // state, against the supplier's registered GST state code. Persisted below
+    // as an immutable snapshot so the invoice never changes retroactively.
+    const sellerStateCode = (await (0, paymentService_1.getSellerStateCode)()) || '';
+    const gst = (0, gstService_1.computeGst)({
+        taxableValue: amounts.packagePrice,
+        gstRate: amounts.gstRate,
+        buyerState: state,
+        sellerStateCode,
+    });
     // Server-side gate on the chosen method: COD may be switched off or capped,
     // and Razorpay may be off or unconfigured. The UI hides those options, but
     // hiding is not enforcing.
@@ -358,6 +434,15 @@ exports.completeBooking = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
             method,
             'pending',
             JSON.stringify(consents),
+            // GST snapshot (immutable breakdown for the invoice)
+            gst.gstRate,
+            gst.taxType,
+            gst.cgst,
+            gst.sgst,
+            gst.igst,
+            gst.placeOfSupply || state,
+            gst.placeOfSupplyCode || null,
+            booking.sac_code || null,
         ];
         let billingId;
         if (existingBilling.length > 0) {
@@ -366,15 +451,20 @@ exports.completeBooking = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
                     SET gst_number = ?, billing_address = ?, city = ?, state = ?, pin_code = ?,
                         package_price = ?, taxes = ?, additional_charges = ?, gst_amount = ?,
                         total_payable = ?, payment_method = ?, payment_status = ?,
-                        confirmation_details = ?, updated_at = NOW()
+                        confirmation_details = ?,
+                        gst_rate = ?, tax_type = ?, cgst_amount = ?, sgst_amount = ?,
+                        igst_amount = ?, place_of_supply = ?, place_of_supply_code = ?, sac_code = ?,
+                        updated_at = NOW()
                   WHERE id = ?`, [...billingValues, billingId]);
         }
         else {
             const [insertResult] = (await conn.query(`INSERT INTO organizer_billings
                     (booking_id, gst_number, billing_address, city, state, pin_code, package_price,
                      taxes, additional_charges, gst_amount, total_payable, payment_method,
-                     payment_status, confirmation_details, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`, [booking_id, ...billingValues]));
+                     payment_status, confirmation_details,
+                     gst_rate, tax_type, cgst_amount, sgst_amount, igst_amount,
+                     place_of_supply, place_of_supply_code, sac_code, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`, [booking_id, ...billingValues]));
             billingId = insertResult.insertId;
         }
         const paymentId = await (0, paymentService_1.createPaymentRecord)(conn, {
@@ -504,32 +594,172 @@ exports.deactivateAccount = (0, asyncHandler_1.asyncHandler)(async (req, res) =>
     return (0, apiResponse_1.successResponse)(res, 'Your account has been deactivated. Billing and GST invoice records are retained as required by law.');
 });
 /**
- * Results tab — every completed/incomplete group across the organizer's
- * bookings, with results-PDF availability (PDFs live for 1 hour post-game).
+ * Results tab — one row per game session (booking), listed only once the
+ * session's result is declared (every played group finished) and only for one
+ * hour after that declaration. Applies to Mystery Quest and Cook & Create.
  */
 exports.getOrganizerResults = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const organizerId = req.user.id;
-    const [rows] = await (0, db_1.query)(`SELECT gg.id AS group_id, gg.group_name, gg.status, gg.completed_at,
+    // Every group of the organizer's bookings (not only finished ones), so a
+    // session with a group still playing is recognised as not declared yet.
+    const [rows] = await (0, db_1.query)(`SELECT gg.id AS group_id, gg.group_name, gg.status, gg.completed_at, gg.purged_at,
                 gg.results_pdf_path, gg.results_pdf_expires_at,
+                EXISTS(SELECT 1 FROM cc_game_instances ci WHERE ci.group_id = gg.id) AS is_cc,
                 ob.id AS booking_id, ob.scheduled_date, ob.scheduled_time,
                 a.title AS activity_name
          FROM game_groups gg
          JOIN organizer_bookings ob ON ob.id = gg.booking_id
          JOIN activities a ON a.id = ob.activity_id
-         WHERE ob.organizer_id = ? AND gg.status IN ('completed', 'incomplete')
+         WHERE ob.organizer_id = ?
          ORDER BY gg.completed_at DESC, gg.id DESC`, [organizerId]);
-    const now = new Date();
-    const results = rows.map((r) => ({
-        group_id: Number(r.group_id),
-        group_name: r.group_name,
-        booking_id: Number(r.booking_id),
-        activity_name: r.activity_name,
-        scheduled_date: r.scheduled_date,
-        scheduled_time: r.scheduled_time,
-        status: r.status,
-        completed_at: r.completed_at,
-        pdf_available: Boolean(r.results_pdf_path && r.results_pdf_expires_at && new Date(r.results_pdf_expires_at) > now),
-        pdf_expires_at: r.results_pdf_expires_at,
-    }));
+    // Group by booking; a booking is Cook & Create if any of its groups has a CC
+    // instance (a group that never started may not have one yet).
+    const groupsByBooking = new Map();
+    for (const r of rows) {
+        const bookingId = Number(r.booking_id);
+        if (!groupsByBooking.has(bookingId))
+            groupsByBooking.set(bookingId, []);
+        groupsByBooking.get(bookingId).push(r);
+    }
+    const results = [];
+    const ccGroupsByBooking = new Map();
+    const mqGroupsByBooking = new Map();
+    const windowByBooking = new Map();
+    for (const [bookingId, all] of groupsByBooking) {
+        const window = (0, resultWindowService_1.getSessionResultWindow)(all);
+        if (!window || !window.isOpen)
+            continue; // not declared yet, or the hour has passed
+        windowByBooking.set(bookingId, window);
+        const finished = all.filter((g) => g.status === 'completed' || g.status === 'incomplete');
+        const isCc = all.some((g) => Number(g.is_cc) === 1);
+        (isCc ? ccGroupsByBooking : mqGroupsByBooking).set(bookingId, finished);
+    }
+    const windowFields = (bookingId) => {
+        const w = windowByBooking.get(bookingId);
+        return {
+            completed_at: new Date(w.declaredAt),
+            pdf_expires_at: new Date(w.expiresAt),
+            // Server-computed, so the page hides the button on time regardless
+            // of the viewer's own clock.
+            pdf_seconds_remaining: Math.max(0, Math.ceil((w.expiresAt - Date.now()) / 1000)),
+        };
+    };
+    // Mystery Quest: one results PDF per game session (booking) listing every
+    // group and its players, so each session is a single row with a single
+    // download. Available until the last group's data is purged (1 hour after
+    // it finishes). Best-effort — on failure the row shows no download.
+    if (mqGroupsByBooking.size > 0) {
+        const { generateMQResultsPdfForBooking } = await Promise.resolve().then(() => __importStar(require('../services/mqSessionResultsPdfService')));
+        for (const [bookingId, groups] of mqGroupsByBooking) {
+            let filename = null;
+            try {
+                filename = await generateMQResultsPdfForBooking(bookingId);
+            }
+            catch {
+                /* non-fatal: list still returns, retried next load */
+            }
+            results.push({
+                group_id: Math.min(...groups.map((g) => Number(g.group_id))),
+                group_name: groups.length === 1 ? groups[0].group_name : `All groups (${groups.length})`,
+                booking_id: bookingId,
+                activity_name: groups[0].activity_name,
+                scheduled_date: groups[0].scheduled_date,
+                scheduled_time: groups[0].scheduled_time,
+                status: groups.some((g) => g.status === 'completed') ? 'completed' : 'incomplete',
+                is_cook_and_create: false,
+                is_mystery_session: true,
+                pdf_available: Boolean(filename),
+                ...windowFields(bookingId),
+            });
+        }
+    }
+    // Cook & Create: one consolidated Fun Awards PDF per game session (booking),
+    // so each session is a single row with a single download, never one per
+    // group. The PDF is generated once award winners exist and reused until the
+    // results change (see generateCCResultsPdfForBooking); it never expires.
+    // Best-effort — on failure the row shows no download and the next load retries.
+    if (ccGroupsByBooking.size > 0) {
+        const { generateCCResultsPdfForBooking } = await Promise.resolve().then(() => __importStar(require('../services/ccResultsPdfService')));
+        for (const [bookingId, groups] of ccGroupsByBooking) {
+            const anyCompleted = groups.some((g) => g.status === 'completed');
+            let filename = null;
+            if (anyCompleted) {
+                try {
+                    filename = await generateCCResultsPdfForBooking(bookingId);
+                }
+                catch {
+                    /* non-fatal: list still returns, retried next load */
+                }
+            }
+            results.push({
+                group_id: Math.min(...groups.map((g) => Number(g.group_id))),
+                group_name: `All groups (${groups.length})`,
+                booking_id: bookingId,
+                activity_name: groups[0].activity_name,
+                scheduled_date: groups[0].scheduled_date,
+                scheduled_time: groups[0].scheduled_time,
+                status: anyCompleted ? 'completed' : 'incomplete',
+                is_cook_and_create: true,
+                pdf_available: Boolean(filename),
+                ...windowFields(bookingId),
+            });
+        }
+    }
+    // Newest first, sessions included.
+    const time = (r) => (r.completed_at ? new Date(r.completed_at).getTime() : -Infinity);
+    results.sort((a, b) => time(b) - time(a) || b.group_id - a.group_id);
     return (0, apiResponse_1.successResponse)(res, 'Results retrieved.', { results });
+});
+/**
+ * Results tab — download a Mystery Quest session's single results PDF (every
+ * group and its players). Only the organizer who owns the booking can download
+ * it; it is generated (or brought up to date) on demand.
+ */
+exports.downloadMQResultsPdf = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const organizerId = req.user.id;
+    const bookingId = Number(req.params.booking_id);
+    const [rows] = await (0, db_1.query)('SELECT id FROM organizer_bookings WHERE id = ? AND organizer_id = ? LIMIT 1', [
+        bookingId,
+        organizerId,
+    ]);
+    if (!rows?.[0])
+        throw new AppError_1.AppError('Results PDF not available', 404);
+    // Same rule as the Results list: only after every played group has finished,
+    // and only within one hour of that declaration.
+    const window = await (0, resultWindowService_1.getBookingResultWindow)(bookingId);
+    if (!window || !window.isOpen)
+        throw new AppError_1.AppError('Results PDF not available', 404);
+    const { generateMQResultsPdfForBooking, resolveMQSessionPdfPath } = await Promise.resolve().then(() => __importStar(require('../services/mqSessionResultsPdfService')));
+    const filename = await generateMQResultsPdfForBooking(bookingId);
+    const filePath = filename ? resolveMQSessionPdfPath(filename) : null;
+    if (!filePath || !fs_1.default.existsSync(filePath))
+        throw new AppError_1.AppError('Results PDF not available', 404);
+    return res.download(filePath, `mystery-quest-results-session-${bookingId}.pdf`);
+});
+/**
+ * Results tab — download a Cook & Create session's single Fun Awards PDF. Only
+ * the organizer who owns the booking can download it; it is generated (or
+ * brought up to date) on demand, so the link works after any refresh.
+ */
+exports.downloadCCResultsPdf = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const organizerId = req.user.id;
+    const bookingId = Number(req.params.booking_id);
+    const [rows] = await (0, db_1.query)(`SELECT ob.id FROM organizer_bookings ob
+         WHERE ob.id = ? AND ob.organizer_id = ?
+           AND EXISTS (SELECT 1 FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
+                       WHERE gg.booking_id = ob.id)
+         LIMIT 1`, [bookingId, organizerId]);
+    if (!rows?.[0])
+        throw new AppError_1.AppError('Results PDF not available', 404);
+    // Same rule as the Results list: only after every played group has finished,
+    // and only within one hour of that declaration.
+    const window = await (0, resultWindowService_1.getBookingResultWindow)(bookingId);
+    if (!window || !window.isOpen)
+        throw new AppError_1.AppError('Results PDF not available', 404);
+    const { generateCCResultsPdfForBooking, resolveCCPdfPath } = await Promise.resolve().then(() => __importStar(require('../services/ccResultsPdfService')));
+    const filename = await generateCCResultsPdfForBooking(bookingId);
+    const filePath = filename ? resolveCCPdfPath(filename) : null;
+    if (!filePath || !fs_1.default.existsSync(filePath))
+        throw new AppError_1.AppError('Results PDF not available', 404);
+    return res.download(filePath, `cook-and-create-results-session-${bookingId}.pdf`);
 });

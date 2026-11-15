@@ -319,11 +319,55 @@ async function handleTimerExpiration(timer: any) {
                 });
                 break;
 
-            case 'lie_detector':
+            case 'lie_detector': {
                 await conn.query(
                     "UPDATE lie_detector_rounds SET status = 'completed', updated_at = NOW() WHERE group_id = ? AND status = 'active'",
                     [timer.group_id]
                 );
+
+                // Spec rule 9: every eligible player who did NOT cast a Lie Detector
+                // vote in this round loses 10 — once per round. A player who voted
+                // already carries a 'lie_detector_vote' log for this round and is
+                // skipped, so nobody is ever both rewarded (+10) and penalised (-10)
+                // for the same round. The Investigator runs the round and never votes,
+                // so is exempt. The round's own timer fires once (claimed above), and
+                // the 'lie_detector_no_vote' log guards against any re-entry.
+                const [ldRoundRows] = await conn.query<any[]>(
+                    `SELECT id, created_at FROM lie_detector_rounds WHERE group_id = ? ORDER BY id DESC LIMIT 1`,
+                    [timer.group_id]
+                );
+                const ldRound = (ldRoundRows as any[])[0];
+                if (ldRound) {
+                    const ldCfg = await getActivityConfigForGroup(timer.group_id);
+                    const noVotePenalty = Math.abs(Number(ldCfg?.no_response_penalty ?? -10));
+                    if (noVotePenalty > 0) {
+                        const [eligibleRows] = await conn.query<any[]>(
+                            `SELECT ps.id FROM participant_sessions ps
+                               JOIN game_roles gr ON gr.id = ps.role_id
+                              WHERE ps.group_id = ? AND ps.left_at IS NULL AND gr.role_type <> 'investigator'
+                                AND NOT EXISTS (
+                                    SELECT 1 FROM score_logs sl
+                                     WHERE sl.participant_session_id = ps.id
+                                       AND sl.reason = 'lie_detector_vote' AND sl.created_at >= ?)
+                                AND NOT EXISTS (
+                                    SELECT 1 FROM score_logs sl
+                                     WHERE sl.participant_session_id = ps.id
+                                       AND sl.reason = 'lie_detector_no_vote' AND sl.created_at >= ?)`,
+                            [timer.group_id, ldRound.created_at, ldRound.created_at]
+                        );
+                        for (const p of eligibleRows as any[]) {
+                            await conn.query('UPDATE participant_sessions SET total_score = total_score - ? WHERE id = ?', [
+                                noVotePenalty,
+                                p.id,
+                            ]);
+                            await conn.query(
+                                `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                                    VALUES (?, ?, 'lie_detector_no_vote', NOW(), NOW())`,
+                                [p.id, -noVotePenalty]
+                            );
+                        }
+                    }
+                }
 
                 io.to(`group_${timer.group_id}`).emit('lie_detector_ended', {
                     message: 'Lie Detector round ended!',
@@ -333,6 +377,7 @@ async function handleTimerExpiration(timer: any) {
                     message: 'Lie Detector time is up — back to questioning.',
                 });
                 break;
+            }
 
             case 'question_response': {
                 const questionId = timer.reference_id;
@@ -461,9 +506,9 @@ async function handleTimerExpiration(timer: any) {
         await queuedCcHandler();
     }
 
-    // A no-response auto-skip may have applied a penalty above; push the fresh
-    // scores to the group so the Score Board updates live (read after commit).
-    if (timer.timer_type === 'question_response') {
+    // A no-response auto-skip or a Lie Detector round close may have changed
+    // scores above; push the fresh totals so the Score Board updates live.
+    if (timer.timer_type === 'question_response' || timer.timer_type === 'lie_detector') {
         try {
             const [rows] = await query<any>(
                 'SELECT id AS session_id, total_score FROM participant_sessions WHERE group_id = ?',

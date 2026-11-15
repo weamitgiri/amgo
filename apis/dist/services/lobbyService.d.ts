@@ -5,7 +5,14 @@ export type LobbyMember = {
     status: string;
     is_you: boolean;
 };
-export type LobbyPhase = 'before_start' | 'waiting_members' | 'lobby_timer' | 'ready';
+export type LobbyPhase = 'before_start' | 'waiting_members' | 'lobby_timer' | 'ready' | 'group_incomplete';
+/**
+ * A group may only start the game once it has reached its configured capacity
+ * (activities.group_size). Shared by the lobby, game-state and game-summary
+ * endpoints so the "complete group only" rule is enforced identically wherever
+ * a `waiting` group could otherwise be flipped to `active`.
+ */
+export declare function isGroupAtCapacity(groupId: number | string): Promise<boolean>;
 export type LobbyPayload = {
     group_id: number;
     group_name: string;

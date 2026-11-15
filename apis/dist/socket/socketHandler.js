@@ -47,6 +47,14 @@ const verdictScoringService_1 = require("../services/verdictScoringService");
  * nothing happens; only a genuine absence triggers the departure consequences.
  */
 const DEPARTURE_GRACE_MS = 12000;
+/**
+ * The Investigator's departure ends the whole group's game and can't be undone,
+ * so it needs a longer absence than the 12s used for freezing other players: a
+ * locked phone screen, a backgrounded/discarded tab, a Wi-Fi switch (Socket.IO's
+ * reconnect backoff alone can take ~7s per attempt) or a slow page reload all
+ * drop the socket for more than 12s without the Investigator having left.
+ */
+const INVESTIGATOR_DEPARTURE_GRACE_MS = 60000;
 const pendingDepartures = new Map();
 function departureKey(groupId, participantId) {
     return `${groupId}:${participantId}`;
@@ -59,7 +67,16 @@ function cancelPendingDeparture(groupId, participantId) {
         pendingDepartures.delete(key);
     }
 }
-function scheduleDeparture(io, groupId, participantId) {
+/**
+ * True while any live socket of this participant is still in the group room. The
+ * DB `is_online` flag only tracks the LAST socket that joined, so a second tab /
+ * duplicate socket of the same player closing would otherwise read as a departure.
+ */
+async function hasLiveSocket(io, groupId, participantId) {
+    const sockets = await io.in(`group_${groupId}`).fetchSockets();
+    return sockets.some((s) => s.data?.participantId != null && String(s.data.participantId) === String(participantId));
+}
+function scheduleDeparture(io, groupId, participantId, delayMs = DEPARTURE_GRACE_MS, absentSince = Date.now()) {
     const key = departureKey(groupId, participantId);
     if (pendingDepartures.has(key))
         return;
@@ -67,15 +84,25 @@ function scheduleDeparture(io, groupId, participantId) {
         pendingDepartures.delete(key);
         try {
             // Skip if the participant reconnected during the grace window.
-            const [rows] = await (0, db_1.query)('SELECT is_online FROM participant_sessions WHERE group_id = ? AND participant_id = ? LIMIT 1', [groupId, participantId]);
+            const [rows] = await (0, db_1.query)(`SELECT ps.is_online, gr.role_type FROM participant_sessions ps
+                        LEFT JOIN game_roles gr ON gr.id = ps.role_id
+                        WHERE ps.group_id = ? AND ps.participant_id = ? LIMIT 1`, [groupId, participantId]);
             if (rows?.[0] && Number(rows[0].is_online) === 1)
                 return;
+            if (await hasLiveSocket(io, groupId, participantId))
+                return;
+            // Investigator: keep waiting until the longer window has passed.
+            const absentMs = Date.now() - absentSince;
+            if (rows?.[0]?.role_type === 'investigator' && absentMs < INVESTIGATOR_DEPARTURE_GRACE_MS) {
+                scheduleDeparture(io, groupId, participantId, INVESTIGATOR_DEPARTURE_GRACE_MS - absentMs, absentSince);
+                return;
+            }
             await handlePlayerDeparture(io, groupId, participantId);
         }
         catch (err) {
             logger_1.default.error(`[Socket] departure grace check failed: ${err.message}`);
         }
-    }, DEPARTURE_GRACE_MS));
+    }, delayMs));
 }
 /**
  * Resolves the departing session's role, marks it left, and applies the
@@ -152,6 +179,7 @@ const setupSocketHandlers = (io, socket) => {
             socket.join(`group_${groupId}`);
             logger_1.default.info(`[Socket] Client joined lobby room: group_${groupId}`);
             if (participantId) {
+                socket.data.participantId = participantId;
                 cancelPendingDeparture(groupId, participantId);
                 try {
                     // Rejoining also clears left_at while the game is still running —

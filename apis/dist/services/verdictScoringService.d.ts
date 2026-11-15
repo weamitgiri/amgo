@@ -1,8 +1,16 @@
+/**
+ * The culprit's role_type is stored as "hidden culprit" (the admin dropdown value),
+ * so detect it by substring. Everyone accuses, but only non-culprit roles are scored
+ * as guessers; the culprit is scored on whether they were caught.
+ */
+export declare function isCulpritRole(roleType?: string | null): boolean;
 export type PlayerStatus = 'winner' | 'correct' | 'loser' | 'killer_wins';
 /**
- * Records one participant's final accusation. Once every non-culprit role in the
- * group has submitted (or the questioning timer independently expires — see
- * timerService.ts), finalizeVerdict computes and broadcasts the outcome.
+ * Records one participant's final accusation. EVERY player names the killer —
+ * including the culprit, who has to bluff and accuse someone else (their pick is
+ * not scored; see finalizeVerdict). Once every player still in the game has
+ * submitted (or the final-accusation timer expires — see timerService.ts),
+ * finalizeVerdict computes and broadcasts the outcome.
  */
 export declare function submitAccusation(groupId: number | string, participantSessionId: number, accusedSessionId: number, reasoning: string): Promise<{
     accepted: true;

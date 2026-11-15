@@ -3,6 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.loadGroupResults = loadGroupResults;
+exports.drawParticipantsTable = drawParticipantsTable;
 exports.generateResultsPdf = generateResultsPdf;
 exports.resolvePdfPath = resolvePdfPath;
 const fs_1 = __importDefault(require("fs"));
@@ -16,16 +18,14 @@ function ensureStorageDir() {
         fs_1.default.mkdirSync(STORAGE_DIR, { recursive: true });
     }
 }
-async function generateResultsPdf(groupId) {
-    ensureStorageDir();
-    const [groupRows] = await (0, db_1.query)(`SELECT gg.*, ob.scheduled_date, ob.scheduled_time, ag.title AS case_title
-         FROM game_groups gg
-         JOIN organizer_bookings ob ON ob.id = gg.booking_id
-         LEFT JOIN activity_games ag ON ag.id = COALESCE(gg.game_id, ob.game_id)
-         WHERE gg.id = ? LIMIT 1`, [groupId]);
-    const group = groupRows?.[0];
-    if (!group)
-        throw new Error('Group not found for PDF generation');
+const STATUS_LABELS = {
+    winner: 'WINNER',
+    correct: 'CORRECT — identified the killer',
+    loser: 'LOSER — wrong guess',
+    killer_wins: 'KILLER WINS — escaped!',
+};
+/** A group's saved result row plus one table row per participant, winners/losers resolved. */
+async function loadGroupResults(groupId) {
     const [results] = await (0, db_1.query)('SELECT * FROM results WHERE group_id = ? ORDER BY id DESC LIMIT 1', [groupId]);
     const result = results?.[0];
     const [sessions] = await (0, db_1.query)(`SELECT ps.id, ps.total_score, gr.role_type, gr.character_name,
@@ -46,37 +46,150 @@ async function generateResultsPdf(groupId) {
             : result.per_role_results
         : [];
     const statusBySession = new Map(perRoleResults.map((r) => [String(r.session_id), r.status]));
-    const STATUS_LABELS = {
-        winner: 'WINNER',
-        correct: 'CORRECT — identified the killer',
-        loser: 'LOSER — wrong guess',
-        killer_wins: 'KILLER WINS — escaped!',
+    const rows = sessions.map((s) => ({
+        name: s.participant_name || 'Unknown',
+        email: s.participant_email || 'no email',
+        role: s.role_type || 'unassigned',
+        score: String(s.total_score ?? 0),
+        status: statusBySession.get(String(s.id)) ?? (winnerSet.has(String(s.id)) ? 'winner' : 'loser'),
+    }));
+    return { result, rows };
+}
+/** Draws the "# / Participant / Role / Score / Result" table at doc.y, paging as needed. */
+function drawParticipantsTable(doc, rows) {
+    const LEFT = doc.page.margins.left;
+    const RIGHT = doc.page.width - doc.page.margins.right;
+    const PAD = 6;
+    // Column layout: widths sum to (RIGHT-LEFT) = 512.
+    const cols = {
+        idx: { x: LEFT, w: 26 },
+        name: { x: LEFT + 26, w: 196 },
+        role: { x: LEFT + 222, w: 96 },
+        score: { x: LEFT + 318, w: 52 },
+        result: { x: LEFT + 370, w: 142 },
     };
+    const seps = [cols.idx.x, cols.name.x, cols.role.x, cols.score.x, cols.result.x, RIGHT];
+    const bottomLimit = doc.page.height - doc.page.margins.bottom;
+    const measure = (text, w, font, size) => {
+        doc.font(font).fontSize(size);
+        return doc.heightOfString(String(text ?? ''), { width: w - PAD * 2 });
+    };
+    const drawHeaderRow = () => {
+        const heads = [
+            [cols.idx, '#'],
+            [cols.name, 'Participant'],
+            [cols.role, 'Role'],
+            [cols.score, 'Score'],
+            [cols.result, 'Result'],
+        ];
+        const y = doc.y;
+        let h = 0;
+        for (const [c, t] of heads)
+            h = Math.max(h, measure(t, c.w, 'Helvetica-Bold', 10));
+        h += PAD * 2;
+        doc.rect(LEFT, y, RIGHT - LEFT, h).fill('#2a1348');
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
+        for (const [c, t] of heads)
+            doc.text(t, c.x + PAD, y + PAD, { width: c.w - PAD * 2 });
+        doc.strokeColor('#999999').lineWidth(0.5);
+        doc.moveTo(LEFT, y + h).lineTo(RIGHT, y + h).stroke();
+        for (const x of seps)
+            doc.moveTo(x, y).lineTo(x, y + h).stroke();
+        doc.moveTo(LEFT, y).lineTo(RIGHT, y).stroke();
+        doc.y = y + h;
+    };
+    drawHeaderRow();
+    let rowIndex = 0;
+    for (const { name, email, role, score, status } of rows) {
+        rowIndex += 1;
+        const resultLabel = STATUS_LABELS[status] ?? String(status).toUpperCase();
+        const nameH = measure(name, cols.name.w, 'Helvetica-Bold', 10) + measure(email, cols.name.w, 'Helvetica', 8);
+        const h = Math.max(measure(rowIndex, cols.idx.w, 'Helvetica', 10), nameH, measure(role, cols.role.w, 'Helvetica', 10), measure(score, cols.score.w, 'Helvetica-Bold', 10), measure(resultLabel, cols.result.w, 'Helvetica-Bold', 9)) +
+            PAD * 2;
+        if (doc.y + h > bottomLimit) {
+            doc.addPage();
+            drawHeaderRow();
+        }
+        const y = doc.y;
+        // Zebra striping for readability.
+        if (rowIndex % 2 === 0)
+            doc.rect(LEFT, y, RIGHT - LEFT, h).fill('#f6f2fb');
+        doc.font('Helvetica').fontSize(10).fillColor('#555555')
+            .text(String(rowIndex), cols.idx.x + PAD, y + PAD, { width: cols.idx.w - PAD * 2 });
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#111111')
+            .text(name, cols.name.x + PAD, y + PAD, { width: cols.name.w - PAD * 2 });
+        doc.font('Helvetica').fontSize(8).fillColor('#888888')
+            .text(email, cols.name.x + PAD, y + PAD + measure(name, cols.name.w, 'Helvetica-Bold', 10), {
+            width: cols.name.w - PAD * 2,
+        });
+        doc.font('Helvetica').fontSize(10).fillColor('#111111')
+            .text(role, cols.role.x + PAD, y + PAD, { width: cols.role.w - PAD * 2 });
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#111111')
+            .text(score, cols.score.x + PAD, y + PAD, { width: cols.score.w - PAD * 2 });
+        const resultColor = status === 'loser' ? '#c0392b' : status === 'killer_wins' ? '#b8860b' : '#1f8a4c';
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(resultColor)
+            .text(resultLabel, cols.result.x + PAD, y + PAD, { width: cols.result.w - PAD * 2 });
+        doc.strokeColor('#d9d0e8').lineWidth(0.5);
+        doc.moveTo(LEFT, y + h).lineTo(RIGHT, y + h).stroke();
+        for (const x of seps)
+            doc.moveTo(x, y).lineTo(x, y + h).stroke();
+        doc.y = y + h;
+    }
+    doc.fillColor('#000000');
+}
+async function generateResultsPdf(groupId) {
+    ensureStorageDir();
+    const [groupRows] = await (0, db_1.query)(`SELECT gg.*, ob.scheduled_date, ob.scheduled_time, ag.title AS case_title
+         FROM game_groups gg
+         JOIN organizer_bookings ob ON ob.id = gg.booking_id
+         LEFT JOIN activity_games ag ON ag.id = COALESCE(gg.game_id, ob.game_id)
+         WHERE gg.id = ? LIMIT 1`, [groupId]);
+    const group = groupRows?.[0];
+    if (!group)
+        throw new Error('Group not found for PDF generation');
+    const { result, rows } = await loadGroupResults(groupId);
     const filename = `group-${groupId}-${crypto_1.default.randomBytes(12).toString('hex')}.pdf`;
     const filePath = path_1.default.join(STORAGE_DIR, filename);
     await new Promise((resolve, reject) => {
         const doc = new pdfkit_1.default({ margin: 50 });
         const stream = fs_1.default.createWriteStream(filePath);
         doc.pipe(stream);
-        doc.fontSize(20).text('Mystery Quest — Results', { align: 'center' });
-        doc.moveDown();
-        doc.fontSize(12).text(`Case: ${group.case_title || 'The Bungalow Secret'}`);
-        doc.text(`Group: ${group.group_name}`);
-        doc.text(`Session: ${group.scheduled_date} ${group.scheduled_time}`);
-        doc.text(`Completed: ${group.completed_at || new Date().toISOString()}`);
-        doc.moveDown();
-        doc.fontSize(14).text('Outcome', { underline: true });
-        doc.fontSize(12).text(result?.is_correct
-            ? 'The culprit was correctly identified.'
-            : 'The culprit was NOT identified — the culprit wins.');
-        doc.text(`Correct guesses: ${result?.correct_guess_count ?? '—'} of 4`);
-        doc.moveDown();
-        doc.fontSize(14).text('Participants', { underline: true });
-        doc.moveDown(0.5);
-        for (const s of sessions) {
-            const status = statusBySession.get(String(s.id)) ?? (winnerSet.has(String(s.id)) ? 'winner' : 'loser');
-            doc.fontSize(12).text(`${s.participant_name || 'Unknown'} (${s.participant_email || 'no email'}) — Role: ${s.role_type || 'unassigned'} — Score: ${s.total_score ?? 0} — ${STATUS_LABELS[status] ?? status.toUpperCase()}`);
+        // Page geometry (Letter, 50pt margins → content spans x:50..562).
+        const LEFT = doc.page.margins.left;
+        const RIGHT = doc.page.width - doc.page.margins.right;
+        // ---------- Title ----------
+        doc.font('Helvetica-Bold').fontSize(20).fillColor('#1a1a2e')
+            .text('Mystery Quest — Results', LEFT, doc.y, { align: 'center', width: RIGHT - LEFT });
+        doc.moveDown(0.3);
+        doc.strokeColor('#b15cf7').lineWidth(1.5).moveTo(LEFT, doc.y).lineTo(RIGHT, doc.y).stroke();
+        doc.moveDown(0.8);
+        // ---------- Meta ----------
+        const meta = [
+            ['Case', group.case_title || 'The Bungalow Secret'],
+            ['Group', group.group_name || '—'],
+            ['Session', `${group.scheduled_date ?? ''} ${group.scheduled_time ?? ''}`.trim() || '—'],
+            ['Completed', String(group.completed_at || new Date().toISOString())],
+        ];
+        for (const [label, val] of meta) {
+            doc.fontSize(11).font('Helvetica-Bold').fillColor('#444444').text(`${label}:  `, LEFT, doc.y, { continued: true });
+            doc.font('Helvetica').fillColor('#000000').text(val);
         }
+        doc.moveDown(0.8);
+        // ---------- Outcome ----------
+        const culpritIdentified = !!result?.is_correct;
+        doc.font('Helvetica-Bold').fontSize(14).fillColor('#1a1a2e').text('Outcome', LEFT, doc.y);
+        doc.moveDown(0.2);
+        doc.font('Helvetica-Bold').fontSize(12).fillColor(culpritIdentified ? '#1f8a4c' : '#c0392b')
+            .text(culpritIdentified
+            ? 'The culprit was correctly identified.'
+            : 'The culprit was NOT identified — the culprit wins.', LEFT, doc.y);
+        doc.font('Helvetica').fontSize(11).fillColor('#000000')
+            .text(`Correct guesses: ${result?.correct_guess_count ?? '—'} of 4`, LEFT, doc.y);
+        doc.moveDown(0.9);
+        // ---------- Participants table ----------
+        doc.font('Helvetica-Bold').fontSize(14).fillColor('#1a1a2e').text('Participants', LEFT, doc.y);
+        doc.moveDown(0.4);
+        drawParticipantsTable(doc, rows);
         doc.end();
         stream.on('finish', () => resolve());
         stream.on('error', reject);

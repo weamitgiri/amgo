@@ -5,6 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startTimerService = void 0;
 exports.ensureCaseSummaryTimer = ensureCaseSummaryTimer;
+exports.recoverMissedQuestioningPhase = recoverMissedQuestioningPhase;
+exports.devAdvancePhase = devAdvancePhase;
 const db_1 = require("../config/db");
 const moment_1 = __importDefault(require("moment"));
 const server_1 = require("../server");
@@ -23,16 +25,26 @@ const FINAL_VERDICT_SECS = 120;
 const startTimerService = () => {
     console.log('[TimerService] Started...');
     // Run every 5 seconds — game-phase timers need second-level responsiveness.
+    // `ticking` stops a slow tick (DB stall, a long transition) from overlapping the
+    // next one and picking up the same expired timer twice.
+    let ticking = false;
     setInterval(async () => {
+        if (ticking)
+            return;
+        ticking = true;
         try {
             const now = new Date();
             const [expiredTimers] = await (0, db_1.query)('SELECT * FROM timers WHERE is_active = 1 AND expires_at <= ?', [now]);
             for (const timer of expiredTimers) {
                 await handleTimerExpiration(timer);
             }
+            await recoverStuckVerdicts();
         }
         catch (error) {
             console.error('[TimerService] Error:', error);
+        }
+        finally {
+            ticking = false;
         }
     }, 5000);
     // Post-game data-retention sweep — a much heavier, multi-table purge, so it
@@ -43,20 +55,183 @@ const startTimerService = () => {
 };
 exports.startTimerService = startTimerService;
 /**
+ * Safety net for games stuck on the Final Accusation screen at 00:00: the
+ * final_verdict timer was already used up (is_active = 0) but the verdict never
+ * landed — finalizeVerdict threw, or the API restarted between claiming the timer
+ * and finalizing. Nothing retried it, so players waited forever and never reached
+ * the results page. finalizeVerdict is idempotent (it claims the group atomically),
+ * so re-running it here is safe. The short grace period leaves the normal path,
+ * which finalizes right after claiming the timer, to finish first.
+ */
+const lastStuckVerdictAttempt = new Map();
+async function recoverStuckVerdicts() {
+    const [rows] = await (0, db_1.query)(`SELECT DISTINCT t.group_id FROM timers t
+           JOIN game_groups g ON g.id = t.group_id
+          WHERE t.timer_type = 'final_verdict' AND t.is_active = 0 AND t.expires_at <= ?
+            AND g.status NOT IN ('completed', 'incomplete')
+            AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at)
+          LIMIT 20`, [(0, moment_1.default)().subtract(15, 'seconds').toDate()]);
+    for (const row of rows) {
+        // At most one attempt per group per minute, so a group that keeps failing
+        // doesn't get hammered (and flood the log) every 5-second tick.
+        const key = String(row.group_id);
+        if (Date.now() - (lastStuckVerdictAttempt.get(key) ?? 0) < 60000)
+            continue;
+        lastStuckVerdictAttempt.set(key, Date.now());
+        try {
+            await (0, verdictScoringService_1.finalizeVerdict)(row.group_id);
+            console.log(`[TimerService] Recovered stuck final verdict for group ${row.group_id}`);
+        }
+        catch (err) {
+            console.error(`[TimerService] Could not finalize stuck verdict for group ${row.group_id}:`, err);
+        }
+    }
+}
+/**
  * Starts the game clock for a group by creating its initial case_summary timer.
  * Idempotent — safe to call from every lobby poll / game-summary load; only the
  * first call after game start actually inserts the timer.
  */
 async function ensureCaseSummaryTimer(groupId, caseSummarySecs) {
-    const [existing] = await (0, db_1.query)("SELECT id FROM timers WHERE group_id = ? AND timer_type = 'case_summary' LIMIT 1", [groupId]);
-    if (existing.length > 0)
+    // check-then-insert is NOT atomic: the lobby poll, the game-summary load and the
+    // game-state load all call this at the moment the game starts, so two of them can
+    // both see "no timer yet" and both insert — leaving two case_summary timers that
+    // each spawn their own questioning / clue-room timers (double phase_changed,
+    // double final_verdict). A MySQL advisory lock (held on one dedicated connection)
+    // serialises the check+insert across concurrent requests AND across processes.
+    const lockName = `zoventro_case_summary_${groupId}`;
+    const conn = await db_1.pool.getConnection();
+    try {
+        const [lockRows] = await conn.query('SELECT GET_LOCK(?, 5) AS got', [lockName]);
+        // Couldn't get the lock in 5s → someone else is creating it right now.
+        if (!Number(lockRows[0]?.got))
+            return;
+        try {
+            const [existing] = await conn.query(`SELECT t.id FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'case_summary' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) LIMIT 1`, [groupId]);
+            if (existing.length > 0)
+                return;
+            await conn.query('INSERT INTO timers (group_id, timer_type, expires_at, is_active) VALUES (?, ?, ?, 1)', [
+                groupId,
+                'case_summary',
+                (0, moment_1.default)().add(Number(caseSummarySecs) || 300, 'seconds').toDate(),
+            ]);
+            console.log(`[TimerService] case_summary timer started for group ${groupId}`);
+        }
+        finally {
+            await conn.query('SELECT RELEASE_LOCK(?)', [lockName]);
+        }
+    }
+    finally {
+        conn.release();
+    }
+}
+/**
+ * Self-heal a group whose Case Summary has ended but whose Questioning phase never
+ * started — i.e. the questioning + clue_room timers were never created (the process
+ * was down for the 5-second tick that should have advanced it, so the game sits at
+ * 00:00 forever). Safe to call from getGameState on every load: a cheap unlocked
+ * pre-check returns immediately in the normal case (a questioning timer already
+ * exists), and the actual repair is serialised by a lock and re-checked, so it can
+ * never race the timer service into duplicate timers.
+ */
+async function recoverMissedQuestioningPhase(groupId) {
+    // Fast path (no lock): the game already advanced past case summary.
+    const [qPre] = await (0, db_1.query)(`SELECT t.id FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'questioning' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) LIMIT 1`, [groupId]);
+    if (qPre.length > 0)
         return;
-    await (0, db_1.query)('INSERT INTO timers (group_id, timer_type, expires_at, is_active) VALUES (?, ?, ?, 1)', [
-        groupId,
-        'case_summary',
-        (0, moment_1.default)().add(Number(caseSummarySecs) || 300, 'seconds').toDate(),
-    ]);
-    console.log(`[TimerService] case_summary timer started for group ${groupId}`);
+    const lockName = `zoventro_phase_${groupId}`;
+    const conn = await db_1.pool.getConnection();
+    try {
+        const [lockRows] = await conn.query('SELECT GET_LOCK(?, 3) AS got', [lockName]);
+        if (!Number(lockRows[0]?.got))
+            return;
+        try {
+            // Re-check under the lock (the timer service may have just created it).
+            const [qRows] = await conn.query(`SELECT t.id FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'questioning' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) LIMIT 1`, [groupId]);
+            if (qRows.length > 0)
+                return;
+            // Only recover once the case summary has actually ended.
+            const [csRows] = await conn.query(`SELECT t.expires_at, t.is_active FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'case_summary' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) ORDER BY t.id DESC LIMIT 1`, [groupId]);
+            const cs = csRows[0];
+            if (!cs)
+                return; // case summary never started — nothing to recover
+            const caseEnded = Number(cs.is_active) === 0 || new Date(cs.expires_at) <= new Date();
+            if (!caseEnded)
+                return; // still inside the case summary window
+            const config = await getActivityConfigForGroup(groupId);
+            const totalSecs = Number(config?.game_duration_secs ?? 1500);
+            const caseSummarySecs = Number(config?.case_summary_view_secs ?? 300);
+            const clueUnlockSecs = Number(config?.clue_room_unlock_secs ?? 600);
+            const questioningSecs = Math.max(totalSecs - caseSummarySecs, 60);
+            // Anchor to when the case summary actually ended so the recovered clock is
+            // honest (a long-stuck game will produce an already-past questioning
+            // deadline, which the timer loop then advances straight to the verdict).
+            const caseEnd = new Date(cs.expires_at);
+            const anchor = caseEnd > new Date() ? new Date() : caseEnd;
+            const questioningExpiry = new Date(anchor.getTime() + questioningSecs * 1000);
+            const clueDelaySecs = Math.max(questioningSecs - clueUnlockSecs, 0);
+            const clueExpiry = new Date(anchor.getTime() + clueDelaySecs * 1000);
+            await conn.query('INSERT INTO timers (group_id, timer_type, expires_at, is_active) VALUES (?, ?, ?, 1)', [
+                groupId,
+                'questioning',
+                questioningExpiry,
+            ]);
+            await conn.query('INSERT INTO timers (group_id, timer_type, expires_at, is_active) VALUES (?, ?, ?, 1)', [
+                groupId,
+                'clue_room_unlock',
+                clueExpiry,
+            ]);
+            server_1.io.to(`group_${groupId}`).emit('phase_changed', {
+                new_phase: 'questioning',
+                message: 'Case Summary ended. Questioning phase started!',
+            });
+            console.log(`[TimerService] Recovered missed questioning phase for group ${groupId}`);
+        }
+        finally {
+            await conn.query('SELECT RELEASE_LOCK(?)', [lockName]);
+        }
+    }
+    finally {
+        conn.release();
+    }
+}
+/**
+ * DEV / TESTING ONLY — skip the current phase's timer so the next screen opens
+ * without waiting out the clock. If the game hasn't started yet it starts it;
+ * otherwise it expires the current active phase timer and runs its transition
+ * immediately (Lie Detector round → Case Summary → Questioning → Final Verdict →
+ * Results). Wire this behind a button you remove before production.
+ */
+async function devAdvancePhase(groupId) {
+    // Not started yet (no case_summary timer) → start the game now.
+    const [csRows] = await (0, db_1.query)(`SELECT t.id FROM timers t JOIN game_groups g ON g.id = t.group_id
+              WHERE t.group_id = ? AND t.timer_type = 'case_summary' AND (g.created_at IS NULL OR t.created_at IS NULL OR t.created_at >= g.created_at) LIMIT 1`, [groupId]);
+    if (csRows.length === 0) {
+        await (0, db_1.query)("UPDATE game_groups SET status = 'active' WHERE id = ? AND status IN ('waiting','active')", [groupId]);
+        const cfg = await getActivityConfigForGroup(groupId);
+        await ensureCaseSummaryTimer(groupId, Number(cfg?.case_summary_view_secs) || 300);
+        return { advanced: 'game_started' };
+    }
+    // Otherwise expire the current active phase timer and process it right away.
+    const priority = ['lie_detector', 'final_verdict', 'questioning', 'case_summary'];
+    const [timerRows] = await (0, db_1.query)('SELECT * FROM timers WHERE group_id = ? AND is_active = 1', [groupId]);
+    const active = timerRows;
+    let target = null;
+    for (const type of priority) {
+        target = active.find((t) => t.timer_type === type);
+        if (target)
+            break;
+    }
+    if (!target)
+        return { advanced: null };
+    target.expires_at = new Date(Date.now() - 1000);
+    await (0, db_1.query)('UPDATE timers SET expires_at = ? WHERE id = ?', [target.expires_at, target.id]);
+    await handleTimerExpiration(target);
+    return { advanced: target.timer_type };
 }
 async function getActivityConfigForGroup(groupId) {
     const [rows] = await (0, db_1.query)(`SELECT a.* FROM game_groups gg
@@ -70,9 +245,18 @@ async function handleTimerExpiration(timer) {
     // Cook & Create round advancement is queued in the switch below and invoked
     // only once the transaction has committed — see the note on the cc_* cases.
     let ccHandler = null;
+    let claimed = true;
     await (0, db_1.withTransaction)(async (conn) => {
-        // Mark timer as inactive
-        await conn.query('UPDATE timers SET is_active = 0 WHERE id = ?', [timer.id]);
+        // Claim the timer atomically. Only the caller whose UPDATE actually flips
+        // is_active 1 → 0 may run the transition; a concurrent tick / second process /
+        // the dev "Next" button that raced us gets affectedRows = 0 and backs off.
+        // Without this, both would run the transition and create duplicate follow-up
+        // timers and broadcasts.
+        const [claim] = await conn.query('UPDATE timers SET is_active = 0 WHERE id = ? AND is_active = 1', [timer.id]);
+        if (!claim?.affectedRows) {
+            claimed = false;
+            return;
+        }
         switch (timer.timer_type) {
             case 'case_summary': {
                 const config = await getActivityConfigForGroup(timer.group_id);
@@ -103,8 +287,42 @@ async function handleTimerExpiration(timer) {
                     message: 'Clue Room is now open!',
                 });
                 break;
-            case 'lie_detector':
+            case 'lie_detector': {
                 await conn.query("UPDATE lie_detector_rounds SET status = 'completed', updated_at = NOW() WHERE group_id = ? AND status = 'active'", [timer.group_id]);
+                // Spec rule 9: every eligible player who did NOT cast a Lie Detector
+                // vote in this round loses 10 — once per round. A player who voted
+                // already carries a 'lie_detector_vote' log for this round and is
+                // skipped, so nobody is ever both rewarded (+10) and penalised (-10)
+                // for the same round. The Investigator runs the round and never votes,
+                // so is exempt. The round's own timer fires once (claimed above), and
+                // the 'lie_detector_no_vote' log guards against any re-entry.
+                const [ldRoundRows] = await conn.query(`SELECT id, created_at FROM lie_detector_rounds WHERE group_id = ? ORDER BY id DESC LIMIT 1`, [timer.group_id]);
+                const ldRound = ldRoundRows[0];
+                if (ldRound) {
+                    const ldCfg = await getActivityConfigForGroup(timer.group_id);
+                    const noVotePenalty = Math.abs(Number(ldCfg?.no_response_penalty ?? -10));
+                    if (noVotePenalty > 0) {
+                        const [eligibleRows] = await conn.query(`SELECT ps.id FROM participant_sessions ps
+                               JOIN game_roles gr ON gr.id = ps.role_id
+                              WHERE ps.group_id = ? AND ps.left_at IS NULL AND gr.role_type <> 'investigator'
+                                AND NOT EXISTS (
+                                    SELECT 1 FROM score_logs sl
+                                     WHERE sl.participant_session_id = ps.id
+                                       AND sl.reason = 'lie_detector_vote' AND sl.created_at >= ?)
+                                AND NOT EXISTS (
+                                    SELECT 1 FROM score_logs sl
+                                     WHERE sl.participant_session_id = ps.id
+                                       AND sl.reason = 'lie_detector_no_vote' AND sl.created_at >= ?)`, [timer.group_id, ldRound.created_at, ldRound.created_at]);
+                        for (const p of eligibleRows) {
+                            await conn.query('UPDATE participant_sessions SET total_score = total_score - ? WHERE id = ?', [
+                                noVotePenalty,
+                                p.id,
+                            ]);
+                            await conn.query(`INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                                    VALUES (?, ?, 'lie_detector_no_vote', NOW(), NOW())`, [p.id, -noVotePenalty]);
+                        }
+                    }
+                }
                 server_1.io.to(`group_${timer.group_id}`).emit('lie_detector_ended', {
                     message: 'Lie Detector round ended!',
                 });
@@ -113,6 +331,7 @@ async function handleTimerExpiration(timer) {
                     message: 'Lie Detector time is up — back to questioning.',
                 });
                 break;
+            }
             case 'question_response': {
                 const questionId = timer.reference_id;
                 if (!questionId)
@@ -215,6 +434,8 @@ async function handleTimerExpiration(timer) {
                 break;
         }
     });
+    if (!claimed)
+        return;
     // Committed now, so the `timers` row lock is released and the CC handler's
     // ensureCCTimer call can start the next phase's timer. (Read through a local
     // because TS can't see that the callback above already ran.)
@@ -222,9 +443,9 @@ async function handleTimerExpiration(timer) {
     if (queuedCcHandler) {
         await queuedCcHandler();
     }
-    // A no-response auto-skip may have applied a penalty above; push the fresh
-    // scores to the group so the Score Board updates live (read after commit).
-    if (timer.timer_type === 'question_response') {
+    // A no-response auto-skip or a Lie Detector round close may have changed
+    // scores above; push the fresh totals so the Score Board updates live.
+    if (timer.timer_type === 'question_response' || timer.timer_type === 'lie_detector') {
         try {
             const [rows] = await (0, db_1.query)('SELECT id AS session_id, total_score FROM participant_sessions WHERE group_id = ?', [timer.group_id]);
             server_1.io.to(`group_${timer.group_id}`).emit('scores_updated', {

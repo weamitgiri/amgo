@@ -164,6 +164,10 @@ export const participantService = {
   usePasscard: (payload: { group_id: number | string; participant_id: number | string }) =>
     apiClient.post<null>(API_ENDPOINTS.game.usePasscard, payload, pAuth()),
 
+  // Clue Room opened — awards +10 once per player per game (spec rule 10).
+  openClueRoom: (payload: { group_id: number | string; participant_id: number | string }) =>
+    apiClient.post<{ awarded: boolean; points: number }>(API_ENDPOINTS.game.openClueRoom, payload, pAuth()),
+
   reopenCaseSummary: (payload: { group_id: number | string; participant_id: number | string }) =>
     apiClient.post<null>(API_ENDPOINTS.game.reopenCaseSummary, payload, pAuth()),
 

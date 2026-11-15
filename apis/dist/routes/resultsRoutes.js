@@ -35,7 +35,8 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const resultsController = __importStar(require("../controllers/resultsController"));
+const participantAuth_1 = require("../middlewares/participantAuth");
 const router = (0, express_1.Router)();
-router.get('/:group_id', resultsController.getGameResults);
+router.get('/:group_id', participantAuth_1.participantAuth, resultsController.getGameResults);
 router.get('/:group_id/pdf', resultsController.downloadResultsPdf);
 exports.default = router;

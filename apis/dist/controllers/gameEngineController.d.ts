@@ -20,6 +20,12 @@ import { Request, Response } from 'express';
  */
 export declare const getGameState: (req: Request, res: Response, next: import("express").NextFunction) => void;
 /**
+ * DEV / TESTING ONLY — skip the current phase's timer so the next screen opens
+ * immediately. Drives the same transitions the timer service would, then broadcasts
+ * to the group. Remove the button that calls this before production.
+ */
+export declare const devAdvance: (req: Request, res: Response, next: import("express").NextFunction) => void;
+/**
  * Investigator Asks a Question
  * Enforces the "Max N questions total" rule (activity-configurable, default 5).
  * Awards +10 points to the Investigator immediately, and starts a per-question
@@ -64,3 +70,10 @@ export declare const useWitnessPasscard: (req: Request, res: Response, next: imp
  * Reopen Case Summary — Investigator-only, once per game.
  */
 export declare const reopenCaseSummary: (req: Request, res: Response, next: import("express").NextFunction) => void;
+/**
+ * Clue Room opened — spec rule 10: the first time a player opens the Clue Room
+ * popup they earn +10. Guarded by a per-session 'clue_room_opened' score log so
+ * reopening the popup never awards again (once per player per game). There is NO
+ * dwell / 10-minute requirement — opening the popup is enough.
+ */
+export declare const openClueRoom: (req: Request, res: Response, next: import("express").NextFunction) => void;

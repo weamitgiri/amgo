@@ -8,11 +8,19 @@ exports.ensureVotesTable = ensureVotesTable;
 exports.ensureGroupAccusationsTable = ensureGroupAccusationsTable;
 exports.ensureResultsScoringColumns = ensureResultsScoringColumns;
 exports.ensureActivityGamesVictimName = ensureActivityGamesVictimName;
+exports.ensureGameRolesRoleIcon = ensureGameRolesRoleIcon;
+exports.ensureEqualChanceScoringColumns = ensureEqualChanceScoringColumns;
+exports.ensureMysteryQuestScoreboardValues = ensureMysteryQuestScoreboardValues;
+exports.ensureActivityGamesCulpritImage = ensureActivityGamesCulpritImage;
+exports.ensureFullStoryPartImage = ensureFullStoryPartImage;
 exports.ensureGameDurationDefault = ensureGameDurationDefault;
 exports.ensureGameGroupsGameId = ensureGameGroupsGameId;
 exports.ensureCookAndCreateSchema = ensureCookAndCreateSchema;
+exports.ensureCCStageDurations = ensureCCStageDurations;
 exports.ensureGameSchemaUpdates = ensureGameSchemaUpdates;
 const db_1 = require("../config/db");
+const groupDataCleanup_1 = require("../services/groupDataCleanup");
+const ccStageDurations_1 = require("../services/ccStageDurations");
 async function ensureOrganizerStatusColumns() {
     try {
         const [paymentRows] = await (0, db_1.query)("SHOW COLUMNS FROM organizers LIKE 'payment_status'");
@@ -51,6 +59,9 @@ async function ensureGameGroupRetentionColumns() {
             { name: 'purged_at', ddl: 'ADD COLUMN purged_at TIMESTAMP NULL DEFAULT NULL' },
             { name: 'results_pdf_path', ddl: 'ADD COLUMN results_pdf_path VARCHAR(255) NULL DEFAULT NULL' },
             { name: 'results_pdf_expires_at', ddl: 'ADD COLUMN results_pdf_expires_at TIMESTAMP NULL DEFAULT NULL' },
+            // Cook & Create awards PDF — kept permanently (not subject to the
+            // 1-hour retention purge above), stored in its own folder.
+            { name: 'cc_results_pdf_path', ddl: 'ADD COLUMN cc_results_pdf_path VARCHAR(255) NULL DEFAULT NULL' },
         ];
         const missing = [];
         for (const col of columns) {
@@ -160,6 +171,109 @@ async function ensureActivityGamesVictimName() {
         console.warn('[schemaHelpers] Could not ensure activity_games.victim_name:', err.message || err);
     }
 }
+/**
+ * game_roles.role_icon — the small (60×60) badge image shown on the player's own
+ * "Your Role" card, uploaded per role in the admin wizard. The Laravel migration
+ * adds it too; this guard exists because gameSummaryService SELECTs the column,
+ * so a deploy that forgot `php artisan migrate` would otherwise break every game.
+ */
+async function ensureGameRolesRoleIcon() {
+    try {
+        const [rows] = await (0, db_1.query)("SHOW COLUMNS FROM game_roles LIKE 'role_icon'");
+        if (rows.length === 0) {
+            await (0, db_1.query)('ALTER TABLE game_roles ADD COLUMN role_icon VARCHAR(255) NULL DEFAULT NULL AFTER role_image');
+        }
+    }
+    catch (err) {
+        console.warn('[schemaHelpers] Could not ensure game_roles.role_icon:', err.message || err);
+    }
+}
+/**
+ * "Equal Chance" scoring columns on activities (Scoreboard Logic PDF). The verdict
+ * service SELECTs these; the Laravel migration adds them too, so this guard keeps a
+ * deploy that skipped `php artisan migrate` from breaking end-game scoring.
+ */
+async function ensureEqualChanceScoringColumns() {
+    const cols = {
+        role_goal_bonus: 60,
+        cooperation_bonus: 10,
+        clue_room_bonus: 10,
+        final_accusation_bonus: 10,
+    };
+    for (const [name, def] of Object.entries(cols)) {
+        try {
+            const [rows] = await (0, db_1.query)(`SHOW COLUMNS FROM activities LIKE '${name}'`);
+            if (rows.length === 0) {
+                await (0, db_1.query)(`ALTER TABLE activities ADD COLUMN ${name} INT NOT NULL DEFAULT ${def} AFTER no_response_penalty`);
+            }
+        }
+        catch (err) {
+            console.warn(`[schemaHelpers] Could not ensure activities.${name}:`, err.message || err);
+        }
+    }
+}
+/**
+ * Mystery Quest scoreboard — the FINAL source of truth (see the scoring spec).
+ * These values are fixed and shown read-only in the admin panel, so we enforce
+ * them on boot for the mystery-quest activity. This keeps the backend scoring in
+ * step with the spec even on a deploy that skipped a migration, and makes the
+ * read-only admin values authoritative everywhere. Only the mystery-quest row is
+ * touched — Cook & Create and every other activity are left untouched.
+ */
+async function ensureMysteryQuestScoreboardValues() {
+    // rule → column = points
+    const vals = {
+        investigator_question_bonus: 10, // 1  Investigator asks a question
+        lie_detector_init_bonus: 5, // 2  Investigator starts Lie Detector
+        timely_response_bonus: 10, // 3+4 Player answers a question (normal or Lie Detector)
+        no_response_penalty: -10, // 5+9 Fails to answer / fails to vote in time
+        lie_detector_participation_bonus: 10, // 6+7+8 Believable / Suspicious / Lie Detector vote
+        clue_room_bonus: 10, // 10 Opens the Clue Room popup
+        role_goal_bonus: 60, // 11 Correctly identifies the killer
+        role_wrong_penalty: -20, // 12 Fails to identify the correct killer
+        culprit_win_bonus: 80, // 13 Hidden Culprit remains unidentified
+    };
+    try {
+        const sets = Object.keys(vals).map((c) => `${c} = ?`).join(', ');
+        await (0, db_1.query)(`UPDATE activities SET ${sets} WHERE slug = 'mystery-quest'`, Object.values(vals));
+    }
+    catch (err) {
+        console.warn('[schemaHelpers] Could not enforce Mystery Quest scoreboard values:', err.message || err);
+    }
+}
+/**
+ * activity_games.culprit_image — the image shown for the Hidden Culprit reveal on
+ * the results screen, uploaded in the admin wizard. The Laravel migration adds it
+ * too; this guard exists because the results endpoint SELECTs the column.
+ */
+async function ensureActivityGamesCulpritImage() {
+    try {
+        const [rows] = await (0, db_1.query)("SHOW COLUMNS FROM activity_games LIKE 'culprit_image'");
+        if (rows.length === 0) {
+            await (0, db_1.query)('ALTER TABLE activity_games ADD COLUMN culprit_image VARCHAR(255) NULL DEFAULT NULL AFTER victim_name');
+        }
+    }
+    catch (err) {
+        console.warn('[schemaHelpers] Could not ensure activity_games.culprit_image:', err.message || err);
+    }
+}
+/**
+ * game_full_story.part_image — the image shown next to each Full Story Reveal part
+ * on the results screen, uploaded per part in the admin wizard. The Laravel
+ * migration adds it too; this guard exists because the results endpoint SELECTs
+ * the column, so a deploy that forgot `php artisan migrate` would break results.
+ */
+async function ensureFullStoryPartImage() {
+    try {
+        const [rows] = await (0, db_1.query)("SHOW COLUMNS FROM game_full_story LIKE 'part_image'");
+        if (rows.length === 0) {
+            await (0, db_1.query)('ALTER TABLE game_full_story ADD COLUMN part_image VARCHAR(255) NULL DEFAULT NULL AFTER part_body');
+        }
+    }
+    catch (err) {
+        console.warn('[schemaHelpers] Could not ensure game_full_story.part_image:', err.message || err);
+    }
+}
 async function ensureGameDurationDefault() {
     try {
         // Total session should be 25 minutes (5 min case summary + 20 min investigation).
@@ -259,12 +373,15 @@ async function ensureCookAndCreateSchema() {
                 round1_votes_per_player INT UNSIGNED NOT NULL DEFAULT 2,
                 round1_top_ingredients INT UNSIGNED NOT NULL DEFAULT 4,
                 round1_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                round1_results_secs INT UNSIGNED NOT NULL DEFAULT 60,
                 round2_step_max_chars INT UNSIGNED NOT NULL DEFAULT 120,
                 round2_submit_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
                 round2_review_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                dish_naming_secs INT UNSIGNED NOT NULL DEFAULT 60,
                 round3_discussion_timer_secs INT UNSIGNED NOT NULL DEFAULT 60,
                 round3_voting_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
                 round3_max_messages_per_player INT UNSIGNED NOT NULL DEFAULT 2,
+                role_brief_secs INT UNSIGNED NOT NULL DEFAULT 300,
                 show_host_role_enabled TINYINT(1) NOT NULL DEFAULT 1,
                 impostor_bias_card_text TEXT,
                 status ENUM('draft','active') NOT NULL DEFAULT 'active',
@@ -434,10 +551,12 @@ async function ensureCookAndCreateSchema() {
             `CREATE TABLE IF NOT EXISTS cc_ratings (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 instance_id BIGINT UNSIGNED NOT NULL,
-                category_id BIGINT UNSIGNED NOT NULL,
+                category_id BIGINT UNSIGNED NULL,
+                stars TINYINT UNSIGNED NULL,
                 voting_participant_id BIGINT UNSIGNED NOT NULL,
                 rated_group_id BIGINT UNSIGNED DEFAULT NULL,
                 created_at TIMESTAMP NULL DEFAULT NULL,
+                UNIQUE KEY unique_review (voting_participant_id, rated_group_id),
                 KEY instance_id (instance_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         ];
@@ -524,11 +643,26 @@ async function ensureCookAndCreateSchema() {
         if (phaseCol.length === 0) {
             await (0, db_1.query)(`ALTER TABLE cc_game_instances ADD COLUMN round2_phase ENUM('submit','review') NOT NULL DEFAULT 'submit' AFTER status`);
         }
-        // 12. One nomination per (voter, rated group, category) — lets rating
-        // submission use ON DUPLICATE KEY UPDATE to stay idempotent on re-taps.
-        const [ratingKeyRows] = await (0, db_1.query)(`SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cc_ratings' AND INDEX_NAME = 'unique_vote_per_category'`);
-        if (ratingKeyRows.length === 0) {
-            await (0, db_1.query)(`ALTER TABLE cc_ratings ADD UNIQUE KEY unique_vote_per_category (voting_participant_id, rated_group_id, category_id)`);
+        // 12. Results review = one row per (voter, rated group) holding BOTH the
+        // emoji reaction (category_id, now nullable) and the 1–5 star rating
+        // (stars). The unique key is per (voter, rated group) so there is exactly
+        // one review per other group.
+        const [starsCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_ratings LIKE 'stars'`);
+        if (starsCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_ratings ADD COLUMN stars TINYINT UNSIGNED NULL AFTER category_id`);
+        }
+        // category_id nullable so a star can be saved before an emoji (either order).
+        try {
+            await (0, db_1.query)(`ALTER TABLE cc_ratings MODIFY COLUMN category_id BIGINT UNSIGNED NULL`);
+        }
+        catch (_e) { /* already nullable */ }
+        const [oldRatingKey] = await (0, db_1.query)(`SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cc_ratings' AND INDEX_NAME = 'unique_vote_per_category'`);
+        if (oldRatingKey.length > 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_ratings DROP INDEX unique_vote_per_category`);
+        }
+        const [newRatingKey] = await (0, db_1.query)(`SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cc_ratings' AND INDEX_NAME = 'unique_review'`);
+        if (newRatingKey.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_ratings ADD UNIQUE KEY unique_review (voting_participant_id, rated_group_id)`);
         }
         // 13. Admin-uploadable background image for the Challenge Brief (pre-
         // Round-1) screen — falls back to the bundled default art on the
@@ -558,6 +692,18 @@ async function ensureCookAndCreateSchema() {
                     ADD COLUMN chef3_image VARCHAR(255) NULL DEFAULT NULL,
                     ADD COLUMN chef4_image VARCHAR(255) NULL DEFAULT NULL,
                     ADD COLUMN show_host_image VARCHAR(255) NULL DEFAULT NULL`);
+        }
+        // 15b. Admin-configurable durations for the stages that were previously
+        // fixed in the frontend or untimed: the Secret Role / Challenge Brief
+        // reading time, the Ingredient Selection results popup, and Dish Naming.
+        // (The other stage durations already have columns, or live on the
+        // activity for the lobby wait.) Defaults match the required spec values.
+        const [roleBriefCol] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_game_templates LIKE 'role_brief_secs'`);
+        if (roleBriefCol.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_game_templates
+                    ADD COLUMN round1_results_secs INT UNSIGNED NOT NULL DEFAULT 60 AFTER round1_timer_secs,
+                    ADD COLUMN dish_naming_secs INT UNSIGNED NOT NULL DEFAULT 60 AFTER round2_review_timer_secs,
+                    ADD COLUMN role_brief_secs INT UNSIGNED NOT NULL DEFAULT 300 AFTER round3_max_messages_per_player`);
         }
         // 16. Round 2's turn-based submission. Players write their cooking step
         // one at a time (Step A, then B, ...), each with their own countdown,
@@ -595,6 +741,57 @@ async function ensureCookAndCreateSchema() {
         console.warn('[schemaHelpers] Could not ensure Cook & Create schema:', err.message || err);
     }
 }
+/**
+ * Global Cook & Create stage durations (cc_stage_durations, single row id = 1)
+ * and the per-game snapshot column (cc_game_instances.stage_durations) — see
+ * services/ccStageDurations.ts. Existing games are backfilled from their own
+ * template BEFORE the global values are first applied to every template, so a
+ * game already running keeps its durations. Same steps, same order, as the
+ * Laravel migration 2026_10_18_000001; whichever runs first wins.
+ */
+async function ensureCCStageDurations() {
+    try {
+        const [col] = await (0, db_1.query)(`SHOW COLUMNS FROM cc_game_instances LIKE 'stage_durations'`);
+        if (col.length === 0) {
+            await (0, db_1.query)(`ALTER TABLE cc_game_instances ADD COLUMN stage_durations JSON NULL DEFAULT NULL AFTER template_id`);
+        }
+        const snapshot = `JSON_OBJECT(${ccStageDurations_1.CC_GAME_DURATION_FIELDS.map((f) => `'${f}', t.${f}`).join(', ')})`;
+        await (0, db_1.query)(`UPDATE cc_game_instances ci JOIN cc_game_templates t ON t.id = ci.template_id
+             SET ci.stage_durations = ${snapshot} WHERE ci.stage_durations IS NULL`);
+        const [table] = await (0, db_1.query)(`SHOW TABLES LIKE 'cc_stage_durations'`);
+        if (table.length > 0)
+            return;
+        await (0, db_1.query)(`CREATE TABLE cc_stage_durations (
+                id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+                lobby_wait_secs INT UNSIGNED NOT NULL DEFAULT 900,
+                role_brief_secs INT UNSIGNED NOT NULL DEFAULT 300,
+                round1_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                round1_results_secs INT UNSIGNED NOT NULL DEFAULT 60,
+                round2_submit_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                round2_review_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                round3_discussion_timer_secs INT UNSIGNED NOT NULL DEFAULT 60,
+                round3_voting_timer_secs INT UNSIGNED NOT NULL DEFAULT 120,
+                dish_naming_secs INT UNSIGNED NOT NULL DEFAULT 60,
+                created_at TIMESTAMP NULL DEFAULT NULL,
+                updated_at TIMESTAMP NULL DEFAULT NULL
+            )`);
+        // Start from the most recently saved template (the admin's latest intent).
+        const [latest] = await (0, db_1.query)(`SELECT ${ccStageDurations_1.CC_GAME_DURATION_FIELDS.map((f) => `t.${f}`).join(', ')}, a.lobby_wait_secs
+             FROM cc_game_templates t
+             LEFT JOIN activity_games g ON g.id = t.activity_game_id
+             LEFT JOIN activities a ON a.id = g.activity_id
+             ORDER BY t.updated_at DESC, t.id DESC LIMIT 1`);
+        const seed = Object.fromEntries(Object.entries(latest?.[0] ?? {}).filter(([, v]) => v !== null));
+        await (0, db_1.query)(`INSERT INTO cc_stage_durations SET ?`, [{ id: 1, created_at: new Date(), updated_at: new Date(), ...seed }]);
+        await (0, db_1.query)(`UPDATE cc_game_templates t JOIN cc_stage_durations d ON d.id = 1
+             SET ${ccStageDurations_1.CC_GAME_DURATION_FIELDS.map((f) => `t.${f} = d.${f}`).join(', ')}`);
+        await (0, db_1.query)(`UPDATE activities a JOIN cc_stage_durations d ON d.id = 1
+             SET a.lobby_wait_secs = d.lobby_wait_secs WHERE a.slug LIKE 'cook%'`);
+    }
+    catch (err) {
+        console.warn('[schemaHelpers] Could not ensure Cook & Create stage durations:', err.message || err);
+    }
+}
 async function ensureGameSchemaUpdates() {
     await ensureGameGroupRetentionColumns();
     await ensureGameGroupsGameId();
@@ -604,7 +801,15 @@ async function ensureGameSchemaUpdates() {
     await ensureGroupAccusationsTable();
     await ensureResultsScoringColumns();
     await ensureActivityGamesVictimName();
+    await ensureGameRolesRoleIcon();
+    await ensureFullStoryPartImage();
+    await ensureActivityGamesCulpritImage();
+    await ensureEqualChanceScoringColumns();
+    await ensureMysteryQuestScoreboardValues();
     await ensureGameDurationDefault();
     await ensureCookAndCreateSchema();
+    await ensureCCStageDurations();
+    // Last: clear rows left behind by deleted groups whose ids were later reused.
+    await (0, groupDataCleanup_1.purgeStaleGroupRowsOnBoot)();
 }
 exports.default = ensureOrganizerStatusColumns;

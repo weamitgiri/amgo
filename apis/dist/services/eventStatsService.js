@@ -108,6 +108,14 @@ async function buildEventStats(bookingId) {
          WHERE g.booking_id = ?
          ORDER BY g.id ASC`, [bookingId]);
     const groupsFormed = groupRows.filter((g) => Number(g.member_count) === playersPerGroup).length;
+    // The event is only "completed" once the actual game has ended for every
+    // group that exists — i.e. each group is in a terminal status. While any
+    // group is still 'waiting' or 'active' (timer running), the event is live.
+    // This replaces the old time-window inference (scheduled start + duration)
+    // that flagged completion while a group was still playing.
+    const TERMINAL_GROUP_STATUSES = new Set(['completed', 'incomplete']);
+    const terminalGroupCount = groupRows.filter((g) => TERMINAL_GROUP_STATUSES.has(String(g.status))).length;
+    const isEventCompleted = groupRows.length > 0 && terminalGroupCount === groupRows.length;
     const currentIncompleteGroup = groupRows.find((g) => Number(g.member_count) > 0 && Number(g.member_count) < playersPerGroup);
     const membersInIncompleteGroup = currentIncompleteGroup
         ? Number(currentIncompleteGroup.member_count)
@@ -164,6 +172,7 @@ async function buildEventStats(bookingId) {
             reschedule_cutoff: cutoffTime.format('DD MMM YYYY, hh:mm A'),
             is_reschedule_allowed: !booking.is_rescheduled && (0, moment_1.default)().isBefore(cutoffTime),
             min_players_per_group: playersPerGroup,
+            is_completed: isEventCompleted,
         },
         recent_groups: groupRows.slice(-10).map((g) => ({
             id: g.id,

@@ -11,12 +11,33 @@ const apiResponse_1 = require("../utils/apiResponse");
 const AppError_1 = require("../utils/AppError");
 const db_1 = require("../config/db");
 const serializer_1 = require("../utils/serializer");
-const pseudonym_1 = require("../utils/pseudonym");
 const resultsPdfService_1 = require("../services/resultsPdfService");
+const ccResultsPdfService_1 = require("../services/ccResultsPdfService");
+const verdictScoringService_1 = require("../services/verdictScoringService");
 const jwtSecret_1 = require("../utils/jwtSecret");
+/** Strip HTML tags/entities from admin-authored rich text down to plain text. */
+function htmlToPlainText(html) {
+    if (!html)
+        return '';
+    return String(html)
+        .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&quot;/gi, '"')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
 /**
- * Post-game results for a group — always rendered with pseudonyms (never raw
- * participant names), matching how the live game already hides identities.
+ * Post-game results for a group. The game is over, so identities are no longer
+ * secret — the reveal screen shows each player's real registered name alongside
+ * their character and role (the PDF already does the same).
  */
 exports.getGameResults = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { group_id } = req.params;
@@ -38,22 +59,27 @@ exports.getGameResults = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
             LEFT JOIN game_roles gr ON gr.id = ps.role_id
             LEFT JOIN game_participants gp ON gp.id = ps.participant_id
             WHERE ps.group_id = ?`, [group_id]);
-    // Post-game "Full Story" reveal: the game's clues in order, plus the tagline.
-    const [gameRows] = await (0, db_1.query)(`SELECT ag.id AS game_row_id, ag.tagline
+    // Post-game "Full Story" reveal: the admin-authored Full Story Reveal parts
+    // (game_full_story), in order, plus the tagline. part_body is rich HTML pasted
+    // from the admin editor, so strip tags to plain text for the results card.
+    const [gameRows] = await (0, db_1.query)(`SELECT ag.id AS game_row_id, ag.tagline, ag.culprit_image
             FROM game_groups gg
             JOIN organizer_bookings ob ON ob.id = gg.booking_id
             LEFT JOIN activity_games ag ON ag.id = COALESCE(gg.game_id, ob.game_id)
             WHERE gg.id = ? LIMIT 1`, [group_id]);
     const gameRowId = gameRows?.[0]?.game_row_id;
+    // Admin-set Hidden Culprit reveal image; the frontend falls back to the
+    // culprit role's portrait when this is null.
+    const culpritRevealImage = gameRows?.[0]?.culprit_image ?? null;
     let fullStory = [];
     if (gameRowId) {
-        const [clueRows] = await (0, db_1.query)(`SELECT id, clue_title, clue_short_description, clue_detail, clue_image
-                FROM game_clues WHERE game_id = ? ORDER BY id ASC`, [gameRowId]);
-        fullStory = (clueRows ?? []).map((c) => ({
-            id: Number(c.id),
-            title: c.clue_title,
-            text: c.clue_detail || c.clue_short_description,
-            image: c.clue_image,
+        const [storyRows] = await (0, db_1.query)(`SELECT id, part_title, part_body, part_image
+                FROM game_full_story WHERE game_id = ? ORDER BY part_number ASC, id ASC`, [gameRowId]);
+        fullStory = (storyRows ?? []).map((s) => ({
+            id: Number(s.id),
+            title: s.part_title,
+            text: htmlToPlainText(s.part_body),
+            image: s.part_image,
         }));
     }
     const winnerIds = result?.winner_ids
@@ -70,29 +96,36 @@ exports.getGameResults = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
             : result.per_role_results
         : [];
     const statusBySession = new Map(perRoleResults.map((r) => [String(r.session_id), r.status]));
+    const mvpBySession = new Set(perRoleResults.filter((r) => r.is_mvp).map((r) => String(r.session_id)));
     const withPseudonym = (s) => ({
         session_id: Number(s.id),
-        pseudonym: (0, pseudonym_1.shortName)(s.participant_name || 'Player', Number(s.id)),
+        // Real registered name — the game is over, identities are revealed.
+        pseudonym: (s.participant_name || '').trim() || 'Player',
         role_type: s.role_type,
         score: s.total_score,
         status: statusBySession.get(String(s.id)) ?? (winnerSet.has(String(s.id)) ? 'winner' : 'loser'),
+        is_mvp: mvpBySession.has(String(s.id)),
         character_name: s.character_name ?? null,
         role_image: s.role_image ?? null,
         is_you: participantId != null && String(s.participant_id) === String(participantId),
     });
-    const culpritSession = sessions.find((s) => s.role_type === 'culprit');
+    // role_type is stored as "hidden culprit" — an exact 'culprit' match never found
+    // them, so the results page never showed who the killer was.
+    const culpritSession = sessions.find((s) => (0, verdictScoringService_1.isCulpritRole)(s.role_type));
     const payload = {
         is_finished: true,
         is_incomplete: group.status === 'incomplete',
         group_id: Number(group.id),
         completed_at: group.completed_at,
         killer_wins: result ? !result.is_correct : false,
-        culprit: culpritSession ? withPseudonym(culpritSession) : null,
+        culprit: culpritSession
+            ? { ...withPseudonym(culpritSession), culprit_image: culpritRevealImage }
+            : null,
         players: sessions.filter((s) => s.role_type).map(withPseudonym),
         winners: sessions.filter((s) => winnerSet.has(String(s.id))).map(withPseudonym),
         losers: sessions.filter((s) => s.role_type && !winnerSet.has(String(s.id))).map(withPseudonym),
         correct_guess_count: result?.correct_guess_count ?? null,
-        total_guessers: sessions.filter((s) => s.role_type && s.role_type !== 'culprit').length,
+        total_guessers: sessions.filter((s) => s.role_type && !(0, verdictScoringService_1.isCulpritRole)(s.role_type)).length,
         tagline: gameRows?.[0]?.tagline ?? null,
         full_story: fullStory,
         pdf_available: Boolean(group.results_pdf_path && group.results_pdf_expires_at && new Date(group.results_pdf_expires_at) > new Date()),
@@ -111,14 +144,17 @@ exports.downloadResultsPdf = (0, asyncHandler_1.asyncHandler)(async (req, res) =
     const participantId = req.query.participant_id;
     const [groupRows] = await (0, db_1.query)('SELECT * FROM game_groups WHERE id = ? LIMIT 1', [group_id]);
     const group = groupRows?.[0];
-    if (!group ||
-        !group.results_pdf_path ||
-        !group.results_pdf_expires_at ||
-        new Date(group.results_pdf_expires_at) <= new Date()) {
+    // Cook & Create awards PDF is kept permanently (no expiry). Mystery Quest's
+    // results_pdf_path keeps its existing 1-hour availability window.
+    const ccPdfPath = group?.cc_results_pdf_path || null;
+    const mysteryAvailable = Boolean(group?.results_pdf_path && group.results_pdf_expires_at && new Date(group.results_pdf_expires_at) > new Date());
+    if (!group || (!ccPdfPath && !mysteryAvailable)) {
         throw new AppError_1.AppError('Results PDF not available', 404);
     }
     let authorized = false;
-    if (participantId) {
+    // The Cook & Create PDF lists every winning group's members and emails, so
+    // only the organizer (HR) may download it — never a participant.
+    if (participantId && !ccPdfPath) {
         const [memberRows] = await (0, db_1.query)('SELECT id FROM game_participants WHERE group_id = ? AND id = ? LIMIT 1', [group_id, participantId]);
         authorized = !!memberRows?.[0];
     }
@@ -138,6 +174,12 @@ exports.downloadResultsPdf = (0, asyncHandler_1.asyncHandler)(async (req, res) =
     }
     if (!authorized)
         throw new AppError_1.AppError('Results PDF not available', 404);
+    if (ccPdfPath) {
+        const ccFile = (0, ccResultsPdfService_1.resolveCCPdfPath)(ccPdfPath);
+        if (!fs_1.default.existsSync(ccFile))
+            throw new AppError_1.AppError('Results PDF not available', 404);
+        return res.download(ccFile, 'cook-and-create-results.pdf');
+    }
     const filePath = (0, resultsPdfService_1.resolvePdfPath)(group.results_pdf_path);
     if (!fs_1.default.existsSync(filePath))
         throw new AppError_1.AppError('Results PDF not available', 404);

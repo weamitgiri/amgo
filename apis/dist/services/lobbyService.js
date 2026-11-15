@@ -3,12 +3,32 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isGroupAtCapacity = isGroupAtCapacity;
 exports.parseBookingSchedule = parseBookingSchedule;
 exports.buildLobbyPayload = buildLobbyPayload;
 exports.emitLobbyUpdate = emitLobbyUpdate;
 const moment_1 = __importDefault(require("moment"));
 const db_1 = require("../config/db");
 const timerService_1 = require("./timerService");
+/**
+ * A group may only start the game once it has reached its configured capacity
+ * (activities.group_size). Shared by the lobby, game-state and game-summary
+ * endpoints so the "complete group only" rule is enforced identically wherever
+ * a `waiting` group could otherwise be flipped to `active`.
+ */
+async function isGroupAtCapacity(groupId) {
+    const [rows] = await (0, db_1.query)(`SELECT a.group_size,
+                (SELECT COUNT(*) FROM game_participants WHERE group_id = gg.id) AS member_count
+           FROM game_groups gg
+           JOIN organizer_bookings ob ON ob.id = gg.booking_id
+           JOIN activities a ON a.id = ob.activity_id
+          WHERE gg.id = ? LIMIT 1`, [groupId]);
+    if (!rows || rows.length === 0)
+        return false;
+    const groupSize = Number(rows[0].group_size) || 5;
+    const memberCount = Number(rows[0].member_count) || 0;
+    return memberCount >= groupSize;
+}
 function parseBookingSchedule(scheduled_date, scheduled_time) {
     if (!scheduled_date || !scheduled_time)
         return null;
@@ -87,6 +107,15 @@ async function buildLobbyPayload(groupId, currentParticipantId) {
         statusMessage = remainingSlots > 0
             ? `The activity started at ${scheduledStartLabel}. You can still join until the ${lobbyWaitMins}-minute entry window closes. ${remainingSlots} slot${remainingSlots === 1 ? '' : 's'} remain.`
             : `The activity started at ${scheduledStartLabel}. The game will begin when the ${lobbyWaitMins}-minute entry window closes.`;
+    }
+    else if (!isGroupFull) {
+        // Entry window closed but the group never reached capacity. An incomplete
+        // group must NOT proceed to the Game Summary / Game Play screen: hold every
+        // member on the lobby with an ENDED status and never activate the group or
+        // start any timer. Scoped to THIS group only — other groups are unaffected.
+        lobbyPhase = 'group_incomplete';
+        canStartGame = false;
+        statusMessage = 'Your group not complete participant.';
     }
     else {
         lobbyPhase = 'ready';

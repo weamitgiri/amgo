@@ -6,7 +6,6 @@ const apiResponse_1 = require("../utils/apiResponse");
 const asyncHandler_1 = require("../utils/asyncHandler");
 const AppError_1 = require("../utils/AppError");
 const cookandcreateService_1 = require("../services/cookandcreateService");
-const pseudonym_1 = require("../utils/pseudonym");
 // Read-only reuse of Mystery's schedule parser so both activities interpret a
 // booking's date/time identically. buildLobbyPayload itself is NOT used here —
 // it starts Mystery's case-summary timer as a side effect.
@@ -31,8 +30,13 @@ exports.getCCGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         throw new AppError_1.AppError('Group not found', 404);
     }
     const group = groupRows[0];
-    // Get or create CC instance
-    const ccData = await (0, cookandcreateService_1.getOrCreateCCInstance)(group_id, group.game_id || group.booking_game_id);
+    // Resolve the Cook & Create template from the activity_game the organizer
+    // actually booked (organizer_bookings.game_id). game_groups.game_id is not
+    // reliable here — for Cook & Create groups it carries a default of 1, which
+    // is Mystery Quest's activity_game and has no CC template, so preferring it
+    // made getOrCreateCCInstance fail with "template not found". Fall back to
+    // gg.game_id only if the booking somehow has none.
+    const ccData = await (0, cookandcreateService_1.getOrCreateCCInstance)(group_id, group.booking_game_id || group.game_id);
     if (!ccData) {
         throw new AppError_1.AppError('Cook & Create game template not found', 404);
     }
@@ -56,7 +60,11 @@ exports.getCCGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
          ORDER BY joined_at ASC, gp.id ASC`, [group_id]);
     const participants = participantRows.map((p) => ({
         id: Number(p.id),
-        name: myParticipantId === Number(p.id) ? p.name : (0, pseudonym_1.shortName)(p.name, Number(p.id)),
+        // Show each player's real registered name (the name they entered when
+        // they joined), mapped to their participant id, consistently across
+        // every Cook & Create screen. Falls back to 'Participant' if a name is
+        // somehow missing so the game never renders a blank label.
+        name: p.name || 'Participant',
         isYou: myParticipantId === Number(p.id),
         status: Number(p.is_online) === 1 ? 'online' : 'offline',
     }));
@@ -65,20 +73,52 @@ exports.getCCGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     // capacity Mystery Quest enforces, NOT round1_top_ingredients, which is an
     // unrelated Round-1 tuning value).
     const groupCapacity = Number(group.group_size) || 5;
-    if (instance.status === 'waiting' && participants.length >= groupCapacity) {
+    // Authoritative lobby window — the single source of truth for when play may
+    // begin. It is the booking's scheduled start plus the configured lobby wait
+    // (default 15 min), derived identically on every request, so a refresh,
+    // extra tab or reconnect keeps the same countdown and no client can start
+    // the game early. The game must NOT start until this instant passes, even if
+    // the group filled early.
+    const scheduleStart = (0, lobbyService_1.parseBookingSchedule)(group.scheduled_date, group.scheduled_time);
+    const lobbyWaitSecs = Number(group.lobby_wait_secs) || 900;
+    const gameDurationSecs = Number(group.game_duration_secs) || 1500;
+    const gameStartsAt = scheduleStart ? scheduleStart.clone().add(lobbyWaitSecs, 'seconds') : null;
+    const lobbyExpired = !gameStartsAt || Date.now() >= gameStartsAt.valueOf();
+    if (instance.status === 'waiting' && participants.length >= groupCapacity && lobbyExpired) {
         const roles = await (0, cookandcreateService_1.assignCCRoles)(instance.id, participantIds);
-        instance.impostor_participant_id = roles.impostorId;
-        instance.show_host_participant_id = roles.showHostId;
-        instance.status = 'round1';
-        try {
-            const { io } = require('../server');
-            if (io)
-                io.to(`cc-instance-${instance.id}`).emit('cc_round1_started', {});
+        if (roles.claimed) {
+            instance.impostor_participant_id = roles.impostorId;
+            instance.show_host_participant_id = roles.showHostId;
+            instance.status = 'round1';
+            // Round 1 play begins only AFTER the role-reveal / Challenge Brief
+            // period. The brief is shown on the summary screen for
+            // role_brief_secs, so push round1_started_at forward by the brief
+            // length (the in-game countdown then shows the FULL Round-1 time once
+            // the brief ends) and size the Round-1 timer to span brief + round1.
+            const briefSecs = Math.max(0, Number(template.role_brief_secs) || 0);
+            if (briefSecs > 0) {
+                await (0, db_1.query)(`UPDATE cc_game_instances SET round1_started_at = DATE_ADD(NOW(), INTERVAL ? SECOND) WHERE id = ?`, [briefSecs, instance.id]);
+                const [r1Row] = await (0, db_1.query)(`SELECT round1_started_at FROM cc_game_instances WHERE id = ?`, [instance.id]);
+                instance.round1_started_at = r1Row?.[0]?.round1_started_at ?? instance.round1_started_at;
+            }
+            try {
+                const { io } = require('../server');
+                if (io)
+                    io.to(`cc-instance-${instance.id}`).emit('cc_round1_started', {});
+            }
+            catch (_e) {
+                /* ignore */
+            }
+            await (0, cookandcreateService_1.ensureCCTimer)(group_id, instance.id, 'cc_round1', briefSecs + template.round1_timer_secs);
         }
-        catch (_e) {
-            /* ignore */
+        else {
+            // A concurrent request already started the game — re-read the
+            // instance so this response reflects the started state instead of a
+            // stale 'waiting'.
+            const fresh = await (0, cookandcreateService_1.getInstanceById)(instance.id);
+            if (fresh)
+                Object.assign(instance, fresh.instance);
         }
-        await (0, cookandcreateService_1.ensureCCTimer)(group_id, instance.id, 'cc_round1', template.round1_timer_secs);
     }
     // Heal a Round 2 that began before turn-based submission existed: without
     // turn state no turn is ever open, so every submission is rejected and no
@@ -148,7 +188,7 @@ exports.getCCGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         const [stepsRows] = await (0, db_1.query)(`SELECT s.id, s.step_letter, s.step_text, s.status,
                     (SELECT COUNT(*) FROM cc_round2_step_votes sv WHERE sv.step_id = s.id AND sv.vote = 'keep') as keep_votes,
                     (SELECT COUNT(*) FROM cc_round2_step_votes sv WHERE sv.step_id = s.id AND sv.vote = 'remove') as remove_votes,
-                    s.participant_id
+                    s.participant_id, s.created_at
              FROM cc_round2_steps s WHERE s.instance_id = ? ORDER BY s.step_letter ASC`, [instance.id]);
         cookingSteps = stepsRows.map((s) => ({
             id: Number(s.id),
@@ -157,6 +197,9 @@ exports.getCCGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
             status: s.status,
             keep_votes: Number(s.keep_votes),
             remove_votes: Number(s.remove_votes),
+            // When the step was written ("3 minutes ago" in the activity feed) —
+            // a time, not an identity.
+            submitted_at: s.created_at ?? null,
             // Never expose who submitted which step — steps are anonymous
             // during review, per the game design (PDF: "Steps appear on
             // screen with no names — just Step A, B, C, D, E").
@@ -279,10 +322,8 @@ exports.getCCGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     // is exactly why the lobby countdown reset to 2:00 on each refresh. Anchored
     // to a fixed point in time, a refresh just recomputes the same remainder.
     // server_time lets the client cancel out any clock skew between the two.
-    const scheduleStart = (0, lobbyService_1.parseBookingSchedule)(group.scheduled_date, group.scheduled_time);
-    const lobbyWaitSecs = Number(group.lobby_wait_secs) || 120;
-    const gameDurationSecs = Number(group.game_duration_secs) || 1500;
-    const gameStartsAt = scheduleStart ? scheduleStart.clone().add(lobbyWaitSecs, 'seconds') : null;
+    // scheduleStart / lobbyWaitSecs / gameDurationSecs / gameStartsAt are the
+    // same values computed above for the lobby-expiry gate.
     const schedule = {
         scheduled_start_at: scheduleStart ? scheduleStart.toISOString() : null,
         // When the lobby's entry window closes and play begins.
@@ -314,21 +355,31 @@ exports.getCCGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         }
         else {
             myRole = 'chef';
-            // Assign a Chef number based on participant order
-            const chefIndex = participants
-                .filter((p) => p.id !== instance.impostor_participant_id && p.id !== instance.show_host_participant_id)
-                .findIndex((p) => p.id === myParticipantId);
-            myRoleLabel = chefIndex >= 0 ? `Chef ${chefIndex + 1}` : 'Chef';
+            // Use the SAME public "Chef N" label the Key People list shows for
+            // this player, so the role modal, the "Your Role" panel and the
+            // player list always agree. The public list numbers every
+            // non-Show-Host player — the hidden impostor included — so numbering
+            // here with the impostor filtered out was off by one for any chef
+            // after the impostor (e.g. list "Chef 4 (You)" but modal "Chef 3").
+            const mine = participantsWithRoles.find((p) => p.id === myParticipantId);
+            myRoleLabel = mine?.role_label ?? 'Chef';
         }
     }
     // Round 2 released clues
     const [clueRows] = await (0, db_1.query)(`SELECT c.id, c.clue_text, c.round_number FROM cc_round2_released_clues rc JOIN cc_clues c ON rc.clue_id = c.id WHERE rc.instance_id = ?`, [instance.id]);
     const releasedClues = clueRows.map((r) => ({ id: Number(r.id), text: r.clue_text, round_number: Number(r.round_number) }));
-    // The impostor's identity is the one genuine secret in this game — never
-    // send it to anyone except the impostor themselves, until the game is
-    // over and the reveal is public (finalizeRound3 already broadcasts it via
-    // cc_round3_complete at that point).
-    const revealImpostor = instance.status === 'completed' || isImpostor;
+    // Has THIS player finished every required other-group review (a star rating
+    // AND an emoji reaction on each other completed dish)? The protected results
+    // stay locked until they have. Only meaningful once the game is over.
+    const reviewsComplete = instance.status === 'completed' && myParticipantId != null
+        ? await (0, cookandcreateService_1.hasCompletedAllReviews)(instance.group_id, myParticipantId)
+        : false;
+    // The impostor's identity is the one genuine secret DURING play — never send
+    // it to anyone but the impostor themselves while the game is running. Once
+    // the game is completed the reveal is public (this is the "Impostor has been
+    // unmarked" results section), shown immediately and independent of whether
+    // this player has finished rating other kitchens.
+    const revealImpostor = isImpostor || instance.status === 'completed';
     // The Double Down offer is "secretly selected" per the game design — only
     // the chosen participant (or everyone, once the game is over) should see
     // who it went to. Everyone else gets my_double_down: null and a redacted
@@ -355,6 +406,7 @@ exports.getCCGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         my_role_label: myRoleLabel,
         is_impostor: isImpostor,
         is_show_host: isShowHost,
+        reviews_complete: reviewsComplete,
         impostor_bias_card: isImpostor ? template.impostor_bias_card_text : null,
         // Round 1
         all_ingredients: allIngredients,
@@ -708,9 +760,15 @@ exports.getOtherDishes = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
  * Rating: nominate another group's dish for an award category
  */
 exports.submitRatingHandler = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const { instance_id, participant_id, rated_group_id, category_id } = req.body;
-    if (!instance_id || !participant_id || !rated_group_id || !category_id) {
+    const { instance_id, participant_id, rated_group_id, category_id, stars } = req.body;
+    // A review is one atomic submission carrying BOTH a star rating and an emoji
+    // reaction — both are required.
+    if (!instance_id || !participant_id || !rated_group_id || category_id === undefined || category_id === null || category_id === '') {
         throw new AppError_1.AppError('instance_id, participant_id, rated_group_id, and category_id are required', 400);
+    }
+    const starsVal = Number(stars);
+    if (!Number.isInteger(starsVal) || starsVal < 1 || starsVal > 5) {
+        throw new AppError_1.AppError('A star rating from 1 to 5 is required', 400);
     }
     const data = await (0, cookandcreateService_1.getInstanceById)(instance_id);
     if (!data)
@@ -718,10 +776,28 @@ exports.submitRatingHandler = (0, asyncHandler_1.asyncHandler)(async (req, res) 
     if (data.instance.status !== 'completed') {
         throw new AppError_1.AppError('You can rate other kitchens once your own game has finished', 400);
     }
+    // Membership: the rater must belong to the instance's group.
+    const [memberRows] = await (0, db_1.query)('SELECT 1 FROM game_participants WHERE id = ? AND group_id = ? LIMIT 1', [participant_id, data.instance.group_id]);
+    if (!memberRows || memberRows.length === 0) {
+        throw new AppError_1.AppError('You are not a member of this group', 403);
+    }
     if (Number(rated_group_id) === data.instance.group_id) {
         throw new AppError_1.AppError('You cannot rate your own group', 400);
     }
-    await (0, cookandcreateService_1.submitRating)(instance_id, participant_id, rated_group_id, category_id);
+    // The rated group must be another completed dish in the same booking (guards
+    // direct API calls against arbitrary group ids).
+    const [ratableRows] = await (0, db_1.query)(`SELECT 1 FROM game_groups gg JOIN cc_game_instances ci ON ci.group_id = gg.id
+         WHERE gg.id = ? AND gg.booking_id = (SELECT booking_id FROM game_groups WHERE id = ?)
+           AND ci.status = 'completed' AND ci.dish_name IS NOT NULL LIMIT 1`, [rated_group_id, data.instance.group_id]);
+    if (!ratableRows || ratableRows.length === 0) {
+        throw new AppError_1.AppError("That dish isn't available to rate", 400);
+    }
+    // Once-only: a dish already fully reviewed by this player cannot be rated
+    // again (refresh, revisit, repeated clicks or a direct API call).
+    if (await (0, cookandcreateService_1.hasReviewedGroup)(participant_id, rated_group_id)) {
+        throw new AppError_1.AppError('You have already rated this dish', 409);
+    }
+    await (0, cookandcreateService_1.submitRating)(instance_id, participant_id, rated_group_id, category_id, starsVal);
     return (0, apiResponse_1.successResponse)(res, 'Rating submitted', {});
 });
 /**
@@ -729,6 +805,21 @@ exports.submitRatingHandler = (0, asyncHandler_1.asyncHandler)(async (req, res) 
  */
 exports.getAwardsHandler = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { group_id } = req.params;
+    const participantId = req.query.participant_id || undefined;
+    if (!participantId) {
+        throw new AppError_1.AppError('participant_id is required', 400);
+    }
+    // Backend-enforced gate — never trust a frontend flag. The requester must
+    // belong to this group AND have submitted a star rating + emoji reaction for
+    // every other completed dish before the protected results board is returned.
+    const [memberRows] = await (0, db_1.query)('SELECT 1 FROM game_participants WHERE id = ? AND group_id = ? LIMIT 1', [participantId, group_id]);
+    if (!memberRows || memberRows.length === 0) {
+        throw new AppError_1.AppError('You are not a member of this group', 403);
+    }
+    const complete = await (0, cookandcreateService_1.hasCompletedAllReviews)(group_id, participantId);
+    if (!complete) {
+        throw new AppError_1.AppError('Rate and react to every other dish to unlock the results', 403);
+    }
     const board = await (0, cookandcreateService_1.getAwards)(group_id);
     if (!board)
         throw new AppError_1.AppError('Group not found', 404);

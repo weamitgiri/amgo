@@ -9,6 +9,12 @@ export declare const verifyInvitation: (req: Request, res: Response, next: impor
  */
 export declare const participantJoin: (req: Request, res: Response, next: import("express").NextFunction) => void;
 /**
+ * Participant: Resend OTP to an already-joined (but perhaps not yet verified)
+ * participant. Regenerates the OTP for the existing row, honouring the 60s
+ * resend cooldown; it does NOT re-run the join/group logic or mint a new token.
+ */
+export declare const resendParticipantOtp: (req: Request, res: Response, next: import("express").NextFunction) => void;
+/**
  * Participant Step 2: Verify OTP and Assign Group
  */
 export declare const verifyParticipantOtp: (req: Request, res: Response, next: import("express").NextFunction) => void;

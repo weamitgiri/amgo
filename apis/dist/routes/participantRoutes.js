@@ -40,6 +40,7 @@ const joinLinkController = __importStar(require("../controllers/joinLinkControll
 const validateRequest_1 = require("../middlewares/validateRequest");
 const joinLinkRateLimit_1 = require("../middlewares/joinLinkRateLimit");
 const authRateLimit_1 = require("../middlewares/authRateLimit");
+const participantAuth_1 = require("../middlewares/participantAuth");
 const router = (0, express_1.Router)();
 // Verify invitation link
 router.get('/verify-link/:link_token', participantController.verifyInvitation);
@@ -52,6 +53,11 @@ router.post('/join', authRateLimit_1.otpRequestRateLimit, [
     (0, express_validator_1.body)('name').notEmpty().withMessage('Name is required'),
     (0, express_validator_1.body)('email').isEmail().withMessage('Valid email is required'),
 ], validateRequest_1.validateRequest, participantController.participantJoin);
+// Resend OTP (dedicated; enforces the 60s cooldown)
+router.post('/resend-otp', authRateLimit_1.otpRequestRateLimit, [
+    (0, express_validator_1.body)('booking_id').isNumeric().withMessage('Booking ID is required'),
+    (0, express_validator_1.body)('email').isEmail().withMessage('Valid email is required'),
+], validateRequest_1.validateRequest, participantController.resendParticipantOtp);
 // Step 2: Verify OTP & Assign Group
 router.post('/verify-otp', authRateLimit_1.otpVerifyRateLimit, [
     (0, express_validator_1.body)('booking_id').isNumeric().withMessage('Booking ID is required'),
@@ -59,7 +65,7 @@ router.post('/verify-otp', authRateLimit_1.otpVerifyRateLimit, [
     (0, express_validator_1.body)('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
 ], validateRequest_1.validateRequest, participantController.verifyParticipantOtp);
 // Get Lobby Information
-router.get('/lobby/:group_id', participantController.getLobbyInfo);
+router.get('/lobby/:group_id', participantAuth_1.participantAuth, participantController.getLobbyInfo);
 // Case summary / game screen
-router.get('/game-summary/:group_id', participantController.getGameSummary);
+router.get('/game-summary/:group_id', participantAuth_1.participantAuth, participantController.getGameSummary);
 exports.default = router;

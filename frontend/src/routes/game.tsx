@@ -457,9 +457,31 @@ function GamePage() {
   }, [players, frozenSessionIds, selectedAskee]);
   const [question, setQuestion] = useState("");
   const [modal, setModal] = useState<ModalKey>(null);
+  // Clue Room +10 (spec rule 10): awarded the first time the player opens the
+  // Clue Room popup. The backend only ever awards it once per player, so this
+  // ref just avoids firing the request on every reopen within a session.
+  const clueAwardedRef = useRef(false);
   // Normal (non-Lie-Detector) questions the Investigator has spent so far —
   // lie-round questions come out of their own separate 3-question budget.
   const [questionsUsed, setQuestionsUsed] = useState(0);
+  // Award the Clue Room +10 the first time the popup is opened (after unlock).
+  useEffect(() => {
+    if (
+      modal === "clue" &&
+      cluesUnlocked &&
+      session?.groupId &&
+      session?.participantId &&
+      !clueAwardedRef.current
+    ) {
+      clueAwardedRef.current = true;
+      participantService
+        .openClueRoom({ group_id: session.groupId, participant_id: session.participantId })
+        .catch(() => {
+          // Allow a retry on the next open if the request failed.
+          clueAwardedRef.current = false;
+        });
+    }
+  }, [modal, cluesUnlocked, session?.groupId, session?.participantId]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [pendingAnswerForMe, setPendingAnswerForMe] = useState<ActivityItem | null>(null);
   const [answerTimeoutPenalty, setAnswerTimeoutPenalty] = useState(0);

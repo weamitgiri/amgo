@@ -9,7 +9,7 @@ const AppError_1 = require("../utils/AppError");
  * Get all active packages
  */
 exports.getPackages = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const [rows] = await (0, db_1.query)('SELECT id, name, slug, price, max_users, total_groups, validity_days, short_description, features, game_access, status FROM packages WHERE status = ? AND deleted_at IS NULL ORDER BY sort_order ASC', ['active']);
+    const [rows] = await (0, db_1.query)('SELECT id, name, slug, price, gst_rate, sac_code, max_users, total_groups, validity_days, short_description, features, game_access, status FROM packages WHERE status = ? AND deleted_at IS NULL ORDER BY sort_order ASC', ['active']);
     // Parse JSON fields if they are strings
     const packages = rows.map((pkg) => ({
         ...pkg,
@@ -74,6 +74,8 @@ const PUBLIC_SETTING_KEYS = [
     'meta_title',
     'meta_description',
     'meta_keywords',
+    'invoice_seller_state',
+    'invoice_seller_state_code',
     'primary_color',
     'secondary_color',
     'button_color',

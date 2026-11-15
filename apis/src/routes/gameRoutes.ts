@@ -107,6 +107,18 @@ router.post(
     gameEngineController.useWitnessPasscard
 );
 
+// Clue Room opened (+10 once per player per game — spec rule 10)
+router.post(
+    '/clue-room/open',
+    participantAuth,
+    [
+        body('group_id').notEmpty().withMessage('Group ID is required'),
+        body('participant_id').notEmpty().withMessage('participant_id is required'),
+    ],
+    validateRequest,
+    gameEngineController.openClueRoom
+);
+
 // Final Accusation (every player, culprit included — see verdictScoringService.ts)
 router.post(
     '/submit-accusation',

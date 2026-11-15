@@ -202,6 +202,38 @@ export async function ensureEqualChanceScoringColumns(): Promise<void> {
 }
 
 /**
+ * Mystery Quest scoreboard — the FINAL source of truth (see the scoring spec).
+ * These values are fixed and shown read-only in the admin panel, so we enforce
+ * them on boot for the mystery-quest activity. This keeps the backend scoring in
+ * step with the spec even on a deploy that skipped a migration, and makes the
+ * read-only admin values authoritative everywhere. Only the mystery-quest row is
+ * touched — Cook & Create and every other activity are left untouched.
+ */
+export async function ensureMysteryQuestScoreboardValues(): Promise<void> {
+    // rule → column = points
+    const vals: Record<string, number> = {
+        investigator_question_bonus: 10,        // 1  Investigator asks a question
+        lie_detector_init_bonus: 5,             // 2  Investigator starts Lie Detector
+        timely_response_bonus: 10,              // 3+4 Player answers a question (normal or Lie Detector)
+        no_response_penalty: -10,               // 5+9 Fails to answer / fails to vote in time
+        lie_detector_participation_bonus: 10,   // 6+7+8 Believable / Suspicious / Lie Detector vote
+        clue_room_bonus: 10,                    // 10 Opens the Clue Room popup
+        role_goal_bonus: 60,                    // 11 Correctly identifies the killer
+        role_wrong_penalty: -20,                // 12 Fails to identify the correct killer
+        culprit_win_bonus: 80,                  // 13 Hidden Culprit remains unidentified
+    };
+    try {
+        const sets = Object.keys(vals).map((c) => `${c} = ?`).join(', ');
+        await query(
+            `UPDATE activities SET ${sets} WHERE slug = 'mystery-quest'`,
+            Object.values(vals)
+        );
+    } catch (err: any) {
+        console.warn('[schemaHelpers] Could not enforce Mystery Quest scoreboard values:', err.message || err);
+    }
+}
+
+/**
  * activity_games.culprit_image — the image shown for the Hidden Culprit reveal on
  * the results screen, uploaded in the admin wizard. The Laravel migration adds it
  * too; this guard exists because the results endpoint SELECTs the column.
@@ -839,6 +871,7 @@ export async function ensureGameSchemaUpdates(): Promise<void> {
     await ensureFullStoryPartImage();
     await ensureActivityGamesCulpritImage();
     await ensureEqualChanceScoringColumns();
+    await ensureMysteryQuestScoreboardValues();
     await ensureGameDurationDefault();
     await ensureCookAndCreateSchema();
     await ensureCCStageDurations();

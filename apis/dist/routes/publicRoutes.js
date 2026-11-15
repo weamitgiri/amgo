@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const publicController = __importStar(require("../controllers/publicController"));
 const paymentController = __importStar(require("../controllers/paymentController"));
+const activityMusicController = __importStar(require("../controllers/activityMusicController"));
 const router = (0, express_1.Router)();
 // Packages API
 router.get('/packages', publicController.getPackages);
@@ -50,4 +51,7 @@ router.get('/payment-methods', paymentController.getPaymentMethods);
 // Games/Activities API
 router.get('/games', publicController.getGames);
 router.get('/games/:id', publicController.getGameDetails);
+// Background music (admin Music Manager): the activity's active track, or null.
+router.get('/activities/:activity/music', activityMusicController.getActivityMusic);
+router.get('/groups/:group_id/music', activityMusicController.getGroupMusic);
 exports.default = router;

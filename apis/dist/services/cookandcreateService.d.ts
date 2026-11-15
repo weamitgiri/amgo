@@ -20,12 +20,15 @@ export type CCGameTemplate = {
     round1_votes_per_player: number;
     round1_top_ingredients: number;
     round1_timer_secs: number;
+    round1_results_secs: number;
     round2_step_max_chars: number;
     round2_submit_timer_secs: number;
     round2_review_timer_secs: number;
+    dish_naming_secs: number;
     round3_discussion_timer_secs: number;
     round3_voting_timer_secs: number;
     round3_max_messages_per_player: number;
+    role_brief_secs: number;
     show_host_role_enabled: boolean;
     impostor_bias_card_text: string | null;
 };
@@ -136,15 +139,25 @@ export declare function ensureCCParticipantSessions(groupId: number | string): P
 export declare function assignCCRoles(instanceId: number | string, participantIds: number[]): Promise<{
     impostorId: number | null;
     showHostId: number | null;
+    claimed: boolean;
 }>;
 /**
  * Save ingredient votes for round 1
  */
 export declare function saveRound1Votes(instanceId: number | string, participantId: number | string, ingredientIds: number[]): Promise<boolean>;
 /**
- * Calculate round 1 results and save top N ingredients
+ * Calculate round 1 results and save the top N ingredients for the recipe.
+ *
+ * Absurd ingredients (Sand, Ice Cubes, …) are deliberately kept OUT of the
+ * final N: the dish still has to be cookable in Round 2, so we only ever pick
+ * real ingredients. The selection is: real ingredients ranked by votes (most
+ * first), ties and the zero-vote fillers broken at random — so when only two
+ * real ingredients were voted for, two more random real ones fill the recipe
+ * up to N. Absurd ingredients are used only as a last resort, if the template
+ * pool somehow has fewer than N real ingredients. The absurd picks that drew
+ * votes still surface separately in the "also received votes" callout.
  */
-export declare function calculateRound1Results(instanceId: number | string, topCount: number): Promise<{
+export declare function calculateRound1Results(instanceId: number | string, topCount: number, templateId: number | string): Promise<{
     ingredientId: number;
     count: number;
 }[]>;
@@ -189,10 +202,25 @@ export declare function advanceRound2ToReview(instanceId: number | string, group
  */
 export declare function advanceRound2Turn(instanceId: number | string, groupId: number | string): Promise<void>;
 /**
- * Resolves every step's final keep/remove status by simple majority (a tie
- * defaults to "kept" — lenient, per the plan). Idempotent: guarded by whether
- * any step is still in 'submitted' status, so a race between the "everyone
- * voted" fast path and the review-timer expiry can't double-resolve.
+ * Resolves Round 2 review into the final recipe: keep the 4 steps with the most
+ * KEEP votes and drop the single step with the most REMOVE votes (equivalently
+ * the fewest KEEP votes — every player keeps 4 and removes 1, so each step's
+ * keep+remove total is the player count).
+ *
+ * Previously this was a per-step majority (removed only when remove > keep),
+ * which eliminated nobody whenever the removal votes were split across steps —
+ * so the results modal showed all 5 steps instead of 4.
+ *
+ * Exactly one step is dropped when 5 were submitted; with 4 or fewer steps
+ * (a player missed their Round-2 turn) nothing is dropped. The ties that matter
+ * — above all the case where all 5 players remove a different step, so every
+ * step has one remove vote — are broken by `round2TieKey`, so the result is the
+ * same for everyone and survives refreshes/reconnects without being reshuffled.
+ *
+ * Idempotent: only steps still in 'submitted' are read, so a second caller (the
+ * review-timer safety net racing the "everyone voted" fast path) finds nothing
+ * to resolve, and because the ordering is deterministic both callers that do
+ * run would write the identical result.
  */
 export declare function finalizeRound2Review(instanceId: number | string, groupId: number | string): Promise<void>;
 /**
@@ -263,25 +291,55 @@ export type CCOtherDish = {
     group_name: string;
     dish_name: string;
     nomination_counts: Record<string, number>;
+    /** Average 1–5 stars this dish has received so far (null when none yet). */
+    average_rating: number | null;
+    /** How many star ratings the average is based on. */
+    rating_count: number;
     /** The dish's final recipe — its kept Round-2 steps, in order. */
     steps: {
         letter: string;
         text: string;
     }[];
+    /** This participant's own in-progress review of the dish (for refresh-restore).
+     *  A review is complete only once both are set. */
+    my_category_id: number | null;
+    my_stars: number | null;
 };
 /**
- * Up to 3 random *other* completed groups in the same booking, excluding any
- * group this participant has already nominated in any category — so the pool
- * naturally shrinks to unseen groups as the participant keeps rating.
+ * The single dish this group may rate: the NEXT group's finished dish (see
+ * getNextGroupIdInBooking). Returns exactly one dish when that next group has a
+ * completed recipe, otherwise an empty list (the UI then shows its empty state).
+ * The row carries this participant's own saved star/reaction (my_stars /
+ * my_category_id) so an already-rated dish renders read-only, never removed.
  */
 export declare function getOtherDishes(groupId: number | string, participantId: number | string): Promise<CCOtherDish[]>;
 /**
- * Records one participant's award nomination for another group's dish.
- * One nomination per (participant, rated group, category) — re-tapping the
- * same category for the same group is a harmless idempotent no-op via the
- * unique key added in schemaHelpers.ts.
+ * True once this participant has a COMPLETE review (both the emoji reaction and
+ * the 1–5 star rating) for this other group's dish — i.e. they've already rated
+ * it and must not submit again.
  */
-export declare function submitRating(instanceId: number | string, participantId: number | string, ratedGroupId: number | string, categoryId: number | string): Promise<void>;
+export declare function hasReviewedGroup(participantId: number | string, ratedGroupId: number | string): Promise<boolean>;
+/**
+ * Records one participant's review of another group's dish: a single cc_ratings
+ * row per (participant, rated group) carrying BOTH the emoji reaction
+ * (category_id) and the 1–5 star rating (stars), submitted together.
+ *
+ * Rating is once-only: the ON DUPLICATE KEY guard writes the two values only
+ * when the existing row is NOT already complete, so an already-rated dish can
+ * never be overwritten — even under a double-click race. Callers should still
+ * pre-check hasReviewedGroup() to return a friendly "already rated" response.
+ * The unique (participant, group) key makes this an upsert, which also completes
+ * a legacy emoji-only row (stars NULL) left by the previous flow.
+ */
+export declare function submitRating(instanceId: number | string, participantId: number | string, ratedGroupId: number | string, categoryId: number | string, stars: number): Promise<void>;
+/**
+ * Backend source of truth for the rating-gated results. Each group rates exactly
+ * ONE dish — the next group's (see getNextGroupIdInBooking) — so this is true
+ * when the participant has a complete review (BOTH a star rating AND an emoji
+ * reaction) for that one designated dish. It is trivially true when there is no
+ * next group, or that group hasn't finished a dish yet (nothing to rate).
+ */
+export declare function hasCompletedAllReviews(groupId: number | string, participantId: number | string): Promise<boolean>;
 export type CCAwardEntry = {
     group_id: number;
     group_name: string;
@@ -305,12 +363,17 @@ export type CCAwardsBoard = {
         double_down_penalty_applied: boolean;
         /** How many nominations this group's dish received, per category slug. */
         reaction_counts: Record<string, number>;
+        /** Average 1–5 star rating received (null when none yet). */
+        average_rating: number | null;
+        /** How many star ratings the average is based on. */
+        rating_count: number;
     };
 };
 /**
  * The Final Results / Leaderboard board: every completed group in this
- * group's booking, plus whichever award category each one leads (most
- * nominations wins; earliest cc_game_instances.finished_at breaks ties),
- * plus this group's own impostor reveal.
+ * group's booking, plus the Fun Award each one earned (groups are ranked by
+ * their average received star rating, highest first, and mapped onto the five
+ * award categories in order; earliest cc_game_instances.finished_at then lower
+ * group id breaks ties), plus this group's own impostor reveal.
  */
 export declare function getAwards(groupId: number | string): Promise<CCAwardsBoard | null>;

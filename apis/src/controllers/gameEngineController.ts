@@ -447,18 +447,13 @@ export const answerQuestion = asyncHandler(async (req: Request, res: Response) =
     const now = moment();
     const penalty = lateBySecs > responseSecs ? noResponsePenalty : 0;
 
-    // Lie Detector engagement bonus (spec §2): answering a question directed at
-    // you during an active Lie Detector round earns +5. Awarded to whichever
-    // player is in the hot seat — gating it on the culprit role would expose the
-    // culprit through the live scoreboard.
-    const [lieRoundRows] = await query<any>(
-        `SELECT id FROM lie_detector_rounds
-            WHERE group_id = ? AND suspect_id = ? AND status = 'active' AND created_at <= ?
-            ORDER BY id DESC LIMIT 1`,
-        [question.group_id, participantSession.id, question.created_at]
-    );
-    const lieParticipationBonus = Number(config?.lie_detector_participation_bonus ?? 5);
-    const lieDetectorBonus = lieRoundRows?.[0] && penalty === 0 ? lieParticipationBonus : 0;
+    // Spec rules 3 & 4: every valid answer that beats the timer earns +10,
+    // whether it answers a normal Investigator question or a Lie Detector
+    // question. A late answer takes the timeout penalty instead and earns no
+    // bonus — never both (spec rule 5: never penalise a player who already
+    // submitted a valid, on-time answer, and never reward a timed-out one).
+    const answerBonus = Number(config?.timely_response_bonus ?? 10);
+    const validAnswerBonus = penalty === 0 ? answerBonus : 0;
 
     // The `existingAnswers` check above runs OUTSIDE this transaction, so two
     // near-simultaneous submits (a double-click, or a retried request) can both
@@ -483,15 +478,15 @@ export const answerQuestion = asyncHandler(async (req: Request, res: Response) =
                 ]);
             }
 
-            if (lieDetectorBonus > 0) {
+            if (validAnswerBonus > 0) {
                 await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
-                    lieDetectorBonus,
+                    validAnswerBonus,
                     participantSession.id,
                 ]);
                 await conn.query(
                     `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
-                        VALUES (?, ?, 'lie_detector_answer', NOW(), NOW())`,
-                    [participantSession.id, lieDetectorBonus]
+                        VALUES (?, ?, 'answer_question', NOW(), NOW())`,
+                    [participantSession.id, validAnswerBonus]
                 );
             }
 
@@ -832,4 +827,47 @@ export const reopenCaseSummary = asyncHandler(async (req: Request, res: Response
     });
 
     return successResponse(res, 'Case summary reopened successfully');
+});
+
+/**
+ * Clue Room opened — spec rule 10: the first time a player opens the Clue Room
+ * popup they earn +10. Guarded by a per-session 'clue_room_opened' score log so
+ * reopening the popup never awards again (once per player per game). There is NO
+ * dwell / 10-minute requirement — opening the popup is enough.
+ */
+export const openClueRoom = asyncHandler(async (req: Request, res: Response) => {
+    const { group_id, participant_id } = req.body;
+
+    const session = await getSessionForParticipant(group_id, participant_id);
+    if (!session) throw new AppError('Session not found', 404);
+
+    const config = await getActivityConfigForGroup(group_id);
+    const clueBonus = Number(config?.clue_room_bonus ?? 10);
+
+    let awarded = false;
+    await withTransaction(async (conn) => {
+        // Lock the session row so two rapid opens can't both pass the guard below.
+        await conn.query('SELECT id FROM participant_sessions WHERE id = ? FOR UPDATE', [session.id]);
+        const [existing] = await conn.query<any[]>(
+            `SELECT id FROM score_logs WHERE participant_session_id = ? AND reason = 'clue_room_opened' LIMIT 1`,
+            [session.id]
+        );
+        if ((existing as any[]).length > 0) return; // already awarded — reopening is free
+        if (clueBonus !== 0) {
+            await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
+                clueBonus,
+                session.id,
+            ]);
+        }
+        await conn.query(
+            `INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                VALUES (?, ?, 'clue_room_opened', NOW(), NOW())`,
+            [session.id, clueBonus]
+        );
+        awarded = true;
+    });
+
+    if (awarded) await emitScoresUpdate(group_id);
+
+    return successResponse(res, 'Clue room opened', { awarded, points: awarded ? clueBonus : 0 });
 });

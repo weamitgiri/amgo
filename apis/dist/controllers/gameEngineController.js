@@ -18,7 +18,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.reopenCaseSummary = exports.useWitnessPasscard = exports.endLieDetectorRound = exports.getLieDetectorTally = exports.voteLieDetector = exports.startLieDetector = exports.submitAccusation = exports.answerQuestion = exports.askQuestion = exports.getGameState = void 0;
+exports.openClueRoom = exports.reopenCaseSummary = exports.useWitnessPasscard = exports.endLieDetectorRound = exports.getLieDetectorTally = exports.voteLieDetector = exports.startLieDetector = exports.submitAccusation = exports.answerQuestion = exports.askQuestion = exports.devAdvance = exports.getGameState = void 0;
 const apiResponse_1 = require("../utils/apiResponse");
 const db_1 = require("../config/db");
 const serializer_1 = require("../utils/serializer");
@@ -27,6 +27,8 @@ const AppError_1 = require("../utils/AppError");
 const server_1 = require("../server");
 const moment_1 = __importDefault(require("moment"));
 const verdictScoringService_1 = require("../services/verdictScoringService");
+const timerService_1 = require("../services/timerService");
+const lobbyService_1 = require("../services/lobbyService");
 async function getSessionForParticipant(groupId, participantId) {
     const [rows] = await (0, db_1.query)(`SELECT ps.*, gr.role_type, gr.character_name FROM participant_sessions ps
             LEFT JOIN game_roles gr ON gr.id = ps.role_id
@@ -83,6 +85,44 @@ exports.getGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const group = groups?.[0];
     if (!group)
         throw new AppError_1.AppError('Group not found', 404);
+    // Make getGameState self-sufficient about the game clock. The frontend loads
+    // getGameSummary and getGameState in PARALLEL (Promise.all), so getGameState
+    // can read the `timers` table below before getGameSummary's ensureCaseSummaryTimer
+    // INSERT has committed — leaving game_seconds_remaining / case_summary_seconds_remaining
+    // at 0, i.e. a 00:00 clock that never recovers (the game page has no periodic
+    // state poll). Creating the case-summary timer here too guarantees the clock is
+    // present on the first paint. It's idempotent (only the first call per group
+    // inserts).
+    //
+    // Also cover `waiting`: the lobby page navigates to /game as soon as its LOCAL
+    // countdown hits zero, which can beat the server round-trip that actually flips
+    // the group to `active` and starts this timer (buildLobbyPayload's "ready"
+    // branch, driven by a 15s poll / socket push — see lobby.tsx). When that race is
+    // lost, a participant lands here with the group still `waiting`, so the old
+    // `active`-only guard silently skipped starting the clock — the game then reads
+    // as "no active timer" and jumps straight to Investigation with 00:00 showing.
+    // Treat `waiting` the same as `active` here (the participant has already been
+    // routed to the game screen, so the game IS starting for them regardless of
+    // which flag value happens to be stored yet) while still never resurrecting a
+    // timer for a `finished`/`completed`/`incomplete` group.
+    if (group.status === 'active' || group.status === 'waiting') {
+        if (group.status === 'waiting') {
+            // Complete-group gate: never start the game for a group that never
+            // reached capacity. Incomplete groups end on the lobby
+            // (buildLobbyPayload → group_incomplete); this is the backend safety
+            // net for any direct hit on the game endpoint. Already-`active` groups
+            // (a game that legitimately started) are untouched.
+            if (!(await (0, lobbyService_1.isGroupAtCapacity)(group_id))) {
+                throw new AppError_1.AppError('Your group not complete participant.', 403);
+            }
+            await (0, db_1.query)("UPDATE game_groups SET status = 'active' WHERE id = ? AND status = 'waiting'", [group_id]);
+        }
+        const activeCfg = await getActivityConfigForGroup(group_id);
+        await (0, timerService_1.ensureCaseSummaryTimer)(group_id, Number(activeCfg?.case_summary_view_secs) || 300);
+        // Self-heal a game whose Case Summary ended but whose Questioning phase was
+        // never started (missed timer tick) — otherwise it stays stuck at 00:00.
+        await (0, timerService_1.recoverMissedQuestioningPhase)(group_id);
+    }
     const [sessions] = await (0, db_1.query)(`SELECT ps.*, p.name as participant_name, p.email as participant_email,
                 gr.role_type, gr.character_name, gr.role_image, gr.objective
             FROM participant_sessions ps
@@ -156,6 +196,13 @@ exports.getGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         if (r.vote_value === 'suspicious')
             lieVoteTallies[key].suspicious = Number(r.cnt);
     }
+    // Which lie-detector answers THIS player has already voted on. The client uses
+    // this to re-open the believable/suspicious popup on resync for any answer it
+    // still owes a vote on — so a missed `new_answer` broadcast (reconnect gap, or a
+    // multi-worker deploy) no longer means the player silently never gets to vote.
+    const [myVoteRows] = await (0, db_1.query)(`SELECT reference_id AS question_id FROM votes
+            WHERE group_id = ? AND reference_type = 'lie_detector' AND voter_id = ?`, [group_id, userSession.id]);
+    const myLieVotes = myVoteRows.map((r) => Number(r.question_id));
     const [clueRooms] = await (0, db_1.query)(`SELECT cr.*, gc.clue_title, gc.clue_short_description, gc.clue_detail, gc.clue_image
             FROM clue_rooms cr
             JOIN game_clues gc ON gc.id = cr.clue_id
@@ -186,6 +233,7 @@ exports.getGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         questions: hydratedQuestions,
         lie_detector_rounds: lieDetectorRoundsWithTally,
         lie_vote_tallies: lieVoteTallies,
+        my_lie_votes: myLieVotes,
         clue_rooms: clueRooms.map((c) => ({
             ...c,
             game_clues: {
@@ -205,6 +253,18 @@ exports.getGameState = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         my_role: (0, serializer_1.serializeData)(groupPayload.participant_sessions.find((s) => String(s.id) === String(userSession.id))?.game_roles),
         is_investigator: userSession.role_type === 'investigator',
     });
+});
+/**
+ * DEV / TESTING ONLY — skip the current phase's timer so the next screen opens
+ * immediately. Drives the same transitions the timer service would, then broadcasts
+ * to the group. Remove the button that calls this before production.
+ */
+exports.devAdvance = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const { group_id } = req.params;
+    if (!group_id)
+        throw new AppError_1.AppError('group_id is required', 400);
+    const result = await (0, timerService_1.devAdvancePhase)(group_id);
+    return (0, apiResponse_1.successResponse)(res, 'Phase advanced', result);
 });
 /**
  * Investigator Asks a Question
@@ -286,42 +346,65 @@ exports.answerQuestion = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const config = await getActivityConfigForGroup(question.group_id);
     const responseSecs = Number(config?.question_response_secs ?? 120);
     const noResponsePenalty = Math.abs(Number(config?.no_response_penalty ?? -10));
+    // Compute how late the answer is using the DATABASE clock for BOTH timestamps.
+    // Previously this did moment(question.created_at) vs moment() (Node's clock),
+    // which silently added the offset between the MySQL server timezone and the Node
+    // process timezone. When they differ (very common in production: MySQL on UTC,
+    // Node on IST), an answer submitted immediately looked hours "late", so the
+    // no-response penalty was deducted even though the player answered on time —
+    // i.e. scores went negative for correct, timely answers. TIMESTAMPDIFF against
+    // NOW() keeps created_at and "now" on the same clock, so no offset can creep in.
+    const [elapsedRows] = await (0, db_1.query)('SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) AS elapsed FROM questions WHERE id = ? LIMIT 1', [question_id]);
+    const lateBySecs = Number(elapsedRows?.[0]?.elapsed ?? 0);
     const now = (0, moment_1.default)();
-    const lateBySecs = now.diff((0, moment_1.default)(question.created_at), 'seconds');
     const penalty = lateBySecs > responseSecs ? noResponsePenalty : 0;
-    // Lie Detector engagement bonus (spec §2): answering a question directed at
-    // you during an active Lie Detector round earns +5. Awarded to whichever
-    // player is in the hot seat — gating it on the culprit role would expose the
-    // culprit through the live scoreboard.
-    const [lieRoundRows] = await (0, db_1.query)(`SELECT id FROM lie_detector_rounds
-            WHERE group_id = ? AND suspect_id = ? AND status = 'active' AND created_at <= ?
-            ORDER BY id DESC LIMIT 1`, [question.group_id, participantSession.id, question.created_at]);
-    const lieParticipationBonus = Number(config?.lie_detector_participation_bonus ?? 5);
-    const lieDetectorBonus = lieRoundRows?.[0] && penalty === 0 ? lieParticipationBonus : 0;
-    const answer = await (0, db_1.withTransaction)(async (conn) => {
-        await conn.query(`INSERT INTO answers (question_id, participant_session_id, answer_text, penalty_applied, answered_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, NOW(), NOW())`, [question_id, participantSession.id, answer_text, penalty, now.toDate()]);
-        if (penalty > 0) {
-            await conn.query(`UPDATE participant_sessions SET total_score = total_score - ? WHERE id = ?`, [
-                penalty,
-                participantSession.id,
+    // Spec rules 3 & 4: every valid answer that beats the timer earns +10,
+    // whether it answers a normal Investigator question or a Lie Detector
+    // question. A late answer takes the timeout penalty instead and earns no
+    // bonus — never both (spec rule 5: never penalise a player who already
+    // submitted a valid, on-time answer, and never reward a timed-out one).
+    const answerBonus = Number(config?.timely_response_bonus ?? 10);
+    const validAnswerBonus = penalty === 0 ? answerBonus : 0;
+    // The `existingAnswers` check above runs OUTSIDE this transaction, so two
+    // near-simultaneous submits (a double-click, or a retried request) can both
+    // pass it before either has committed. The insert is guarded by a unique key
+    // on `answers.question_id` and is the FIRST statement in the transaction, so
+    // the loser's insert fails and the whole transaction rolls back before any
+    // penalty/bonus is applied twice — mirrors the same race guard already used
+    // for group_accusations in verdictScoringService.ts.
+    let answer;
+    try {
+        answer = await (0, db_1.withTransaction)(async (conn) => {
+            await conn.query(`INSERT INTO answers (question_id, participant_session_id, answer_text, penalty_applied, answered_at, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, NOW(), NOW())`, [question_id, participantSession.id, answer_text, penalty, now.toDate()]);
+            if (penalty > 0) {
+                await conn.query(`UPDATE participant_sessions SET total_score = total_score - ? WHERE id = ?`, [
+                    penalty,
+                    participantSession.id,
+                ]);
+            }
+            if (validAnswerBonus > 0) {
+                await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
+                    validAnswerBonus,
+                    participantSession.id,
+                ]);
+                await conn.query(`INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                        VALUES (?, ?, 'answer_question', NOW(), NOW())`, [participantSession.id, validAnswerBonus]);
+            }
+            // The answer arrived — defuse the timeout timer so it doesn't also fire.
+            await conn.query(`UPDATE timers SET is_active = 0 WHERE group_id = ? AND timer_type = 'question_response' AND reference_id = ?`, [question.group_id, question_id]);
+            const [rows] = await conn.query(`SELECT * FROM answers WHERE question_id = ? ORDER BY id DESC LIMIT 1`, [
+                question_id,
             ]);
+            return rows?.[0];
+        });
+    }
+    catch (err) {
+        if (err?.code === 'ER_DUP_ENTRY') {
+            throw new AppError_1.AppError('Already answered', 400);
         }
-        if (lieDetectorBonus > 0) {
-            await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
-                lieDetectorBonus,
-                participantSession.id,
-            ]);
-            await conn.query(`INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
-                    VALUES (?, ?, 'lie_detector_answer', NOW(), NOW())`, [participantSession.id, lieDetectorBonus]);
-        }
-        // The answer arrived — defuse the timeout timer so it doesn't also fire.
-        await conn.query(`UPDATE timers SET is_active = 0 WHERE group_id = ? AND timer_type = 'question_response' AND reference_id = ?`, [question.group_id, question_id]);
-        const [rows] = await conn.query(`SELECT * FROM answers WHERE question_id = ? ORDER BY id DESC LIMIT 1`, [
-            question_id,
-        ]);
-        return rows?.[0];
-    });
+        throw err;
+    }
     server_1.io.to(`group_${question.group_id}`).emit('new_answer', (0, serializer_1.serializeData)(answer));
     await emitScoresUpdate(question.group_id);
     return (0, apiResponse_1.successResponse)(res, 'Answered successfully', (0, serializer_1.serializeData)(answer));
@@ -351,13 +434,25 @@ exports.startLieDetector = (0, asyncHandler_1.asyncHandler)(async (req, res) => 
     if (!investigatorSession || investigatorSession.role_type !== 'investigator') {
         throw new AppError_1.AppError('Only the Investigator can start the lie detector', 403);
     }
-    const [usedRows] = await (0, db_1.query)(`SELECT id FROM score_logs WHERE participant_session_id = ? AND reason = 'lie_detector_used' LIMIT 1`, [investigatorSession.id]);
-    if (usedRows?.[0])
-        throw new AppError_1.AppError('The Lie Detector can only be used once per game', 400);
     const config = await getActivityConfigForGroup(group_id);
     const timerSecs = Number(config?.lie_detector_timer_secs ?? 420);
     const initBonus = Number(config?.lie_detector_init_bonus ?? 5);
-    const round = await (0, db_1.withTransaction)(async (conn) => {
+    // The Lie Detector is once per game, so "is there already a round for this
+    // group?" is the source of truth. The check and the insert MUST be serialised:
+    // a fast double-click (or a retry) used to send two requests that both passed a
+    // plain SELECT before either had inserted. Locking the group row makes the second
+    // request wait, then see the first one's round.
+    const { round, created } = await (0, db_1.withTransaction)(async (conn) => {
+        await conn.query('SELECT id FROM game_groups WHERE id = ? FOR UPDATE', [group_id]);
+        const [existingRows] = await conn.query(`SELECT * FROM lie_detector_rounds WHERE group_id = ? ORDER BY id DESC LIMIT 1`, [group_id]);
+        const existing = existingRows?.[0];
+        if (existing) {
+            // Still running → this is a duplicate click / retry: hand back the live
+            // round instead of erroring, so the UI just shows lie-detector mode.
+            if (existing.status === 'active')
+                return { round: existing, created: false };
+            throw new AppError_1.AppError('The Lie Detector can only be used once per game', 400);
+        }
         const [insertResult] = await conn.query(`INSERT INTO lie_detector_rounds (group_id, suspect_id, status, created_at, updated_at)
                 VALUES (?, ?, 'active', NOW(), NOW())`, [group_id, suspect_session_id]);
         const roundId = insertResult.insertId;
@@ -373,11 +468,21 @@ exports.startLieDetector = (0, asyncHandler_1.asyncHandler)(async (req, res) => 
         await conn.query(`INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
                 VALUES (?, ?, 'lie_detector_used', NOW(), NOW())`, [investigatorSession.id, initBonus]);
         const [rows] = await conn.query(`SELECT * FROM lie_detector_rounds WHERE id = ? LIMIT 1`, [roundId]);
-        return rows?.[0];
+        return { round: rows?.[0], created: true };
     });
-    server_1.io.to(`group_${group_id}`).emit('lie_detector_started', (0, serializer_1.serializeData)(round));
-    await emitScoresUpdate(group_id);
-    return (0, apiResponse_1.successResponse)(res, 'Lie detector round started', (0, serializer_1.serializeData)(round));
+    // How long the round has left, from the SERVER's timer row — so every client
+    // (the investigator's own response, the room broadcast, and a duplicate click)
+    // counts down the same clock instead of each starting a fresh 7 minutes.
+    const [timerRows] = await (0, db_1.query)(`SELECT TIMESTAMPDIFF(SECOND, NOW(), expires_at) AS secs FROM timers
+            WHERE group_id = ? AND timer_type = 'lie_detector' AND reference_id = ? AND is_active = 1
+            ORDER BY id DESC LIMIT 1`, [group_id, round.id]);
+    const secondsRemaining = Math.min(timerSecs, Math.max(0, Number(timerRows?.[0]?.secs ?? timerSecs)));
+    const payload = (0, serializer_1.serializeData)({ ...round, seconds_remaining: secondsRemaining, duration_secs: timerSecs });
+    if (created) {
+        server_1.io.to(`group_${group_id}`).emit('lie_detector_started', payload);
+        await emitScoresUpdate(group_id);
+    }
+    return (0, apiResponse_1.successResponse)(res, created ? 'Lie detector round started' : 'Lie detector already running', payload);
 });
 /**
  * Vote in Lie Detector — one vote per participant per answer, tallied in real time.
@@ -442,13 +547,12 @@ exports.endLieDetectorRound = (0, asyncHandler_1.asyncHandler)(async (req, res) 
     if (!investigatorSession || investigatorSession.role_type !== 'investigator') {
         throw new AppError_1.AppError('Only the Investigator can end the lie detector round', 403);
     }
-    await (0, db_1.query)(`UPDATE lie_detector_rounds SET status = 'completed', updated_at = NOW() WHERE id = ?`, [round_id]);
-    await (0, db_1.query)(`UPDATE timers SET is_active = 0 WHERE group_id = ? AND timer_type = 'lie_detector'`, [group_id]);
-    server_1.io.to(`group_${group_id}`).emit('phase_changed', {
-        new_phase: 'questioning',
-        message: 'Lie Detector round has ended.',
-    });
-    return (0, apiResponse_1.successResponse)(res, 'Lie detector round ended');
+    // The Lie Detector always runs its full duration (7 min by default) and closes
+    // itself when its timer expires (timerService 'lie_detector' case). It cannot be
+    // cut short — refuse rather than end it, so a stray click/request can't end the
+    // round early. `round_id` is only echoed back for the client's benefit.
+    void round_id;
+    throw new AppError_1.AppError('The Lie Detector runs for its full duration and ends automatically.', 400);
 });
 /**
  * Use Witness Passcard
@@ -529,4 +633,38 @@ exports.reopenCaseSummary = (0, asyncHandler_1.asyncHandler)(async (req, res) =>
         message: 'Investigator has reopened the case summary for 5 more minutes!',
     });
     return (0, apiResponse_1.successResponse)(res, 'Case summary reopened successfully');
+});
+/**
+ * Clue Room opened — spec rule 10: the first time a player opens the Clue Room
+ * popup they earn +10. Guarded by a per-session 'clue_room_opened' score log so
+ * reopening the popup never awards again (once per player per game). There is NO
+ * dwell / 10-minute requirement — opening the popup is enough.
+ */
+exports.openClueRoom = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const { group_id, participant_id } = req.body;
+    const session = await getSessionForParticipant(group_id, participant_id);
+    if (!session)
+        throw new AppError_1.AppError('Session not found', 404);
+    const config = await getActivityConfigForGroup(group_id);
+    const clueBonus = Number(config?.clue_room_bonus ?? 10);
+    let awarded = false;
+    await (0, db_1.withTransaction)(async (conn) => {
+        // Lock the session row so two rapid opens can't both pass the guard below.
+        await conn.query('SELECT id FROM participant_sessions WHERE id = ? FOR UPDATE', [session.id]);
+        const [existing] = await conn.query(`SELECT id FROM score_logs WHERE participant_session_id = ? AND reason = 'clue_room_opened' LIMIT 1`, [session.id]);
+        if (existing.length > 0)
+            return; // already awarded — reopening is free
+        if (clueBonus !== 0) {
+            await conn.query(`UPDATE participant_sessions SET total_score = total_score + ? WHERE id = ?`, [
+                clueBonus,
+                session.id,
+            ]);
+        }
+        await conn.query(`INSERT INTO score_logs (participant_session_id, points, reason, created_at, updated_at)
+                VALUES (?, ?, 'clue_room_opened', NOW(), NOW())`, [session.id, clueBonus]);
+        awarded = true;
+    });
+    if (awarded)
+        await emitScoresUpdate(group_id);
+    return (0, apiResponse_1.successResponse)(res, 'Clue room opened', { awarded, points: awarded ? clueBonus : 0 });
 });

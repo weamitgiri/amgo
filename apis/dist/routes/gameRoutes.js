@@ -37,55 +37,63 @@ const express_1 = require("express");
 const express_validator_1 = require("express-validator");
 const gameEngineController = __importStar(require("../controllers/gameEngineController"));
 const validateRequest_1 = require("../middlewares/validateRequest");
+const participantAuth_1 = require("../middlewares/participantAuth");
 const router = (0, express_1.Router)();
 // Participants have no JWT (see participantController.ts's existing pattern) — every
 // action below is scoped by group_id + the caller's own participant_id instead of
 // an auth middleware.
 // Get game state
-router.get('/state/:group_id', gameEngineController.getGameState);
+router.get('/state/:group_id', participantAuth_1.participantAuth, gameEngineController.getGameState);
+// DEV / TESTING ONLY — skip the current phase timer (remove before production).
+router.post('/dev/advance/:group_id', gameEngineController.devAdvance);
 // Case Summary Reopen
-router.post('/reopen-case-summary', [
+router.post('/reopen-case-summary', participantAuth_1.participantAuth, [
     (0, express_validator_1.body)('group_id').notEmpty().withMessage('Group ID is required'),
     (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
 ], validateRequest_1.validateRequest, gameEngineController.reopenCaseSummary);
 // Questioning
-router.post('/ask-question', [
+router.post('/ask-question', participantAuth_1.participantAuth, [
     (0, express_validator_1.body)('group_id').notEmpty().withMessage('Group ID is required'),
     (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
     (0, express_validator_1.body)('asked_to_session_id').notEmpty().withMessage('Target session ID is required'),
     (0, express_validator_1.body)('question_text').notEmpty().withMessage('Question text is required'),
 ], validateRequest_1.validateRequest, gameEngineController.askQuestion);
-router.post('/answer-question', [
+router.post('/answer-question', participantAuth_1.participantAuth, [
     (0, express_validator_1.body)('question_id').notEmpty().withMessage('Question ID is required'),
     (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
     (0, express_validator_1.body)('answer_text').notEmpty().withMessage('Answer text is required'),
 ], validateRequest_1.validateRequest, gameEngineController.answerQuestion);
 // Lie Detector
-router.post('/start-lie-detector', [
+router.post('/start-lie-detector', participantAuth_1.participantAuth, [
     (0, express_validator_1.body)('group_id').notEmpty().withMessage('Group ID is required'),
     (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
     (0, express_validator_1.body)('suspect_session_id').notEmpty().withMessage('Suspect session ID is required'),
 ], validateRequest_1.validateRequest, gameEngineController.startLieDetector);
-router.post('/vote-lie-detector', [
+router.post('/vote-lie-detector', participantAuth_1.participantAuth, [
     (0, express_validator_1.body)('group_id').notEmpty().withMessage('Group ID is required'),
     (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
     (0, express_validator_1.body)('round_id').notEmpty().withMessage('Round ID is required'),
     (0, express_validator_1.body)('question_id').notEmpty().withMessage('Question ID is required'),
     (0, express_validator_1.body)('vote_value').isIn(['believable', 'suspicious']).withMessage('Invalid vote value'),
 ], validateRequest_1.validateRequest, gameEngineController.voteLieDetector);
-router.get('/lie-detector/:round_id/tally', gameEngineController.getLieDetectorTally);
-router.post('/end-lie-detector', [
+router.get('/lie-detector/:round_id/tally', participantAuth_1.participantAuth, gameEngineController.getLieDetectorTally);
+router.post('/end-lie-detector', participantAuth_1.participantAuth, [
     (0, express_validator_1.body)('group_id').notEmpty().withMessage('Group ID is required'),
     (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
     (0, express_validator_1.body)('round_id').notEmpty().withMessage('Round ID is required'),
 ], validateRequest_1.validateRequest, gameEngineController.endLieDetectorRound);
 // Witness Passcard
-router.post('/use-passcard', [
+router.post('/use-passcard', participantAuth_1.participantAuth, [
     (0, express_validator_1.body)('group_id').notEmpty().withMessage('Group ID is required'),
     (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
 ], validateRequest_1.validateRequest, gameEngineController.useWitnessPasscard);
-// Final Accusation (any non-culprit role — see verdictScoringService.ts)
-router.post('/submit-accusation', [
+// Clue Room opened (+10 once per player per game — spec rule 10)
+router.post('/clue-room/open', participantAuth_1.participantAuth, [
+    (0, express_validator_1.body)('group_id').notEmpty().withMessage('Group ID is required'),
+    (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
+], validateRequest_1.validateRequest, gameEngineController.openClueRoom);
+// Final Accusation (every player, culprit included — see verdictScoringService.ts)
+router.post('/submit-accusation', participantAuth_1.participantAuth, [
     (0, express_validator_1.body)('group_id').notEmpty().withMessage('Group ID is required'),
     (0, express_validator_1.body)('participant_id').notEmpty().withMessage('participant_id is required'),
     (0, express_validator_1.body)('accused_session_id').notEmpty().withMessage('Accused session ID is required'),

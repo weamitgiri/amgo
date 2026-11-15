@@ -41,7 +41,20 @@ export declare const completeBooking: (req: Request, res: Response, next: import
 export declare const updateSession: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const deactivateAccount: (req: Request, res: Response, next: import("express").NextFunction) => void;
 /**
- * Results tab — every completed/incomplete group across the organizer's
- * bookings, with results-PDF availability (PDFs live for 1 hour post-game).
+ * Results tab — one row per game session (booking), listed only once the
+ * session's result is declared (every played group finished) and only for one
+ * hour after that declaration. Applies to Mystery Quest and Cook & Create.
  */
 export declare const getOrganizerResults: (req: Request, res: Response, next: import("express").NextFunction) => void;
+/**
+ * Results tab — download a Mystery Quest session's single results PDF (every
+ * group and its players). Only the organizer who owns the booking can download
+ * it; it is generated (or brought up to date) on demand.
+ */
+export declare const downloadMQResultsPdf: (req: Request, res: Response, next: import("express").NextFunction) => void;
+/**
+ * Results tab — download a Cook & Create session's single Fun Awards PDF. Only
+ * the organizer who owns the booking can download it; it is generated (or
+ * brought up to date) on demand, so the link works after any refresh.
+ */
+export declare const downloadCCResultsPdf: (req: Request, res: Response, next: import("express").NextFunction) => void;

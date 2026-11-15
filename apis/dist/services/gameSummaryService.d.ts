@@ -26,6 +26,7 @@ export type GameSummaryPayload = {
         tagline: string | null;
         case_summary_html: string | null;
         bg_image: string | null;
+        case_summary_image: string | null;
         timeline: {
             time: string;
             event: string;
@@ -56,6 +57,8 @@ export type GameSummaryPayload = {
         you_know: string[];
         keep_in_mind: string[];
         role_image: string | null;
+        /** Own role only: the 60×60 badge icon uploaded in admin (null for others). */
+        role_icon: string | null;
         is_you: boolean;
     }[];
     photos: {
@@ -77,6 +80,12 @@ export type GameSummaryPayload = {
         details: string[];
     }[];
     role_strategy_slides: {
+        title: string;
+        description: string;
+        details: string[];
+    }[];
+    /** Investigator only: every OTHER role's strategy cards, one slide per role. */
+    all_role_strategy_slides: {
         title: string;
         description: string;
         details: string[];

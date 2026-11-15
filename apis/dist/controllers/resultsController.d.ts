@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 /**
- * Post-game results for a group — always rendered with pseudonyms (never raw
- * participant names), matching how the live game already hides identities.
+ * Post-game results for a group. The game is over, so identities are no longer
+ * secret — the reveal screen shows each player's real registered name alongside
+ * their character and role (the PDF already does the same).
  */
 export declare const getGameResults: (req: Request, res: Response, next: import("express").NextFunction) => void;
 /**

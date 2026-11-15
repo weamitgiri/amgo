@@ -14,6 +14,17 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = __importDefault(require("./utils/logger"));
 // Load environment variables
 dotenv_1.default.config();
+// Socket.IO rooms, presence and the game/timer loops live IN THIS PROCESS (there is
+// no Redis adapter). Run under PM2 cluster mode (or any multi-instance setup) and an
+// HTTP request handled by worker A broadcasts only to the sockets connected to worker
+// A — so players see questions, answers and Lie Detector state only after a refresh —
+// and every worker also runs the timer loop. Run ONE instance
+// (`pm2 start dist/server.js --name zoventro-api -i 1`, i.e. fork mode) until a Redis
+// adapter is added.
+if (process.env.exec_mode === 'cluster_mode' || Number(process.env.NODE_APP_INSTANCE) > 0) {
+    logger_1.default.error('[Server] Running in multi-instance / PM2 cluster mode, but Socket.IO has no shared adapter — ' +
+        'realtime events will only reach sockets on the same worker. Use a single instance (fork mode).');
+}
 const defaultOrigins = [
     'http://localhost:8080',
     'http://127.0.0.1:8080',
@@ -43,7 +54,7 @@ const corsOptions = {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Participant-Token'],
 };
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
