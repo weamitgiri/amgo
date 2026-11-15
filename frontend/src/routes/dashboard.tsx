@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   Share2, MessageCircle, Mail, Link2,
   Calendar, Clock, ShieldCheck, Download, Users, Boxes,
-  UserMinus, MousePointerClick, Play, Info, CheckCircle2, Layers, X, AlertCircle,
+  UserMinus, MousePointerClick, Play, Info, CheckCircle2, Layers, X, AlertCircle, PlusCircle,
 } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { isOrganizerAuthenticated, requireOrganizerAuth } from "@/lib/auth";
@@ -30,6 +30,8 @@ function DashboardPage() {
   const [rescheduled, setRescheduled] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [invoiceDownloading, setInvoiceDownloading] = useState(false);
+  // Which purchased game is in focus (game switcher). null = newest booking.
+  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const navigate = useNavigate();
   // Early auth check as fallback
   useEffect(() => {
@@ -38,7 +40,8 @@ function DashboardPage() {
     }
   }, [navigate]);
 
-  const { booking, organizer, eventStats, isLoading, isError } = useOrganizerEventLive();
+  const { booking, bookings, organizer, eventStats, isLoading, isError } =
+    useOrganizerEventLive(selectedBookingId);
 
   const organizerName = organizer?.name ?? "Organizer";
   const organizerEmail = organizer?.email ?? "";
@@ -166,6 +169,16 @@ function DashboardPage() {
   // its scheduled time, so the time window would flag "completed" while a group
   // is still playing. `eventEndTime` is retained only for the display label.
   const isEventCompleted = eventStatusMeta?.is_completed ?? false;
+
+  // "Register for New Game": allowed once the organizer's most recent game is
+  // finished (so they aren't mid-way through a just-purchased game). The live
+  // flag covers the case where the newest game is the one currently in focus.
+  const latestBooking = bookings[0];
+  const canRegisterNewGame =
+    !!latestBooking &&
+    (latestBooking.is_completed === 1 ||
+      (latestBooking.booking_id === booking?.booking_id && isEventCompleted));
+  const goRegisterNewGame = () => navigate({ to: "/create", search: { activity: undefined } });
   const eventStatusLabel = eventStartsMs === null
     ? "Schedule unavailable"
     : isEventStarted
@@ -308,6 +321,54 @@ function DashboardPage() {
               </button>
             </div>
           </div>
+
+          {/* My Games bar: switch between purchased games + register another once
+              the latest game is completed. Only shown when it adds something
+              (more than one game, or the latest game is finished). */}
+          {(bookings.length > 1 || canRegisterNewGame) && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white shadow-card p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-foreground mr-1">My Games</span>
+                {bookings.map((b, i) => {
+                  const active = b.booking_id === booking?.booking_id;
+                  const done = b.is_completed === 1;
+                  return (
+                    <button
+                      key={b.booking_id}
+                      onClick={() => setSelectedBookingId(b.booking_id)}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                        active
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border/80 bg-white text-foreground hover:bg-muted/50"
+                      }`}
+                      title={b.activity_name}
+                    >
+                      <span className="max-w-[160px] truncate">
+                        {b.activity_name}
+                        {bookings.length > 1 ? ` #${bookings.length - i}` : ""}
+                      </span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                          done ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {done ? "Completed" : "Active"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {canRegisterNewGame && (
+                <button
+                  onClick={goRegisterNewGame}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-sm"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  Register for New Game
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Event Overview */}
       <section className="rounded-2xl bg-white shadow-card overflow-hidden">

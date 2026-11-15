@@ -98,6 +98,8 @@ export interface DashboardBooking {
   max_users: number;
   registered_participants: number;
   payment_date?: string | null;
+  /** 1 when every group of this game has finished (completed/incomplete). */
+  is_completed?: number;
 }
 
 export type OrganizerGameResult = {

@@ -4,7 +4,7 @@ import { organizerService } from "@/api/services/organizer.service";
 import type { OrganizerDashboardResponse, OrganizerEventStats } from "@/api/types/organizer";
 import { getSocket } from "@/lib/socket";
 
-export function useOrganizerEventLive() {
+export function useOrganizerEventLive(selectedBookingId?: number | null) {
   const queryClient = useQueryClient();
 
   const dashboardQuery = useQuery<OrganizerDashboardResponse, Error>({
@@ -14,7 +14,20 @@ export function useOrganizerEventLive() {
     retry: false,
   });
 
-  const bookingId = dashboardQuery.data?.bookings?.[0]?.booking_id;
+  // Only paid/activated games are real purchased games. An abandoned unpaid
+  // draft (status 'pending_activation') must never appear as a game or become
+  // the primary booking — a returning organizer who starts a second purchase
+  // and drops it still sees their real games, not the draft.
+  const bookings = (dashboardQuery.data?.bookings ?? []).filter(
+    (b) => b.booking_status !== "pending_activation"
+  );
+  // The caller can pick which purchased game is in focus (dashboard game switcher);
+  // default to the newest booking so every existing caller keeps its behaviour.
+  const selectedBooking =
+    (selectedBookingId != null
+      ? bookings.find((b) => b.booking_id === selectedBookingId)
+      : undefined) ?? bookings[0];
+  const bookingId = selectedBooking?.booking_id;
 
   const statsQuery = useQuery<OrganizerEventStats, Error>({
     queryKey: ["organizerEventStats", bookingId],
@@ -61,7 +74,8 @@ export function useOrganizerEventLive() {
 
   return {
     bookingId,
-    booking: dashboardQuery.data?.bookings?.[0],
+    booking: selectedBooking,
+    bookings,
     organizer: dashboardQuery.data?.organizer,
     eventStats: statsQuery.data,
     isLoading: dashboardQuery.isLoading || statsQuery.isLoading,

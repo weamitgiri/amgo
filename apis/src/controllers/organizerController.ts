@@ -209,7 +209,16 @@ export const getOrganizerDashboard = asyncHandler(async (req: Request, res: Resp
             p.price as package_price,
             p.max_users,
             (SELECT COUNT(*) FROM game_participants WHERE booking_id = ob.id AND email_verified_at IS NOT NULL) as registered_participants,
-            (SELECT COALESCE(bill.created_at, ob.created_at) FROM organizer_billings bill WHERE bill.booking_id = ob.id ORDER BY bill.id DESC LIMIT 1) as payment_date
+            (SELECT COALESCE(bill.created_at, ob.created_at) FROM organizer_billings bill WHERE bill.booking_id = ob.id ORDER BY bill.id DESC LIMIT 1) as payment_date,
+            -- A game is "completed" once every one of its groups is in a terminal
+            -- state (completed/incomplete) and at least one group exists. Mirrors
+            -- eventStatsService's isEventCompleted so the dashboard can gate the
+            -- "Register for New Game" button without a separate stats call per booking.
+            (SELECT CASE
+                        WHEN COUNT(*) > 0 AND COUNT(*) = SUM(CASE WHEN gg.status IN ('completed','incomplete') THEN 1 ELSE 0 END)
+                        THEN 1 ELSE 0
+                    END
+             FROM game_groups gg WHERE gg.booking_id = ob.id) as is_completed
         FROM organizer_bookings ob
         JOIN activities a ON ob.activity_id = a.id
         JOIN packages p ON ob.package_id = p.id
