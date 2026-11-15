@@ -170,14 +170,12 @@ function DashboardPage() {
   // is still playing. `eventEndTime` is retained only for the display label.
   const isEventCompleted = eventStatusMeta?.is_completed ?? false;
 
-  // "Register for New Game": allowed once the organizer's most recent game is
-  // finished (so they aren't mid-way through a just-purchased game). The live
-  // flag covers the case where the newest game is the one currently in focus.
+  // "Register for New Game": available to any organizer who already has at least
+  // one paid game — whether that game is scheduled, started/in-progress, or
+  // completed. They can buy an additional game at any time without affecting the
+  // existing one; each game keeps its own payment, link and data.
   const latestBooking = bookings[0];
-  const canRegisterNewGame =
-    !!latestBooking &&
-    (latestBooking.is_completed === 1 ||
-      (latestBooking.booking_id === booking?.booking_id && isEventCompleted));
+  const canRegisterNewGame = !!latestBooking;
   const goRegisterNewGame = () => navigate({ to: "/create", search: { activity: undefined } });
   const eventStatusLabel = eventStartsMs === null
     ? "Schedule unavailable"
