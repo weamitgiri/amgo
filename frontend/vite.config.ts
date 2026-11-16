@@ -8,7 +8,13 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    // `vite preview` (used in production) rejects unknown Host headers by default.
+    // Allow the live domains so requests proxied in by nginx are served.
+    preview: {
+      allowedHosts: ["zoventro.com", "www.zoventro.com"],
+    },
     server: {
+      allowedHosts: ["zoventro.com", "www.zoventro.com"],
       proxy: {
         "/v1": {
           target: process.env.VITE_API_PROXY_TARGET || "http://localhost:6001",
