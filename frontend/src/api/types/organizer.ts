@@ -238,6 +238,8 @@ export interface BookingConsents {
   terms_accepted: boolean;
   non_refundable_accepted: boolean;
   validity_accepted: boolean;
+  participant_max: boolean;
+  confirm_user: boolean;
 }
 
 export type PaymentMethodId = "razorpay" | "cod";

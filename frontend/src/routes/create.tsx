@@ -1314,6 +1314,11 @@ function PaymentStep({
     terms_accepted: false,
     non_refundable_accepted: false,
     validity_accepted: false,
+    // These two were missing from the state, so they were never part of the
+    // "all consents accepted" check — the user could continue to payment with
+    // them unticked. Every declaration must be accepted (spec).
+    participant_max: false,
+    confirm_user: false,
   });
 
   const price = session.package?.price ?? 0;

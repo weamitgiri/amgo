@@ -179,6 +179,8 @@ router.post(
         body('consents.terms_accepted').isBoolean().equals('true').withMessage('Terms acceptance is required'),
         body('consents.non_refundable_accepted').isBoolean().equals('true').withMessage('Non-refundable policy acceptance is required'),
         body('consents.validity_accepted').isBoolean().equals('true').withMessage('Booking validity acceptance is required'),
+        body('consents.participant_max').isBoolean().equals('true').withMessage('Group-size (multiples of 5) acknowledgement is required'),
+        body('consents.confirm_user').isBoolean().equals('true').withMessage('Participant-names consent is required'),
     ],
     validateRequest,
     organizerController.completeBooking
