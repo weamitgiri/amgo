@@ -826,7 +826,24 @@ export async function ensureCCStageDurations(): Promise<void> {
     }
 }
 
+/**
+ * organizer_bookings.session_code — the single shared login code employees enter
+ * (with their name) to join, replacing email+OTP. One code per booking, generated
+ * lazily (sessionCodeService). Nullable so existing bookings backfill on demand.
+ */
+export async function ensureBookingSessionCodeColumn(): Promise<void> {
+    try {
+        const [rows] = await query<any>(`SHOW COLUMNS FROM organizer_bookings LIKE 'session_code'`);
+        if ((rows as any).length === 0) {
+            await query('ALTER TABLE organizer_bookings ADD COLUMN session_code VARCHAR(12) NULL DEFAULT NULL AFTER invitation_link');
+        }
+    } catch (err: any) {
+        console.warn('[schemaHelpers] Could not ensure organizer_bookings.session_code:', err.message || err);
+    }
+}
+
 export async function ensureGameSchemaUpdates(): Promise<void> {
+    await ensureBookingSessionCodeColumn();
     await ensureGameGroupRetentionColumns();
     await ensureGameGroupsGameId();
     await ensureParticipantSessionsLeftAt();

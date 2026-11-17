@@ -18,6 +18,7 @@ import { generateNumericOtp } from '../utils/otp';
 import { getOtpExpiresAt, OTP_RESEND_COOLDOWN_SECONDS } from '../services/otpConfig';
 import { assertResendCooldown } from '../services/otpResend';
 import { notifyParticipantJoined } from '../services/notificationService';
+import { normaliseCode } from '../services/sessionCodeService';
 
 /**
  * Verify Invitation Link and Get Booking Info
@@ -286,6 +287,162 @@ export const verifyParticipantOtp = asyncHandler(async (req: Request, res: Respo
     }
 
     return successResponse(res, 'Verified successfully. Entering lobby...', result);
+});
+
+/**
+ * Participant Join via shared Login Code (Option A — single session code).
+ *
+ * The employee enters their full name and the one login code the organiser
+ * shared for this session. There is no email and no OTP: a matching code IS the
+ * verification, so the participant is marked verified and assigned to a group in
+ * one step, then lands in the lobby. The downstream lobby/game flow, grouping,
+ * timing and scoring are completely unchanged — only the join/auth step differs.
+ */
+export const participantJoinWithCode = asyncHandler(async (req: Request, res: Response) => {
+    const { booking_id, name, code } = req.body;
+
+    const trimmedName = String(name ?? '').trim();
+    if (!trimmedName) throw new AppError('Name is required', 400);
+
+    const [bookingRows] = await query(
+        `SELECT ob.id, ob.status, ob.game_id, ob.session_code, ob.scheduled_date, ob.scheduled_time,
+                a.lobby_wait_secs
+         FROM organizer_bookings ob
+         JOIN activities a ON a.id = ob.activity_id
+         WHERE ob.id = ? LIMIT 1`,
+        [booking_id]
+    );
+    if (bookingRows.length === 0) throw new AppError('Booking not found', 404);
+    const booking = bookingRows[0];
+
+    if (booking.status === 'expired' || booking.status === 'cancelled') {
+        throw new AppError('This session link has expired', 400);
+    }
+
+    // Entry window — identical rule to the OTP flow (verifyInvitation): entry
+    // closes lobby_wait_secs after the scheduled start.
+    if (booking.scheduled_date && booking.scheduled_time) {
+        const scheduledDate = moment(booking.scheduled_date).isValid()
+            ? moment(booking.scheduled_date).format('YYYY-MM-DD')
+            : String(booking.scheduled_date);
+        const scheduledTime = moment(booking.scheduled_time, ['HH:mm:ss', 'HH:mm', moment.ISO_8601], true).isValid()
+            ? moment(booking.scheduled_time, ['HH:mm:ss', 'HH:mm', moment.ISO_8601], true).format('HH:mm:ss')
+            : String(booking.scheduled_time);
+        const scheduleStart = moment(`${scheduledDate} ${scheduledTime}`, 'YYYY-MM-DD HH:mm:ss');
+        if (scheduleStart.isValid()) {
+            const lobbyWaitSecs = Number(booking.lobby_wait_secs) || 900;
+            const joinWindowEnd = scheduleStart.clone().add(lobbyWaitSecs, 'seconds');
+            if (moment().isAfter(joinWindowEnd)) {
+                throw new AppError(
+                    `Access Denied: entry closed at ${joinWindowEnd.format('h:mm A')}. Please contact the Organiser.`,
+                    403
+                );
+            }
+        }
+    }
+
+    // Validate the login code against the one issued for this booking.
+    const storedCode = booking.session_code ? String(booking.session_code).toUpperCase() : '';
+    const enteredCode = normaliseCode(code);
+    if (!enteredCode) throw new AppError('Login code is required', 400);
+    if (!storedCode || enteredCode !== storedCode) {
+        throw new AppError('Invalid login code. Please check the code shared by your organiser.', 403);
+    }
+
+    // One participant per browser. If this browser already holds a token for a
+    // participant in THIS booking, treat the submit as a rejoin (return the same
+    // participant, no duplicate row). If the token belongs to an active game in a
+    // DIFFERENT booking, block — mirrors assertBrowserNotBoundToOtherParticipant.
+    const browserToken = req.get('x-participant-token');
+    if (typeof browserToken === 'string' && /^[a-f0-9]{64}$/.test(browserToken)) {
+        const [boundRows] = await query(
+            `SELECT gp.id, gp.booking_id, gp.name, gp.group_id, gg.group_name, gg.status AS group_status
+             FROM game_participants gp
+             JOIN game_groups gg ON gg.id = gp.group_id
+             WHERE gp.join_token = ? AND gp.email_verified_at IS NOT NULL AND gp.status <> 'finished'
+             LIMIT 1`,
+            [browserToken]
+        );
+        if ((boundRows as any[]).length > 0) {
+            const bound = boundRows[0];
+            if (String(bound.booking_id) === String(booking_id)) {
+                return successResponse(res, 'Rejoined this session.', {
+                    participant_id: bound.id,
+                    name: bound.name,
+                    join_token: browserToken,
+                    group_id: bound.group_id,
+                    group_name: bound.group_name,
+                });
+            }
+            if (!['completed', 'incomplete', 'finished'].includes(String(bound.group_status))) {
+                throw new AppError(
+                    `This browser is already joined to an active game as ${bound.name}. ` +
+                        'Leave or finish that game before joining a different one.',
+                    409
+                );
+            }
+        }
+    }
+
+    const { getBookingLimits } = await import('../services/eventStatsService');
+    const limits = await getBookingLimits(booking_id);
+    const join_token = crypto.randomBytes(32).toString('hex');
+
+    const result = await withTransaction(async (conn) => {
+        // Lock the booking so the capacity check and insert are race-safe — the
+        // same guard the OTP verify step uses.
+        await conn.query('SELECT id FROM organizer_bookings WHERE id = ? FOR UPDATE', [booking_id]);
+
+        if (limits && limits.maxUsers > 0) {
+            const [totalRows] = (await conn.query(
+                'SELECT COUNT(*) AS total FROM game_participants WHERE booking_id = ? AND email_verified_at IS NOT NULL',
+                [booking_id]
+            )) as any;
+            if (Number(totalRows[0]?.total ?? 0) >= limits.maxUsers) {
+                throw new AppError(
+                    `Join limit reached. This package allows a maximum of ${limits.maxUsers} participants.`,
+                    403
+                );
+            }
+        }
+
+        // A validated code is the verification, so set email_verified_at now.
+        // email stays NULL — code participants have no email.
+        const [insertRes] = (await conn.query(
+            `INSERT INTO game_participants
+                (booking_id, game_id, name, email, email_verified_at, join_token, status, created_at, updated_at)
+             VALUES (?, ?, ?, NULL, NOW(), ?, 'joined', NOW(), NOW())`,
+            [booking_id, booking.game_id, trimmedName, join_token]
+        )) as any;
+        const participantId = insertRes.insertId;
+
+        // Reuse the existing group-assignment logic. It keys its "already in a
+        // group?" lookup on email; passing the fresh join_token (never an email)
+        // makes that lookup miss, so this is treated as a brand-new assignment.
+        const { groupId, groupName } = await assignParticipantToGroup(conn, booking_id, participantId, join_token);
+
+        return {
+            participant_id: participantId,
+            name: trimmedName,
+            join_token,
+            group_id: groupId,
+            group_name: groupName,
+        };
+    });
+
+    const { io } = require('../server');
+    if (io) {
+        await emitLobbyUpdate(io, result.group_id);
+        await emitEventStatsUpdate(io, booking_id);
+        await notifyParticipantJoined(
+            io,
+            booking_id,
+            { id: result.participant_id, name: result.name },
+            { id: result.group_id, name: result.group_name }
+        );
+    }
+
+    return successResponse(res, 'Joined successfully. Entering lobby...', result);
 });
 
 /**

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-import { ArrowRight, ArrowLeft, User, Mail, Calendar, Clock, Lock, ShieldCheck } from "lucide-react";
+import { ArrowRight, ArrowLeft, User, Mail, KeyRound, Calendar, Clock, Lock, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { participantService } from "@/api/services/participant.service";
 import type { JoinLinkResponse } from "@/api/types/participant";
@@ -111,11 +111,10 @@ function resolveJoinStep(data: JoinLinkResponse): "pending" | "form" {
 function JoinPage() {
   const navigate = useNavigate();
   const { linkToken } = Route.useParams();
-  const [step, setStep] = useState<"loading" | "invalid" | "pending" | "form" | "otp" | "done">("loading");
+  const [step, setStep] = useState<"loading" | "invalid" | "pending" | "form" | "done">("loading");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
-  const [otpValues, setOtpValues] = useState<string[]>(["", "", "", "", "", ""]);
   const [bookingId, setBookingId] = useState<number | null>(null);
   const [activityTitle, setActivityTitle] = useState("Mystery Quest");
   const [activityDescription, setActivityDescription] = useState("");
@@ -132,7 +131,6 @@ function JoinPage() {
   const [scheduleStart, setScheduleStart] = useState<Date | null>(null);
   const [linkError, setLinkError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const resend = useResendCountdown(60);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [joinedInfo, setJoinedInfo] = useState<{ group_id: number; group_name: string; name: string } | null>(null);
 
@@ -236,10 +234,9 @@ function JoinPage() {
     return () => clearInterval(interval);
   }, [step, linkToken]);
 
-  const canSendOtp = name.trim().length > 0 && email.includes("@") && disclaimerAccepted;
-  const otpCode = otpValues.join("");
+  const canJoin = name.trim().length > 0 && code.trim().length >= 4 && disclaimerAccepted;
 
-  const handleSendOtp = () => {
+  const handleJoin = () => {
     if (!bookingId) {
       toastError("Session is not ready. Please refresh the page and try again.");
       return;
@@ -248,8 +245,8 @@ function JoinPage() {
       toastError("Name is required.");
       return;
     }
-    if (!email.includes("@")) {
-      toastError("Please enter a valid email address.");
+    if (!code.trim()) {
+      toastError("Login code is required.");
       return;
     }
     if (!disclaimerAccepted) {
@@ -259,55 +256,7 @@ function JoinPage() {
 
     setIsSubmitting(true);
     participantService
-      .join({ booking_id: bookingId, name: name.trim(), email: email.trim() })
-      .then((data) => {
-        toastSuccess("Verification code sent to your email.");
-        if (import.meta.env.DEV && data && "dev_otp" in data && data.dev_otp) {
-          toastInfo(`Dev mode: use OTP ${data.dev_otp}`);
-        }
-        resend.start(60);
-        setStep("otp");
-      })
-      .catch((error) => {
-        toastError(error?.message || "Unable to send verification code.");
-      })
-      .finally(() => setIsSubmitting(false));
-  };
-
-  const handleResendOtp = () => {
-    if (!bookingId || resend.active) return;
-    setIsSubmitting(true);
-    participantService
-      .resendOtp({ booking_id: bookingId, email: email.trim() })
-      .then((data) => {
-        toastSuccess("A new code has been sent to your email.");
-        if (import.meta.env.DEV && data && "dev_otp" in data && data.dev_otp) {
-          toastInfo(`Dev mode: use OTP ${data.dev_otp}`);
-        }
-        resend.start(data?.resend_cooldown ?? 60);
-      })
-      .catch((error) => {
-        const retry = getRetryAfterSeconds(error);
-        if (retry) resend.start(retry);
-        toastError(error?.message || "Unable to resend the code.");
-      })
-      .finally(() => setIsSubmitting(false));
-  };
-
-  const handleVerifyOtp = () => {
-    if (!bookingId) return;
-    if (otpCode.length !== 6) {
-      toastError("Please enter the 6-digit OTP.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    participantService
-      .verifyOtp({
-        booking_id: bookingId,
-        email: email.trim(),
-        otp: otpCode,
-      })
+      .joinWithCode({ booking_id: bookingId, name: name.trim(), code: code.trim() })
       .then(async (response) => {
         setJoinedInfo({
           group_id: response.group_id,
@@ -324,7 +273,7 @@ function JoinPage() {
           gameSlug: slug,
         });
         setStep("done");
-        toastSuccess("Verified successfully. Entering the lobby...");
+        toastSuccess("Joined successfully. Entering the lobby...");
         const lobby = resolveLobbyRoute(slug);
         setTimeout(
           () =>
@@ -336,16 +285,9 @@ function JoinPage() {
         );
       })
       .catch((error) => {
-        toastError(error?.message || "OTP verification failed.");
+        toastError(error?.message || "Unable to join. Please check your login code and try again.");
       })
       .finally(() => setIsSubmitting(false));
-  };
-
-  const updateOtpValue = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    const next = [...otpValues];
-    next[index] = digit;
-    setOtpValues(next);
   };
 
   return (
@@ -471,28 +413,16 @@ function JoinPage() {
               <FormStep
                 name={name}
                 setName={setName}
-                email={email}
-                setEmail={setEmail}
+                code={code}
+                setCode={setCode}
                 disclaimerAccepted={disclaimerAccepted}
                 setDisclaimerAccepted={setDisclaimerAccepted}
-                onNext={handleSendOtp}
-                canProceed={name.trim().length > 0 && email.includes("@") && disclaimerAccepted}
+                onNext={handleJoin}
+                canProceed={canJoin}
                 isSubmitting={isSubmitting}
                 activityTitle={activityTitle}
                 activityDescription={activityDescription}
                 activitySlug={activitySlug}
-              />
-            )}
-            {step === "otp" && (
-              <OtpStep
-                email={email}
-                values={otpValues}
-                onUpdate={updateOtpValue}
-                onBack={() => setStep("form")}
-                onVerify={handleVerifyOtp}
-                onResend={handleResendOtp}
-                isSubmitting={isSubmitting}
-                cooldown={resend.remaining}
               />
             )}
             {step === "done" && (
@@ -647,8 +577,8 @@ function PendingStep({
 function FormStep({
   name,
   setName,
-  email,
-  setEmail,
+  code,
+  setCode,
   disclaimerAccepted,
   setDisclaimerAccepted,
   onNext,
@@ -660,8 +590,8 @@ function FormStep({
 }: {
   name: string;
   setName: (v: string) => void;
-  email: string;
-  setEmail: (v: string) => void;
+  code: string;
+  setCode: (v: string) => void;
   disclaimerAccepted: boolean;
   setDisclaimerAccepted: (v: boolean) => void;
   onNext: () => void;
@@ -692,13 +622,12 @@ function FormStep({
       <div className="mt-6 space-y-5">
         <Field icon={User} label="Full Name" placeholder="Enter your full name" value={name} onChange={setName} />
         <Field
-          icon={Mail}
-          label="Work Email"
-          hint="An OTP will be sent to this email for verification"
-          placeholder="Enter your work email"
-          value={email}
-          onChange={setEmail}
-          type="email"
+          icon={KeyRound}
+          label="Login Code"
+          hint="Enter the login code shared by your organiser"
+          placeholder="Enter your login code"
+          value={code}
+          onChange={(v) => setCode(v.toUpperCase())}
         />
       </div>
 
@@ -725,7 +654,7 @@ function FormStep({
             : "bg-white/10 text-white/40 cursor-not-allowed"
         }`}
       >
-        {isSubmitting ? "Sending…" : "Send Verification Code"}
+        {isSubmitting ? "Joining…" : "Join Game"}
         <span className={`grid h-9 w-9 place-items-center rounded-full transition-colors ${
           canProceed && !isSubmitting ? "bg-white text-[#8B5CF6]" : "bg-white/10 text-white/40"
         }`}>

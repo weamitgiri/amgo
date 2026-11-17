@@ -12,6 +12,7 @@ import type {
   LieDetectorTally,
   LobbySessionResponse,
   ParticipantJoinPayload,
+  ParticipantJoinWithCodePayload,
   ParticipantVerifyOtpPayload,
   ParticipantVerifyOtpResponse,
   SubmitAccusationResponse,
@@ -76,6 +77,15 @@ export const participantService = {
   join: (payload: ParticipantJoinPayload) =>
     apiClient.post<{ email: string; dev_otp?: string }>(
       API_ENDPOINTS.participant.join,
+      payload,
+      pAuth()
+    ),
+
+  /** Code-based join (Option A): name + shared session code → straight into the
+   *  lobby. No email, no OTP. Returns the same shape as a verified OTP join. */
+  joinWithCode: (payload: ParticipantJoinWithCodePayload) =>
+    apiClient.post<ParticipantVerifyOtpResponse>(
+      API_ENDPOINTS.participant.joinWithCode,
       payload,
       pAuth()
     ),

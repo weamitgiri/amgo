@@ -23,6 +23,13 @@ export type ParticipantJoinPayload = {
   email: string;
 };
 
+/** Code-based login (Option A): name + the one shared session code, no email/OTP. */
+export type ParticipantJoinWithCodePayload = {
+  booking_id: number;
+  name: string;
+  code: string;
+};
+
 export type ParticipantVerifyOtpPayload = {
   booking_id: number;
   email: string;

@@ -200,6 +200,7 @@ export const getOrganizerDashboard = asyncHandler(async (req: Request, res: Resp
             ob.scheduled_time,
             ob.status as booking_status,
             ob.invitation_link,
+            ob.session_code,
             ob.is_rescheduled,
             a.title as activity_name,
             a.cover_image,
@@ -232,6 +233,19 @@ export const getOrganizerDashboard = asyncHandler(async (req: Request, res: Resp
     );
 
     const organizer = organizerInfoRows[0] || null;
+
+    // Ensure every paid booking has its shared employee login code, so HR can see
+    // and share it from the dashboard. Generated once, then reused (idempotent).
+    const { getOrCreateBookingSessionCode } = await import('../services/sessionCodeService');
+    for (const b of bookings as any[]) {
+        if (b.booking_status !== 'pending_activation' && !b.session_code) {
+            try {
+                b.session_code = await getOrCreateBookingSessionCode(b.booking_id);
+            } catch {
+                /* non-fatal: code can be generated on the next load */
+            }
+        }
+    }
 
     return successResponse(res, 'Dashboard data retrieved.', {
         organizer,

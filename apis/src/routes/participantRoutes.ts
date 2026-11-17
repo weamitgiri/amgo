@@ -53,6 +53,20 @@ router.post(
     participantController.verifyParticipantOtp
 );
 
+// Join with Name + shared Login Code (Option A — replaces email+OTP for employees).
+// Rate-limited like OTP verification so codes cannot be brute-forced.
+router.post(
+    '/join-with-code',
+    otpVerifyRateLimit,
+    [
+        body('booking_id').isNumeric().withMessage('Booking ID is required'),
+        body('name').notEmpty().withMessage('Name is required'),
+        body('code').notEmpty().withMessage('Login code is required'),
+    ],
+    validateRequest,
+    participantController.participantJoinWithCode
+);
+
 // Get Lobby Information
 router.get('/lobby/:group_id', participantAuth, participantController.getLobbyInfo);
 

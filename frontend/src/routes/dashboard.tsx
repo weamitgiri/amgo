@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   Share2, MessageCircle, Mail, Link2,
   Calendar, Clock, ShieldCheck, Download, Users, Boxes,
-  UserMinus, MousePointerClick, Play, Info, CheckCircle2, Layers, X, AlertCircle, PlusCircle,
+  UserMinus, MousePointerClick, Play, Info, CheckCircle2, Layers, X, AlertCircle, PlusCircle, KeyRound,
 } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { isOrganizerAuthenticated, requireOrganizerAuth } from "@/lib/auth";
@@ -300,7 +300,25 @@ function DashboardPage() {
                 Manage your session, track participation, and prepare for the scheduled start.
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              {booking?.session_code && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(String(booking.session_code));
+                      toastSuccess('Login code copied to clipboard');
+                    } catch (e) {
+                      toastError('Unable to copy code');
+                    }
+                  }}
+                  title="Employees enter this code with their name to join. Click to copy."
+                  className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-primary/10 transition-colors shadow-sm"
+                >
+                  <KeyRound className="h-4 w-4 text-primary" />
+                  <span className="text-muted-foreground font-medium">Login Code:</span>
+                  <span className="font-mono tracking-widest text-foreground">{booking.session_code}</span>
+                </button>
+              )}
               <span className="text-sm font-semibold text-foreground">Share Access Link</span>
               <button
                 onClick={async () => {

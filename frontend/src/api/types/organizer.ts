@@ -88,6 +88,8 @@ export interface DashboardBooking {
   scheduled_time: string;
   booking_status: string;
   invitation_link?: string | null;
+  /** Single shared login code employees enter (with their name) to join. */
+  session_code?: string | null;
   is_rescheduled: number;
   activity_name: string;
   cover_image: string;
