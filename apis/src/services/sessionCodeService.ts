@@ -5,7 +5,7 @@ import { query } from '../config/db';
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_LENGTH = 6;
 
-export function generateSessionCode(): string {
+export function generateCode(): string {
     let out = '';
     for (let i = 0; i < CODE_LENGTH; i++) {
         out += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
@@ -14,7 +14,7 @@ export function generateSessionCode(): string {
 }
 
 /**
- * Normalise a user-entered login code for comparison: trim, strip spaces and any
+ * Normalise a user-entered login code for comparison: strip spaces and any
  * non-alphanumeric characters, and upper-case. Codes never contain O/0/I/1, so a
  * simple upper-case compare is enough.
  */
@@ -24,31 +24,73 @@ export function normaliseCode(input: unknown): string {
         .replace(/[^A-Z0-9]/g, '');
 }
 
-/**
- * One shared login code per booking (Option A). HR shares this single code with
- * every employee; employees enter their name + this code to join — no email, no
- * OTP. Idempotent: returns the booking's existing code, or generates, stores and
- * returns a new one that is unique across bookings.
- */
-export async function getOrCreateBookingSessionCode(bookingId: number | string): Promise<string> {
-    const [rows] = await query<any>('SELECT session_code FROM organizer_bookings WHERE id = ? LIMIT 1', [bookingId]);
-    if ((rows as any[]).length === 0) return '';
-    const existing = rows[0].session_code;
-    if (existing) return String(existing);
+/** How many login codes a booking should have — one per seat in its package. */
+async function getBookingSeatCount(bookingId: number | string): Promise<number> {
+    const [rows] = await query<any>(
+        `SELECT p.max_users FROM organizer_bookings ob
+         JOIN packages p ON p.id = ob.package_id
+         WHERE ob.id = ? LIMIT 1`,
+        [bookingId]
+    );
+    if ((rows as any[]).length === 0) return 0;
+    return Number(rows[0].max_users) || 0;
+}
 
-    for (let attempt = 0; attempt < 8; attempt++) {
-        const code = generateSessionCode();
-        const [dupe] = await query<any>('SELECT id FROM organizer_bookings WHERE session_code = ? LIMIT 1', [code]);
-        if ((dupe as any[]).length > 0) continue;
-        // Only set it if still empty, so two concurrent callers can't overwrite
-        // each other — then read back whichever value won.
-        await query('UPDATE organizer_bookings SET session_code = ? WHERE id = ? AND session_code IS NULL', [
-            code,
-            bookingId,
-        ]);
-        const [fresh] = await query<any>('SELECT session_code FROM organizer_bookings WHERE id = ? LIMIT 1', [bookingId]);
-        const won = fresh?.[0]?.session_code;
-        if (won) return String(won);
+/**
+ * Ensure a booking has its full set of per-employee login codes — one unique code
+ * per seat in the selected package (Option B / PDF). Idempotent: it only tops up
+ * the missing count, so calling it repeatedly is safe. Returns all codes, in order.
+ */
+export async function ensureBookingCodes(bookingId: number | string): Promise<string[]> {
+    const target = await getBookingSeatCount(bookingId);
+
+    const [existingRows] = await query<any>(
+        'SELECT code FROM participant_login_codes WHERE booking_id = ? ORDER BY id ASC',
+        [bookingId]
+    );
+    let codes = (existingRows as any[]).map((r) => String(r.code));
+    if (target <= 0 || codes.length >= target) return codes;
+
+    const have = new Set(codes);
+    const toAdd = target - codes.length;
+    const fresh: string[] = [];
+    let guard = 0;
+    while (fresh.length < toAdd && guard < toAdd * 50 + 100) {
+        guard++;
+        const c = generateCode();
+        if (have.has(c)) continue;
+        have.add(c);
+        fresh.push(c);
     }
-    throw new Error('Could not generate a unique session code');
+
+    if (fresh.length > 0) {
+        const placeholders = fresh.map(() => '(?, ?)').join(', ');
+        const params = fresh.flatMap((c) => [bookingId, c]);
+        // INSERT IGNORE tolerates the UNIQUE(booking_id, code) key if two requests
+        // generate at once — duplicates are simply skipped.
+        await query(
+            `INSERT IGNORE INTO participant_login_codes (booking_id, code) VALUES ${placeholders}`,
+            params
+        );
+    }
+
+    const [afterRows] = await query<any>(
+        'SELECT code FROM participant_login_codes WHERE booking_id = ? ORDER BY id ASC',
+        [bookingId]
+    );
+    codes = (afterRows as any[]).map((r) => String(r.code));
+    return codes;
+}
+
+/** Total vs used code counts for a booking (used = bound to a joined participant). */
+export async function getBookingCodeStats(
+    bookingId: number | string
+): Promise<{ total: number; used: number }> {
+    const [rows] = await query<any>(
+        `SELECT COUNT(*) AS total,
+                COALESCE(SUM(participant_id IS NOT NULL), 0) AS used
+         FROM participant_login_codes WHERE booking_id = ?`,
+        [bookingId]
+    );
+    return { total: Number(rows?.[0]?.total || 0), used: Number(rows?.[0]?.used || 0) };
 }

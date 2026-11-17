@@ -159,6 +159,33 @@ export const organizerService = {
     window.URL.revokeObjectURL(url);
   },
 
+  /** Download the booking's employee login codes as an .xlsx (ownership-scoped). */
+  downloadLoginCodes: async (bookingId: number | string) => {
+    const token = apiClient.getToken();
+    const res = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.organizer.loginCodes(bookingId)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      let message = "Could not download the login codes.";
+      try {
+        const body = await res.json();
+        message = body?.message || message;
+      } catch {
+        /* non-JSON error body — keep the default message */
+      }
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `login-codes-${bookingId}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
   /**
    * Step 4: Save billing details and start payment.
    *

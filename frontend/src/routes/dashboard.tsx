@@ -301,22 +301,24 @@ function DashboardPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-4">
-              {booking?.session_code && (
+              {booking?.booking_id && (booking?.codes_total ?? 0) > 0 && (
                 <button
                   onClick={async () => {
                     try {
-                      await navigator.clipboard.writeText(String(booking.session_code));
-                      toastSuccess('Login code copied to clipboard');
+                      await organizerService.downloadLoginCodes(booking.booking_id);
+                      toastSuccess('Login codes downloaded');
                     } catch (e) {
-                      toastError('Unable to copy code');
+                      toastError(e instanceof Error ? e.message : 'Unable to download login codes');
                     }
                   }}
-                  title="Employees enter this code with their name to join. Click to copy."
+                  title="Download the Excel sheet of employee login codes. Share one code per employee; they join with their name + a code."
                   className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-primary/10 transition-colors shadow-sm"
                 >
                   <KeyRound className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground font-medium">Login Code:</span>
-                  <span className="font-mono tracking-widest text-foreground">{booking.session_code}</span>
+                  Download Login Codes (Excel)
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {(booking.codes_used ?? 0)}/{booking.codes_total} used
+                  </span>
                 </button>
               )}
               <span className="text-sm font-semibold text-foreground">Share Access Link</span>

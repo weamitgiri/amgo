@@ -200,7 +200,6 @@ export const getOrganizerDashboard = asyncHandler(async (req: Request, res: Resp
             ob.scheduled_time,
             ob.status as booking_status,
             ob.invitation_link,
-            ob.session_code,
             ob.is_rescheduled,
             a.title as activity_name,
             a.cover_image,
@@ -234,15 +233,18 @@ export const getOrganizerDashboard = asyncHandler(async (req: Request, res: Resp
 
     const organizer = organizerInfoRows[0] || null;
 
-    // Ensure every paid booking has its shared employee login code, so HR can see
-    // and share it from the dashboard. Generated once, then reused (idempotent).
-    const { getOrCreateBookingSessionCode } = await import('../services/sessionCodeService');
+    // Ensure every paid booking has its per-employee login codes generated, and
+    // attach how many have been used, so HR can download the sheet and track joins.
+    const { ensureBookingCodes, getBookingCodeStats } = await import('../services/sessionCodeService');
     for (const b of bookings as any[]) {
-        if (b.booking_status !== 'pending_activation' && !b.session_code) {
+        if (b.booking_status !== 'pending_activation') {
             try {
-                b.session_code = await getOrCreateBookingSessionCode(b.booking_id);
+                await ensureBookingCodes(b.booking_id);
+                const stats = await getBookingCodeStats(b.booking_id);
+                b.codes_total = stats.total;
+                b.codes_used = stats.used;
             } catch {
-                /* non-fatal: code can be generated on the next load */
+                /* non-fatal: codes can be generated on the next load */
             }
         }
     }
@@ -252,6 +254,41 @@ export const getOrganizerDashboard = asyncHandler(async (req: Request, res: Resp
         bookings,
         total_bookings: bookings.length,
     });
+});
+
+/**
+ * Download the booking's employee login codes as an .xlsx (single "Login Code"
+ * column). HR distributes these to employees, who join with name + one code.
+ * Scoped to the authenticated organiser's own booking.
+ */
+export const downloadLoginCodes = asyncHandler(async (req: Request, res: Response) => {
+    const organizerId = (req as any).user.id;
+    const { booking_id } = req.params;
+
+    const [rows] = await query(
+        'SELECT ob.id FROM organizer_bookings ob WHERE ob.id = ? AND ob.organizer_id = ? LIMIT 1',
+        [booking_id, organizerId]
+    );
+    if (rows.length === 0) throw new AppError('Booking not found', 404);
+
+    const { ensureBookingCodes } = await import('../services/sessionCodeService');
+    const codes = await ensureBookingCodes(booking_id);
+
+    const ExcelMod: any = await import('exceljs');
+    const Workbook = ExcelMod.Workbook || ExcelMod.default?.Workbook;
+    const workbook = new Workbook();
+    const sheet = workbook.addWorksheet('Login Codes');
+    sheet.columns = [{ header: 'Login Code', key: 'code', width: 22 }];
+    sheet.getRow(1).font = { bold: true };
+    for (const code of codes) sheet.addRow({ code });
+
+    res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="login-codes-booking-${booking_id}.xlsx"`);
+    await workbook.xlsx.write(res);
+    res.end();
 });
 
 /**

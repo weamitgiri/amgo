@@ -65,6 +65,13 @@ router.get(
     organizerController.getOrganizerDashboard
 );
 
+// Download the booking's employee login codes as an .xlsx (Protected)
+router.get(
+    '/bookings/:booking_id/login-codes',
+    authMiddleware,
+    organizerController.downloadLoginCodes
+);
+
 // Organizer Profile (Protected)
 router.get('/profile', authMiddleware, profileController.getProfile);
 router.put(

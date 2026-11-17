@@ -305,7 +305,7 @@ export const participantJoinWithCode = asyncHandler(async (req: Request, res: Re
     if (!trimmedName) throw new AppError('Name is required', 400);
 
     const [bookingRows] = await query(
-        `SELECT ob.id, ob.status, ob.game_id, ob.session_code, ob.scheduled_date, ob.scheduled_time,
+        `SELECT ob.id, ob.status, ob.game_id, ob.scheduled_date, ob.scheduled_time,
                 a.lobby_wait_secs
          FROM organizer_bookings ob
          JOIN activities a ON a.id = ob.activity_id
@@ -341,13 +341,8 @@ export const participantJoinWithCode = asyncHandler(async (req: Request, res: Re
         }
     }
 
-    // Validate the login code against the one issued for this booking.
-    const storedCode = booking.session_code ? String(booking.session_code).toUpperCase() : '';
     const enteredCode = normaliseCode(code);
     if (!enteredCode) throw new AppError('Login code is required', 400);
-    if (!storedCode || enteredCode !== storedCode) {
-        throw new AppError('Invalid login code. Please check the code shared by your organiser.', 403);
-    }
 
     // One participant per browser. If this browser already holds a token for a
     // participant in THIS booking, treat the submit as a rejoin (return the same
@@ -384,27 +379,26 @@ export const participantJoinWithCode = asyncHandler(async (req: Request, res: Re
         }
     }
 
-    const { getBookingLimits } = await import('../services/eventStatsService');
-    const limits = await getBookingLimits(booking_id);
+    // Look up the per-employee login code issued for this booking (Option B / PDF).
+    const [codeRows] = await query(
+        'SELECT id, participant_id FROM participant_login_codes WHERE booking_id = ? AND code = ? LIMIT 1',
+        [booking_id, enteredCode]
+    );
+    const codeRow = (codeRows as any[])[0];
+    if (!codeRow) {
+        throw new AppError('Invalid login code. Please check the code shared by your organiser.', 403);
+    }
+    if (codeRow.participant_id) {
+        // Already claimed. The same browser would have rejoined above via its token,
+        // so reaching here means a different person is reusing someone else's code.
+        throw new AppError('This login code has already been used. Each code works for one participant.', 409);
+    }
+
     const join_token = crypto.randomBytes(32).toString('hex');
 
     const result = await withTransaction(async (conn) => {
-        // Lock the booking so the capacity check and insert are race-safe — the
-        // same guard the OTP verify step uses.
+        // Lock the booking so the code claim and insert are race-safe.
         await conn.query('SELECT id FROM organizer_bookings WHERE id = ? FOR UPDATE', [booking_id]);
-
-        if (limits && limits.maxUsers > 0) {
-            const [totalRows] = (await conn.query(
-                'SELECT COUNT(*) AS total FROM game_participants WHERE booking_id = ? AND email_verified_at IS NOT NULL',
-                [booking_id]
-            )) as any;
-            if (Number(totalRows[0]?.total ?? 0) >= limits.maxUsers) {
-                throw new AppError(
-                    `Join limit reached. This package allows a maximum of ${limits.maxUsers} participants.`,
-                    403
-                );
-            }
-        }
 
         // A validated code is the verification, so set email_verified_at now.
         // email stays NULL — code participants have no email.
@@ -415,6 +409,16 @@ export const participantJoinWithCode = asyncHandler(async (req: Request, res: Re
             [booking_id, booking.game_id, trimmedName, join_token]
         )) as any;
         const participantId = insertRes.insertId;
+
+        // Claim the code for this participant — single-use and race-safe: the
+        // WHERE participant_id IS NULL means only the first claimant wins.
+        const [claim] = (await conn.query(
+            'UPDATE participant_login_codes SET participant_id = ?, used_at = NOW() WHERE id = ? AND participant_id IS NULL',
+            [participantId, codeRow.id]
+        )) as any;
+        if (!claim || Number(claim.affectedRows || 0) === 0) {
+            throw new AppError('This login code was just used. Please try a different code.', 409);
+        }
 
         // Reuse the existing group-assignment logic. It keys its "already in a
         // group?" lookup on email; passing the fresh join_token (never an email)

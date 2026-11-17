@@ -827,23 +827,31 @@ export async function ensureCCStageDurations(): Promise<void> {
 }
 
 /**
- * organizer_bookings.session_code — the single shared login code employees enter
- * (with their name) to join, replacing email+OTP. One code per booking, generated
- * lazily (sessionCodeService). Nullable so existing bookings backfill on demand.
+ * participant_login_codes — per-employee login codes (Option B / PDF). One unique
+ * code per seat in the booking's package; an employee joins with their name + one
+ * code. Each code is single-use: participant_id/used_at are set when it is claimed.
  */
-export async function ensureBookingSessionCodeColumn(): Promise<void> {
+export async function ensureParticipantLoginCodesTable(): Promise<void> {
     try {
-        const [rows] = await query<any>(`SHOW COLUMNS FROM organizer_bookings LIKE 'session_code'`);
-        if ((rows as any).length === 0) {
-            await query('ALTER TABLE organizer_bookings ADD COLUMN session_code VARCHAR(12) NULL DEFAULT NULL AFTER invitation_link');
-        }
+        await query(`
+            CREATE TABLE IF NOT EXISTS participant_login_codes (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                booking_id BIGINT UNSIGNED NOT NULL,
+                code VARCHAR(12) NOT NULL,
+                participant_id BIGINT UNSIGNED NULL DEFAULT NULL,
+                used_at TIMESTAMP NULL DEFAULT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_booking_code (booking_id, code),
+                KEY idx_booking (booking_id)
+            )
+        `);
     } catch (err: any) {
-        console.warn('[schemaHelpers] Could not ensure organizer_bookings.session_code:', err.message || err);
+        console.warn('[schemaHelpers] Could not ensure participant_login_codes table:', err.message || err);
     }
 }
 
 export async function ensureGameSchemaUpdates(): Promise<void> {
-    await ensureBookingSessionCodeColumn();
+    await ensureParticipantLoginCodesTable();
     await ensureGameGroupRetentionColumns();
     await ensureGameGroupsGameId();
     await ensureParticipantSessionsLeftAt();
