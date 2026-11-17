@@ -15,6 +15,7 @@ import type {
   CompleteBookingPayload,
   CompleteBookingResponse,
   OrganizerDashboardResponse,
+  LoginCodesListResponse,
   OrganizerEventStats,
   OrganizerProfileResponse,
   UpdateOrganizerProfilePayload,
@@ -78,6 +79,10 @@ export const organizerService = {
   /** Dashboard data for authenticated organizer */
   getDashboard: () =>
     apiClient.get<OrganizerDashboardResponse>(API_ENDPOINTS.organizer.dashboard),
+
+  /** List all login codes for a booking with who used each one. */
+  getLoginCodes: (bookingId: number | string) =>
+    apiClient.get<LoginCodesListResponse>(API_ENDPOINTS.organizer.loginCodesList(bookingId)),
 
   getProfile: () =>
     apiClient.get<OrganizerProfileResponse>(API_ENDPOINTS.organizer.profile),

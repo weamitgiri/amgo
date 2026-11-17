@@ -232,7 +232,8 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
             p.id, p.name, p.email,
             p.email_verified_at as joined_at,
             p.group_id,
-            g.group_name
+            g.group_name,
+            (SELECT code FROM participant_login_codes WHERE participant_id = p.id LIMIT 1) AS login_code
          FROM game_participants p
          LEFT JOIN game_groups g ON p.group_id = g.id
          WHERE p.booking_id = ? AND p.email_verified_at IS NOT NULL
@@ -301,6 +302,7 @@ export async function buildEventStats(bookingId: number | string): Promise<Event
             id: p.id,
             name: p.name,
             email: p.email,
+            login_code: p.login_code ?? null,
             joined_at: p.joined_at,
             group_id: p.group_id ?? null,
             group_name: p.group_name,

@@ -152,9 +152,22 @@ export interface BookingParticipant {
   id: number;
   name: string | null;
   email: string | null;
+  /** The login code this participant joined with (code-based login). */
+  login_code?: string | null;
   joined_at: string | null;
   group_id?: number | null;
   group_name?: string | null;
+}
+
+/** One row of the HR "Login Codes" page. */
+export interface LoginCodeRow {
+  code: string;
+  participant_name: string | null;
+  joined_at: string | null;
+}
+
+export interface LoginCodesListResponse {
+  codes: LoginCodeRow[];
 }
 
 export interface BookingGroupMember {

@@ -1,11 +1,12 @@
 import { useRouterState, Link } from "@tanstack/react-router";
-import { LayoutGrid, Users, Layers, Trophy, Settings, LayoutDashboard, ChevronLeft, ChevronRight, ChevronDown, User } from "lucide-react";
+import { LayoutGrid, Users, Layers, Trophy, Settings, LayoutDashboard, ChevronLeft, ChevronRight, ChevronDown, User, KeyRound } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Flogo } from "./Flogo";
 import { OrganizerNotificationBell } from "./OrganizerNotificationBell";
 
 const NAV = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutGrid },
+  { label: "Login Codes", to: "/login-codes", icon: KeyRound },
   { label: "Participants", to: "/participants", icon: Users },
   { label: "Groups", to: "/groups", icon: Layers },
   { label: "Results", to: "/hr-results", icon: Trophy },

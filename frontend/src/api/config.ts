@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
     verifyLogin: "/v1/organizer/verify-login",
     dashboard: "/v1/organizer/dashboard",
     loginCodes: (bookingId: number | string) => `/v1/organizer/bookings/${bookingId}/login-codes`,
+    loginCodesList: (bookingId: number | string) => `/v1/organizer/bookings/${bookingId}/login-codes-list`,
     profile: "/v1/organizer/profile",
     profileBilling: "/v1/organizer/profile/billing",
     eventStats: (bookingId: number | string) => `/v1/organizer/event-stats/${bookingId}`,

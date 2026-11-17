@@ -16,6 +16,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as ParticipantsRouteImport } from './routes/participants'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as LoginCodesRouteImport } from './routes/login-codes'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LobbyRouteImport } from './routes/lobby'
 import { Route as HrResultsRouteImport } from './routes/hr-results'
@@ -66,6 +67,11 @@ const ParticipantsRoute = ParticipantsRouteImport.update({
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginCodesRoute = LoginCodesRouteImport.update({
+  id: '/login-codes',
+  path: '/login-codes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/hr-results': typeof HrResultsRoute
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
+  '/login-codes': typeof LoginCodesRoute
   '/notifications': typeof NotificationsRoute
   '/participants': typeof ParticipantsRoute
   '/payments': typeof PaymentsRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/hr-results': typeof HrResultsRoute
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
+  '/login-codes': typeof LoginCodesRoute
   '/notifications': typeof NotificationsRoute
   '/participants': typeof ParticipantsRoute
   '/payments': typeof PaymentsRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/hr-results': typeof HrResultsRoute
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
+  '/login-codes': typeof LoginCodesRoute
   '/notifications': typeof NotificationsRoute
   '/participants': typeof ParticipantsRoute
   '/payments': typeof PaymentsRoute
@@ -236,6 +245,7 @@ export interface FileRouteTypes {
     | '/hr-results'
     | '/lobby'
     | '/login'
+    | '/login-codes'
     | '/notifications'
     | '/participants'
     | '/payments'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/hr-results'
     | '/lobby'
     | '/login'
+    | '/login-codes'
     | '/notifications'
     | '/participants'
     | '/payments'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/hr-results'
     | '/lobby'
     | '/login'
+    | '/login-codes'
     | '/notifications'
     | '/participants'
     | '/payments'
@@ -311,6 +323,7 @@ export interface RootRouteChildren {
   HrResultsRoute: typeof HrResultsRoute
   LobbyRoute: typeof LobbyRoute
   LoginRoute: typeof LoginRoute
+  LoginCodesRoute: typeof LoginCodesRoute
   NotificationsRoute: typeof NotificationsRoute
   ParticipantsRoute: typeof ParticipantsRoute
   PaymentsRoute: typeof PaymentsRoute
@@ -371,6 +384,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login-codes': {
+      id: '/login-codes'
+      path: '/login-codes'
+      fullPath: '/login-codes'
+      preLoaderRoute: typeof LoginCodesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -517,6 +537,7 @@ const rootRouteChildren: RootRouteChildren = {
   HrResultsRoute: HrResultsRoute,
   LobbyRoute: LobbyRoute,
   LoginRoute: LoginRoute,
+  LoginCodesRoute: LoginCodesRoute,
   NotificationsRoute: NotificationsRoute,
   ParticipantsRoute: ParticipantsRoute,
   PaymentsRoute: PaymentsRoute,

@@ -82,6 +82,28 @@ export async function ensureBookingCodes(bookingId: number | string): Promise<st
     return codes;
 }
 
+/**
+ * Full list of a booking's codes with who used each one. Unused codes have a null
+ * name/joined_at. Ordered by issue order, so the sheet and this list line up.
+ */
+export async function getBookingCodeList(
+    bookingId: number | string
+): Promise<{ code: string; participant_name: string | null; joined_at: string | null }[]> {
+    const [rows] = await query<any>(
+        `SELECT c.code, gp.name AS participant_name, c.used_at AS joined_at
+         FROM participant_login_codes c
+         LEFT JOIN game_participants gp ON gp.id = c.participant_id
+         WHERE c.booking_id = ?
+         ORDER BY c.id ASC`,
+        [bookingId]
+    );
+    return (rows as any[]).map((r) => ({
+        code: String(r.code),
+        participant_name: r.participant_name ?? null,
+        joined_at: r.joined_at ?? null,
+    }));
+}
+
 /** Total vs used code counts for a booking (used = bound to a joined participant). */
 export async function getBookingCodeStats(
     bookingId: number | string

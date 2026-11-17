@@ -257,6 +257,28 @@ export const getOrganizerDashboard = asyncHandler(async (req: Request, res: Resp
 });
 
 /**
+ * List the booking's login codes with who used each one (name + join time), for
+ * the HR "Login Codes" page. Unused codes come back with null name/joined_at.
+ * Scoped to the authenticated organiser's own booking.
+ */
+export const getLoginCodesList = asyncHandler(async (req: Request, res: Response) => {
+    const organizerId = (req as any).user.id;
+    const { booking_id } = req.params;
+
+    const [rows] = await query(
+        'SELECT ob.id FROM organizer_bookings ob WHERE ob.id = ? AND ob.organizer_id = ? LIMIT 1',
+        [booking_id, organizerId]
+    );
+    if (rows.length === 0) throw new AppError('Booking not found', 404);
+
+    const { ensureBookingCodes, getBookingCodeList } = await import('../services/sessionCodeService');
+    await ensureBookingCodes(booking_id);
+    const codes = await getBookingCodeList(booking_id);
+
+    return successResponse(res, 'Login codes retrieved.', { codes });
+});
+
+/**
  * Download the booking's employee login codes as an .xlsx (single "Login Code"
  * column). HR distributes these to employees, who join with name + one code.
  * Scoped to the authenticated organiser's own booking.

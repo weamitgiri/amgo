@@ -65,6 +65,13 @@ router.get(
     organizerController.getOrganizerDashboard
 );
 
+// List the booking's login codes with who used each (Protected)
+router.get(
+    '/bookings/:booking_id/login-codes-list',
+    authMiddleware,
+    organizerController.getLoginCodesList
+);
+
 // Download the booking's employee login codes as an .xlsx (Protected)
 router.get(
     '/bookings/:booking_id/login-codes',
