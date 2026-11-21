@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Search, Filter, Download, MoreHorizontal, Users } from "lucide-react";
+import { Search, Filter, Download, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { isOrganizerAuthenticated, requireOrganizerAuth } from "@/lib/auth";
@@ -150,7 +150,6 @@ function GroupsPage() {
                   <th className="py-3 px-4 font-semibold">Avatars</th>
                   <th className="py-3 px-4 font-semibold">Status</th>
                   <th className="py-3 px-4 font-semibold">Last Updated</th>
-                  <th className="py-3 px-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -185,15 +184,6 @@ function GroupsPage() {
                     </td>
                     <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">
                       {formatTimeShort(r.last_updated)}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        type="button"
-                        className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted ml-auto"
-                        aria-label={`Actions for ${r.name}`}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
                     </td>
                   </tr>
                 ))}
