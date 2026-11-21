@@ -46,7 +46,7 @@ import { useGames, useGameDetails, usePackages, usePaymentMethods, useSiteSettin
 import { loadRazorpayCheckout, openRazorpayCheckout } from "@/utils/razorpay";
 import { resolveMediaUrl } from "@/utils/media";
 import { isOrganizerAuthenticated } from "@/lib/auth";
-import { Check, Mail, User, Copy, MessageCircle, Share2, CheckCircle2, X, Loader2, Calendar as CalendarIcon, Link2, Clock, Package as PackageIcon, Gamepad2, LockKeyhole, ArrowRight, FileDown } from "lucide-react";
+import { Check, Mail, User, Copy, MessageCircle, Share2, CheckCircle2, X, Loader2, Calendar as CalendarIcon, Link2, Clock, Package as PackageIcon, Gamepad2, LockKeyhole, ArrowRight } from "lucide-react";
 import mystery from "@/assets/login-a.jpg";
 import cook from "@/assets/login-c.jpg";
 import hero from "@/assets/hero.jpg";
@@ -1786,16 +1786,6 @@ function SuccessCard({
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
-  const downloadCodes = async () => {
-    if (!bookingId) return;
-    try {
-      await organizerService.downloadLoginCodes(bookingId);
-      toastSuccess("Login codes downloaded.");
-    } catch (e) {
-      toastError(e instanceof Error ? e.message : "Could not download login codes.");
-    }
-  };
-
   const shareMore = async () => {
     if (!joinUrl) return;
     if (navigator.share) {
@@ -1861,16 +1851,6 @@ function SuccessCard({
             <Copy className="h-4 w-4" /> Copy
           </button>
         </div>
-
-        {/* Employee login codes — one per seat; share one with each participant. */}
-        <button
-          type="button"
-          onClick={downloadCodes}
-          disabled={!bookingId}
-          className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3 text-sm font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
-        >
-          <FileDown className="h-4 w-4" /> Download Login Codes (Excel)
-        </button>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <span className="text-sm font-semibold">Share Link</span>
