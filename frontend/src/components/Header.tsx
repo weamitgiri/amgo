@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { ArrowRight, LogIn } from "lucide-react";
+import { ArrowRight, LogIn, UserPlus } from "lucide-react";
 import { Flogo } from "./Flogo";
 
 const NAV = [
@@ -38,12 +38,23 @@ export function Header({ floating = false }: { floating?: boolean }) {
             })}
           </nav>
           <div className="flex justify-end">
-            <Link to="/login" className="group flex items-center gap-2 rounded-full border border-border bg-white pl-5 pr-1.5 py-1.5 text-[15px] font-medium text-foreground hover:bg-gray-50 transition-colors">
-              Login
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-purple-100 text-[#8B5CF6] transition-transform group-hover:translate-x-0.5">
-                <LogIn className="h-[18px] w-[18px]" strokeWidth={2.5} />
-              </span>
-            </Link>
+            {/* On the login page the button offers Register (→ /create); on every
+                other page it offers Login (→ /login). */}
+            {location.pathname === "/login" ? (
+              <Link to="/create" className="group flex items-center gap-2 rounded-full border border-border bg-white pl-5 pr-1.5 py-1.5 text-[15px] font-medium text-foreground hover:bg-gray-50 transition-colors">
+                Register
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-purple-100 text-[#8B5CF6] transition-transform group-hover:translate-x-0.5">
+                  <UserPlus className="h-[18px] w-[18px]" strokeWidth={2.5} />
+                </span>
+              </Link>
+            ) : (
+              <Link to="/login" className="group flex items-center gap-2 rounded-full border border-border bg-white pl-5 pr-1.5 py-1.5 text-[15px] font-medium text-foreground hover:bg-gray-50 transition-colors">
+                Login
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-purple-100 text-[#8B5CF6] transition-transform group-hover:translate-x-0.5">
+                  <LogIn className="h-[18px] w-[18px]" strokeWidth={2.5} />
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
