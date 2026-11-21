@@ -21,8 +21,11 @@ type FilterKey = "all" | "used" | "unused";
 
 function LoginCodesPage() {
   const navigate = useNavigate();
-  const { booking, organizer } = useOrganizerEventLive();
+  const { booking, organizer, eventStats } = useOrganizerEventLive();
   const bookingId = booking?.booking_id ?? null;
+  // Once the event has ended, login codes are no longer shown (and are deleted on
+  // retention) — same gate the dashboard uses to hide the code download.
+  const isEventCompleted = (eventStats?.event_status?.is_completed ?? false) || booking?.is_completed === 1;
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -39,7 +42,7 @@ function LoginCodesPage() {
   const codesQuery = useQuery({
     queryKey: ["organizerLoginCodes", bookingId],
     queryFn: () => organizerService.getLoginCodes(bookingId as number),
-    enabled: !!bookingId,
+    enabled: !!bookingId && !isEventCompleted,
     staleTime: 1000 * 10,
     // Near-real-time: a short poll so a code flips to "Joined" soon after an
     // employee enters it, even without a socket push on this page.
@@ -131,31 +134,37 @@ function LoginCodesPage() {
               )}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search code or name…"
-                className="rounded-full border border-border pl-8 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+          {!isEventCompleted && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search code or name…"
+                  className="rounded-full border border-border pl-8 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              {filterBtn("all", "All")}
+              {filterBtn("used", "Joined")}
+              {filterBtn("unused", "Not used")}
+              <button
+                type="button"
+                onClick={downloadExcel}
+                disabled={!bookingId || all.length === 0 || downloading}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-primary text-white px-4 py-2 text-xs font-medium shadow-glow disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5" /> {downloading ? "Downloading…" : "Excel"}
+              </button>
             </div>
-            {filterBtn("all", "All")}
-            {filterBtn("used", "Joined")}
-            {filterBtn("unused", "Not used")}
-            <button
-              type="button"
-              onClick={downloadExcel}
-              disabled={!bookingId || all.length === 0 || downloading}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-primary text-white px-4 py-2 text-xs font-medium shadow-glow disabled:opacity-50"
-            >
-              <Download className="h-3.5 w-3.5" /> {downloading ? "Downloading…" : "Excel"}
-            </button>
-          </div>
+          )}
         </div>
 
-        {!bookingId ? (
+        {isEventCompleted ? (
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            The event has ended — login codes have been removed.
+          </p>
+        ) : !bookingId ? (
           <p className="mt-8 text-center text-sm text-muted-foreground">No active session yet.</p>
         ) : codesQuery.isLoading ? (
           <p className="mt-8 text-center text-sm text-muted-foreground">Loading login codes…</p>
@@ -223,6 +232,7 @@ function LoginCodesPage() {
           </div>
         )}
 
+        {!isEventCompleted && (
         <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
           <span>
             {filtered.length === 0
@@ -254,6 +264,7 @@ function LoginCodesPage() {
             </button>
           </div>
         </div>
+        )}
       </section>
     </DashboardShell>
   );
