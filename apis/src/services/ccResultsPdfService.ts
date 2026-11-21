@@ -37,7 +37,7 @@ type AwardSection = {
     categoryName: string;
     winnerGroupId: number | null;
     winnerGroupLabel: string | null;
-    members: { name: string; email: string }[];
+    members: { name: string; code: string }[];
 };
 
 type BookingInfo = {
@@ -80,17 +80,19 @@ async function computeBookingAwards(bookingId: number): Promise<AwardSection[]> 
     for (const cat of categories) {
         const winner = board.groups.find((g) => g.awards.some((a) => a.category_id === cat.id)) ?? null;
         const winnerGroupId = winner ? winner.group_id : null;
-        let members: { name: string; email: string }[] = [];
+        let members: { name: string; code: string }[] = [];
         if (winnerGroupId != null) {
             const [memberRows] = await query<any>(
-                `SELECT name, email FROM game_participants
-                 WHERE group_id = ? AND name IS NOT NULL AND TRIM(name) <> ''
-                 ORDER BY id ASC`,
+                `SELECT gp.name,
+                        (SELECT code FROM participant_login_codes WHERE participant_id = gp.id LIMIT 1) AS code
+                 FROM game_participants gp
+                 WHERE gp.group_id = ? AND gp.name IS NOT NULL AND TRIM(gp.name) <> ''
+                 ORDER BY gp.id ASC`,
                 [winnerGroupId]
             );
             members = (memberRows || []).map((m: any) => ({
                 name: (m.name || '').trim() || 'Player',
-                email: (m.email || '').trim() || '—',
+                code: (m.code || '').trim() || '—',
             }));
         }
         sections.push({
@@ -199,7 +201,7 @@ async function renderPdf(info: BookingInfo, sections: AwardSection[], filename: 
             doc.fillColor(DARK).font('Helvetica-Bold').fontSize(10);
             doc.text('Group No.', LEFT + 8, y + 6, { width: colGroupW - 8 });
             doc.text('Member Name', LEFT + colGroupW + 8, y + 6, { width: colNameW - 8 });
-            doc.text('Email Address', LEFT + colGroupW + colNameW + 8, y + 6, { width: colEmailW - 8 });
+            doc.text('Login Code', LEFT + colGroupW + colNameW + 8, y + 6, { width: colEmailW - 8 });
             doc.y = y + 22;
         };
 
@@ -224,8 +226,8 @@ async function renderPdf(info: BookingInfo, sections: AwardSection[], filename: 
             s.members.forEach((m) => {
                 // Measure the tallest cell so rows never overlap or clip.
                 const nameH = doc.heightOfString(m.name, { width: colNameW - 16 });
-                const emailH = doc.heightOfString(m.email, { width: colEmailW - 16 });
-                const cellH = Math.max(nameH, emailH, 12) + 10;
+                const codeH = doc.heightOfString(m.code, { width: colEmailW - 16 });
+                const cellH = Math.max(nameH, codeH, 12) + 10;
                 if (doc.y + cellH > BOTTOM) {
                     doc.addPage();
                     drawTableHeader();
@@ -235,7 +237,7 @@ async function renderPdf(info: BookingInfo, sections: AwardSection[], filename: 
                 doc.fillColor(DARK);
                 doc.text(s.winnerGroupLabel as string, LEFT + 8, y + 5, { width: colGroupW - 12 });
                 doc.text(m.name, LEFT + colGroupW + 8, y + 5, { width: colNameW - 16 });
-                doc.text(m.email, LEFT + colGroupW + colNameW + 8, y + 5, { width: colEmailW - 16 });
+                doc.text(m.code, LEFT + colGroupW + colNameW + 8, y + 5, { width: colEmailW - 16 });
                 doc.rect(LEFT, y, WIDTH, cellH).strokeColor(LINE).lineWidth(0.5).stroke();
                 // vertical separators
                 doc.moveTo(LEFT + colGroupW, y).lineTo(LEFT + colGroupW, y + cellH).stroke();

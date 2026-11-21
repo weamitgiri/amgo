@@ -13,7 +13,7 @@ function ensureStorageDir() {
 }
 
 /** One participant row of a group's results table. */
-export type ResultRow = { name: string; email: string; role: string; score: string; status: string };
+export type ResultRow = { name: string; code: string; role: string; score: string; status: string };
 
 const STATUS_LABELS: Record<string, string> = {
     winner: 'WINNER',
@@ -29,7 +29,8 @@ export async function loadGroupResults(groupId: number | string): Promise<{ resu
 
     const [sessions] = await query<any>(
         `SELECT ps.id, ps.total_score, gr.role_type, gr.character_name,
-                gp.name AS participant_name, gp.email AS participant_email
+                gp.name AS participant_name,
+                (SELECT code FROM participant_login_codes WHERE participant_id = ps.participant_id LIMIT 1) AS participant_code
          FROM participant_sessions ps
          LEFT JOIN game_roles gr ON gr.id = ps.role_id
          LEFT JOIN game_participants gp ON gp.id = ps.participant_id
@@ -55,7 +56,7 @@ export async function loadGroupResults(groupId: number | string): Promise<{ resu
 
     const rows: ResultRow[] = (sessions as any[]).map((s: any) => ({
         name: s.participant_name || 'Unknown',
-        email: s.participant_email || 'no email',
+        code: s.participant_code || '—',
         role: s.role_type || 'unassigned',
         score: String(s.total_score ?? 0),
         status: statusBySession.get(String(s.id)) ?? (winnerSet.has(String(s.id)) ? 'winner' : 'loser'),
@@ -110,11 +111,11 @@ export function drawParticipantsTable(doc: PDFKit.PDFDocument, rows: ResultRow[]
     drawHeaderRow();
 
     let rowIndex = 0;
-    for (const { name, email, role, score, status } of rows) {
+    for (const { name, code, role, score, status } of rows) {
         rowIndex += 1;
         const resultLabel = STATUS_LABELS[status] ?? String(status).toUpperCase();
 
-        const nameH = measure(name, cols.name.w, 'Helvetica-Bold', 10) + measure(email, cols.name.w, 'Helvetica', 8);
+        const nameH = measure(name, cols.name.w, 'Helvetica-Bold', 10) + measure(code, cols.name.w, 'Helvetica', 8);
         const h =
             Math.max(
                 measure(rowIndex, cols.idx.w, 'Helvetica', 10),
@@ -139,7 +140,7 @@ export function drawParticipantsTable(doc: PDFKit.PDFDocument, rows: ResultRow[]
         doc.font('Helvetica-Bold').fontSize(10).fillColor('#111111')
             .text(name, cols.name.x + PAD, y + PAD, { width: cols.name.w - PAD * 2 });
         doc.font('Helvetica').fontSize(8).fillColor('#888888')
-            .text(email, cols.name.x + PAD, y + PAD + measure(name, cols.name.w, 'Helvetica-Bold', 10), {
+            .text(code, cols.name.x + PAD, y + PAD + measure(name, cols.name.w, 'Helvetica-Bold', 10), {
                 width: cols.name.w - PAD * 2,
             });
         doc.font('Helvetica').fontSize(10).fillColor('#111111')

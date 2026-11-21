@@ -164,13 +164,14 @@ function ParticipantsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium">{p.name || "Unnamed participant"}</div>
-                  <div className="text-xs text-muted-foreground truncate">{p.email || (p.login_code ? "Code login" : "—")}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {p.login_code ? (
+                      <span className="font-mono font-semibold tracking-wider text-foreground/80">{p.login_code}</span>
+                    ) : (
+                      p.email || "—"
+                    )}
+                  </div>
                 </div>
-                {p.login_code && (
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-mono font-semibold tracking-wider text-foreground whitespace-nowrap" title="Login code used to join">
-                    {p.login_code}
-                  </span>
-                )}
                 <div className="text-xs text-muted-foreground whitespace-nowrap">{formatJoinedAt(p.joined_at)}</div>
                 <span className="rounded-full bg-purple-100 text-primary text-xs px-2.5 py-0.5 font-medium whitespace-nowrap">
                   {p.group_name ?? "—"}
