@@ -300,47 +300,52 @@ function DashboardPage() {
                 Manage your session, track participation, and prepare for the scheduled start.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-4">
-              {booking?.booking_id && (booking?.codes_total ?? 0) > 0 && (
+            {/* Login-code download + share link are hidden once the event has
+                ended — the codes are deleted after the game and the link is no
+                longer useful. */}
+            {!isEventCompleted && (
+              <div className="flex flex-wrap items-center gap-4">
+                {booking?.booking_id && (booking?.codes_total ?? 0) > 0 && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await organizerService.downloadLoginCodes(booking.booking_id);
+                        toastSuccess('Login codes downloaded');
+                      } catch (e) {
+                        toastError(e instanceof Error ? e.message : 'Unable to download login codes');
+                      }
+                    }}
+                    title="Download the Excel sheet of employee login codes. Share one code per employee; they join with their name + a code."
+                    className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-primary/10 transition-colors shadow-sm"
+                  >
+                    <KeyRound className="h-4 w-4 text-primary" />
+                    Download Login Codes (Excel)
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {(booking.codes_used ?? 0)}/{booking.codes_total} used
+                    </span>
+                  </button>
+                )}
+                <span className="text-sm font-semibold text-foreground">Share Access Link</span>
                 <button
                   onClick={async () => {
+                    const link = booking?.invitation_link ? `${window.location.origin}/join/${booking.invitation_link}` : "";
+                    if (!link) return;
                     try {
-                      await organizerService.downloadLoginCodes(booking.booking_id);
-                      toastSuccess('Login codes downloaded');
+                      await navigator.clipboard.writeText(link);
+                      toastSuccess('Invitation link copied to clipboard');
+                      setCopyStatus('Copied!');
+                      setTimeout(() => setCopyStatus(''), 1800);
                     } catch (e) {
-                      toastError(e instanceof Error ? e.message : 'Unable to download login codes');
+                      toastError('Unable to copy link');
                     }
                   }}
-                  title="Download the Excel sheet of employee login codes. Share one code per employee; they join with their name + a code."
-                  className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-primary/10 transition-colors shadow-sm"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-border/80 bg-white px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors shadow-sm"
                 >
-                  <KeyRound className="h-4 w-4 text-primary" />
-                  Download Login Codes (Excel)
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {(booking.codes_used ?? 0)}/{booking.codes_total} used
-                  </span>
+                  <Link2 className="h-4 w-4 text-primary" />
+                  {copyStatus || 'Copy Link'}
                 </button>
-              )}
-              <span className="text-sm font-semibold text-foreground">Share Access Link</span>
-              <button
-                onClick={async () => {
-                  const link = booking?.invitation_link ? `${window.location.origin}/join/${booking.invitation_link}` : "";
-                  if (!link) return;
-                  try {
-                    await navigator.clipboard.writeText(link);
-                    toastSuccess('Invitation link copied to clipboard');
-                    setCopyStatus('Copied!');
-                    setTimeout(() => setCopyStatus(''), 1800);
-                  } catch (e) {
-                    toastError('Unable to copy link');
-                  }
-                }}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-border/80 bg-white px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors shadow-sm"
-              >
-                <Link2 className="h-4 w-4 text-primary" />
-                {copyStatus || 'Copy Link'}
-              </button>
-            </div>
+              </div>
+            )}
           </div>
 
           {/* My Games bar: switch between purchased games + register another once

@@ -42,13 +42,26 @@ async function getBookingSeatCount(bookingId: number | string): Promise<number> 
  * the missing count, so calling it repeatedly is safe. Returns all codes, in order.
  */
 export async function ensureBookingCodes(bookingId: number | string): Promise<string[]> {
-    const target = await getBookingSeatCount(bookingId);
-
     const [existingRows] = await query<any>(
         'SELECT code FROM participant_login_codes WHERE booking_id = ? ORDER BY id ASC',
         [bookingId]
     );
     let codes = (existingRows as any[]).map((r) => String(r.code));
+
+    // Once the game has ended, the codes are deleted on retention and must NOT
+    // be regenerated — so never top up a booking whose every group has finished.
+    const [grpRows] = await query<any>(
+        `SELECT COUNT(*) AS total,
+                COALESCE(SUM(status IN ('completed','incomplete')), 0) AS terminal
+         FROM game_groups WHERE booking_id = ?`,
+        [bookingId]
+    );
+    const total = Number(grpRows?.[0]?.total || 0);
+    const terminal = Number(grpRows?.[0]?.terminal || 0);
+    const gameEnded = total > 0 && terminal === total;
+    if (gameEnded) return codes;
+
+    const target = await getBookingSeatCount(bookingId);
     if (target <= 0 || codes.length >= target) return codes;
 
     const have = new Set(codes);

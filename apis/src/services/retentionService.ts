@@ -260,6 +260,9 @@ export async function purgeBookingJoiningData(bookingId: number | string): Promi
         // purged_at is set.
         await conn.query(`DELETE FROM participant_sessions WHERE ${inBookingGroups}`, [bookingId]);
         await conn.query('DELETE FROM game_participants WHERE booking_id = ?', [bookingId]);
+        // Employee login codes are deleted once the game is over — they are
+        // single-use for that session only and must not linger or be reusable.
+        await conn.query('DELETE FROM participant_login_codes WHERE booking_id = ?', [bookingId]);
         await conn.query(
             'UPDATE game_groups SET purged_at = NOW(), results_pdf_path = NULL, results_pdf_expires_at = NULL WHERE booking_id = ? AND purged_at IS NULL',
             [bookingId]
