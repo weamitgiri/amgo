@@ -1853,7 +1853,7 @@ function SuccessCard({
         </div>
 
         <p className="mt-3 text-sm font-semibold text-red-600">
-          HR must login to dashboard for access login codes.
+          *HR must login to dashboard for access login codes.
         </p>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
