@@ -1923,21 +1923,16 @@ function SuccessCard({
                 Access is valid for 5 days from the date and time of payment, expiry is shown above.
               </li>
               <li>
-                The session will start at start time, employees need to click the access link and
-                verify email and proceed for activity
+                The session will start at start time, employees need to click the access link and enter name and login access code to proceed for activity
+Share the access link with participants before your scheduled start time , they join using their name and login access code.
               </li>
-              <li>
-                Share the access link with participants before your scheduled start time, they join
-                using their email ID and OTP.
-              </li>
+             
               <li>
                 You can reschedule your session date and time once from the dashboard. The 5-day
                 access window will not reset on rescheduling.
               </li>
               <li>
-                Your package supports up to {pkg?.max_users ?? 50} participants. For best results,
-                ensure your team size is a multiple of {groupSize}. Participants beyond a complete
-                group of {groupSize} will not be assigned.
+                Your package supports up to {pkg?.max_users ?? 50} participants. For best results, ensure your team size is a multiple of {groupSize} (e.g., 45 or 50). Participants beyond a complete group of 5 will not be assigned.
               </li>
             </ul>
           </div>
