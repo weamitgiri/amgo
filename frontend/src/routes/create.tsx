@@ -1023,7 +1023,7 @@ function SetupStep({
       </div>
 
       <p className="rounded-2xl border border-sky-500 bg-sky-100 px-5 py-4 text-sm leading-relaxed text-foreground">
-        After activation, you will receive a unique session access link. Share it with your participants, they simply enter their email ID, verify via OTP, and join the activity instantly. No app download, no passwords, no pre-registration needed.
+        After activation, you will receive a unique session access link. Share it with your participants, they simply enter their email ID, verify via Code, and join the activity instantly. No app download, no passwords, no pre-registration needed.
       </p>
 
       <PillButton

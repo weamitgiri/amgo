@@ -69,7 +69,7 @@ type StepCard = {
 const STEPS: StepCard[] = [
   { n: "01", image: step1, title: "Register & Choose a Package", desc: "The HR or Organizer registers using their official company email ID, selects the appropriate package, and completes payment.", meta: "Takes 2 minutes", metaIcon: Clock },
   { n: "02", image: step2, title: "Receive a unique join link", desc: "A secure, shareable access link is generated instantly after activation. Send it to participants via email or WhatsApp.", meta: "Instant setup", metaIcon: Link2 },
-  { n: "03", image: step3, title: "Share Link & Start the Game", desc: "Participants open the link, enter their details, and verify via OTP. They join instantly, no login, no app download.", meta: "No passwords needed", metaIcon: Lock },
+  { n: "03", image: step3, title: "Share Link & Start the Game", desc: "Participants open the link, enter name and login access code.  They join instantly, no login, no app download.", meta: "No passwords needed", metaIcon: Lock },
   { n: "04", image: step4, title: "Start Game & Track Live", desc: "Teams are auto-grouped and ready to play with assigned roles. Track participation, groups, and results in real-time.", meta: "Zero manual effort", metaIcon: Sparkles },
 ];
 
