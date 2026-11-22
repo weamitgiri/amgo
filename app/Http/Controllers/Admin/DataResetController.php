@@ -45,6 +45,7 @@ class DataResetController extends Controller
         'game_participants',
         'game_groups',
         'participant_sessions',
+        'participant_login_codes',
 
         // Mystery Quest session data
         'questions',
