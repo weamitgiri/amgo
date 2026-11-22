@@ -1553,7 +1553,7 @@ function PaymentStep({
       <div>
         <p className="text-sm font-semibold">Billing Details (GST Invoice) (Ex.29ABCDE1234F1Z5)</p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          A GST invoice will be automatically generated and sent to your registered email after successful payment
+         HR/Organiser can download the GST invoice after login to the HR dashboard.
         </p>
         <div className="mt-3 space-y-3">
           <BField
