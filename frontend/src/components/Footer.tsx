@@ -1,4 +1,4 @@
-import { Instagram, Facebook, Linkedin, MessageCircle, ArrowUp } from "lucide-react";
+import { Instagram, Linkedin, MessageCircle, ArrowUp } from "lucide-react";
 import { Flogo } from "./Flogo";
 import { Link } from "@tanstack/react-router";
 import { useCmsPages, useSiteSettings } from "@/hooks/usePublicContent";
@@ -37,7 +37,6 @@ export function Footer() {
   const email = settings?.support_email || "support@zoventro.com";
 
   const socialLinks = [
-    { url: settings?.instagram_url, Icon: Instagram, label: "Instagram" },
     {
       url: settings?.whatsapp_number
         ? `https://wa.me/${settings.whatsapp_number.replace(/\D/g, "")}`
@@ -45,7 +44,7 @@ export function Footer() {
       Icon: MessageCircle,
       label: "WhatsApp",
     },
-    { url: settings?.facebook_url, Icon: Facebook, label: "Facebook" },
+    { url: settings?.instagram_url, Icon: Instagram, label: "Instagram" },
     { url: settings?.linkedin_url, Icon: Linkedin, label: "LinkedIn" },
   ].filter((item) => item.url);
 
@@ -132,7 +131,7 @@ export function Footer() {
                   </a>
                 ))
               ) : (
-                [Instagram, MessageCircle, Facebook, Linkedin].map((Icon, i) => (
+                [MessageCircle, Instagram, Linkedin].map((Icon, i) => (
                   <span
                     key={i}
                     className="grid h-9 w-9 place-items-center rounded-full border border-border text-foreground/40"
