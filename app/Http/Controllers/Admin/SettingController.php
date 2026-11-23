@@ -125,24 +125,18 @@ class SettingController extends Controller {
     private function siteValidateArrayLinks()
     {
         return [
-            'facebook_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(facebook\.com|fb\.com)(\/.*)?$/i'],
-            'instagram_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?instagram\.com(\/.*)?$/i'],
             'whatsapp_number' => ['bail', 'required', 'string', 'max:20', 'regex:/^\+?[0-9\s\-]{7,20}$/'],
-            'twitter_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(twitter\.com|x\.com)(\/.*)?$/i'],
+            'instagram_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?instagram\.com(\/.*)?$/i'],
             'linkedin_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?linkedin\.com(\/.*)?$/i'],
-            'youtube_url' => ['bail', 'required', 'url', 'max:255', 'regex:/^https?:\/\/([a-z0-9-]+\.)?(youtube\.com|youtu\.be)(\/.*)?$/i'],
         ];
     }
 
     private function siteValidateLinksMessages()
     {
         return [
-            'facebook_url.regex' => 'Enter a Facebook link, e.g. https://facebook.com/yourpage',
-            'instagram_url.regex' => 'Enter an Instagram link, e.g. https://instagram.com/yourprofile',
             'whatsapp_number.regex' => 'Enter a valid phone number, e.g. +919876543210',
-            'twitter_url.regex' => 'Enter a Twitter / X link, e.g. https://x.com/yourprofile',
+            'instagram_url.regex' => 'Enter an Instagram link, e.g. https://instagram.com/yourprofile',
             'linkedin_url.regex' => 'Enter a LinkedIn link, e.g. https://linkedin.com/in/yourprofile',
-            'youtube_url.regex' => 'Enter a YouTube link, e.g. https://youtube.com/@yourchannel',
         ];
     }
 // =====================================================================
