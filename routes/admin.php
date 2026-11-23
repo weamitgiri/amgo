@@ -79,6 +79,8 @@ Route::group(
         Route::post("settings/database-export", [DatabaseExportController::class, "export"])->name("database.export");
         // Permanently clears organizer, participant & payment data (settings/games untouched) — full admins only.
         Route::post("settings/clear-data", [\App\Http\Controllers\Admin\DataResetController::class, "clear"])->name("data.clear");
+        // Clear application/config/route/view caches from the admin header.
+        Route::post("cache/clear", [\App\Http\Controllers\Admin\CacheController::class, "clear"])->name("cache.clear");
 
         // CMS Pages Management
         Route::prefix('cms')->group(function () {

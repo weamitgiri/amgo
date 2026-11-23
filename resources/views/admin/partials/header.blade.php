@@ -27,6 +27,16 @@
   </li>
   @endif
 
+  {{-- Clear application caches (config/route/view/cache). Clears caches only, never data. --}}
+  <li class="nav-item d-flex align-items-center mr-2">
+      <form method="POST" action="{{ route('admin.cache.clear') }}" class="mb-0">
+          @csrf
+          <button type="submit" class="btn btn-outline-secondary btn-sm" title="Clear cache (config, routes, views & app cache)">
+              <i class="fas fa-broom"></i>
+          </button>
+      </form>
+  </li>
+
 <li class="nav-item dropdown headerProfile">
   <a class="nav-link text-dark" data-toggle="dropdown" href="#">
       @php $admin = auth('admin')->user(); @endphp
