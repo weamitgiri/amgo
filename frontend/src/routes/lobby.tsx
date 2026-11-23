@@ -352,7 +352,20 @@ function LobbyPage() {
           </div>
 
           <div className="relative min-h-[380px] overflow-hidden rounded-3xl border border-white/10">
-            <img src={caseImage || investigation} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            {/* Fall back to the bundled image if the uploaded cover fails to load,
+                so a broken/missing media URL shows the default art, not a blank box. */}
+            <img
+              src={caseImage || investigation}
+              alt=""
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.dataset.fellBack) {
+                  img.dataset.fellBack = "1";
+                  img.src = investigation;
+                }
+              }}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/40" />
             <div className="relative p-6">
               <div className="inline-block max-w-[80%] rounded-2xl bg-black/45 px-5 py-3.5 backdrop-blur-sm">
