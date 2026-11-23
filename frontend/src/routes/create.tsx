@@ -1551,14 +1551,14 @@ function PaymentStep({
       </Section>
 
       <div>
-        <p className="text-sm font-semibold">Billing Details (GST Invoice) (Ex.29ABCDE1234F1Z5)</p>
+        <p className="text-sm font-semibold">Billing Details (GST Invoice)</p>
         <p className="text-xs text-muted-foreground mt-0.5">
          HR/Organiser can download the GST invoice after login to the HR dashboard.
         </p>
         <div className="mt-3 space-y-3">
           <BField
             label="GST Number *"
-            placeholder="Enter GST Number (Ex.29ABCDE1234F1Z5)"
+            placeholder="Enter GST Number"
             value={gstNumber}
             onChange={(value) => setGstNumber(value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15))}
             error={errors.gst_number}
