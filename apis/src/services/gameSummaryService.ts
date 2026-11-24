@@ -14,16 +14,21 @@ const ROLE_GRADS = [
 
 function parseJsonArray(value: unknown): string[] {
     if (!value) return [];
-    if (Array.isArray(value)) return value.map(String);
-    if (typeof value === 'string') {
+    let raw: any = value;
+    if (typeof raw === 'string') {
         try {
-            const parsed = JSON.parse(value);
-            return Array.isArray(parsed) ? parsed.map(String) : [];
+            raw = JSON.parse(raw);
         } catch {
             return [];
         }
     }
-    return [];
+    // A bullet-list repeater (What You Know / Keep In Mind / Why Suspicious /
+    // Suggested Questions) saved after deleting a middle row becomes an OBJECT of
+    // index→value ({"0":"…","2":"…"}) instead of an array, so accept that too —
+    // otherwise those bullets would vanish exactly like the timeline did.
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) raw = Object.values(raw);
+    if (!Array.isArray(raw)) return [];
+    return raw.map(String);
 }
 
 function parseTimeline(value: unknown): { time: string; event: string }[] {

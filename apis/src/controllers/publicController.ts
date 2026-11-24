@@ -13,11 +13,26 @@ export const getPackages = asyncHandler(async (req: Request, res: Response) => {
         ['active']
     );
     
-    // Parse JSON fields if they are strings
+    // Normalise JSON list fields to a real array. Deleting a middle row in the
+    // admin repeater leaves index gaps, which PHP json_encodes as an OBJECT
+    // ({"0":…,"2":…}) — without this the frontend's Array.isArray check would drop
+    // every feature (the same bug that hid game timelines).
+    const toJsonArray = (v: any): any[] => {
+        let raw = v;
+        if (typeof raw === 'string') {
+            try {
+                raw = JSON.parse(raw);
+            } catch {
+                return [];
+            }
+        }
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) raw = Object.values(raw);
+        return Array.isArray(raw) ? raw : [];
+    };
     const packages = rows.map((pkg: any) => ({
         ...pkg,
-        features: typeof pkg.features === 'string' ? JSON.parse(pkg.features) : pkg.features,
-        game_access: typeof pkg.game_access === 'string' ? JSON.parse(pkg.game_access) : pkg.game_access
+        features: toJsonArray(pkg.features),
+        game_access: toJsonArray(pkg.game_access),
     }));
 
     return successResponse(res, 'Packages retrieved successfully.', packages);
