@@ -23,11 +23,13 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Activity List</h3>
+                    {{-- Hidden per client request: activities are fixed, no adding new ones.
                     <div class="card-tools">
                         <a href="{{ route('admin.activities.create') }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-plus"></i> Add New Activity
                         </a>
                     </div>
+                    --}}
                 </div>
                 <div class="card-body">
                     <table class="table table-bordered table-striped" id="activities-table">
@@ -58,6 +60,7 @@
                                     <a href="{{ route('admin.activities.edit', $activity->id) }}" class="btn btn-primary btn-sm" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
+                                    {{-- Hidden per client request: activities are fixed, no deleting.
                                     <form action="{{ route('admin.activities.destroy', $activity->id) }}" method="POST" style="display:inline-block;">
                                         @csrf
                                         @method('DELETE')
@@ -65,6 +68,7 @@
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
+                                    --}}
                                 </td>
                             </tr>
                             @endforeach
