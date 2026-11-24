@@ -28,7 +28,7 @@ function parseJsonArray(value: unknown): string[] {
 
 function parseTimeline(value: unknown): { time: string; event: string }[] {
     if (!value) return [];
-    let raw = value;
+    let raw: any = value;
     if (typeof value === 'string') {
         try {
             raw = JSON.parse(value);
@@ -36,6 +36,10 @@ function parseTimeline(value: unknown): { time: string; event: string }[] {
             return [];
         }
     }
+    // Deleting a repeater row in the admin leaves index gaps (0,1,2,4,…), which
+    // PHP json_encodes as an OBJECT ({"0":{…},"1":{…}}) instead of an array — so
+    // accept an object of entries too, not only a plain array.
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) raw = Object.values(raw);
     if (!Array.isArray(raw)) return [];
     return raw
         .map((item: any) => ({
@@ -47,12 +51,21 @@ function parseTimeline(value: unknown): { time: string; event: string }[] {
 
 function parseQuickFacts(value: unknown): { label: string; value: string; icon: string }[] {
     if (!value) return [];
-    let raw = value;
+    let raw: any = value;
     if (typeof value === 'string') {
         try {
             raw = JSON.parse(value);
         } catch {
             return [];
+        }
+    }
+    // A repeater saved with index gaps becomes an OBJECT of {label,value} entries
+    // ({"0":{…},"1":{…}}); treat that as the array it was meant to be. A genuine
+    // key→value facts map (location/date_time/…) is handled further down.
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        const vals = Object.values(raw);
+        if (vals.length && typeof vals[0] === 'object' && vals[0] !== null) {
+            raw = vals;
         }
     }
     if (Array.isArray(raw)) {

@@ -37,11 +37,15 @@ class StoreActivityGameRequest extends FormRequest
         // re-indexing here would break that pairing. Empty rows have no file anyway.
 
         // Timeline: a row counts as empty when both time and event are blank.
+        // Re-index with array_values so deleting a middle row can't leave index
+        // gaps — a gapped array json_encodes as an OBJECT ({"0":…,"2":…}) which the
+        // game case-summary then can't read. Timeline rows carry no file upload, so
+        // re-indexing is safe here (unlike photos/clues below).
         if (is_array($timeline = $this->input('timeline'))) {
-            $clean['timeline'] = array_filter($timeline, function ($row) {
+            $clean['timeline'] = array_values(array_filter($timeline, function ($row) {
                 return is_array($row)
                     && (trim((string) ($row['time'] ?? '')) !== '' || trim((string) ($row['event'] ?? '')) !== '');
-            });
+            }));
         }
 
         // Photos: empty when there is no label, no new upload and no existing image.
