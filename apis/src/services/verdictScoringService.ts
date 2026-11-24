@@ -253,11 +253,31 @@ export async function finalizeVerdict(groupId: number | string): Promise<void> {
             };
         });
 
-        // WINNER = everyone who reached their role goal (1–4 possible, plus the culprit
-        // when they escape). MVP badge = highest final score; ties share it.
+        // Exactly ONE winner: among the players who correctly caught the culprit,
+        // only the single highest final score wins; an earlier correct accusation
+        // breaks a score tie. Every other correct guesser is 'correct' (they
+        // identified the killer) rather than a co-winner. When the culprit escapes
+        // (culpritWins) there are no correct guessers, so the culprit alone is the
+        // outcome (killer_wins).
+        const correctGuessWinners = perRoleResults.filter((r) => r.status === 'winner');
+        if (correctGuessWinners.length > 1) {
+            correctGuessWinners.sort((a, b) => {
+                if (b.final_score !== a.final_score) return b.final_score - a.final_score;
+                const ta = a.guess_submitted_at ? Date.parse(a.guess_submitted_at) : Infinity;
+                const tb = b.guess_submitted_at ? Date.parse(b.guess_submitted_at) : Infinity;
+                return ta - tb;
+            });
+            const soleWinnerId = correctGuessWinners[0].session_id;
+            for (const r of correctGuessWinners) {
+                if (r.session_id !== soleWinnerId) r.status = 'correct';
+            }
+        }
+
+        // The single winner, plus the culprit when they escaped.
         const winners = perRoleResults
             .filter((r) => r.status === 'winner' || r.status === 'killer_wins')
             .map((r) => r.session_id);
+        // MVP badge = highest final score overall; ties share it.
         const topScore = perRoleResults.reduce((m, r) => (r.final_score > m ? r.final_score : m), -Infinity);
         for (const r of perRoleResults) {
             if (topScore > -Infinity && r.final_score === topScore) r.is_mvp = true;
