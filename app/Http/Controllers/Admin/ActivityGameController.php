@@ -343,16 +343,24 @@ class ActivityGameController extends Controller
     {
         try {
             DB::transaction(function () use ($game) {
-                // Clone the main game record
+                // Clone the main game record. replicate() copies every column
+                // (case summary, timeline, quick_facts, …); we then give each image
+                // field its OWN copied file so editing/deleting the clone's images
+                // never touches the original's (and vice-versa).
                 $newGame = $game->replicate();
                 $newGame->title = $game->title . ' (Clone)';
                 $newGame->status = 'draft';
+                $newGame->bg_image = $this->duplicatePublicImage($game->bg_image);
+                $newGame->case_summary_image = $this->duplicatePublicImage($game->case_summary_image);
+                $newGame->culprit_image = $this->duplicatePublicImage($game->culprit_image);
                 $newGame->save();
 
                 // Clone Roles and their Strategy Cards
                 foreach ($game->roles as $role) {
                     $newRole = $role->replicate();
                     $newRole->game_id = $newGame->id;
+                    $newRole->role_image = $this->duplicatePublicImage($role->role_image);
+                    $newRole->role_icon = $this->duplicatePublicImage($role->role_icon);
                     $newRole->save();
 
                     foreach ($role->strategyCards as $card) {
@@ -373,6 +381,7 @@ class ActivityGameController extends Controller
                 foreach ($game->photos as $photo) {
                     $newPhoto = $photo->replicate();
                     $newPhoto->game_id = $newGame->id;
+                    $newPhoto->image = $this->duplicatePublicImage($photo->image);
                     $newPhoto->save();
                 }
 
@@ -380,6 +389,7 @@ class ActivityGameController extends Controller
                 foreach ($game->clues as $clue) {
                     $newClue = $clue->replicate();
                     $newClue->game_id = $newGame->id;
+                    $newClue->clue_image = $this->duplicatePublicImage($clue->clue_image);
                     $newClue->save();
                 }
 
@@ -394,6 +404,7 @@ class ActivityGameController extends Controller
                 foreach ($game->fullStory as $story) {
                     $newStory = $story->replicate();
                     $newStory->game_id = $newGame->id;
+                    $newStory->part_image = $this->duplicatePublicImage($story->part_image);
                     $newStory->save();
                 }
             });
@@ -417,6 +428,33 @@ class ActivityGameController extends Controller
             return $file->store($dir, 'public');
         } catch (\Throwable $e) {
             throw new \RuntimeException("Image upload failed. Please try again. ({$dir})", 0, $e);
+        }
+    }
+
+    /**
+     * Copy a stored public image to a new file so a cloned game owns an
+     * independent copy. Returns the new relative path, or the original path
+     * unchanged when there is nothing to copy or the source file is missing
+     * (best-effort — a clone must never fail because of a stray image).
+     */
+    private function duplicatePublicImage(?string $path): ?string
+    {
+        if (!$path) {
+            return $path;
+        }
+
+        try {
+            $disk = Storage::disk('public');
+            if (!$disk->exists($path)) {
+                return $path;
+            }
+            $dir = trim(dirname($path), './');
+            $ext = pathinfo($path, PATHINFO_EXTENSION);
+            $newPath = ($dir !== '' ? $dir . '/' : '') . \Illuminate\Support\Str::random(40) . ($ext !== '' ? '.' . $ext : '');
+            $disk->copy($path, $newPath);
+            return $newPath;
+        } catch (\Throwable $e) {
+            return $path;
         }
     }
 
