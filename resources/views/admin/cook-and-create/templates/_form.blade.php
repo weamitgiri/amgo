@@ -59,6 +59,12 @@
     @error('description') <div class="invalid-feedback">{{ $message }}</div> @enderror
 </div>
 
+{{-- Challenge Brief background image & Character portraits are hidden from the
+     Cook & Create template form: the game uses the bundled default kitchen art
+     and chef/show-host portraits. These fields are optional (nullable) in the
+     controller, so hiding them submits nothing and keeps any existing value.
+     To re-enable, remove this Blade-comment wrapper.
+
 <div class="form-group">
     <label>Challenge Brief background image <span class="text-muted">(shown behind the pre-Round-1 screen — falls back to the default kitchen art if not set)</span></label>
     <input type="file" name="background_image" class="form-control-file @error('background_image') is-invalid @enderror" accept="image/*">
@@ -91,6 +97,7 @@
         @endforeach
     </div>
 </div>
+--}}
 
 <hr>
 <h5 class="mb-1">⏱ Stage Durations</h5>
