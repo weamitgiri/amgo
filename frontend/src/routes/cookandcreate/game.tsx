@@ -23,6 +23,7 @@ import { toastError } from '@/lib/toast';
 import imposterImg from '../../assets/cookandcreate/imposter 1.png';
 import imposterIcon from '../../assets/cookandcreate/imposter-icon.png';
 import { resolveMediaUrl } from '@/utils/media';
+import { noPasteCopyProps } from '@/lib/inputGuard';
 
 export const Route = createFileRoute('/cookandcreate/game')({
   component: GamePage,
@@ -1172,6 +1173,7 @@ function Round2Content({
               <textarea
                 value={stepText}
                 onChange={(e) => setStepText(e.target.value.slice(0, maxChars))}
+                {...noPasteCopyProps}
                 placeholder={`Write your step here...\nExample: Saute onions in oil, add spices, and cook for 5 minutes..`}
                 className="w-full h-[200px] rounded-[13px] border-[1.5px] border-[#C9A98E] focus:border-[#E87512] focus:ring-2 focus:ring-[#E87512]/15 outline-none p-5 pb-9 text-[15px] text-[#333333] placeholder:text-[#9C8B79] bg-[#FFF3E2] resize-none leading-relaxed"
               />

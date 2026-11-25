@@ -24,6 +24,7 @@ import suspectBanner from "@/assets/game-summery/Group 1000004660.png";
 import ri1 from "@/assets/role-icon/1.png";
 import ri2 from "@/assets/role-icon/2.png";
 import ri3 from "@/assets/role-icon/3.png";
+import { noPasteCopyProps } from "@/lib/inputGuard";
 
 
 type GameSearch = { game?: string };
@@ -2093,6 +2094,7 @@ function InvestigationView(props: {
                   <label className="text-xs text-white/45">Type your question (max 120 characters)</label>
                   <div className="mt-1.5 relative">
                     <textarea value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 120))}
+                      {...noPasteCopyProps}
                       placeholder="Type your question here..."
                       disabled={isSubmittingQuestion}
                       className="w-full h-24 rounded-xl bg-transparent border border-white/15 p-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#a855f7] disabled:cursor-not-allowed resize-none" />
@@ -2598,6 +2600,7 @@ function AnswerModal({
               <textarea
                 value={ans}
                 onChange={(e) => setAns(e.target.value.slice(0, 120))}
+                {...noPasteCopyProps}
                 placeholder="Type your answer here..."
                 disabled={isTimeUp || isSubmitting}
                 className={`w-full h-20 rounded-xl bg-black/20 border border-white/20 p-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#a855f7] resize-none ${
@@ -2832,7 +2835,7 @@ function AccuseModal({
             <div className="mt-5">
               <label className="text-xs text-white/80">Why do you think this player is the culprit?</label>
               <div className="mt-1 relative">
-                <textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 120))} placeholder="Type your reason here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
+                <textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 120))} {...noPasteCopyProps} placeholder="Type your reason here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
                 <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{reason.length}/120</span>
               </div>
             </div>
@@ -2920,7 +2923,7 @@ function FinalAccusationModal({
               <div className="mt-5">
                 <label className="text-xs text-white/80">Why do you think this player is the culprit?</label>
                 <div className="mt-1 relative">
-                  <textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 120))} placeholder="Type your reason here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
+                  <textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 120))} {...noPasteCopyProps} placeholder="Type your reason here..." className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400" />
                   <span className="absolute bottom-2 right-3 text-[10px] text-white/50">{reason.length}/120</span>
                 </div>
               </div>

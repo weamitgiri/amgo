@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import step2Img from '../../../assets/cookandcreate/game-flow-step-2.png';
 import { resolveMediaUrl } from "@/utils/media";
+import { noPasteCopyProps } from "@/lib/inputGuard";
 export type CCNameDishIngredient = {
   id: number;
   name: string;
@@ -172,6 +173,7 @@ export function NameDishModal({ isOpen, onSubmit, topIngredients, canSubmit, wai
                   type="text"
                   value={dishName}
                   onChange={(e) => setDishName(e.target.value.slice(0, 40))}
+                  {...noPasteCopyProps}
                   placeholder="Example: Creamy hub paneer pasta"
                   className="w-full rounded-xl border border-[#E0D4C4] focus:border-[#E8881E] focus:ring-2 focus:ring-[#E8881E]/20 outline-none px-4 py-3 text-sm text-[#3D2E1F] placeholder:text-[#B8A898] bg-white pr-14"
                 />
