@@ -60,7 +60,6 @@
                                     <a href="{{ route('admin.activities.edit', $activity->id) }}" class="btn btn-primary btn-sm" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    {{-- Hidden per client request: activities are fixed, no deleting.
                                     <form action="{{ route('admin.activities.destroy', $activity->id) }}" method="POST" style="display:inline-block;">
                                         @csrf
                                         @method('DELETE')
@@ -68,7 +67,6 @@
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
-                                    --}}
                                 </td>
                             </tr>
                             @endforeach
