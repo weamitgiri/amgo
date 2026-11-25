@@ -11,6 +11,7 @@ import { useEffect } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { GameMusicPlayer } from "@/components/GameMusicPlayer";
+import { ContentProtection } from "@/components/ContentProtection";
 import { requireOrganizerAuth, restoreAuthToken } from "@/lib/auth";
 import { AUTH_CHANGED_EVENT } from "@/api/client";
 import { ENV } from "@/config/environment";
@@ -160,6 +161,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <Outlet />
       <GameMusicPlayer />
+      <ContentProtection />
       <Toaster position="bottom-right" />
     </QueryClientProvider>
   );
