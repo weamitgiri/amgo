@@ -271,28 +271,33 @@ export async function ensureGameGroupsGameId(): Promise<void> {
 
 export async function ensureCookAndCreateSchema(): Promise<void> {
     try {
-        // 1. Make sure activity exists in activities table
-        const [ccActivity] = await query<any>(`SELECT id, slug FROM activities WHERE slug = 'cook-and-create'`);
-        let ccActivityId: number;
+        // 1. Make sure activity exists in activities table.
+        //
+        // Match the SAME broad rule the rest of the system uses (admin's
+        // cookAndCreateActivityGames() and isCookAndCreateSlug both treat any
+        // slug starting with "cook" as Cook & Create) — NOT an exact
+        // 'cook-and-create'. The real activity on live/local is slugged
+        // 'cook-create', so an exact match never found it and this function
+        // INSERTed a fresh 'cook-and-create' activity on every API boot,
+        // producing a phantom duplicate in the Activities list each time the
+        // existing one was deleted. Pick the earliest existing row so we always
+        // reuse the genuine activity instead of spawning a new one.
+        const [ccActivity] = await query<any>(
+            `SELECT id, slug FROM activities WHERE slug LIKE 'cook%' ORDER BY id ASC LIMIT 1`
+        );
+        // Never create an activity from here. Activities are managed by the
+        // admin only (the "Add New Activity" button) — this boot-time helper must
+        // never add a third row to the Activities list. If no Cook & Create
+        // activity exists yet, skip the activity-dependent seeding and log; the
+        // admin will create it, and the next boot picks it up.
         if ((ccActivity as any).length === 0) {
-            const [result] = await query<any>(
-                `INSERT INTO activities (title, slug, description, status, lobby_wait_secs, entry_cutoff_mins,
-                    game_duration_secs, case_summary_view_secs, strategy_guide_delay_secs, clue_room_unlock_secs,
-                    question_response_secs, max_questions, group_size, auto_expire_days, win_bonus,
-                    participation_bonus, timely_response_bonus, no_response_penalty, wrong_vote_penalty,
-                    lie_detector_enabled, lie_detector_max_questions, lie_detector_timer_secs,
-                    lie_detector_voting_timer_secs, icon, created_at, updated_at)
-                VALUES (?, ?, ?, 'active', 900, 15, 1500, 0, 0, 0, 120, 0, 5, 5, 100, 50, 20, -10, -15,
-                    0, 0, 0, 0, '🍳', NOW(), NOW())`,
-                [
-                    'Cook & Create', 'cook-and-create',
-                    'A fun cooking-themed impostor game where players collaborate to create the best dish while finding the hidden impostor among them!'
-                ]
+            console.warn(
+                '[schemaHelpers] No Cook & Create activity found (slug LIKE "cook%"); ' +
+                'skipping Cook & Create seeding. Create it from the admin panel.'
             );
-            ccActivityId = Number((result as any).insertId);
-        } else {
-            ccActivityId = Number(ccActivity[0].id);
+            return;
         }
+        const ccActivityId: number = Number(ccActivity[0].id);
 
         // 2. Create cc_ingredients table
         await query(`
